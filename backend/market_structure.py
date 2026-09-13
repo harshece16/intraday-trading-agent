@@ -68,6 +68,55 @@ def key_levels(candles, highs, lows, atr_val):
     return zones
 
 
+FIB_RATIOS = (0.236, 0.382, 0.5, 0.618)
+
+
+def fibonacci_levels(highs, lows):
+    """Retracement levels of the latest swing (Varsity TA ch 16): below the high after an up-swing,
+    above the low after a down-swing."""
+    if not highs or not lows:
+        return []
+    hi_i, hi = highs[-1]
+    lo_i, lo = lows[-1]
+    if hi <= lo:
+        return []
+    span = hi - lo
+    up_swing = hi_i > lo_i
+    return [
+        {"price": (hi - r * span) if up_swing else (lo + r * span), "kind": f"fib_{r * 100:g}", "touches": 1}
+        for r in FIB_RATIOS
+    ]
+
+
+def central_pivot_range(candles):
+    """CPR from the previous session (Varsity TA ch 22): pivot = (H+L+C)/3, BC = (H+L)/2, TC = 2*pivot - BC."""
+    days = []
+    for c in candles:
+        d = c["time"][:10]
+        if not days or days[-1][0] != d:
+            days.append((d, []))
+        days[-1][1].append(c)
+    if len(days) < 2:
+        return None
+    prev = days[-2][1]
+    high, low, close = max(c["high"] for c in prev), min(c["low"] for c in prev), prev[-1]["close"]
+    pivot = (high + low + close) / 3
+    bc = (high + low) / 2
+    tc = 2 * pivot - bc
+    bottom, top = sorted((bc, tc))
+    return {"pivot": pivot, "bottom": bottom, "top": top}
+
+
+def cpr_levels(cpr):
+    if not cpr:
+        return []
+    return [
+        {"price": cpr["top"], "kind": "cpr_top", "touches": 1},
+        {"price": cpr["pivot"], "kind": "pivot", "touches": 1},
+        {"price": cpr["bottom"], "kind": "cpr_bottom", "touches": 1},
+    ]
+
+
 def nearest_levels(price, levels):
     below = [lv for lv in levels if lv["price"] < price]
     above = [lv for lv in levels if lv["price"] > price]

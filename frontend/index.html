@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Intraday Desk</title>
+<title>Trader Sahab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -169,6 +169,17 @@
   .evidence { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
   .evidence li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--rule); }
   .evidence li:first-child { border-top: 0; }
+  .checklist { list-style: none; margin: 0 0 8px; padding: 0; }
+  .check { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.4; }
+  .check:first-child { border-top: 0; }
+  .check .mark { font-weight: 700; }
+  .check.pass .mark { color: var(--long); }
+  .check.fail .mark { color: var(--short); }
+  .check.soft .mark { color: var(--wait); }
+  .check .muted { font-size: 13px; }
+  .check .source { font-size: 11.5px; color: var(--focus); }
+  .tax { margin: 12px 0 4px; padding: 10px 12px; border-radius: 8px; background: var(--sunken); font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+  .tax strong { color: var(--ink); }
   .pts { font-weight: 600; }
   .pts.penalty { color: var(--wait); }
   .facts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 16px; margin: 20px 0 0; }
@@ -227,7 +238,7 @@
 <body>
 
 <header class="topbar">
-  <div class="brand"><span class="dot" id="market-dot"></span><b>Intraday Desk</b><span id="market-status">Connecting…</span></div>
+  <div class="brand"><span class="dot" id="market-dot"></span><b>Trader Sahab</b><span id="market-status">Connecting…</span></div>
   <div class="stat"><small>Realized today</small><strong id="realized">₹0</strong></div>
   <div class="stat"><small>Open P&amp;L</small><strong id="unrealized">₹0</strong></div>
   <span class="divider"></span>
@@ -240,7 +251,7 @@
 
 <section class="stance" aria-live="polite">
   <div class="stance-text">
-    <h1 id="stance-lead">Connecting to the trading engine…</h1>
+    <h1 id="stance-lead">Connecting to Trader Sahab…</h1>
     <p id="stance-rest">If this doesn't change in a few seconds, start the backend with uvicorn app:app --port 8000.</p>
   </div>
   <div class="scan"><button class="btn primary" id="btn-scan">Scan now</button><small id="scan-info"></small></div>
@@ -385,15 +396,15 @@ function renderStance(s) {
   const m = s.market, sc = s.scanner;
   if (!m) {
     setHTML($("stance-lead"), "Reading the market for the first time…");
-    setHTML($("stance-rest"), "The agent is downloading prices for all NIFTY 100 stocks. This takes about 30 seconds.");
+    setHTML($("stance-rest"), "Trader Sahab is downloading prices for all NIFTY 100 stocks. This takes about 30 seconds.");
     setHTML($("stance-facts"), "");
     setHTML($("scan-info"), "");
     return;
   }
   const lead = {
-    "risk-off": "The market is weak, so the agent is looking for stocks to short.",
-    "risk-on": "The market is strong, so the agent is looking for stocks to buy.",
-    "neutral": "The market is mixed, so the agent trades both sides on clear setups only.",
+    "risk-off": "The market is weak, so Trader Sahab is looking for stocks to short.",
+    "risk-on": "The market is strong, so Trader Sahab is looking for stocks to buy.",
+    "neutral": "The market is mixed, so Trader Sahab trades both sides on clear setups only.",
   }[m.bias] || "Reading the market.";
 
   const n = m.nifty;
@@ -459,7 +470,7 @@ function renderOpps(s) {
   }
   const list = groups[ui.left];
   const intro = {
-    trading: "The engine checks these for entries every 30 seconds.",
+    trading: "Trader Sahab checks these for entries every 30 seconds.",
     watch: "Ranked candidates that didn't make the active list.",
     skipped: "Filtered out today, with the reason.",
   }[ui.left];
@@ -485,8 +496,9 @@ function planHTML(s, r, b, pos) {
 
   if (pos && pos.quantity) {
     const long = pos.quantity > 0;
+    const exits = pos.stop_price ? ` Stop ${num(pos.stop_price)}, target ${num(pos.target_price)}.` : "";
     return box(long ? "long" : "short", `Holding ${Math.abs(pos.quantity)} shares ${long ? "long" : "short"}`,
-      `<p>Entered at ${num(pos.avg_price)}, open P&amp;L <span class="${tone(pos.unrealized_pnl)}">${money(pos.unrealized_pnl)}</span>. Closes at the stop, the target, an exit signal or 15:15.</p>${lv}`);
+      `<p>Entered at ${num(pos.avg_price)}, open P&amp;L <span class="${tone(pos.unrealized_pnl)}">${money(pos.unrealized_pnl)}</span>.${exits} Closes at the stop, the target, an exit signal or 15:15.</p>${lv}`);
   }
   if (r && r.excluded) return box("", "No trade in this stock today", `<p>${esc(r.excluded)}</p>`);
   const side = r ? r.side : (b && b.bias === "short" ? "SHORT" : "LONG");
@@ -497,9 +509,12 @@ function planHTML(s, r, b, pos) {
   const m = s.market || {};
   const paused = (side === "LONG" && m.bias === "risk-off") || (side === "SHORT" && m.bias === "risk-on");
   const ready = side === "SHORT" ? b.short_ok : b.long_ok;
+  const cl = b.checklist && b.checklist[side === "SHORT" ? "short" : "long"];
   if (ready && !paused && (!r || r.status === "ACTIVE")) {
-    return box(side === "SHORT" ? "short" : "long", `Ready to ${verb}`,
-      `<p>Every entry condition is met. The order goes in on the next check if risk limits allow.</p>${lv}`);
+    const planLine = cl && cl.stop != null
+      ? `<p>Enter near ${num(cl.entry)}, stop ${num(cl.stop)}, target ${num(cl.target)}, reward-to-risk ${num(cl.rrr)} after costs, at ${Math.round(cl.size_factor * 100)}% size.</p>`
+      : `<p>Every entry condition is met. The order goes in on the next check if risk limits allow.</p>`;
+    return box(side === "SHORT" ? "short" : "long", `Ready to ${verb}`, planLine + lv);
   }
   const waits = [];
   if (paused) waits.push(`New ${side === "LONG" ? "longs" : "shorts"} are paused while the market is ${m.bias === "risk-off" ? "weak" : "strong"}`);
@@ -523,12 +538,37 @@ function caseHTML(title, value, thr, color, items, emptyText) {
   </div>`;
 }
 
-function timingHTML(a) {
+function checklistHTML(r, b) {
+  if (!b.checklist) return "";
+  const side = r && r.side ? r.side.toLowerCase() : (b.bias === "short" ? "short" : "long");
+  const cl = b.checklist[side] || b.checklist.long;
+  if (!cl) return "";
+  const failing = cl.items.filter(i => i.required && !i.ok).length;
+  const rows = cl.items.map(i => {
+    const state = i.ok ? "pass" : i.required ? "fail" : "soft";
+    const mark = i.ok ? "✓" : i.required ? "✗" : "–";
+    return `<li class="check ${state}"><span class="mark" aria-label="${state}">${mark}</span>
+      <span>${esc(i.label)}${i.required ? "" : ` <span class="muted">(sizes the trade)</span>`}<br><span class="muted">${esc(i.detail)}</span><br><span class="source">${esc(i.source)}</span></span></li>`;
+  }).join("");
+  const summary = cl.passed
+    ? `Every required point passes for a ${cl.side}.`
+    : `${failing} required point${failing > 1 ? "s" : ""} fail${failing > 1 ? "" : "s"}, so there's no ${cl.side} trade.`;
+  const plan = cl.stop != null
+    ? ` If taken: entry ${num(cl.entry)}, stop ${num(cl.stop)}, target ${num(cl.target)}, reward-to-risk ${num(cl.rrr)}.` : "";
+  return `<h3 class="sub-title" style="margin-top:0">Zerodha Varsity checklist</h3>
+    <p class="lede">${summary}${plan} Trader Sahab uses this same checklist to decide every trade — the source of each rule is linked below so you can read the lesson yourself.</p>
+    <ul class="checklist">${rows}</ul>`;
+}
+
+function timingHTML(r, a) {
   if (!a) return `<p class="empty">No timing read yet. It runs on the scanner's top 15 and on every tracked stock while the market is open.</p>`;
   const b = a.b;
+  const checklist = b.entry_mode === "checklist" ? checklistHTML(r, b) : "";
   const patterns = (b.patterns || []).map(p => esc(p.name));
   const context = `${a.live ? "Live read." : "From the last scan."} The stock is ${esc(b.regime)} (ADX ${num(b.adx, 0)}), its swing structure is ${esc(b.structure)}, and the 15-minute trend is ${esc(b.htf_trend)}. RSI ${num(b.rsi, 0)}${b.volume_ratio != null ? `, volume ${num(b.volume_ratio, 1)}× average` : ""}.${patterns.length ? ` Candle patterns: ${joinWords(patterns)}.` : ""}`;
-  return `<p class="lede">${context}</p>
+  return `${checklist}
+    ${checklist ? `<h3 class="sub-title">Supporting evidence</h3>` : ""}
+    <p class="lede">${context}</p>
     <div class="cases">
       ${caseHTML("Case for buying", b.bull_score, b.entry_threshold, "var(--long)", b.reasons || [], "Nothing bullish yet.")}
       ${caseHTML("Case for shorting", b.bear_score, b.entry_threshold, "var(--short)", b.bear_reasons || [], "Nothing bearish yet.")}
@@ -553,6 +593,7 @@ function scanHTML(r) {
       ${f("Below 52-week high", `${num(r.pct_from_high, 1)}%`)}
       ${f("Above 52-week low", `${num(r.pct_from_low, 1)}%`)}
       ${f("Daily turnover", `₹${num(r.turnover_cr, 0)} cr`)}
+      ${f("Beta vs NIFTY", r.beta == null ? "—" : num(r.beta, 2))}
     </dl>${cat}`;
 }
 
@@ -611,7 +652,7 @@ function renderStock(s) {
     ["scan", "Why it ranks"],
     ["news", "News", news && !news.error ? news.count : undefined],
   ]));
-  const content = ui.center === "timing" ? timingHTML(a) : ui.center === "scan" ? scanHTML(r) : newsHTML(s);
+  const content = ui.center === "timing" ? timingHTML(r, a) : ui.center === "scan" ? scanHTML(r) : newsHTML(s);
   setHTML($("center-content"), content);
 }
 
@@ -711,7 +752,9 @@ function renderRight(s) {
         <div class="body">${esc(a.message)}</div>
       </li>`).join("") : `<li class="empty">Nothing yet. Scans, picks, trades and skipped signals appear here.</li>`);
   } else {
-    setHTML($("right-content"), s.trades.length ? s.trades.map(t => {
+    const tax = s.tax || {turnover: 0, net_pnl: 0, charges: 0, closed_trades: 0};
+    const taxNote = `<li class="tax">Intraday equity counts as <strong>speculative business income</strong>. So far: turnover <strong>₹${num(tax.turnover, 0)}</strong> (each closed trade's profit or loss, added up without signs), net P&amp;L <strong class="${tone(tax.net_pnl)}">${money(tax.net_pnl)}</strong>, estimated charges <strong>₹${num(tax.charges, 0)}</strong>. Speculative losses only offset speculative gains and carry forward 4 years. Advance tax is due by 15 Jun, 15 Sep, 15 Dec and 15 Mar. Source: Zerodha Varsity, Markets and Taxation; check with a CA.</li>`;
+    setHTML($("right-content"), taxNote + (s.trades.length ? s.trades.map(t => {
       const action = tradeAction(t);
       const opening = action === "Bought" || action === "Sold short";
       const reason = REASON_TEXT[t.reason] || t.reason || "";
@@ -720,7 +763,7 @@ function renderRight(s) {
         <div class="body">${t.quantity} shares at ${num(t.price)}</div>
         <div class="detail">${esc([reason, t.note].filter(Boolean).join(": "))}</div>
       </li>`;
-    }).join("") : `<li class="empty">No orders yet today.</li>`);
+    }).join("") : `<li class="empty">No orders yet today.</li>`));
   }
 }
 
@@ -808,7 +851,7 @@ document.addEventListener("click", e => {
 
 $("btn-paper").onclick = () => setMode(true);
 $("btn-live").onclick = () => {
-  if (confirm("Switch to live trading? Real orders will be placed on Zerodha.")) setMode(false);
+  if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false);
 };
 
 async function refreshKiteStatus() {

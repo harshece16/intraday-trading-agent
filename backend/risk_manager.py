@@ -41,9 +41,11 @@ class RiskManager:
             return atr * self.cfg.get("atr_tp_multiplier", 3.0)
         return entry_price * self.cfg["take_profit_pct"] / 100
 
-    def position_size(self, entry_price: float, atr: float | None = None) -> int:
+    def position_size(self, entry_price: float, atr: float | None = None, stop_price: float | None = None) -> int:
+        """Percentage-risk sizing (Varsity Risk Management ch 14): risk amount / stop distance.
+        A structural stop (e.g. the candlestick pattern's low) is used when given."""
         risk_amount = self.cfg["total_capital"] * self.cfg["max_risk_per_trade_pct"] / 100
-        stop_distance = self._stop_distance(entry_price, atr)
+        stop_distance = abs(entry_price - stop_price) if stop_price else self._stop_distance(entry_price, atr)
         if stop_distance <= 0:
             return 0
         qty = int(risk_amount / stop_distance)

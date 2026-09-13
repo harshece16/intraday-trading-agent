@@ -1,13 +1,17 @@
-# Intraday Trading Agent — NSE (Zerodha)
+# Trader Sahab: an intraday trading agent for NSE (Zerodha)
 
-An intraday trading agent for Indian equities. It works like a disciplined
-technical trader. It **scans the NIFTY 100** to decide *what* is worth trading
-today and on which side: strong stocks to buy on strong days, weak stocks to
-**short** on weak days. It uses market context, relative strength, volume,
-sector leadership, news and results-day risk. The **Trader Brain** then
-decides *when* to enter and exit, using trend, structure, momentum, levels,
-candlestick patterns and volume. It sizes every trade by risk and explains
-each decision in plain language on a live dashboard.
+Trader Sahab is an intraday trading agent for Indian equities. It works like
+a disciplined technical trader. It **scans the NIFTY 100** to decide *what*
+is worth trading today and on which side: strong stocks to buy on strong
+days, weak stocks to **short** on weak days. It uses market context,
+relative strength, volume, sector leadership, news and results-day risk. The
+**Trader Brain** then decides *when* to enter and exit, following
+**Zerodha Varsity's own Grand Checklist** — a candlestick pattern, a stop at
+support or resistance, above-average volume, Dow Theory trend agreement, and
+a minimum reward-to-risk — the same checklist Varsity's Technical Analysis
+module teaches a retail trader to run before every trade. It sizes every
+trade by risk and explains each decision in plain language, with a link to
+the exact Varsity lesson behind it, on a live dashboard.
 
 It runs in **paper mode** by default and can route real orders through
 **Zerodha Kite Connect**.
@@ -64,7 +68,32 @@ weekly from NSE's list.
 | **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
 | **Active watchlist** | Top 6 by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
 
-### 3. Trader Brain — *when* to trade (`trader_brain.py`)
+### 3. The Varsity Checklist — *when* to trade (`trader_brain.py`)
+
+Trader Sahab's default entry logic (`entry_mode: "checklist"`) is Zerodha
+Varsity's **Grand Checklist**, read directly from the Technical Analysis
+module (chapters 4–18) and implemented rule for rule instead of paraphrased:
+
+| Varsity rule | Chapter | What Trader Sahab checks |
+|---|---|---|
+| A recognisable candlestick pattern, after the right prior trend | ch 4–10 | One of 20 patterns (`candlestick_patterns.py`), sized sanely (0.3–3× ATR) |
+| The stop-loss sits at support or resistance | ch 11 | The pattern's low/high must land within 0.5 ATR of a swing, previous-day, opening-range, Fibonacci or CPR level |
+| Above-average volume on the signal candle | ch 12 | Volume vs its 10-candle average (Varsity's volume-trend table: price up + volume up = smart money buying) |
+| Dow Theory agrees | ch 17–18 | The 15-minute trend and swing structure must not contradict the trade |
+| Indicators confirm, but only to size the bet | ch 15.4 | MACD and RSI: if they agree, full size; if not, Varsity's own worked example ("300 shares instead of 500") — 60% size |
+| Reward-to-risk of at least 1.5, net of costs | ch 18.5 | Target = next level beyond entry (or 2R if none); RRR is computed after estimated round-trip costs |
+
+**A trade needs every required point** (pattern, S/R, volume, Dow, RRR);
+indicators only scale the size. This is stricter than the older
+confluence-score system (`entry_mode: "confluence"`, kept for comparison) and
+trades far less often — see the backtest table below.
+
+Two more Varsity concepts feed the checklist as extra support/resistance
+sources: **Fibonacci retracements** (ch 16 — 23.6/38.2/50/61.8% of the last
+swing) and the **Central Pivot Range** (ch 22 — pivot, top and bottom from
+the previous session's high/low/close), in `market_structure.py`.
+
+### 4. The confluence engine (legacy, `entry_mode: "confluence"`)
 
 | What a trained trader checks | Source | Rule |
 |---|---|---|
@@ -88,10 +117,24 @@ the scanner ranked as a long, and vice versa. Shorts are MIS (intraday)
 orders and are always covered by the 15:15 square-off. Never hold a cash
 short overnight, because a short delivery goes to exchange auction.
 
-Exits for both sides: the ATR stop-loss and take-profit, the opposite case
-reaching 5 or the swing structure breaking, and the 15:15 square-off.
-`allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and `SCANNER` turns
-shorting off.
+Exits for both sides: the ATR stop-loss and take-profit (or the checklist's
+own pattern-based stop and level-based target, when `entry_mode: "checklist"`),
+the opposite case reaching 5 or the swing structure breaking, and the 15:15
+square-off. `allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and
+`SCANNER` turns shorting off.
+
+### 5. Position sizing and stops (Varsity Risk Management module)
+
+- **Percentage-risk sizing** (ch 11–13): risk 1% of capital divided by the
+  stop distance — the pattern's structural stop when the checklist supplies
+  one, ATR otherwise (`risk_manager.py`).
+- **Step trailing stop** (Futures Trading ch 7): optional, off by default
+  (`RISK["trail_after_r"]`) — after N·R profit, lock in (N−1)·R, one R at a
+  time, the way Varsity describes a trailing SL on a Bracket Order.
+- **R-multiples and expectancy** (ch 11, 14 — Kelly's Criterion): the
+  backtester reports each trade's result as a multiple of its initial risk,
+  the system's expectancy in R per trade, and the Kelly fraction (negative
+  means the correct bet size is zero, however good the entries feel).
 
 ### 4. News sources (`news_sentiment.py`, `nse_feed.py`)
 
@@ -114,6 +157,15 @@ EODHD's free tier gives about 2–4 news calls a day, and Alpha Vantage allows
 25 requests a day in total. NSE filings plus Google News cover Indian
 large caps better, and they're free.
 
+### 6. Taxation panel (Varsity Markets & Taxation module)
+
+Intraday equity is **speculative business income** under Indian tax law (ch
+3): the Trades tab shows running trade-wise turnover, net P&L, estimated
+charges, and reminders that speculative losses only offset speculative gains
+and carry forward 4 years (ch 5), and advance tax is due 15 Jun / 15 Sep / 15
+Dec / 15 Mar if trading as a business (ch 6). Informational only — it is not
+tax advice; the panel says so and names Varsity as its source.
+
 ## Dashboard
 
 The dashboard is built to be read, not decoded. Everything is in plain
@@ -131,12 +183,15 @@ for waiting.
   today* (with the reason, like results due). Each row shows the side, the
   score, the day's change and the top two reasons.
 - **Selected stock:**
-  - a **plan box** that says *Ready to short*, *Waiting to buy* (with a
-    list of what it's waiting for), *Holding a short position of 33 shares*,
+  - a **plan box** that says *Ready to short* (with the exact entry, stop,
+    target and reward-to-risk), *Waiting to buy* (with which Varsity
+    checklist points still fail), *Holding a short position of 33 shares*,
     or *No trade in this stock today*
   - key levels, with the chart showing them as dashed lines
-  - the timing read: side-by-side *Case for buying* and *Case for shorting*,
-    each with a meter against the threshold and its evidence
+  - a **Timing read** tab showing the full Varsity checklist for this stock
+    — every point, pass or fail, in plain English, with the exact Varsity
+    chapter it comes from, so the reasoning behind every trade is visible
+    both while it's being decided and afterwards in the trade journal
   - why the scanner ranked the stock where it did
 - **Open positions** and **What the agent is doing:** a sentence log of
   scans, watchlist changes, forming setups, trades and skipped signals with
@@ -164,7 +219,25 @@ realistic Zerodha costs + slippage. H1/H2 are the two halves of the sample.
 | Same on **15-minute** bars, 4 fixed stocks | 103 | 23% | −₹2,736 | ₹3,525 | **−6.3%** | −3.3k / −3.0k |
 | 15-minute bars, scanner top-5/day | 177 | 23% | −₹8,796 | ₹5,668 | **−14.5%** | −5.7k / −8.8k |
 
-**With short selling** (same period, symmetric long/short rules):
+**Varsity checklist mode** (`entry_mode: "checklist"`, now the default —
+same 55 days, long + short):
+
+| Setup | Trades | Win % | Net | Expectancy | Kelly |
+|---|---|---|---|---|---|
+| 4 fixed stocks | 6 | 17% | **−0.5%** | −0.69R/trade | −36% (bet size should be 0) |
+| Scanner top-10/day, NIFTY 100 | 19 | 26% | **−1.9%** | −0.60R/trade | −43% (bet size should be 0) |
+
+The checklist requires a pattern, a stop at a real level, above-average
+volume, Dow Theory agreement and a 1.5+ reward-to-risk all at once — so it
+trades far less often (6–19 times in 55 days, versus 150–450 for the
+confluence engine) and loses far less in rupee terms. But **it is not an
+edge**: the expectancy per trade is still negative, and the Kelly fraction
+says the mathematically correct position size is zero. Being selective
+avoided paying for bad trades; it didn't turn the entries into good ones.
+Both figures come from far too few trades (6 and 19) to trust — this is a
+sanity check on the logic, not a verdict on the checklist.
+
+**With short selling, confluence engine** (same period, symmetric long/short rules):
 
 | Setup | Trades | Win % | Gross | Costs | **Net** | Longs / Shorts net |
 |---|---|---|---|---|---|---|

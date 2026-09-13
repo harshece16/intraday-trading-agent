@@ -1,0 +1,66 @@
+[
+  {
+    "id": "E24-sebi-fno-losses",
+    "gemini_claim": "93% of individual F&O traders lose money; transaction costs are 28% of net losses.",
+    "verdict": "partly_correct",
+    "verified": "SEBI PR No. 22/2024 (23 Sep 2024): 93% of over 1 crore individual F&O traders lost about ₹2 lakh each on average over FY22-FY24 (including costs); aggregate losses above ₹1.8 lakh crore. Individuals spent about ₹50,000 crore on transaction costs over the three years (51% brokerage, 20% exchange fees) and ₹26,000 per person in FY24. 97% of FPI profits and 96% of proprietary trader profits came from algorithmic trading.",
+    "not_supported": "The '28% of net losses went to transaction costs' figure is not in this press release. Gemini attributed it to the wrong source.",
+    "sources": [
+      {"title": "SEBI PR No. 22/2024, copy hosted by AIBI", "url": "https://aibi.org.in/Sebipr/Updated_SEBI_Study_Reveals_93_percentage_of_Individual_Traders_Incurred_Losses_in_Equity_F&O_between_FY22_and_FY24.pdf", "read": "2026-09-13"}
+    ],
+    "use_in_agent": "Context only. This is about F&O, not intraday cash."
+  },
+  {
+    "id": "E24b-sebi-intraday-cash-study",
+    "gemini_claim": null,
+    "verdict": "missed_by_gemini",
+    "verified": "SEBI study released 24 Jul 2024: 71% of individual intraday traders in the equity cash segment made a net loss in FY23; 80% for traders with more than 500 trades a year. Loss-makers spent an additional 57% of their trading losses on trading costs; profit-makers spent 19% of their profits. Sample: individual clients of the top 10 brokers (about 86% of individual clients).",
+    "sources": [
+      {"title": "7 in 10 intraday traders in equity cash suffered losses in FY23: Sebi study (PTI via Business Standard)", "url": "https://www.business-standard.com/markets/news/7-in-10-intraday-traders-in-equity-cash-suffered-losses-in-fy23-sebi-study-124072400975_1.html", "read": "2026-09-13"}
+    ],
+    "use_in_agent": "Directly relevant. Supports the backtest finding that overtrading and costs drive losses: keep the one-entry-per-stock-per-day limit and add a cost-to-expected-move filter."
+  },
+  {
+    "id": "A5-retail-algo-rules",
+    "gemini_claim": "Retail API trading is capped at 10 orders per second without registration; effective 2025-04-01.",
+    "verdict": "partly_correct",
+    "verified": "NSE FAQ (3 Nov 2025): all orders a client sends through the broker's API count as algo orders and must be tagged, even below the 10 orders-per-second threshold. A 'tech-savvy' client using the API must use a static IP and host the algo at their end, and is not required to join the monthly mock trading sessions. Registration is needed above 10 OPS. The FAQ quotes NSE/MSD/67753 (29 Apr 2025) point 8.1.1.12: algo orders with order type Market are not permitted.",
+    "not_supported": "The 2025-04-01 effective date is wrong. The framework comes from the SEBI circular of 4 Feb 2025, implemented through NSE circulars of 5 May, 22 Jul and 19 Sep 2025, with a SEBI timeline extension in Sep 2025. The final go-live date could not be confirmed because sebi.gov.in was unreachable.",
+    "sources": [
+      {"title": "NSE FAQ: Safer participation of retail investors in algorithmic trading", "url": "https://nsearchives.nseindia.com/web/sites/default/files/inline-files/FAQ_Retail%20Algo_03112025_NSE.pdf", "read": "2026-09-13"}
+    ],
+    "use_in_agent": "Resolved for Zerodha: per Kite Connect docs, a MARKET order sent with market_protection is converted into a limit order within the exchange price-protection range, and orders with market_protection 0 are rejected. kite_broker.py already sets market_protection, so no change needed. Zerodha also enforces 10 requests/second (HTTP 429 above that). Needs a static IP from the machine placing orders.",
+    "extra_sources": [
+      {"title": "Kite Connect v3 orders documentation", "url": "https://kite.trade/docs/connect/v3/orders/"},
+      {"title": "Kite Connect forum: preparing to comply with SEBI's retail algo rules", "url": "https://kite.trade/forum/discussion/15912/preparing-to-comply-with-sebis-retail-algo-rules-static-ip-ratelimits-order-types"}
+    ]
+  },
+  {
+    "id": "F27-ml-validation",
+    "gemini_claim": "Standard K-fold leaks information in financial time series; use purged and embargoed cross-validation.",
+    "verdict": "concept_correct_citation_wrong",
+    "verified": "Purged/embargoed cross-validation is a well-established method (López de Prado).",
+    "not_supported": "The URL Gemini gave is SSRN 3558728, 'Machine Learning for Asset Managers' (2020), not 'Advances in Financial Machine Learning' (2018) as labelled. The 'quote' is copied from the user's own pasted report, not from the book.",
+    "sources": [],
+    "use_in_agent": "Adopt in the training pipeline (already planned)."
+  },
+  {
+    "id": "B8-orb-volume-filter",
+    "gemini_claim": "ORB has positive expectancy only with RVOL >= 1.5 and VWAP alignment; avoid entries 12:00-13:30.",
+    "verdict": "unsupported",
+    "verified": "Nothing. The only source is a Scribd user upload whose content could not be read (the page showed only recommendations). No sample period, no dataset, no NSE study.",
+    "backtest": "The 12:00-13:30 no-entry window was tested on 55 days of 5-minute NIFTY 100 data: fixed 4 stocks −10.6% vs −10.6% baseline; scanner top-5 −8.4% vs −8.5%. No measurable effect because the brain rarely enters then. Not adopted (no_entry_windows stays []).",
+    "sources": [
+      {"title": "Opening Range Breakout Trading Guide (Scribd upload)", "url": "https://www.scribd.com/document/904780571/Opening-Range-Breakout-Strategy", "read": "2026-09-13", "note": "content not accessible"}
+    ],
+    "use_in_agent": "Treat as a hypothesis only. Worth a proper ORB backtest with time-of-day relative volume, but no evidence supports it yet."
+  },
+  {
+    "id": "summary-claims-without-sources",
+    "gemini_claim": "Averaging down is a primary driver of the 93% failure rate; genuine strategies cluster at 40-60% win rates.",
+    "verdict": "unsupported",
+    "verified": "Neither claim appears in the SEBI releases read, and Gemini gave no sources for them.",
+    "sources": [],
+    "use_in_agent": "Ignore. (The agent never averages down anyway: it blocks entries when a position is already open.)"
+  }
+]

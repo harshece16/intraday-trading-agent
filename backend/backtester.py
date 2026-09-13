@@ -27,6 +27,7 @@ Usage:
 """
 
 import argparse
+import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -41,13 +42,16 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 class _Position:
-    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost")
+    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost", "stop", "target", "risk_ps")
 
     def __init__(self):
         self.quantity = 0
         self.avg_price = 0.0
         self.entry_atr = None
         self.entry_cost = 0.0
+        self.stop = None
+        self.target = None
+        self.risk_ps = None
 
 
 def _to_ist(iso_time: str) -> datetime:
@@ -55,12 +59,15 @@ def _to_ist(iso_time: str) -> datetime:
     return ts.astimezone(IST) if ts.tzinfo else ts.replace(tzinfo=IST)
 
 
-def _open_position(pos, side, raw_price, qty, atr_val, costs_cfg):
+def _open_position(pos, side, raw_price, qty, atr_val, costs_cfg, risk, stop=None, target=None):
     fill_price = apply_slippage(side, raw_price, costs_cfg)
     pos.quantity = qty if side == "BUY" else -qty
     pos.avg_price = fill_price
     pos.entry_atr = atr_val
     pos.entry_cost = leg_cost(side, fill_price, qty, costs_cfg)
+    pos.stop = stop if stop is not None else risk.stop_loss_price(fill_price, side, atr=atr_val)
+    pos.target = target if target is not None else risk.take_profit_price(fill_price, side, atr=atr_val)
+    pos.risk_ps = abs(fill_price - pos.stop)
 
 
 def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs_cfg):
@@ -79,8 +86,10 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
         "symbol": symbol, "exit_time": ts.isoformat(), "side": "LONG" if side_sign > 0 else "SHORT",
         "qty": qty, "entry_price": pos.avg_price, "exit_price": fill_price,
         "gross_pnl": gross_pnl, "cost": total_cost, "pnl": net_pnl, "reason": reason,
+        "r": net_pnl / (pos.risk_ps * qty) if pos.risk_ps else None,
     })
     pos.quantity, pos.avg_price, pos.entry_atr, pos.entry_cost = 0, 0.0, None, 0.0
+    pos.stop = pos.target = pos.risk_ps = None
     risk.open_positions_count = max(0, risk.open_positions_count - 1)
     return net_pnl
 
@@ -139,17 +148,24 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
             # 1) Stop-loss / take-profit against this bar's high/low (more
             #    realistic than only checking the close).
             if pos.quantity != 0:
-                side = "BUY" if pos.quantity > 0 else "SELL"
-                stop = risk.stop_loss_price(pos.avg_price, side, atr=pos.entry_atr)
-                target = risk.take_profit_price(pos.avg_price, side, atr=pos.entry_atr)
-                hit_stop = (pos.quantity > 0 and bar["low"] <= stop) or (pos.quantity < 0 and bar["high"] >= stop)
-                hit_target = (pos.quantity > 0 and bar["high"] >= target) or (pos.quantity < 0 and bar["low"] <= target)
+                sign = 1 if pos.quantity > 0 else -1
+                hit_stop = (pos.quantity > 0 and bar["low"] <= pos.stop) or (pos.quantity < 0 and bar["high"] >= pos.stop)
+                hit_target = (pos.quantity > 0 and bar["high"] >= pos.target) or (pos.quantity < 0 and bar["low"] <= pos.target)
                 if hit_stop or hit_target:
-                    exit_price = stop if hit_stop else target
+                    exit_price = pos.stop if hit_stop else pos.target
+                    if hit_stop and (bar["open"] - pos.stop) * sign < 0:
+                        exit_price = bar["open"]  # gapped through the stop: fill at the open, not the stop
                     equity += _close_position(pos, exit_price, risk, trades, symbol, ts,
                                                "stop_loss" if hit_stop else "take_profit", costs_cfg)
                     equity_curve.append(equity)
                     continue
+                trail_after = risk_cfg.get("trail_after_r")
+                if trail_after and pos.risk_ps:
+                    steps = math.floor((bar["close"] - pos.avg_price) * sign / pos.risk_ps)
+                    if steps >= trail_after:
+                        new_stop = pos.avg_price + sign * pos.risk_ps * (steps - trail_after)
+                        if (new_stop - pos.stop) * sign > 0:
+                            pos.stop = new_stop
 
             # 2) Auto square-off window / outside market hours.
             if t >= square_off_t:
@@ -185,10 +201,17 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
                 if not risk.can_open_new_position():
                     continue
                 atr_val = compute_atr(window, risk_cfg.get("atr_period", 14)) if risk_cfg.get("use_atr_risk") else None
-                qty = risk.position_size(bar["close"], atr=atr_val)
+                plan = None
+                if st.get("entry_mode") == "checklist":
+                    plan = (st.get("checklist") or {}).get("long" if side == "BUY" else "short")
+                    if not plan or plan.get("stop") is None:
+                        plan = None
+                qty = int(risk.position_size(bar["close"], atr=atr_val, stop_price=plan["stop"] if plan else None)
+                          * (plan["size_factor"] if plan else 1.0))
                 if qty <= 0:
                     continue
-                _open_position(pos, side, bar["close"], qty, atr_val, costs_cfg)
+                _open_position(pos, side, bar["close"], qty, atr_val, costs_cfg, risk,
+                               stop=plan["stop"] if plan else None, target=plan["target"] if plan else None)
                 risk.open_positions_count += 1
 
     # Mark-to-market any positions still open at the end of the sample.
@@ -248,6 +271,19 @@ def report(trades, equity_curve, starting_capital, costs_enabled):
         w = sum(1 for t in ts_ if t["pnl"] > 0)
         print(f"{side + ':':19s}{len(ts_)} trades, win {w / len(ts_) * 100:.0f}%, "
               f"gross {sum(t['gross_pnl'] for t in ts_):.0f}, net {sum(t['pnl'] for t in ts_):.0f}")
+    rs = [t["r"] for t in trades if t.get("r") is not None]
+    if rs:
+        wins_r = [x for x in rs if x > 0]
+        losses_r = [x for x in rs if x <= 0]
+        w = len(wins_r) / len(rs)
+        avg_w = sum(wins_r) / len(wins_r) if wins_r else 0.0
+        avg_l = sum(losses_r) / len(losses_r) if losses_r else 0.0
+        if avg_w > 0 and avg_l < 0:
+            kelly = w - (1 - w) / (avg_w / abs(avg_l))
+        else:
+            kelly = 1.0 if not losses_r else 0.0
+        print(f"Expectancy:        {sum(rs) / len(rs):+.2f}R per trade (avg win {avg_w:+.2f}R, avg loss {avg_l:+.2f}R)")
+        print(f"Kelly fraction:    {kelly:.1%}" + ("  (no edge: the right bet size is zero)" if kelly <= 0 else ""))
     print(f"{'='*50}")
     if not costs_enabled:
         print("NOTE: run with costs disabled (--no-costs) — this is a frictionless,")

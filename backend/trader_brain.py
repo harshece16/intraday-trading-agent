@@ -41,7 +41,17 @@ DEFAULTS = {
     "no_entry_before": "09:30",
     "last_entry_time": "14:30",
     "max_entries_per_day": 1,
+    "no_entry_windows": [],          # e.g. [["12:00", "13:30"]] to skip the midday chop
     "allow_shorts": True,
+    "entry_mode": "checklist",
+    "min_rrr": 1.5,
+    "sr_tolerance_atr": 0.5,
+    "volume_lookback": 10,
+    "indicator_miss_size": 0.6,
+    "min_pattern_atr": 0.3,
+    "max_pattern_atr": 3.0,
+    "cost_pct": 0.12,
+    "rrr_without_level": 2.0,
     "adx_trend": 25,
     "adx_range": 20,
     "htf_factor": 3,
@@ -76,6 +86,114 @@ class _Ledger:
 
 def _r(x, nd=2):
     return round(x, nd) if isinstance(x, float) else x
+
+
+PATTERN_BARS = {
+    "Bullish Engulfing": 2, "Bearish Engulfing": 2, "Piercing Line": 2, "Dark Cloud Cover": 2,
+    "Bullish Harami": 2, "Bearish Harami": 2, "Tweezer Bottom": 2, "Tweezer Top": 2,
+    "Morning Star": 3, "Evening Star": 3, "Three White Soldiers": 3, "Three Black Crows": 3,
+}
+_LEVEL_NAMES = {
+    "swing": "a tested swing level", "prev_day_high": "yesterday's high", "prev_day_low": "yesterday's low",
+    "prev_day_close": "yesterday's close", "opening_range_high": "the opening-range high",
+    "opening_range_low": "the opening-range low", "cpr_top": "the CPR top", "cpr_bottom": "the CPR bottom",
+    "pivot": "the pivot",
+}
+
+
+def _level_name(lv):
+    if lv["kind"].startswith("fib_"):
+        return f"the {lv['kind'][4:]}% Fibonacci retracement"
+    return _LEVEL_NAMES.get(lv["kind"], lv["kind"].replace("_", " "))
+
+
+CHECKLIST_SOURCES = {
+    "pattern": "Varsity Technical Analysis, ch 4-10 (candlestick patterns)",
+    "sr": "Varsity Technical Analysis, ch 11 (support & resistance)",
+    "volume": "Varsity Technical Analysis, ch 12 (volume)",
+    "dow": "Varsity Technical Analysis, ch 17-18 (Dow Theory)",
+    "indicators": "Varsity Technical Analysis, ch 13-16 (moving averages, RSI, MACD)",
+    "rrr": "Varsity Technical Analysis, ch 18.5 (Reward-to-Risk Ratio)",
+}
+
+
+def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p):
+    """Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18) for one side.
+    Required: pattern, stop at S&R, volume, Dow trend, RRR. Indicators only change the size."""
+    s = 1 if side == "long" else -1
+    bias = "bullish" if s > 0 else "bearish"
+    level_word = "support" if s > 0 else "resistance"
+    price = window[-1]["close"]
+    items = []
+
+    def item(key, label, ok, detail, required=True):
+        items.append({"key": key, "label": label, "ok": bool(ok), "detail": detail, "required": required,
+                     "source": CHECKLIST_SOURCES[key]})
+
+    candidates = sorted((x for x in patterns if x["bias"] == bias), key=lambda x: -x["strength"])
+    pattern = candidates[0] if candidates else None
+    stop = target = rrr = None
+    if pattern:
+        bars = window[-PATTERN_BARS.get(pattern["name"], 1):]
+        stop = min(b["low"] for b in bars) if s > 0 else max(b["high"] for b in bars)
+        span = max(b["high"] for b in bars) - min(b["low"] for b in bars)
+        sane = p["min_pattern_atr"] * atr_v <= span <= p["max_pattern_atr"] * atr_v
+        item("pattern", "Recognisable candlestick pattern", sane,
+             pattern["name"] if sane else
+             f"{pattern['name']}, but its range is {span / atr_v:.1f}× ATR; Varsity says not to trade abnormal candles")
+    else:
+        item("pattern", "Recognisable candlestick pattern", False, f"No {bias} pattern after a prior trend")
+
+    risk = abs(price - stop) if stop is not None else 0.0
+    if risk > 0:
+        tol = p["sr_tolerance_atr"] * atr_v
+        near = [lv for lv in levels
+                if (lv["price"] <= price if s > 0 else lv["price"] >= price)
+                and abs(lv["price"] - stop) <= tol and (lv["touches"] >= 2 or lv["kind"] != "swing")]
+        best = min(near, key=lambda lv: abs(lv["price"] - stop)) if near else None
+        item("sr", f"Stop-loss sits at {level_word}", best is not None,
+             f"Stop {stop:.2f} is at {_level_name(best)} ({best['price']:.2f})" if best else
+             f"No {level_word} within {p['sr_tolerance_atr']:g} ATR of the stop {stop:.2f}")
+    else:
+        item("sr", f"Stop-loss sits at {level_word}", False, "Needs a pattern to place the stop")
+
+    item("volume", "Above-average volume", vol10 is not None and vol10 > 1.0,
+         f"Volume is {vol10:.1f}× its {p['volume_lookback']}-candle average" if vol10 is not None else "No volume data")
+
+    dow_ok = htf_trend == ("up" if s > 0 else "down") or (
+        htf_trend == "flat" and structure != ("downtrend" if s > 0 else "uptrend"))
+    item("dow", "Dow Theory trend agrees", dow_ok, f"15-minute trend is {htf_trend}, swing structure is {structure}")
+
+    hist = macd_v["hist"]
+    ind_ok = hist * s > 0 and (rsi_v < 75 if s > 0 else rsi_v > 25)
+    item("indicators", "Indicators confirm (MACD and RSI)", ind_ok,
+         f"MACD histogram {'above' if hist > 0 else 'below'} zero, RSI {rsi_v:.0f}"
+         + ("" if ind_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
+
+    if risk > 0:
+        beyond = [lv["price"] for lv in levels
+                  if (lv["price"] > price + 0.1 * atr_v if s > 0 else lv["price"] < price - 0.1 * atr_v)]
+        if beyond:
+            target = min(beyond) if s > 0 else max(beyond)
+            source = f"next {'resistance' if s > 0 else 'support'}"
+        else:
+            target = price + s * p["rrr_without_level"] * risk
+            source = f"{p['rrr_without_level']:g}R, no level beyond"
+        cost = price * p["cost_pct"] / 100
+        rrr = (abs(target - price) - cost) / (risk + cost)
+        item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
+             f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")
+    else:
+        item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", False, "Needs a stop to measure risk")
+
+    return {
+        "side": side,
+        "items": items,
+        "passed": all(i["ok"] for i in items if i["required"]),
+        "pattern": pattern["name"] if pattern else None,
+        "entry": _r(price), "stop": _r(stop), "target": _r(target), "rrr": _r(rrr),
+        "size_factor": 1.0 if ind_ok else p["indicator_miss_size"],
+    }
 
 
 def trader_brain_signal(candles, prev_state=None, news=None, **params):
@@ -114,6 +232,8 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
     highs, lows = ms.swing_points(window)
     structure = ms.structure_trend(highs, lows)
     levels = ms.key_levels(window, highs, lows, atr_v)
+    cpr = ms.central_pivot_range(window)
+    levels = levels + ms.fibonacci_levels(highs, lows) + ms.cpr_levels(cpr)
     support, resistance = ms.nearest_levels(price, levels)
     brk_up = ms.breakout_above(window, levels, atr_v)
     brk_dn = ms.breakdown_below(window, levels, atr_v)
@@ -139,6 +259,12 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         bull.add("structure", 1.0, "Higher highs & higher lows (Dow theory uptrend)")
     elif structure == "downtrend":
         bear.add("structure", 1.0, "Lower highs & lower lows (Dow theory downtrend)")
+
+    if cpr:
+        if price > cpr["top"]:
+            bull.add("levels", 1.0, f"Above the CPR top {cpr['top']:.2f}")
+        elif price < cpr["bottom"]:
+            bear.add("levels", 1.0, f"Below the CPR bottom {cpr['bottom']:.2f}")
 
     # Higher timeframe
     if htf_trend == "up":
@@ -182,15 +308,19 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
     elif rsi_v <= 22:
         bear.add("momentum", -1.5, f"RSI {rsi_v:.0f} washed out — late to sell")
 
-    # 6. Volume
-    if vol_ratio is not None:
-        if vol_ratio >= 1.5 and up_bar:
-            bull.add("volume", 1.0, f"Volume {vol_ratio:.1f}x average on an up bar")
-        elif vol_ratio >= 1.5 and down_bar:
-            bear.add("volume", 1.0, f"Volume {vol_ratio:.1f}x average on a down bar")
-        elif vol_ratio < 0.6:
-            bull.add("volume", -0.5, "Thin volume — weak conviction")
-            bear.add("volume", -0.5, "Thin volume — weak conviction")
+    # 6. Volume read with price (Varsity volume trend table, 10-period average)
+    vol10 = ind.volume_ratio(window, p["volume_lookback"])
+    if vol10 is not None:
+        if up_bar:
+            if vol10 > 1:
+                bull.add("volume", 1.0, f"Price up on {vol10:.1f}× average volume, smart money buying")
+            else:
+                bull.add("volume", -0.5, f"Price up on thin volume ({vol10:.1f}×), weak hands buying")
+        elif down_bar:
+            if vol10 > 1:
+                bear.add("volume", 1.0, f"Price down on {vol10:.1f}× average volume, smart money selling")
+            else:
+                bear.add("volume", -0.5, f"Price down on thin volume ({vol10:.1f}×), weak hands selling")
 
     # 4. Location
     if brk_up:
@@ -239,7 +369,8 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
 
     # 8. Decision with discipline rules — longs and shorts are exact mirrors
     hhmm = last["time"][11:16]
-    in_entry_window = p["no_entry_before"] <= hhmm < p["last_entry_time"]
+    blocked_window = next(((a, b) for a, b in p["no_entry_windows"] if a <= hhmm < b), None)
+    in_entry_window = p["no_entry_before"] <= hhmm < p["last_entry_time"] and blocked_window is None
     exit_long = bear.total >= p["exit_threshold"] or (price < e50 and structure == "downtrend") or long_veto
     exit_short = bull.total >= p["exit_threshold"] or (price > e50 and structure == "uptrend") or short_veto
     long_ok = (
@@ -254,6 +385,17 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         and len(bear.categories) >= p["min_confirmations"]
         and bear.total - bull.total >= p["min_edge"]
     )
+
+    cl_long = _checklist("long", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p)
+    cl_short = _checklist("short", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p) \
+        if p["allow_shorts"] else None
+    if p["entry_mode"] == "checklist":
+        # Varsity exits are the pattern stop, the S&R target and the square-off, not score swings.
+        exit_long, exit_short = long_veto, short_veto
+        long_ok = in_entry_window and not long_veto and cl_long["passed"]
+        short_ok = bool(cl_short) and in_entry_window and not short_veto and cl_short["passed"]
+        if long_ok and short_ok:
+            long_ok = short_ok = False
 
     day = last["time"][:10]
     entries_today = prev_state.get("entries_today", 0) if prev_state.get("entry_day") == day else 0
@@ -285,13 +427,20 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         setup = "Pullback short"
     else:
         setup = "Bullish confluence" if bullish_side else "Bearish confluence"
+    if p["entry_mode"] == "checklist":
+        if long_ok and cl_long["pattern"]:
+            setup = cl_long["pattern"]
+        elif short_ok and cl_short["pattern"]:
+            setup = cl_short["pattern"]
 
     ledger, other = (bull, bear) if bullish_side else (bear, bull)
     label = "Bull" if bullish_side else "Bear"
     blockers = []
     if not bullish_side and not p["allow_shorts"]:
         blockers.append("Short selling is disabled")
-    if not in_entry_window:
+    if blocked_window:
+        blockers.append(f"Midday no-entry window ({blocked_window[0]}–{blocked_window[1]})")
+    elif not in_entry_window:
         blockers.append(f"Outside entry window ({p['no_entry_before']}–{p['last_entry_time']})")
     if bullish_side and long_veto:
         blockers.append("Strongly negative news — no longs")
@@ -305,6 +454,10 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         blockers.append(f"Edge over the opposite case only {ledger.total - other.total:.1f} (need {p['min_edge']})")
     if not can_enter and signal not in ("BUY", "SHORT"):
         blockers.append(f"Already took {entries_today} entry today in this stock — no revenge trades")
+    if p["entry_mode"] == "checklist":
+        cl = cl_long if bullish_side or not cl_short else cl_short
+        blockers = [b for b in blockers if b.startswith(("Outside", "Midday", "Strongly", "Already", "Short selling"))]
+        blockers += [f"{i['label']}: {i['detail']}" for i in cl["items"] if i["required"] and not i["ok"]]
 
     new_state = {
         "long_ok": long_ok,
@@ -337,6 +490,9 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         "bar_time": last["time"],
         "entry_day": day,
         "entries_today": entries_today,
+        "entry_mode": p["entry_mode"],
+        "checklist": {"long": cl_long, "short": cl_short},
+        "cpr": {k: _r(v) for k, v in cpr.items()} if cpr else None,
     }
     return signal, new_state
 

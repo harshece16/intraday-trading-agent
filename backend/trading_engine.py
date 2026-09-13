@@ -12,11 +12,13 @@ The trading engine — a background loop that, every POLL_INTERVAL_SECONDS:
 
 import asyncio
 import logging
+import math
 import threading
 from datetime import datetime, time as dtime
 from zoneinfo import ZoneInfo
 
 import config
+import costs
 import data_provider
 import news_sentiment
 from paper_broker import execute_paper_order
@@ -135,13 +137,16 @@ class TradingEngine:
     # ---- execution ------------------------------------------------------
 
     def _execute(self, symbol, side, qty, price, reason="signal", note=None):
+        charges = costs.leg_cost(side, price, qty, config.COSTS)
         if self.state.paper_mode:
-            realized = execute_paper_order(self.state, symbol, side, qty, price, reason=reason, note=note)
+            realized = execute_paper_order(self.state, symbol, side, qty, price, reason=reason, note=note,
+                                           charges=charges)
         else:
             executor = self._ensure_kite()
             executor.place_order(symbol, side, qty)
             realized = self.state.apply_fill(symbol, side, qty, price)
-            self.state.record_trade(symbol, side, qty, price, mode="live", reason=reason, note=note)
+            self.state.record_trade(symbol, side, qty, price, mode="live", reason=reason, note=note,
+                                    realized=realized, charges=charges)
         if realized:
             self.risk.record_realized_pnl(realized)
         pnl = f" · P&L ₹{realized:,.0f}" if realized else ""
@@ -168,18 +173,36 @@ class TradingEngine:
         if qty == 0:
             return False
         side = "BUY" if qty > 0 else "SELL"
+        sign = 1 if qty > 0 else -1
         atr_val = pos.get("entry_atr")
-        stop = self.risk.stop_loss_price(pos["avg_price"], side, atr=atr_val)
-        target = self.risk.take_profit_price(pos["avg_price"], side, atr=atr_val)
-        hit_stop = (qty > 0 and ltp <= stop) or (qty < 0 and ltp >= stop)
-        hit_target = (qty > 0 and ltp >= target) or (qty < 0 and ltp <= target)
+        stop = pos.get("stop_price") or self.risk.stop_loss_price(pos["avg_price"], side, atr=atr_val)
+        target = pos.get("target_price") or self.risk.take_profit_price(pos["avg_price"], side, atr=atr_val)
+        hit_stop = (ltp - stop) * sign <= 0
+        hit_target = (ltp - target) * sign >= 0
         if not (hit_stop or hit_target):
+            self._trail_stop(symbol, pos, ltp, stop, sign)
             return False
         exit_side = "SELL" if qty > 0 else "BUY"
         self._execute(symbol, exit_side, abs(qty), ltp, reason="stop_loss" if hit_stop else "take_profit",
                       note=f"stop {stop:.2f} / target {target:.2f}")
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
         return True
+
+    def _trail_stop(self, symbol, pos, ltp, stop, sign):
+        """Step trailing stop (Varsity Futures ch 7): after `trail_after_r` R in profit, lock in
+        everything beyond that many R, one R at a time."""
+        after = config.RISK.get("trail_after_r")
+        r = pos.get("initial_risk")
+        if not after or not r:
+            return
+        steps = math.floor((ltp - pos["avg_price"]) * sign / r)
+        if steps < after:
+            return
+        new_stop = pos["avg_price"] + sign * r * (steps - after)
+        if (new_stop - stop) * sign > 0:
+            with self.state.lock:
+                pos["stop_price"] = new_stop
+            self.state.log("risk", f"Trailing stop moved to {new_stop:.2f} after a {steps}R move", symbol=symbol)
 
     def _blocked(self, symbol, setup, why):
         self.state.log("blocked", f"{setup} signal skipped — {why}", symbol=symbol, level="warn")
@@ -213,17 +236,32 @@ class TradingEngine:
             return self._blocked(symbol, setup, f"already at the max of {config.RISK['max_open_positions']} open positions")
 
         atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) if config.RISK.get("use_atr_risk") else None
-        qty = int(self.risk.position_size(ltp, atr=atr_val) * self.size_multiplier)
+        plan = None
+        if analysis.get("entry_mode") == "checklist":
+            plan = (analysis.get("checklist") or {}).get(side.lower())
+            if not plan or plan.get("stop") is None:
+                plan = None
+        stop_price = plan["stop"] if plan else None
+        size_factor = plan["size_factor"] if plan else 1.0
+        qty = int(self.risk.position_size(ltp, atr=atr_val, stop_price=stop_price) * self.size_multiplier * size_factor)
         if qty <= 0:
             return self._blocked(symbol, setup, "position size rounds to 0 shares")
 
-        key = "reasons" if side == "LONG" else "bear_reasons"
-        why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
-        note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}" \
-            if "bull_score" in analysis else None
+        if plan:
+            note = (f"Varsity checklist passed: stop {plan['stop']:.2f}, target {plan['target']:.2f}, "
+                    f"reward-to-risk {plan['rrr']:.2f}, {size_factor:.0%} size")
+        else:
+            key = "reasons" if side == "LONG" else "bear_reasons"
+            why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
+            note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}" \
+                if "bull_score" in analysis else None
         self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note)
         with self.state.lock:
-            self.state.positions[symbol]["entry_atr"] = atr_val
+            pos = self.state.positions[symbol]
+            pos["entry_atr"] = atr_val
+            pos["stop_price"] = stop_price
+            pos["target_price"] = plan["target"] if plan else None
+            pos["initial_risk"] = abs(ltp - stop_price) if stop_price else self.risk._stop_distance(ltp, atr_val)
         self.risk.open_positions_count += 1
 
     def _note_forming_setup(self, symbol, prev, analysis):
@@ -320,8 +358,8 @@ class TradingEngine:
 
     async def run_forever(self):
         self.state.running = True
-        self.state.log("system", f"Engine started in {'PAPER' if self.state.paper_mode else 'LIVE'} mode "
-                                 f"· strategy {config.STRATEGY}")
+        self.state.log("system", f"Trader Sahab started in {'paper' if self.state.paper_mode else 'live'} mode "
+                                 f"with the {config.STRATEGY} strategy.")
         while self.state.running:
             await asyncio.get_event_loop().run_in_executor(None, self.tick)
             await asyncio.sleep(config.POLL_INTERVAL_SECONDS)

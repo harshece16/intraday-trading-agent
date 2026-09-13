@@ -11,6 +11,11 @@ import uuid
 ACTIVITY_LIMIT = 300
 
 
+def _new_position():
+    return {"quantity": 0, "avg_price": 0.0, "entry_atr": None,
+            "stop_price": None, "target_price": None, "initial_risk": None}
+
+
 class AppState:
     def __init__(self, watchlist, paper_mode: bool):
         self.lock = threading.RLock()
@@ -43,7 +48,7 @@ class AppState:
                 self.candles.setdefault(s, [])
                 self.strategy_state.setdefault(s, None)
                 self.indicators.setdefault(s, {})
-                self.positions.setdefault(s, {"quantity": 0, "avg_price": 0.0, "entry_atr": None})
+                self.positions.setdefault(s, _new_position())
 
     def log(self, kind, message, symbol=None, level="info"):
         with self.lock:
@@ -76,6 +81,7 @@ class AppState:
                 "scanner": self.scanner,
                 "activity": self.activity[:80],
                 "trades": self.trades[:50],
+                "tax": self._tax_summary(),
                 "signals_log": self.signals_log[:30],
                 "realized_pnl_today": self.realized_pnl_today,
                 "unrealized_pnl": unrealized,
@@ -92,7 +98,7 @@ class AppState:
         Returns realized P&L for this fill (0.0 if just opening/adding).
         """
         with self.lock:
-            pos = self.positions.setdefault(symbol, {"quantity": 0, "avg_price": 0.0, "entry_atr": None})
+            pos = self.positions.setdefault(symbol, _new_position())
             signed_qty = quantity if side == "BUY" else -quantity
             new_qty = pos["quantity"] + signed_qty
             realized = 0.0
@@ -105,20 +111,30 @@ class AppState:
                 realized = (price - pos["avg_price"]) * closed_qty * (1 if pos["quantity"] > 0 else -1)
                 self.realized_pnl_today += realized
                 if new_qty == 0:
-                    pos["avg_price"] = 0.0
-                    pos["entry_atr"] = None
+                    pos.update(_new_position())
 
             pos["quantity"] = new_qty
             return realized
 
-    def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None):
+    def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None, charges=None):
         with self.lock:
             self.trades.insert(0, {
                 "id": str(uuid.uuid4())[:8],
                 "symbol": symbol, "side": side, "quantity": quantity,
                 "price": price, "mode": mode, "ts": time.time(),
-                "reason": reason, "note": note,
+                "reason": reason, "note": note, "realized": realized, "charges": charges,
             })
+
+    def _tax_summary(self):
+        """Intraday equity is speculative business income (Varsity Markets & Taxation ch 3-6).
+        Trade-wise turnover is the sum of the absolute profit or loss of each closed trade."""
+        closed = [t for t in self.trades if t.get("realized")]
+        return {
+            "turnover": sum(abs(t["realized"]) for t in closed),
+            "net_pnl": sum(t["realized"] for t in closed),
+            "charges": sum(t.get("charges") or 0 for t in self.trades),
+            "closed_trades": len(closed),
+        }
 
     def record_signal(self, symbol, signal, detail=None):
         with self.lock:

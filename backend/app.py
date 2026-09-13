@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="Intraday Trading Dashboard", lifespan=lifespan)
+app = FastAPI(title="Trader Sahab", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

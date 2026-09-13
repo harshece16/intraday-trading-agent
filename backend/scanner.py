@@ -108,7 +108,22 @@ def daily_profile(bars, nifty_dates, nifty_closes, before_date):
     high52 = max(b["high"] for b in year)
     low52 = min(b["low"] for b in year)
     ranges = [b["high"] - b["low"] for b in bars[-7:]]
+    # 60-day beta vs NIFTY (Varsity Futures ch 11): slope of stock returns on index returns.
+    stock_rets, index_rets = [], []
+    for a, b in zip(bars[-61:-1], bars[-60:]):
+        na = _close_on_or_before(nifty_dates, nifty_closes, _date(a))
+        nb = _close_on_or_before(nifty_dates, nifty_closes, _date(b))
+        if na and nb:
+            stock_rets.append(b["close"] / a["close"] - 1)
+            index_rets.append(nb / na - 1)
+    beta = None
+    if len(index_rets) >= 30:
+        mean_i, mean_s = sum(index_rets) / len(index_rets), sum(stock_rets) / len(stock_rets)
+        var = sum((x - mean_i) ** 2 for x in index_rets)
+        if var:
+            beta = sum((x - mean_i) * (y - mean_s) for x, y in zip(index_rets, stock_rets)) / var
     return {
+        "beta": beta,
         "close": close,
         "atr_pct": atr_v / close * 100 if atr_v else 0.0,
         "turnover_cr": sum(b["close"] * b["volume"] for b in bars[-20:]) / 20 / 1e7,
@@ -383,6 +398,7 @@ class Scanner:
         nifty_closes = [b["close"] for b in daily[NIFTY]]
 
         events = nse_feed.results_calendar()
+        ex_actions = nse_feed.corporate_actions_on(session)
         catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
 
         rows = []
@@ -413,6 +429,8 @@ class Scanner:
             if not excluded and sym in events:
                 ev = events[sym]
                 excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
+            if not excluded and sym in ex_actions:
+                excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
             scored = {}
             rs_today = None
             for side in sides:
@@ -432,7 +450,7 @@ class Scanner:
                 "rs_today": _r(rs_today), "vwap": _r(m["vwap"]), "atr_pct": _r(prof["atr_pct"]),
                 "daily_trend": prof["trend"], "rs10": _r(prof["rs10"]),
                 "pct_from_high": _r(prof["pct_from_high"]), "pct_from_low": _r(prof["pct_from_low"]),
-                "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]),
+                "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]), "beta": _r(prof["beta"]),
                 "catalyst": catalysts.get(sym), "event": events.get(sym), "brain": None,
             })
 

@@ -47,6 +47,18 @@ STRATEGY_PARAMS = {
         "max_entries_per_day": 1,
         # Intraday (MIS) shorts: mirror-image rules on the bearish evidence.
         "allow_shorts": True,
+        # Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18). Required:
+        # candlestick pattern, stop at S&R, above-average volume, Dow trend, reward-to-risk.
+        # Indicators only scale the size. "confluence" uses the older score-based rules.
+        "entry_mode": "checklist",
+        "min_rrr": 1.5,               # Varsity: at least 1.5 for an active trader
+        "sr_tolerance_atr": 0.5,      # how close the stop must be to support/resistance
+        "volume_lookback": 10,        # Varsity compares volume with its 10-period average
+        "indicator_miss_size": 0.6,   # size when MACD/RSI don't confirm (Varsity's 300 vs 500 shares)
+        "min_pattern_atr": 0.3,       # ignore candles too small to mean anything...
+        "max_pattern_atr": 3.0,       # ...or abnormally long (stop too far away)
+        "cost_pct": 0.12,             # round-trip charges + slippage deducted inside the RRR
+        "rrr_without_level": 2.0,     # target in R when no support/resistance lies beyond
         "use_news": True,
         "news_weight": 2.0,
         "news_veto": -0.5,          # sentiment at/below this blocks new longs
@@ -111,6 +123,9 @@ RISK = {
     "atr_period": 14,
     "atr_sl_multiplier": 1.5,
     "atr_tp_multiplier": 3.0,
+    # Step trailing stop: after this many R in profit, move the stop up 1R at a time
+    # (1 = breakeven at +1R, +1R locked at +2R). None disables it.
+    "trail_after_r": None,
 }
 
 # NSE cash market hours (IST)

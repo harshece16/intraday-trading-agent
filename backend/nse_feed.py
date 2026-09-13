@@ -112,6 +112,24 @@ def announcements_by_symbol():
     return out
 
 
+def corporate_actions_on(date_iso):
+    """{SYMBOL: subject} for dividends, bonuses, splits and rights whose ex-date is date_iso (YYYY-MM-DD).
+    On an ex-date the price drops mechanically, which charts read as a gap down."""
+    day = datetime.strptime(date_iso, "%Y-%m-%d")
+    ds = day.strftime("%d-%m-%Y")
+    data = _fetch(f"/api/corporates-corporateActions?index=equities&from_date={ds}&to_date={ds}",
+                  "/companies-listing/corporate-filings-actions", 21600) or []
+    out = {}
+    for a in data if isinstance(data, list) else []:
+        try:
+            ex = datetime.strptime(a.get("exDate", ""), "%d-%b-%Y").date()
+        except ValueError:
+            continue
+        if ex == day.date() and a.get("symbol"):
+            out[a["symbol"].upper()] = a.get("subject") or "corporate action"
+    return out
+
+
 def _next_trading_day(d):
     n = d + timedelta(days=1)
     while n.weekday() >= 5:
