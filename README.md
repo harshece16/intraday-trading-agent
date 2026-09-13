@@ -317,10 +317,17 @@ logged as a trial in `backend/data/backtest_trials.json`).
 
 ## Dashboard
 
-Rebuilt this session as a multi-page site (hash-routed, single HTML file)
-instead of a fixed three-pane layout — it follows your system's dark mode,
-and colour only means something: green for long/profit, red for short/loss,
+Rebuilt across two sessions: first as a multi-page site (hash-routed, single
+HTML file) replacing a fixed three-pane layout, then migrated to **React +
+Vite** with real client-side routing (the old version still works standalone
+at `frontend/legacy/index.html`). It follows your system's dark mode, and
+colour only means something: green for long/profit, red for short/loss,
 amber for waiting, violet for a book/rule citation.
+
+Every piece of jargon (VWAP, RRR, ADX, the option Greeks, DSR, IC, Kelly,
+confidence, ...) has a hover/focus-explained tooltip — a dotted underline
+signals it, keyboard-focusable so it works without a mouse. The stock chart
+supports mouse-wheel zoom, pinch-zoom, and kinetic-scroll panning.
 
 - **Overview** — one-sentence headline of what the agent is doing, a market
   countdown ("opens in 2h 14m" / a live session-progress bar, computed
@@ -467,7 +474,15 @@ webapp/
 │   ├── backtester.py            # same strategy/risk code over history, with costs; --universe mode
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
-└── frontend/index.html          # multi-page dashboard (hash-routed), single file
+└── frontend/                     # React + Vite dashboard (migrated from a single-file vanilla-JS app)
+    ├── src/
+    │   ├── App.jsx                # routing (react-router) + layout shell
+    │   ├── api.js                 # apiFetch, dashboard-key handling, useAppState() WebSocket hook
+    │   ├── helpers.js             # domain helpers shared across pages (scanRows, analysisFor, primaryRule, ...)
+    │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary
+    │   ├── components/            # Header, Chart (Lightweight Charts v5 wrapper), RuleBook, Tip, Pill, ...
+    │   └── pages/                 # Overview, Screener, Stock, TechnicalAnalysis, Portfolio, Journal, Trades
+    └── legacy/index.html          # the original single-file version, kept working for reference
 ```
 
 ## Setup
@@ -485,12 +500,23 @@ On first run, the backend auto-generates a **dashboard API key**
 (`backend/.dashboard_key.json`, gitignored) and logs it on startup. Every
 route except `/kite/callback` requires it (`X-Api-Key` header, or `?key=`
 for the WebSocket and the Kite-login popup, since neither can set a custom
-header). Open `frontend/index.html` (or serve it with
-`python3 -m http.server 5500` from `frontend/`) and it'll prompt for the key
-once, then remember it via `localStorage`. This exists because the backend
-sometimes needs to be reachable from the public internet (see "Connecting
-Kite locally" below) and has real control surface — without a key, anyone
-with the URL could flip it to live trading or turn on F&O.
+header).
+
+In another terminal:
+
+```bash
+cd webapp/frontend
+npm install
+npm run dev          # http://localhost:5500
+```
+
+It'll prompt for the dashboard API key once (or pass it via `?key=...` in
+the URL), then remember it via `localStorage`. The key requirement exists
+because the backend sometimes needs to be reachable from the public
+internet (see "Connecting Kite locally" below) and has real control
+surface — without it, anyone with the URL could flip the dashboard to live
+trading or turn on F&O. `npm run build` produces a static `dist/` you can
+serve any other way if you don't want the dev server running.
 
 The first scan runs within a minute, even when the market is closed (it
 shows the last session). To point the dashboard at a backend on another

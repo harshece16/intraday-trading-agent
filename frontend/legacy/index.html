@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Sahab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --surface: #FFFFFF;
+    --paper: #F3F5F8;
+    --sunken: #F3F5F8;
+    --ink: #162230;
+    --ink-2: #536170;
+    --ink-3: #8592A0;
+    --rule: #E1E6EC;
+    --long: #0B7A5C;
+    --long-bg: #E2F2EC;
+    --short: #B3261E;
+    --short-bg: #FAE8E6;
+    --wait: #8A5A00;
+    --wait-bg: #FBF0DA;
+    --focus: #3A4FD0;
+    --focus-bg: #EEF0FC;
+    --book: #7A4FB5;
+    --book-bg: #F1EAFA;
+    --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: "Newsreader", Georgia, serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #131A22;
+      --paper: #0F151C;
+      --sunken: #1A232D;
+      --ink: #E6EBF0;
+      --ink-2: #A5B2BF;
+      --ink-3: #7C8996;
+      --rule: #25303B;
+      --long: #45C595;
+      --long-bg: #16322B;
+      --short: #F27D73;
+      --short-bg: #3B1E1C;
+      --wait: #E5B04D;
+      --wait-bg: #342A1A;
+      --focus: #9DA9FF;
+      --focus-bg: #1F2645;
+      --book: #C9A8F0;
+      --book-bg: #2B2140;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font); font-size: 15px; line-height: 1.5;
+    font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  .up { color: var(--long); }
+  .down { color: var(--short); }
+  .muted { color: var(--ink-2); font-weight: 400; }
+  .empty { margin: 10px 0; font-size: 14px; color: var(--ink-2); }
+  [hidden] { display: none !important; }
+
+  /* ---- Top bar + page nav (sticky) ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--rule);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; cursor: pointer; border: 0; background: none; padding: 0; }
+  .brand b { font-family: var(--serif); font-size: 19px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; }
+  .brand span { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+  .dot.open { background: var(--long); box-shadow: 0 0 0 3px var(--long-bg); }
+  .stat { display: flex; flex-direction: column; line-height: 1.25; }
+  .stat small { font-size: 12px; color: var(--ink-2); }
+  .stat strong { font-size: 15px; font-weight: 600; }
+  .divider { flex: none; width: 1px; height: 28px; background: var(--rule); }
+  .kite { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .btn {
+    height: 32px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ink-3); }
+  .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .btn:disabled { opacity: 0.6; cursor: default; }
+  .segmented { display: inline-flex; height: 32px; padding: 2px; border: 1px solid var(--rule); border-radius: 6px; background: var(--sunken); }
+  .segmented button { border: 0; background: none; padding: 0 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink-2); }
+  .segmented .paper[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22, 34, 48, 0.14); }
+  .segmented .live[aria-pressed="true"] { background: var(--short); color: #fff; }
+  .countdown { font-size: 12px; color: var(--ink-2); white-space: nowrap; margin-left: 2px; }
+  .session-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; overflow: hidden; }
+  .session-bar-fill { height: 100%; width: 0%; background: var(--long); transition: width 1s linear; }
+
+  .pagenav {
+    position: sticky; top: 57px; z-index: 4; display: flex; gap: 4px; overflow-x: auto;
+    padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--rule);
+  }
+  .navlink {
+    flex: none; position: relative; display: flex; align-items: center; gap: 6px;
+    padding: 13px 14px; border: 0; background: none; cursor: pointer;
+    font-size: 14.5px; font-weight: 500; color: var(--ink-2);
+  }
+  .navlink:hover { color: var(--ink); }
+  .navlink[aria-current="true"] { color: var(--ink); font-weight: 600; }
+  .navlink[aria-current="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--ink); }
+  .navlink .n { font-weight: 400; color: var(--ink-3); }
+
+  /* ---- Page shell ---- */
+  .page { max-width: 1240px; margin: 0 auto; padding: 32px 24px 72px; }
+  .page.narrow { max-width: 920px; }
+  .section-gap { margin-top: 40px; }
+  h2.h { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  p.sub { margin: 0 0 18px; font-size: 14px; color: var(--ink-2); max-width: 70ch; }
+  .backlink { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; cursor: pointer; padding: 0; margin-bottom: 18px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+  .backlink:hover { color: var(--ink); }
+
+  /* ---- Overview hero ---- */
+  .hero { padding: 8px 0 30px; border-bottom: 1px solid var(--rule); margin-bottom: 30px; }
+  .hero h1 { font-family: var(--serif); margin: 0; font-size: clamp(26px, 3.4vw, 36px); line-height: 1.28; font-weight: 600; letter-spacing: -0.01em; max-width: 24ch; }
+  .hero p { margin: 12px 0 0; font-size: 15.5px; color: var(--ink-2); max-width: 80ch; }
+  .hero-foot { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-top: 22px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 0; }
+  .facts div { display: flex; flex-direction: column; padding: 0 22px; border-left: 1px solid var(--rule); }
+  .facts div:first-child { padding-left: 0; border-left: 0; }
+  .facts dt { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .facts dd { margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .scan-cta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .scan-cta small { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: start; }
+  .pickcard {
+    display: flex; flex-direction: column; gap: 8px; text-align: left; cursor: pointer;
+    padding: 16px 18px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
+  }
+  .pickcard:hover { border-color: var(--ink-3); }
+  .pickcard .row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pickcard .sym { font-size: 17px; font-weight: 600; }
+  .pickcard .why { font-size: 13px; color: var(--ink-2); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pickcard .row2 { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+
+  .pill { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .pill.long { background: var(--long-bg); color: var(--long); }
+  .pill.short { background: var(--short-bg); color: var(--short); }
+  .pill.wait { background: var(--wait-bg); color: var(--wait); }
+  .pill.neutral { background: var(--sunken); color: var(--ink-2); }
+  .pill.solid { background: var(--ink); color: var(--surface); }
+  .rule-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; background: var(--book-bg); color: var(--book); }
+  .more { padding: 10px 0 0; border: 0; background: none; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--focus); }
+
+  .cardbox { border: 1px solid var(--rule); border-radius: 12px; padding: 18px 20px; background: var(--surface); }
+  .positions { display: flex; flex-direction: column; }
+  .position { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+  .position:last-child { border-bottom: 0; }
+  .position .muted { font-size: 13px; }
+  .symlink { padding: 0; border: 0; background: none; cursor: pointer; font-weight: 600; text-decoration: underline; text-decoration-color: var(--rule); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .symlink:hover { text-decoration-color: var(--focus); }
+
+  /* ---- Screener page ---- */
+  .tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--rule); margin-bottom: 4px; }
+  .tab { position: relative; padding: 10px 0; border: 0; background: none; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--ink); }
+  .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--ink); }
+  .tab .n { margin-left: 4px; font-weight: 400; color: var(--ink-3); }
+  .opp {
+    display: grid; grid-template-columns: 90px minmax(0, 1fr) 140px 90px; align-items: center; gap: 16px;
+    width: 100%; padding: 14px 4px; border: 0; border-bottom: 1px solid var(--rule); background: none; text-align: left; cursor: pointer;
+  }
+  .opp:hover { background: var(--surface); }
+  .opp.expanded { background: var(--sunken); }
+  .opp-detail { padding: 4px 4px 18px; border-bottom: 1px solid var(--rule); }
+  .sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 4px; font-size: 13px; color: var(--ink-2); }
+  .sortbtn { height: 26px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+  .sortbtn:hover { border-color: var(--ink-3); }
+  .sortbtn.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .opp-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; font-size: 15px; }
+  .opp-score { text-align: right; font-weight: 600; font-size: 15px; }
+  .opp-why { font-size: 13px; line-height: 1.4; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opp-chg { text-align: right; font-size: 14px; }
+
+  /* ---- Stock page ---- */
+  .stock-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .stock-head h1 { font-family: var(--serif); display: flex; align-items: center; gap: 10px; margin: 0; font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; }
+  .stock-head p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+  .price { text-align: right; font-size: 28px; line-height: 1.2; font-weight: 600; }
+  .price small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; }
+  .plan { margin: 18px 0 0; padding: 16px 18px; border-radius: 12px; background: var(--sunken); box-shadow: inset 4px 0 0 var(--ink-3); }
+  .plan.long { box-shadow: inset 4px 0 0 var(--long); }
+  .plan.short { box-shadow: inset 4px 0 0 var(--short); }
+  .plan.wait { box-shadow: inset 4px 0 0 var(--wait); }
+  .plan h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .plan p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+  .plan ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; color: var(--ink-2); }
+  .levels { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+  .levels b { font-weight: 600; color: var(--ink); }
+
+  .rulebook { margin: 18px 0 0; }
+  .rulebook-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--book); font-weight: 700; margin-bottom: 8px; }
+  .rb-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tip { border-bottom: 1px dotted var(--ink-3); cursor: help; position: relative; }
+  .tip::after {
+    content: attr(data-tip);
+    position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%) translateY(-6px);
+    background: var(--ink); color: var(--surface); padding: 7px 10px; border-radius: 7px;
+    font-size: 12px; font-weight: 400; line-height: 1.4; white-space: normal; width: max-content;
+    max-width: 240px; opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.12s ease; z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  }
+  .tip:hover::after, .tip:focus-visible::after { opacity: 1; visibility: visible; }
+  .rb-chip {
+    display: inline-flex; flex-direction: column; gap: 1px; max-width: 260px;
+    border: 1px solid var(--book); border-radius: 10px; padding: 6px 12px; background: var(--book-bg);
+  }
+  .rb-chip b { font-size: 12.5px; color: var(--book); }
+  .rb-chip span { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #stk-chart { height: 320px; margin: 26px 0 4px; }
+  .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 0 0 20px; font-size: 12px; color: var(--ink-2); }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .chart-legend i { width: 12px; height: 2px; border-radius: 1px; }
+  .chart-legend i.dash { width: 12px; height: 0; border-top: 2px dashed; background: none; }
+  .chart-empty { height: 100%; display: grid; place-items: center; border-radius: 8px; background: var(--sunken); font-size: 14px; color: var(--ink-2); }
+  .tab-content { padding-top: 18px; }
+  .lede { margin: 0 0 16px; max-width: 80ch; font-size: 14px; color: var(--ink-2); }
+  .cases { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .case h4 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0; font-size: 14px; font-weight: 600; }
+  .meter { position: relative; height: 6px; margin: 8px 0 8px; border-radius: 999px; background: var(--sunken); }
+  .meter i { display: block; height: 100%; border-radius: 999px; }
+  .meter b { position: absolute; top: -3px; width: 2px; height: 12px; border-radius: 1px; background: var(--ink); }
+  .evidence { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+  .evidence li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--rule); }
+  .evidence li:first-child { border-top: 0; }
+  .checklist { list-style: none; margin: 0 0 8px; padding: 0; }
+  .check { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 10px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.4; }
+  .check:first-child { border-top: 0; }
+  .check .mark { font-weight: 700; }
+  .check.pass .mark { color: var(--long); }
+  .check.fail .mark { color: var(--short); }
+  .check.soft .mark { color: var(--wait); }
+  .check .muted { font-size: 13px; }
+  .check .source { font-size: 11.5px; color: var(--book); }
+  .pts { font-weight: 600; }
+  .pts.penalty { color: var(--wait); }
+  .facts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 16px; margin: 20px 0 0; }
+  .facts-grid dt { font-size: 12px; color: var(--ink-2); }
+  .facts-grid dd { margin: 0; font-size: 15px; font-weight: 600; }
+  .sub-title { margin: 24px 0 8px; font-size: 14px; font-weight: 600; }
+  .note { margin: 16px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--sunken); font-size: 14px; }
+
+  /* ---- Feeds (activity, trades, news, journal) ---- */
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li { padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 14px; line-height: 1.45; }
+  .feed li:last-child { border-bottom: 0; }
+  .feed .meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 2px; font-size: 12.5px; color: var(--ink-2); }
+  .feed .meta span:first-child { display: flex; align-items: baseline; gap: 6px; }
+  .feed .body { color: var(--ink); }
+  .feed .detail { margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+  .feed a { text-decoration: none; }
+  .feed a:hover { text-decoration: underline; }
+  .kind { font-weight: 600; color: var(--ink); }
+  .kind.trade { color: var(--long); }
+  .kind.blocked, .kind.risk { color: var(--wait); }
+  .kind.error { color: var(--short); }
+  .kind.scan, .kind.watchlist { color: var(--focus); }
+  .tax { padding: 14px 16px; border-radius: 10px; background: var(--sunken); font-size: 13px; line-height: 1.5; color: var(--ink-2); margin-bottom: 4px; }
+  .tax strong { color: var(--ink); }
+
+  table.datatable { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.datatable th { text-align: left; font-weight: 500; color: var(--ink-2); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  table.datatable td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .table-wrap { overflow-x: auto; }
+
+  @media (max-width: 900px) {
+    .grid2 { grid-template-columns: minmax(0, 1fr); }
+    .grid3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .topbar { padding: 10px 16px; }
+    .divider { display: none; }
+    .pagenav { padding: 0 12px; }
+    .page { padding: 22px 16px 56px; }
+    .grid3 { grid-template-columns: minmax(0, 1fr); }
+    .cases { grid-template-columns: minmax(0, 1fr); }
+    .stock-head h1, .price { font-size: 22px; }
+    .opp { grid-template-columns: minmax(0, 1fr) 70px; grid-template-areas: "name score" "why why"; }
+    .opp-name { grid-area: name; } .opp-score { grid-area: score; } .opp-why { grid-area: why; white-space: normal; } .opp-chg { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="btn-home"><span class="dot" id="market-dot"></span><b>Trader Sahab</b><span id="market-status">Connecting…</span><span id="market-countdown" class="countdown"></span></button>
+  <div class="stat"><small>Realized today</small><strong id="realized">₹0</strong></div>
+  <div class="stat"><small>Open P&amp;L</small><strong id="unrealized">₹0</strong></div>
+  <span class="divider"></span>
+  <div class="kite"><span id="kite-label">Checking Kite…</span><button class="btn" id="btn-connect-kite">Connect</button></div>
+  <div class="segmented" role="group" aria-label="Trading mode">
+    <button class="paper" id="btn-paper" aria-pressed="true">Paper</button>
+    <button class="live" id="btn-live" aria-pressed="false">Live</button>
+  </div>
+  <div class="session-bar"><div class="session-bar-fill" id="session-bar-fill"></div></div>
+</header>
+
+<nav class="pagenav" id="pagenav"></nav>
+
+<main id="page-overview" class="page"></main>
+<main id="page-screener" class="page" hidden></main>
+<main id="page-stock" class="page" hidden></main>
+<main id="page-journal" class="page" hidden></main>
+<main id="page-trades" class="page" hidden></main>
+<main id="page-method" class="page" hidden></main>
+<main id="page-portfolio" class="page" hidden></main>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+// ?api=http://localhost:8765 points the dashboard at a backend on another local port.
+const API_OVERRIDE = new URLSearchParams(window.location.search).get("api");
+const API_BASE = API_OVERRIDE && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(API_OVERRIDE)
+  ? API_OVERRIDE
+  : window.location.hostname === "" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}:8000`;
+
+// The backend requires this on every request except the Kite OAuth endpoints
+// (see app.py's ApiKeyMiddleware) — asked for once, then remembered per browser.
+function getApiKey() {
+  let key = null;
+  const fromUrl = new URLSearchParams(window.location.search).get("key");
+  try { key = fromUrl || localStorage.getItem("dashboardApiKey"); } catch (e) { /* private window etc. */ }
+  if (fromUrl) { try { localStorage.setItem("dashboardApiKey", fromUrl); } catch (e) { /* ignore */ } }
+  if (!key) {
+    key = prompt("Enter the dashboard API key (see backend/.dashboard_key.json or the startup log):") || "";
+    try { localStorage.setItem("dashboardApiKey", key); } catch (e) { /* ignore */ }
+  }
+  return key;
+}
+const API_KEY = getApiKey();
+
+async function apiFetch(path, options = {}) {
+  const headers = {...(options.headers || {}), "X-Api-Key": API_KEY};
+  const res = await fetch(`${API_BASE}${path}`, {...options, headers});
+  if (res.status === 401) {
+    try { localStorage.removeItem("dashboardApiKey"); } catch (e) { /* ignore */ }
+    alert("Dashboard API key was rejected — reloading to ask again.");
+    location.reload();
+  }
+  return res;
+}
+
+const IST_OFFSET_S = 19800;
+const REASON_TEXT = {
+  stop_loss: "Stop-loss hit", take_profit: "Target hit", auto_square_off: "15:15 square-off",
+  brain_exit: "Exit signal", brain_cover: "Cover signal", signal: "Signal",
+};
+const KIND_TEXT = {
+  scan: "Scan", watchlist: "Watchlist", setup: "Setup forming", trade: "Trade",
+  blocked: "Skipped", risk: "Risk", error: "Problem", system: "System",
+};
+const PAGES = [
+  ["overview", "Overview"], ["screener", "Screener"], ["method", "Technical Analysis"],
+  ["portfolio", "Portfolio"], ["journal", "Journal"], ["trades", "Trades"],
+];
+
+const ui = { page: "overview", screenerTab: "trading", centerTab: "timing", showAllWatch: false, screenerSort: null, expandedSymbol: null };
+let selectedSymbol = null;
+let chart = null, series = null, emaSeries20 = null, emaSeries50 = null, volumeSeries = null;
+let patternMarkerKey = "";
+let priceLines = [];
+let priceLineKey = "";
+let latestState = null;
+let lastChartedSymbol = null;
+let lastChartFetchTs = 0;
+const newsCache = {};
+let journalCache = null;
+let methodsCache = null;
+
+const $ = id => document.getElementById(id);
+function setHTML(el, html) {
+  if (el && el._html !== html) { el.innerHTML = html; el._html = html; }
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+}
+
+// Hover/focus glossary for jargon — a dotted underline signals "hover me",
+// keyboard-focusable (tabindex) so it works without a mouse too.
+const GLOSSARY = {
+  vwap: "Volume-Weighted Average Price — the average price today, weighted by how much traded at each level. The intraday institutional benchmark.",
+  ema20: "20-period Exponential Moving Average — a trend line that weights recent candles more heavily than a simple average.",
+  ema50: "50-period Exponential Moving Average — the slower trend line; price crossing both 20 and 50 EMA in order signals a stronger trend.",
+  rsi: "Relative Strength Index — momentum on a 0-100 scale. Above 70 is often called overbought, below 30 oversold, but this app reads it differently depending on trend vs range.",
+  macd: "Moving Average Convergence/Divergence — the gap between a fast and slow EMA, used to spot momentum shifts.",
+  adx: "Average Directional Index (Wilder) — measures trend strength (not direction) on a 0-100 scale. Above 25 is usually called trending, below 20 ranging.",
+  atr: "Average True Range — the average size of a candle over N periods. Used here to size stops relative to how much a stock actually moves.",
+  bollinger: "Bollinger Bands — a band 2 standard deviations above/below a 20-period average. Price touching the edge is read differently in a trend vs a range.",
+  stochastic: "Stochastic oscillator — compares the close to its recent high-low range, on a 0-100 scale, to spot momentum turns.",
+  rrr: "Reward-to-Risk Ratio — the target distance divided by the stop distance. 1.5 means risking ₹1 to make ₹1.50.",
+  nr7: "Narrowest Range in 7 — today's daily range is the tightest of the last 7 sessions, often read as compression before a bigger move.",
+  cpr: "Central Pivot Range — pivot, top (TC) and bottom (BC) levels computed from the previous session's high/low/close.",
+  fib: "Fibonacci retracement — levels (23.6%, 38.2%, 50%, 61.8%) where a pullback within a trend often pauses.",
+  obv: "On Balance Volume — cumulative volume, added on up-closes and subtracted on down-closes. Its trend should agree with price; when it doesn't, that's a warning (Murphy, ch 7).",
+  mis: "Margin Intraday Squareoff — a leveraged intraday order type that must be closed the same day, or the broker auto-squares it off.",
+  delta: "Change in an option's premium per ₹1 move in the underlying. Roughly, the odds the option finishes in-the-money.",
+  gamma: "Change in an option's Delta per ₹1 move in the underlying — how fast Delta itself is changing.",
+  theta: "Change in an option's premium per day closer to expiry — time decay. Always working against an option buyer.",
+  vega: "Change in an option's premium per 1-point change in implied volatility.",
+  iv: "Implied Volatility — the volatility level the market is pricing into an option's premium, solved backwards from that premium (this app doesn't get IV directly from Kite).",
+  dsr: "Deflated Sharpe Ratio (Bailey & López de Prado) — corrects a backtest's Sharpe ratio for how many configurations were already tried, since trying enough eventually looks good by chance alone.",
+  ic: "Information Coefficient (Grinold) — rank correlation between a score and what actually happened next. 0 = no predictive power, ±1 = perfect.",
+  kelly: "Kelly fraction — the mathematically optimal bet size given a system's win rate and average win/loss. Negative means the correct size is zero.",
+  expectancy: "Average result per trade, in R (multiples of what was risked). Positive means the system wins more than it loses, on average, after costs.",
+  confidence: "A composite of how strong today's setup looks AND whether the system has actually proven an edge yet — not a probability of profit (see the Technical Analysis page).",
+};
+
+function tip(text, key) {
+  const explain = GLOSSARY[key] || key;
+  return `<span class="tip" tabindex="0" data-tip="${esc(explain)}">${esc(text)}</span>`;
+}
+function num(n, d = 2) {
+  return n === null || n === undefined || Number.isNaN(Number(n)) ? "—"
+    : Number(n).toLocaleString("en-IN", {minimumFractionDigits: d, maximumFractionDigits: d});
+}
+function pct(n, d = 1) {
+  return n === null || n === undefined ? "—" : `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(d)}%`;
+}
+function signed(n, d = 1) {
+  return n === null || n === undefined ? "—" : `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(d)}`;
+}
+function tone(n) { return n > 0 ? "up" : n < 0 ? "down" : ""; }
+function money(n) {
+  if (n === null || n === undefined) return "—";
+  return `${n < 0 ? "−" : n > 0 ? "+" : ""}₹${Math.abs(n).toLocaleString("en-IN", {maximumFractionDigits: 0})}`;
+}
+function clock(ts) { return new Date(ts * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}); }
+function dateLabel(iso) { return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", {day: "numeric", month: "short"}); }
+function safeUrl(u) { return typeof u === "string" && /^https?:\/\//i.test(u) ? u : null; }
+function symLink(sym) { return `<button class="symlink" data-sym="${esc(sym)}">${esc(sym)}</button>`; }
+function joinWords(items) {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+function sentiment(score) {
+  if (score >= 0.15) return {word: "Positive", cls: "up"};
+  if (score <= -0.15) return {word: "Negative", cls: "down"};
+  return {word: "Neutral", cls: "muted"};
+}
+function tabsHTML(group, current, tabs) {
+  return tabs.map(([key, label, count]) =>
+    `<button class="tab" role="tab" data-group="${group}" data-tab="${key}" aria-selected="${key === current}">${label}${count !== undefined ? `<span class="n">${count}</span>` : ""}</button>`
+  ).join("");
+}
+
+function scanRows(s) { return (s.scanner && s.scanner.rows) || []; }
+function rowFor(s, sym) { return scanRows(s).find(r => r.symbol === sym) || null; }
+function heldSymbols(s) { return Object.entries(s.positions).filter(([, p]) => p.quantity !== 0).map(([k]) => k); }
+function analysisFor(s, sym) {
+  const live = sym && s.indicators[sym];
+  if (live && live.bull_score !== undefined) return {b: live, live: true};
+  const r = sym && rowFor(s, sym);
+  if (r && r.brain) return {b: r.brain, live: false};
+  return null;
+}
+function isReady(s, r) {
+  const a = analysisFor(s, r.symbol);
+  return r.status === "ACTIVE" && a && (r.side === "SHORT" ? a.b.short_ok : a.b.long_ok);
+}
+function sidePill(side, suffix = "") {
+  return side === "SHORT" ? `<span class="pill short">Short${suffix}</span>` : `<span class="pill long">Long${suffix}</span>`;
+}
+
+// Short form of a checklist item's citation string, e.g. "Varsity Technical
+// Analysis ch 4-10, and Nison, Japanese Candlestick Charting Techniques"
+// -> "Varsity Technical Analysis". Shared by the rule-book chips and the
+// one-line rule tag shown on every row, so a stock's call is traceable to a
+// named source at a glance, not just inside its own page.
+function shortSource(source) {
+  return (source || "").split(",")[0].split(" and ")[0].replace(/ ch [\d.-]+.*/, "").trim();
+}
+
+// The single most specific rule driving a stock's brain wiring, for a quick
+// tag on list rows. Prefers a confirmed Bulkowski daily pattern (the most
+// citation-rich signal); otherwise the strongest passing checklist item from
+// its Trader Brain read (only computed for the scanner's top 15, so most
+// rows won't have one — that's honest, not every stock gets a deep read).
+function primaryRule(r) {
+  if (r.swing_patterns && r.swing_patterns.length) return `Bulkowski: ${r.swing_patterns[0].name}`;
+  if (r.brain && r.brain.checklist) {
+    const cl = r.brain.checklist[(r.side || "LONG").toLowerCase()];
+    const hit = cl && cl.items.find(i => i.ok && i.key === "pattern");
+    if (hit) return `${shortSource(hit.source)}: ${cl.pattern || hit.detail}`;
+    const any = cl && cl.items.find(i => i.ok);
+    if (any) return shortSource(any.source);
+  }
+  return null;
+}
+
+// ---- routing --------------------------------------------------------------
+
+function parseHash() {
+  const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  if (parts[0] === "stock" && parts[1]) return {page: "stock", symbol: decodeURIComponent(parts[1])};
+  if (PAGES.some(([k]) => k === parts[0])) return {page: parts[0]};
+  return {page: "overview"};
+}
+
+function navigate(page, symbol) {
+  location.hash = page === "stock" ? `/stock/${encodeURIComponent(symbol)}` : `/${page}`;
+}
+
+function applyRoute() {
+  const r = parseHash();
+  ui.page = r.page;
+  if (r.page === "stock") selectedSymbol = r.symbol;
+  renderNav();
+  ["overview", "screener", "stock", "method", "portfolio", "journal", "trades"].forEach(p => { $("page-" + p).hidden = p !== ui.page; });
+  if (latestState) renderPage(latestState);
+  if (r.page === "stock") fetchNews(r.symbol);
+}
+
+function renderNav() {
+  setHTML($("pagenav"), PAGES.map(([key, label]) =>
+    `<button class="navlink" data-nav="${key}" aria-current="${ui.page === key}">${label}</button>`
+  ).join(""));
+}
+
+// ---- top bar ----------------------------------------------------------
+
+function hhmmToMinutes(hhmm) {
+  const [h, m] = (hhmm || "0:0").split(":").map(Number);
+  return h * 60 + m;
+}
+
+function sessionInfo(s) {
+  if (!s.server_ts) return null;
+  const ist = new Date(s.server_ts * 1000 + 5.5 * 3600 * 1000); // shift to IST, read with getUTC*
+  const nowMin = ist.getUTCHours() * 60 + ist.getUTCMinutes() + ist.getUTCSeconds() / 60;
+  const openMin = hhmmToMinutes(s.market_open);
+  const closeMin = hhmmToMinutes(s.market_close);
+  if (s.market_status === "open") {
+    const pct = Math.max(0, Math.min(100, (nowMin - openMin) / (closeMin - openMin) * 100));
+    const left = Math.max(0, Math.round(closeMin - nowMin));
+    return {label: `Closes in ${Math.floor(left / 60)}h ${left % 60}m`, pct};
+  }
+  if (!s.next_open) return null;
+  const diffMin = Math.max(0, Math.round((new Date(s.next_open).getTime() - s.server_ts * 1000) / 60000));
+  const h = Math.floor(diffMin / 60), m = diffMin % 60;
+  const label = h >= 24
+    ? `Opens ${new Date(s.next_open).toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"})}, ${s.market_open}`
+    : `Opens in ${h}h ${m}m`;
+  return {label, pct: 0};
+}
+
+function renderTop(s) {
+  const open = s.market_status === "open";
+  $("market-dot").className = "dot" + (open ? " open" : "");
+  $("market-status").textContent = `${open ? "Market open" : "Market closed"}${s.last_update_ts ? `, updated ${clock(s.last_update_ts)}` : ""}`;
+  const si = sessionInfo(s);
+  $("market-countdown").textContent = si ? `· ${si.label}` : "";
+  $("session-bar-fill").style.width = `${si ? si.pct : 0}%`;
+  const r = $("realized");
+  r.textContent = money(s.realized_pnl_today);
+  r.className = tone(s.realized_pnl_today);
+  const u = $("unrealized");
+  u.textContent = money(s.unrealized_pnl);
+  u.className = tone(s.unrealized_pnl);
+  $("btn-paper").setAttribute("aria-pressed", String(s.paper_mode));
+  $("btn-live").setAttribute("aria-pressed", String(!s.paper_mode));
+}
+
+// ---- Overview page ---------------------------------------------------
+
+function heroCopy(s) {
+  const m = s.market, sc = s.scanner;
+  if (s.holiday) {
+    return {
+      lead: `Markets are shut today for ${s.holiday.name}.`,
+      rest: `Trading resumes ${new Date(s.holiday.next_trading_day + "T00:00:00").toLocaleDateString("en-IN", {weekday: "long", day: "numeric", month: "short"})}.`,
+    };
+  }
+  if (!m) return {lead: "Reading the market for the first time…", rest: "Trader Sahab is downloading prices for all NIFTY 100 stocks. This takes about 30 seconds."};
+  const lead = {
+    "risk-off": "The market is weak, so Trader Sahab is looking for stocks to short.",
+    "risk-on": "The market is strong, so Trader Sahab is looking for stocks to buy.",
+    "neutral": "The market is mixed, so Trader Sahab trades both sides on clear setups only.",
+  }[m.bias] || "Reading the market.";
+  const n = m.nifty;
+  const closed = s.market_status !== "open";
+  const sides = Object.values((sc && sc.active_sides) || {});
+  const shorts = sides.filter(x => x === "SHORT").length;
+  const longs = sides.length - shorts;
+  const held = heldSymbols(s).length;
+  const sentences = [
+    `NIFTY ${n.chg_pct >= 0 ? "rose" : "fell"} ${Math.abs(n.chg_pct).toFixed(2)}% ${closed ? `on ${dateLabel(m.session_date)}` : "today"} and ${m.breadth.dec} of ${m.breadth.adv + m.breadth.dec} stocks fell.`,
+    sides.length ? `Tracking ${sides.length} stocks, ${shorts} to short and ${longs} to buy.` : "No stock passes every filter yet.",
+    held ? `${held} open position${held > 1 ? "s" : ""}.` : "No open positions.",
+  ];
+  if (m.vix_high) sentences.push(`India VIX is high, so new positions are half size.`);
+  if (closed) sentences.push("Trading resumes at 9:15.");
+  return {lead, rest: sentences.join(" ")};
+}
+
+function pickCard(s, r, held) {
+  const ready = isReady(s, r);
+  const flag = held.has(r.symbol) ? `<span class="pill solid">Holding</span>` : ready ? `<span class="pill solid">Ready</span>` : "";
+  const why = (r.reasons || []).slice(0, 2).map(x => x.text).join("; ");
+  const rule = primaryRule(r);
+  return `<button class="pickcard" data-sym="${esc(r.symbol)}">
+    <div class="row1"><span class="sym">${esc(r.symbol)}</span>${sidePill(r.side)}${flag}</div>
+    <div class="why">${esc(why)}</div>
+    ${rule ? `<div class="rule-tag" title="From this stock's Trader Brain read">${esc(rule)}</div>` : ""}
+    <div class="row2"><span>Score ${num(r.final_score, 0)}</span><span class="${tone(r.chg_pct)}">${pct(r.chg_pct)}</span></div>
+  </button>`;
+}
+
+function renderOverview(s) {
+  const copy = heroCopy(s);
+  const m = s.market, sc = s.scanner;
+  const sectors = (sc && sc.sectors) || [];
+  const sector = x => x ? `${esc(x.industry)} <span class="${tone(x.chg_pct)}">${pct(x.chg_pct)}</span>` : "—";
+  const fact = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const facts = m ? [
+    fact("NIFTY 50", `${num(m.nifty.ltp, 0)} <span class="${tone(m.nifty.chg_pct)}">${pct(m.nifty.chg_pct, 2)}</span>`),
+    fact("India VIX", num(m.vix, 1)),
+    fact("Advancing", `<span class="up">${m.breadth.adv}</span> <span class="muted">of ${m.breadth.adv + m.breadth.dec}</span>`),
+    fact("Strongest sector", sector(sectors[0])),
+    fact("Weakest sector", sector(sectors[sectors.length - 1])),
+  ].join("") : "";
+
+  const rows = scanRows(s);
+  const held = new Set(heldSymbols(s));
+  const picks = rows.filter(r => r.status === "ACTIVE" || held.has(r.symbol)).slice(0, 6);
+  const pickHTML = picks.length
+    ? `<div class="grid3">${picks.map(r => pickCard(s, r, held)).join("")}</div>`
+    : `<p class="empty">The scan hasn't found a stock that passes every filter yet.</p>`;
+
+  const heldEntries = Object.entries(s.positions).filter(([, p]) => p.quantity !== 0);
+  const positionsHTML = heldEntries.length
+    ? `<div class="positions">${heldEntries.map(([sym, p]) => `
+        <div class="position">
+          <span>${symLink(sym)} ${sidePill(p.quantity > 0 ? "LONG" : "SHORT", ` ${Math.abs(p.quantity)}`)}<br><span class="muted">in at ${num(p.avg_price)}, now ${num(p.ltp)}</span></span>
+          <strong class="${tone(p.unrealized_pnl)}">${money(p.unrealized_pnl)}</strong>
+        </div>`).join("")}</div>`
+    : `<p class="empty">None open. At most 3 at a time, all closed by 15:15.</p>`;
+
+  const activity = (s.activity || []).slice(0, 6);
+  const activityHTML = activity.length
+    ? `<ul class="feed">${activity.map(a => `
+      <li><div class="meta"><span><span class="kind ${esc(a.kind)}">${esc(KIND_TEXT[a.kind] || a.kind)}</span>${a.symbol ? ` ${symLink(a.symbol)}` : ""}</span><span>${clock(a.ts)}</span></div>
+      <div class="body">${esc(a.message)}</div></li>`).join("")}</ul>`
+    : `<p class="empty">Nothing yet. Scans, picks and trades will appear here.</p>`;
+
+  setHTML($("page-overview"), `
+    <section class="hero">
+      <h1>${esc(copy.lead)}</h1>
+      <p>${esc(copy.rest)}</p>
+      <div class="hero-foot">
+        <dl class="facts">${facts}</dl>
+        <div class="scan-cta"><button class="btn primary" id="btn-scan">Scan now</button>
+          <small>${sc ? `Scanned ${sc.scanned} stocks at ${clock(sc.ts)}` : ""}</small></div>
+      </div>
+    </section>
+    <h2 class="h">Today's picks</h2>
+    <p class="sub">The stocks Trader Sahab is actively watching for an entry, ranked by scan score. <button class="more" data-nav="screener" style="display:inline;padding:0">See the full ranked list →</button></p>
+    ${pickHTML}
+    <div class="section-gap grid2">
+      <div>
+        <h2 class="h">What Trader Sahab is doing</h2>
+        <p class="sub">The last few scans, picks and trades.</p>
+        ${activityHTML}
+      </div>
+      <div>
+        <h2 class="h">Open positions</h2>
+        <div class="cardbox">${positionsHTML}</div>
+      </div>
+    </div>
+  `);
+}
+
+// ---- Screener page ------------------------------------------------------
+
+function oppRow(s, r, held) {
+  const flag = held.has(r.symbol) ? `<span class="pill solid">Holding</span>` : isReady(s, r) ? `<span class="pill solid">Ready</span>` : "";
+  const why = r.excluded || (r.reasons || []).slice(0, 2).map(x => x.text).join("; ");
+  const rule = primaryRule(r);
+  const expanded = ui.expandedSymbol === r.symbol;
+  const summary = `<div class="opp${expanded ? " expanded" : ""}" data-toggle="${esc(r.symbol)}">
+    <span class="opp-score" title="Scan score">${r.excluded ? "—" : num(r.final_score, 0)}</span>
+    <span><span class="opp-name">${esc(r.symbol)} ${r.excluded ? `<span class="pill neutral">Skipped</span>` : sidePill(r.side)} ${flag}${rule ? ` <span class="rule-tag" title="From this stock's Trader Brain read">${esc(rule)}</span>` : ""}</span>
+      <div class="opp-why">${esc(why)}</div></span>
+    <span class="opp-why">${esc(r.name || "")}</span>
+    <span class="opp-chg ${tone(r.chg_pct)}">${pct(r.chg_pct)}</span>
+  </div>`;
+  if (!expanded) return summary;
+  const a = analysisFor(s, r.symbol);
+  const detail = ruleBookHTML(r, a && a.b) || `<p class="empty" style="margin:0">No rule-book detail yet for this stock.</p>`;
+  return `${summary}<div class="opp-detail">${detail}
+    <button class="btn" data-sym="${esc(r.symbol)}" style="margin-top:10px">Open full page →</button>
+  </div>`;
+}
+
+function renderScreener(s) {
+  const rows = scanRows(s);
+  const held = new Set(heldSymbols(s));
+  const groups = {
+    trading: rows.filter(r => r.status === "ACTIVE" || held.has(r.symbol)),
+    watch: rows.filter(r => r.status === "WATCH" && !held.has(r.symbol)),
+    skipped: rows.filter(r => r.excluded && !held.has(r.symbol)),
+  };
+  const tabs = tabsHTML("screenerTab", ui.screenerTab, [
+    ["trading", "Trading", groups.trading.length], ["watch", "Watching", groups.watch.length], ["skipped", "Skipped", groups.skipped.length],
+  ]);
+  if (!rows.length) {
+    setHTML($("page-screener"), `<h2 class="h">Screener</h2><p class="empty">The first scan is running. Ranked stocks appear here in about 30 seconds.</p>`);
+    return;
+  }
+  const list = groups[ui.screenerTab];
+  const intro = {
+    trading: "Trader Sahab checks these for entries every 30 seconds.",
+    watch: "Ranked candidates that didn't make the active list.",
+    skipped: "Filtered out today, with the reason.",
+  }[ui.screenerTab];
+  let shown = sortRows(list, ui.screenerSort);
+  if (ui.screenerTab === "watch" && !ui.showAllWatch) shown = shown.slice(0, 20);
+  let rowsHTML = shown.length ? shown.map(r => oppRow(s, r, held)).join("") : `<p class="empty">Nothing here right now.</p>`;
+  if (ui.screenerTab === "watch" && list.length > 20) {
+    rowsHTML += `<button class="more" id="btn-toggle-watch">${ui.showAllWatch ? "Show top 20" : `Show all ${list.length}`}</button>`;
+  }
+  setHTML($("page-screener"), `
+    <h2 class="h">Screener</h2>
+    <p class="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. ${intro} Click a row to expand its rule book inline.</p>
+    <div class="tabs">${tabs}</div>
+    ${sortBarHTML()}
+    <div>${rowsHTML}</div>
+  `);
+}
+
+function sortBarHTML() {
+  const opts = [["score", "Score"], ["chg_pct", "Change %"], ["symbol", "Symbol"]];
+  const sort = ui.screenerSort;
+  return `<div class="sortbar">Sort by ${opts.map(([key, label]) => {
+    const active = sort && sort.key === key;
+    const arrow = active ? (sort.dir === "asc" ? "↑" : "↓") : "";
+    return `<button class="sortbtn${active ? " active" : ""}" data-sort="${key}">${label} ${arrow}</button>`;
+  }).join("")}${sort ? `<button class="sortbtn" data-sort="clear">Reset</button>` : ""}</div>`;
+}
+
+function sortRows(rows, sort) {
+  if (!sort || !sort.key) return rows;
+  const dir = sort.dir === "asc" ? 1 : -1;
+  const val = r => sort.key === "symbol" ? r.symbol : (sort.key === "score" ? r.final_score : r[sort.key]);
+  return [...rows].sort((a, b) => {
+    const va = val(a), vb = val(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === "string") return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+}
+
+function setScreenerSort(key) {
+  if (key === "clear") { ui.screenerSort = null; }
+  else if (ui.screenerSort && ui.screenerSort.key === key) { ui.screenerSort.dir = ui.screenerSort.dir === "asc" ? "desc" : "asc"; }
+  else { ui.screenerSort = {key, dir: key === "symbol" ? "asc" : "desc"}; }
+  renderScreener(latestState);
+}
+
+// ---- Stock page -----------------------------------------------------------
+
+function planHTML(s, r, b, pos) {
+  const box = (cls, title, body) => `<div class="plan ${cls}"><h3>${title}</h3>${body}</div>`;
+  const levels = [];
+  if (b && b.support) levels.push(`<span>Support <b>${num(b.support)}</b></span>`);
+  if (b && b.resistance) levels.push(`<span>Resistance <b>${num(b.resistance)}</b></span>`);
+  if (b && b.vwap) levels.push(`<span>VWAP <b>${num(b.vwap)}</b></span>`);
+  const lv = levels.length ? `<div class="levels">${levels.join("")}</div>` : "";
+
+  if (pos && pos.quantity) {
+    const long = pos.quantity > 0;
+    const exits = pos.stop_price ? ` Stop ${num(pos.stop_price)}, target ${num(pos.target_price)}.` : "";
+    return box(long ? "long" : "short", `Holding ${Math.abs(pos.quantity)} shares ${long ? "long" : "short"}`,
+      `<p>Entered at ${num(pos.avg_price)}, open P&amp;L <span class="${tone(pos.unrealized_pnl)}">${money(pos.unrealized_pnl)}</span>.${exits} Closes at the stop, the target, an exit signal or 15:15.</p>${lv}`);
+  }
+  if (r && r.excluded) return box("", "No trade in this stock today", `<p>${esc(r.excluded)}</p>`);
+  const side = r ? r.side : (b && b.bias === "short" ? "SHORT" : "LONG");
+  const verb = side === "SHORT" ? "short" : "buy";
+  if (!b) {
+    return box("wait", `Watching for a chance to ${verb}`, `<p>A timing read appears once this stock ranks in the top 15 or is tracked.</p>`);
+  }
+  const m = s.market || {};
+  const paused = (side === "LONG" && m.bias === "risk-off") || (side === "SHORT" && m.bias === "risk-on");
+  const ready = side === "SHORT" ? b.short_ok : b.long_ok;
+  const cl = b.checklist && b.checklist[side === "SHORT" ? "short" : "long"];
+  if (ready && !paused && (!r || r.status === "ACTIVE")) {
+    const planLine = cl && cl.stop != null
+      ? `<p>Enter near ${num(cl.entry)}, stop ${num(cl.stop)}, target ${num(cl.target)}, reward-to-risk ${num(cl.rrr)} after costs, at ${Math.round(cl.size_factor * 100)}% size.</p>`
+      : `<p>Every entry condition is met. The order goes in on the next check if risk limits allow.</p>`;
+    return box(side === "SHORT" ? "short" : "long", `Ready to ${verb}`, planLine + lv);
+  }
+  const waits = [];
+  if (paused) waits.push(`New ${side === "LONG" ? "longs" : "shorts"} are paused while the market is ${m.bias === "risk-off" ? "weak" : "strong"}`);
+  if (r && r.status !== "ACTIVE") waits.push("A place in the active list");
+  (b.blockers || []).forEach(x => waits.push(esc(x)));
+  return box("wait", `Waiting to ${verb}`,
+    (waits.length ? `<ul>${waits.map(w => `<li>${w}</li>`).join("")}</ul>` : `<p>Conditions are close. Waiting for the next candle.</p>`) + lv);
+}
+
+// One line per distinct source, so it's obvious at a glance which book or
+// technique justifies this stock's call — not just buried in the checklist.
+function ruleBookHTML(r, b) {
+  const chips = [];
+  const seen = new Set();
+  const add = (label, detail) => {
+    if (seen.has(label)) return;
+    seen.add(label);
+    chips.push(`<div class="rb-chip" title="${esc(detail || "")}"><b>${esc(label)}</b><span>${esc(detail || "")}</span></div>`);
+  };
+  if (b && b.checklist) {
+    const side = r && r.side ? r.side.toLowerCase() : (b.bias === "short" ? "short" : "long");
+    const cl = b.checklist[side] || b.checklist.long;
+    (cl ? cl.items : []).forEach(it => add(it.source.split(",")[0].split(" and ")[0].replace(/ ch [\d.-]+.*/, "").trim(), it.detail));
+  }
+  (r && r.swing_patterns || []).forEach(sw => add("Bulkowski, Encyclopedia of Chart Patterns", `Confirmed ${sw.name} on the daily chart`));
+  if (b) add("Van Tharp, Trade Your Way to Financial Freedom", "Percent Risk Model position sizing");
+  if (!chips.length) return "";
+  return `<div class="rulebook"><div class="rulebook-label">Rule book used for this call</div><div class="rb-row">${chips.join("")}</div></div>`;
+}
+
+function caseHTML(title, value, thr, color, items, emptyText) {
+  const scale = thr * 1.6;
+  const width = Math.max(0, Math.min(100, (value / scale) * 100));
+  const mark = (thr / scale) * 100;
+  const list = items.length
+    ? items.map(x => `<li><span class="pts ${x.points < 0 ? "penalty" : ""}">${signed(x.points, 1)}</span><span>${esc(x.text)}</span></li>`).join("")
+    : `<li><span></span><span class="muted">${emptyText}</span></li>`;
+  return `<div class="case">
+    <h4><span>${title}</span><span>${num(value, 1)} <span class="muted">of ${thr}</span></span></h4>
+    <div class="meter" role="img" aria-label="${title}: ${num(value, 1)} of ${thr} needed"><i style="width:${width}%;background:${color}"></i><b style="left:${mark}%"></b></div>
+    <ul class="evidence">${list}</ul>
+  </div>`;
+}
+
+function checklistHTML(r, b) {
+  if (!b.checklist) return "";
+  const side = r && r.side ? r.side.toLowerCase() : (b.bias === "short" ? "short" : "long");
+  const cl = b.checklist[side] || b.checklist.long;
+  if (!cl) return "";
+  const failing = cl.items.filter(i => i.required && !i.ok).length;
+  const rows = cl.items.map(i => {
+    const state = i.ok ? "pass" : i.required ? "fail" : "soft";
+    const mark = i.ok ? "✓" : i.required ? "✗" : "–";
+    return `<li class="check ${state}"><span class="mark" aria-label="${state}">${mark}</span>
+      <span>${esc(i.label)}${i.required ? "" : ` <span class="muted">(sizes the trade)</span>`}<br><span class="muted">${esc(i.detail)}</span><br><span class="source">${esc(i.source)}</span></span></li>`;
+  }).join("");
+  const summary = cl.passed
+    ? `Every required point passes for a ${cl.side}.`
+    : `${failing} required point${failing > 1 ? "s" : ""} fail${failing > 1 ? "" : "s"}, so there's no ${cl.side} trade.`;
+  const plan = cl.stop != null
+    ? ` If taken: entry ${num(cl.entry)}, stop ${num(cl.stop)}, target ${num(cl.target)}, reward-to-risk ${num(cl.rrr)}.` : "";
+  return `<h3 class="sub-title" style="margin-top:0">Zerodha Varsity checklist</h3>
+    <p class="lede">${summary}${plan} Every rule is checked in the open, and the exact source is next to it.</p>
+    <ul class="checklist">${rows}</ul>`;
+}
+
+function timingHTML(r, a) {
+  if (!a) return `<p class="empty">No timing read yet. It runs on the scanner's top 15 and on every tracked stock while the market is open.</p>`;
+  const b = a.b;
+  const checklist = b.entry_mode === "checklist" ? checklistHTML(r, b) : "";
+  const patterns = (b.patterns || []).map(p => esc(p.name));
+  const context = `${a.live ? "Live read." : "From the last scan."} The stock is ${esc(b.regime)} (ADX ${num(b.adx, 0)}), its swing structure is ${esc(b.structure)}, and the 15-minute trend is ${esc(b.htf_trend)}. RSI ${num(b.rsi, 0)}${b.volume_ratio != null ? `, volume ${num(b.volume_ratio, 1)}× average` : ""}.${patterns.length ? ` Candle patterns: ${joinWords(patterns)}.` : ""}`;
+  return `${checklist}
+    ${checklist ? `<h3 class="sub-title">Supporting evidence</h3>` : ""}
+    <p class="lede">${context}</p>
+    <div class="cases">
+      ${caseHTML("Case for buying", b.bull_score, b.entry_threshold, "var(--long)", b.reasons || [], "Nothing bullish yet.")}
+      ${caseHTML("Case for shorting", b.bear_score, b.entry_threshold, "var(--short)", b.bear_reasons || [], "Nothing bearish yet.")}
+    </div>`;
+}
+
+function scanHTML(r) {
+  if (!r) return `<p class="empty">This stock isn't in the latest scan. It's tracked because it's pinned or held.</p>`;
+  const reasons = (r.reasons || []).map(x => `<li><span class="pts ${x.points < 0 ? "penalty" : ""}">${signed(x.points, 0)}</span><span>${esc(x.text)}</span></li>`).join("");
+  const f = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const cat = r.catalyst
+    ? `<p class="note"><span class="${sentiment(r.catalyst.score).cls}">${sentiment(r.catalyst.score).word} catalyst.</span> ${esc(r.catalyst.top)}</p>` : "";
+  const swing = (r.swing_patterns || []).map(sw =>
+    `<p class="note">Confirmed <strong>${esc(sw.name)}</strong> on the daily chart (${sw.side}), Bulkowski's neckline/confirmation level ${num(sw.level)}, structural stop ${num(sw.stop)}. Source: Bulkowski, <em>Encyclopedia of Chart Patterns</em> — a daily-chart, US-stock statistic used here as a directional weight, not a guarantee for this market or timeframe.</p>`
+  ).join("");
+  return `<p class="lede">Ranked #${r.rank} of ${latestState ? scanRows(latestState).length : 100}. As a long it scores ${signed(r.long_score, 0)}, as a short ${signed(r.short_score, 0)}; the stronger side is kept.</p>
+    <ul class="evidence">${reasons || `<li><span></span><span class="muted">No strong factors either way.</span></li>`}</ul>
+    ${swing}
+    <dl class="facts-grid">
+      ${f("Opening gap", pct(r.gap_pct))}
+      ${f("Versus NIFTY today", `<span class="${tone(r.rs_today)}">${pct(r.rs_today)}</span>`)}
+      ${f("Volume vs usual", r.rvol == null ? "—" : `${num(r.rvol, 1)}×`)}
+      ${f("Daily range", `${num(r.atr_pct, 1)}%`)}
+      ${f("Versus NIFTY, 10 days", `<span class="${tone(r.rs10)}">${pct(r.rs10)}</span>`)}
+      ${f("Daily trend", esc(r.daily_trend))}
+      ${f("Below 52-week high", `${num(r.pct_from_high, 1)}%`)}
+      ${f("Above 52-week low", `${num(r.pct_from_low, 1)}%`)}
+      ${f("Daily turnover", `₹${num(r.turnover_cr, 0)} cr`)}
+      ${f("Beta vs NIFTY", r.beta == null ? "—" : num(r.beta, 2))}
+    </dl>${cat}`;
+}
+
+function newsHTML(s) {
+  const sym = selectedSymbol;
+  const n = sym && newsCache[sym];
+  let html;
+  if (!n) html = `<p class="empty">Loading headlines…</p>`;
+  else if (n.error) html = `<p class="empty">Couldn't load news (${esc(n.error)}). Retrying every minute.</p>`;
+  else {
+    const overall = sentiment(n.score);
+    const sources = Object.entries(n.sources || {}).filter(([, v]) => v).map(([k, v]) => `${v} from ${esc(k)}`);
+    html = `<p class="lede">Overall tone is <span class="${overall.cls}">${overall.word.toLowerCase()}</span> (${signed(n.score, 2)}) across ${joinWords(sources) || "no sources"} in the last 72 hours.</p>`;
+    html += n.headlines.length ? `<ul class="feed">${n.headlines.map(h => {
+      const url = safeUrl(h.url);
+      const t = sentiment(h.score);
+      return `<li><div class="meta"><span><span class="${t.cls}">${t.word}</span> ${esc(h.publisher || h.source)}</span><span>${num(h.age_h, 0)}h ago</span></div>
+        <div class="body">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}</a>` : esc(h.title)}</div></li>`;
+    }).join("")}</ul>` : `<p class="empty">No headlines name this company in the last 72 hours.</p>`;
+  }
+  const cats = scanRows(s).filter(r => r.catalyst).sort((a, b) => Math.abs(b.catalyst.score) - Math.abs(a.catalyst.score)).slice(0, 8);
+  html += `<h3 class="sub-title">In the news across the NIFTY 100</h3>`;
+  html += cats.length ? `<ul class="feed">${cats.map(r => {
+    const t = sentiment(r.catalyst.score);
+    return `<li><div class="meta"><span>${symLink(r.symbol)} <span class="${t.cls}">${t.word}</span></span></div><div class="detail">${esc(r.catalyst.top)}</div></li>`;
+  }).join("")}</ul>` : `<p class="empty">No notable filings or headlines yet today.</p>`;
+  return html;
+}
+
+function renderStock(s) {
+  const sym = selectedSymbol;
+  if (!sym) {
+    setHTML($("page-stock"), `<p class="empty">Pick a stock from the Screener to see the agent's plan for it.</p>`);
+    return;
+  }
+  const r = rowFor(s, sym);
+  const a = analysisFor(s, sym);
+  const pos = s.positions[sym];
+  const ltp = (s.indicators[sym] && s.indicators[sym].ltp) || (r && r.ltp);
+  const news = newsCache[sym];
+
+  setHTML($("page-stock"), `
+    <button class="backlink" data-nav="screener">← Screener</button>
+    <div class="stock-head">
+      <div>
+        <h1>${esc(sym)} ${r && !r.excluded ? sidePill(r.side, " idea") : ""}</h1>
+        <p>${r ? `${esc(r.name)}, ${esc(r.industry)}` : "Pinned or held stock"}</p>
+      </div>
+      <div class="price">${num(ltp)}${r ? `<small class="${tone(r.chg_pct)}">${pct(r.chg_pct)} ${s.market_status === "open" ? "today" : "last session"}</small>` : ""}</div>
+    </div>
+    <div id="stk-plan">${planHTML(s, r, a && a.b, pos)}</div>
+    <div id="stk-rulebook">${ruleBookHTML(r, a && a.b)}</div>
+    <div id="stk-chart"></div>
+    <div class="chart-legend">
+      <span><i style="background:var(--focus)"></i>EMA 20</span>
+      <span><i style="background:var(--book)"></i>EMA 50</span>
+      <span><i class="dash" style="border-color:var(--ink-2)"></i>Plan entry</span>
+      <span><i class="dash" style="border-color:var(--short)"></i>Stop</span>
+      <span><i class="dash" style="border-color:var(--long)"></i>Target</span>
+      <span class="muted">— the checklist's trade plan if taken, not a price forecast</span>
+    </div>
+    <div class="tabs" id="stk-tabs">${tabsHTML("centerTab", ui.centerTab, [
+      ["timing", "Timing read"], ["scan", "Why it ranks"], ["news", "News", news && !news.error ? news.count : undefined],
+    ])}</div>
+    <div class="tab-content" id="stk-content">${ui.centerTab === "timing" ? timingHTML(r, a) : ui.centerTab === "scan" ? scanHTML(r) : newsHTML(s)}</div>
+  `);
+  initChartIfNeeded();
+  renderChart(s);
+}
+
+// ---- chart --------------------------------------------------------------
+
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+let chartEl = null;
+
+function initChartIfNeeded() {
+  const el = $("stk-chart");
+  if (!el) return;
+  if (chart && chartEl === el) return; // still attached to the live DOM node
+  if (chart) { chart.remove(); chart = null; series = null; emaSeries20 = null; emaSeries50 = null; volumeSeries = null; } // renderStock replaced the container; rebuild into the new one
+  chartEl = el;
+  priceLines = [];
+  priceLineKey = ""; // force price lines to be redrawn on the new series
+  patternMarkerKey = "";
+  if (typeof LightweightCharts === "undefined") {
+    el.innerHTML = `<div class="chart-empty">The chart library didn't load. Check the internet connection; everything else still works.</div>`;
+    return;
+  }
+  chart = LightweightCharts.createChart(el, {
+    layout: { background: { color: "transparent" }, textColor: cssVar("--ink-3"), fontFamily: cssVar("--font"), fontSize: 11 },
+    grid: { vertLines: { visible: false }, horzLines: { color: cssVar("--rule") } },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  });
+  const up = cssVar("--long"), down = cssVar("--short");
+  series = chart.addCandlestickSeries({ upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down });
+  series.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } }); // leave room for the volume panel below
+  emaSeries20 = chart.addLineSeries({ color: cssVar("--focus"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  emaSeries50 = chart.addLineSeries({ color: cssVar("--book"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  volumeSeries = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", priceLineVisible: false, lastValueVisible: false });
+  volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  new ResizeObserver(entries => {
+    for (const entry of entries) chart.resize(entry.contentRect.width, entry.contentRect.height);
+  }).observe(el);
+  lastChartedSymbol = null; // force a fresh fetch into the newly (re)created chart element
+}
+
+// Entry/stop/target are the checklist's actual computed trade plan — a real,
+// risk-defined "if this triggers, here's the plan" line, never a predicted
+// future price. This app has no calibrated forecasting model (the Dimaag
+// Scorecard's Information Coefficient is currently negative), so nothing
+// here draws a projected price path; only the plan a real trade would use.
+function updatePriceLines(a, r) {
+  if (!series) return;
+  const b = a ? a.b : null;
+  const side = r && r.side ? r.side.toLowerCase() : (b && b.bias === "short" ? "short" : "long");
+  const cl = b && b.checklist ? (b.checklist[side] || b.checklist.long) : null;
+  const key = b ? [selectedSymbol, b.support, b.resistance, b.vwap, cl && cl.entry, cl && cl.stop, cl && cl.target].join("|") : selectedSymbol;
+  if (key === priceLineKey) return;
+  priceLineKey = key;
+  priceLines.forEach(l => series.removePriceLine(l));
+  priceLines = [];
+  if (!b) return;
+  const add = (price, color, title, dashed = true) => {
+    if (price) priceLines.push(series.createPriceLine({
+      price, color, lineWidth: dashed ? 1 : 2,
+      lineStyle: dashed ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid,
+      axisLabelVisible: true, title,
+    }));
+  };
+  add(b.support, cssVar("--long"), "Support");
+  add(b.resistance, cssVar("--short"), "Resistance");
+  add(b.vwap, cssVar("--focus"), "VWAP");
+  if (cl && cl.stop != null) {
+    add(cl.entry, cssVar("--ink-2"), `Plan entry (${side})`, false);
+    add(cl.stop, cssVar("--short"), `Stop (${cl.rrr != null ? "RRR " + num(cl.rrr, 1) : "risk"})`, false);
+    add(cl.target, cssVar("--long"), "Target", false);
+  }
+}
+
+function updatePatternMarkers(a) {
+  if (!series) return;
+  const b = a ? a.b : null;
+  const patterns = (b && b.patterns) || [];
+  const key = `${selectedSymbol}|${b ? b.bar_time : ""}|${patterns.map(p => p.name).join(",")}`;
+  if (key === patternMarkerKey) return;
+  patternMarkerKey = key;
+  if (!patterns.length || !b || !b.bar_time) { series.setMarkers([]); return; }
+  const time = Math.floor(new Date(b.bar_time).getTime() / 1000) + IST_OFFSET_S;
+  series.setMarkers(patterns.map(p => ({
+    time, position: p.bias === "bearish" ? "aboveBar" : "belowBar",
+    color: p.bias === "bearish" ? cssVar("--short") : p.bias === "bullish" ? cssVar("--long") : cssVar("--ink-3"),
+    shape: p.bias === "bearish" ? "arrowDown" : p.bias === "bullish" ? "arrowUp" : "circle",
+    text: p.name,
+  })));
+}
+
+function renderChart(s) {
+  if (ui.page !== "stock") return;
+  const sym = selectedSymbol;
+  const now = Date.now();
+  if (sym && (sym !== lastChartedSymbol || now - lastChartFetchTs > 20000)) {
+    lastChartedSymbol = sym;
+    lastChartFetchTs = now;
+    fetchCandles(sym);
+  }
+  const a = analysisFor(s, sym);
+  updatePriceLines(a, rowFor(s, sym));
+  updatePatternMarkers(a);
+}
+
+// Same formula as backend/indicators.py's ema_series() — recomputed client-side
+// from the same candles already on the chart, not a separate/guessed value.
+function emaSeriesJS(values, period) {
+  const out = new Array(values.length).fill(null);
+  if (values.length < period) return out;
+  const k = 2 / (period + 1);
+  let e = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out[period - 1] = e;
+  for (let i = period; i < values.length; i++) { e = values[i] * k + e * (1 - k); out[i] = e; }
+  return out;
+}
+
+async function fetchCandles(symbol) {
+  if (!series) return;
+  try {
+    const res = await apiFetch(`/api/candles/${encodeURIComponent(symbol)}`);
+    const data = await res.json();
+    if (symbol !== selectedSymbol) return;
+    const candles = data.candles || [];
+    const times = candles.map(c => Math.floor(new Date(c.time).getTime() / 1000) + IST_OFFSET_S);
+    series.setData(candles.map((c, i) => ({ time: times[i], open: c.open, high: c.high, low: c.low, close: c.close })));
+    const closes = candles.map(c => c.close);
+    const e20 = emaSeriesJS(closes, 20), e50 = emaSeriesJS(closes, 50);
+    if (emaSeries20) emaSeries20.setData(times.map((t, i) => ({time: t, value: e20[i]})).filter(p => p.value != null));
+    if (emaSeries50) emaSeries50.setData(times.map((t, i) => ({time: t, value: e50[i]})).filter(p => p.value != null));
+    if (volumeSeries) volumeSeries.setData(candles.map((c, i) => ({
+      time: times[i], value: c.volume || 0,
+      color: c.close >= c.open ? cssVar("--long-bg") : cssVar("--short-bg"),
+    })));
+    chart.timeScale().fitContent();
+  } catch (e) { /* the backend may not have candles for this stock yet */ }
+}
+
+// ---- Method page (Technical Analysis reference) ------------------------
+
+async function fetchMethods(force = false) {
+  if (!force && methodsCache && Date.now() - methodsCache._ts < 300000) return;
+  try {
+    const res = await apiFetch(`/api/methods`);
+    const data = await res.json();
+    data._ts = Date.now();
+    methodsCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  if (ui.page === "method") setHTML($("page-method"), `<h2 class="h">Technical Analysis</h2><p class="sub">Every technique Sahab's Dimaag actually trades on, with the book or paper behind it.</p>` + methodHTML(methodsCache));
+}
+
+function biasPill(bias) {
+  const cls = bias === "bullish" || bias === "long" ? "long" : bias === "bearish" || bias === "short" ? "short" : "neutral";
+  return `<span class="pill ${cls}">${esc(bias || "neutral")}</span>`;
+}
+
+function methodHTML(m) {
+  if (!m) return `<p class="empty">Loading the method book…</p>`;
+  const parts = [];
+
+  const c = m.checklist;
+  if (c) {
+    parts.push(`<div class="cardbox">
+      <h2 class="h" style="font-size:16px">${esc(c.title)}</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(c.intro)}</p>
+      <div class="rulebook-label">Checklist categories</div>
+      <div class="rb-row">${c.rules.map(r => `<div class="rb-chip" title="${esc(r.source)}"><b>${esc(r.key)}</b><span>${esc(r.source)}</span></div>`).join("")}</div>
+    </div>`);
+  }
+
+  const cp = m.candlestick_patterns;
+  if (cp) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(cp.title)}</h2>
+      <p class="muted" style="margin:0 0 4px;font-size:13px">${esc(cp.source)}</p>
+      <p style="margin:0 0 10px;font-size:13px">${esc(cp.note)}</p>
+      <div class="rb-row">${cp.names.map(n => `<span class="pill neutral">${esc(n)}</span>`).join("")}</div>
+    </div>`);
+  }
+
+  const dp = m.daily_patterns;
+  if (dp && dp.patterns && dp.patterns.length) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(dp.title)}</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(dp.source)} — ${esc(dp.note)}</p>
+      <div class="table-wrap"><table class="datatable"><thead><tr><th>Pattern</th><th>Bias</th><th>Rank</th><th>Bull fail%</th><th>Bull avg move</th><th>Bear fail%</th><th>Bear avg move</th></tr></thead><tbody>
+      ${dp.patterns.map(p => `<tr><td>${esc(p.name)}</td><td>${biasPill(p.bias)}</td><td>${p.rank ?? "—"}</td>
+        <td>${p.bull_failure_rate_pct ?? "—"}%</td><td>${p.bull_avg_move_pct ?? "—"}%</td>
+        <td>${p.bear_failure_rate_pct ?? "—"}%</td><td>${p.bear_avg_move_pct ?? "—"}%</td></tr>`).join("")}
+      </tbody></table></div>
+    </div>`);
+  }
+
+  const noteCard = (section) => section ? `<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(section.title)}</h2>
+      <p class="muted" style="margin:0 0 4px;font-size:13px">${esc(section.source)}</p>
+      <p style="margin:0;font-size:13px">${esc(section.note)}</p>
+    </div>` : "";
+  parts.push(noteCard(m.reversal_days));
+  parts.push(noteCard(m.volume_confirmation));
+
+  const g = m.gaps;
+  if (g) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(g.title)}</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(g.source)} — ${esc(g.note)}</p>
+      <div class="rb-row">${Object.entries(g.close_within_week_pct || {}).map(([k, v]) => `<div class="rb-chip"><b>${esc(k)}</b><span>${v}% close within a week</span></div>`).join("")}</div>
+    </div>`);
+  }
+
+  const ruleSection = (section, extraSource) => {
+    if (!section || !section.rules) return "";
+    return `<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(section.title)}</h2>
+      ${extraSource ? `<p class="muted" style="margin:0 0 10px;font-size:13px">${esc(extraSource)}</p>` : ""}
+      <div class="rb-row">${section.rules.map(r => `<div class="rb-chip" title="${esc(r.source)}"><b>${esc(r.name)}</b><span>${esc(r.source)}</span></div>`).join("")}</div>
+    </div>`;
+  };
+  parts.push(ruleSection(m.trend));
+  parts.push(ruleSection(m.levels));
+
+  const mo = m.momentum;
+  if (mo) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(mo.title)}</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(mo.source)}</p>
+      <div class="rb-row">${mo.names.map(n => `<span class="pill neutral">${esc(n)}</span>`).join("")}</div>
+    </div>`);
+  }
+
+  const nw = m.news;
+  if (nw) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(nw.title)}</h2>
+      <p style="margin:0 0 10px;font-size:13px">${esc(nw.note)}</p>
+      <div class="table-wrap"><table class="datatable"><thead><tr><th>Source</th><th>Trust weight</th></tr></thead><tbody>
+      ${nw.sources.map(s => `<tr><td>${esc(s.name)}</td><td>${s.weight}</td></tr>`).join("")}
+      </tbody></table></div>
+    </div>`);
+  }
+
+  parts.push(ruleSection(m.risk));
+  if (m.fno) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(m.fno.title)}</h2>
+      <p class="muted" style="margin:0 0 4px;font-size:13px">${esc(m.fno.source)}</p>
+      <p style="margin:0 0 10px;font-size:13px">${esc(m.fno.note)}</p>
+      <div class="rb-row">${m.fno.rules.map(r => `<div class="rb-chip" title="${esc(r.source)}"><b>${esc(r.name)}</b><span>${esc(r.source)}</span></div>`).join("")}</div>
+    </div>`);
+  }
+
+  const nyu = m.not_yet_used;
+  if (nyu) {
+    parts.push(`<div class="tax" style="margin-top:16px">
+      <b>${esc(nyu.title)}</b>
+      <div style="margin-top:8px">${nyu.items.map(it => `<div style="margin-bottom:8px"><b>${esc(it.name)}</b><div class="detail">${esc(it.reason)}</div></div>`).join("")}</div>
+    </div>`);
+  }
+
+  return parts.join("");
+}
+
+function renderMethod() {
+  setHTML($("page-method"), `<h2 class="h">Technical Analysis</h2><p class="sub">Every technique Sahab's Dimaag actually trades on, with the book or paper behind it.</p>` + methodHTML(methodsCache));
+  fetchMethods();
+}
+
+// ---- Portfolio page -----------------------------------------------------
+
+let portfolioCache = null;
+let fnoCache = null;
+
+async function fetchPortfolio(force = false) {
+  if (!force && portfolioCache && Date.now() - portfolioCache._ts < 20000) return;
+  try {
+    const res = await apiFetch(`/api/portfolio`);
+    const data = await res.json();
+    data._ts = Date.now();
+    portfolioCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  try {
+    const res2 = await apiFetch(`/api/fno/status`);
+    fnoCache = await res2.json();
+  } catch (e) { /* backend not reachable yet */ }
+  if (ui.page === "portfolio") setHTML($("page-portfolio"), portfolioHTML(portfolioCache, latestState));
+}
+
+async function setFnoEnabled(enabled) {
+  try {
+    await apiFetch(`/api/fno/enable`, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({enabled}),
+    });
+  } catch (e) { /* backend not reachable yet */ }
+  await fetchPortfolio(true);
+  renderPortfolio(latestState);
+}
+
+function confidencePill(score) {
+  const cls = score >= 75 ? "long" : score >= 50 ? "wait" : score >= 25 ? "neutral" : "short";
+  return `<span class="pill ${cls}">${score}/100</span>`;
+}
+
+function fnoHTML(fno) {
+  if (!fno) return `<p class="empty">Loading F&amp;O status…</p>`;
+  const parts = [];
+  parts.push(`<div class="cardbox">
+    <h2 class="h" style="font-size:16px">F&amp;O (options-buying only)</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">Buys calls on a LONG signal, puts on a SHORT
+      signal — never writes/sells options or trades futures (see the Technical Analysis page for why).
+      A separate switch from Paper/Live: an order only reaches Kite when both this is ON and the header
+      says Live.</p>
+    <div class="rb-row" style="margin-bottom:12px">
+      <div class="rb-chip"><b>Capital ring-fenced</b><span>₹${num(fno.capital, 0)}</span></div>
+      <div class="rb-chip"><b>Max premium risk/trade</b><span>${fno.max_premium_risk_pct}%</span></div>
+      <div class="rb-chip"><b>Confidence bar to trade</b><span>${fno.min_confidence_to_trade}/100</span></div>
+    </div>
+    <button class="btn ${fno.enabled ? "primary" : ""}" id="btn-fno-toggle" data-fno-enabled="${fno.enabled}">
+      ${fno.enabled ? "F&O is ON — turn off" : "Turn F&O on"}
+    </button>
+    ${!fno.kite_connected ? `<p class="empty" style="margin-top:8px">Kite isn't connected — F&amp;O needs
+      it for live option quotes and contract data even in paper mode.</p>` : ""}
+  </div>`);
+
+  const positions = Object.entries(fno.open_positions || {});
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">Open F&amp;O positions</h2>
+    ${!positions.length ? `<p class="empty">No open option positions.</p>` : positions.map(([underlying, pos]) => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--rule)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <b>${esc(pos.tradingsymbol)}</b>
+          ${pos.confidence ? confidencePill(pos.confidence.score) : ""}
+        </div>
+        <div class="detail" style="margin-top:4px">${pos.lots} lot(s) of ${pos.lot_size} × entry premium
+          ${num(pos.entry_premium)}, now ${num(pos.ltp)} <span class="${tone(pos.unrealized_pnl)}">(${money(pos.unrealized_pnl)})</span>.
+          Stop ${num(pos.stop_premium)}, target ${num(pos.target_premium)}. Max loss was capped at ₹${num(pos.max_loss, 0)}.</div>
+      </div>`).join("")}
+  </div>`);
+  return parts.join("");
+}
+
+function paperPositionsHTML(positions) {
+  const rows = Object.entries(positions || {});
+  if (!rows.length) return `<p class="empty">No open paper/live positions right now.</p>`;
+  return `<div class="table-wrap"><table class="datatable"><thead><tr>
+    <th>Symbol</th><th>Qty</th><th>Avg price</th><th>LTP</th><th>Unrealized</th><th>Stop</th><th>Target</th>
+    </tr></thead><tbody>
+    ${rows.map(([sym, p]) => `<tr><td>${esc(sym)}</td>
+      <td class="${p.quantity > 0 ? "up" : "down"}">${p.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(p.quantity)}</td>
+      <td>${num(p.avg_price)}</td><td>${p.ltp != null ? num(p.ltp) : "—"}</td>
+      <td class="${tone(p.unrealized_pnl)}">${p.unrealized_pnl != null ? money(p.unrealized_pnl) : "—"}</td>
+      <td>${p.stop_price != null ? num(p.stop_price) : "—"}</td>
+      <td>${p.target_price != null ? num(p.target_price) : "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+function kiteHoldingsHTML(holdings) {
+  if (!holdings || !holdings.length) return `<p class="empty">No T+1 settled holdings in this Kite account.</p>`;
+  return `<div class="table-wrap"><table class="datatable"><thead><tr>
+    <th>Symbol</th><th>Qty</th><th>Avg cost</th><th>LTP</th><th>P&amp;L</th><th>P&amp;L %</th>
+    </tr></thead><tbody>
+    ${holdings.map(h => {
+      const pnlPct = h.average_price ? (h.last_price - h.average_price) / h.average_price * 100 : 0;
+      return `<tr><td>${esc(h.tradingsymbol)}</td><td>${h.quantity}</td><td>${num(h.average_price)}</td>
+        <td>${num(h.last_price)}</td><td class="${tone(h.pnl)}">${money(h.pnl)}</td>
+        <td class="${tone(pnlPct)}">${pct(pnlPct)}</td></tr>`;
+    }).join("")}
+    </tbody></table></div>`;
+}
+
+function portfolioHTML(p, s) {
+  if (!p) return `<p class="empty">Loading portfolio…</p>`;
+  const parts = [];
+  if (p.error) {
+    parts.push(`<div class="tax">${esc(p.error)}</div>`);
+  }
+  if (p.kite_connected && p.margins) {
+    const eq = (p.margins.equity || {}).available || {};
+    parts.push(`<div class="cardbox">
+      <h2 class="h" style="font-size:16px">Kite margins (equity segment)</h2>
+      <div class="rb-row">
+        <div class="rb-chip"><b>Cash</b><span>${money(eq.cash || 0)}</span></div>
+        <div class="rb-chip"><b>Live balance</b><span>${money(eq.live_balance ?? eq.cash ?? 0)}</span></div>
+        <div class="rb-chip"><b>Used margin</b><span>${money((p.margins.equity || {}).utilised ? (p.margins.equity.utilised.debits || 0) : 0)}</span></div>
+      </div>
+    </div>`);
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Kite holdings</h2>
+      ${kiteHoldingsHTML(p.holdings)}
+    </div>`);
+  } else {
+    parts.push(`<div class="tax">Kite isn't connected, so this shows today's paper positions only. Click
+      "Connect" in the header to see real holdings and margins once you go live.</div>`);
+  }
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">Today's open positions (${p.kite_connected ? "live" : "paper"})</h2>
+    ${paperPositionsHTML(p.paper_positions)}
+  </div>`);
+  parts.push(`<div style="margin-top:16px">${fnoHTML(fnoCache)}</div>`);
+  if (s) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Today's P&amp;L</h2>
+      <div class="rb-row">
+        <div class="rb-chip"><b>Realized</b><span class="${tone(s.realized_pnl_today)}">${money(s.realized_pnl_today)}</span></div>
+        <div class="rb-chip"><b>Unrealized</b><span class="${tone(s.unrealized_pnl)}">${money(s.unrealized_pnl)}</span></div>
+      </div>
+    </div>`);
+  }
+  return parts.join("");
+}
+
+function renderPortfolio(s) {
+  setHTML($("page-portfolio"), portfolioHTML(portfolioCache, s));
+  fetchPortfolio();
+}
+
+// ---- Journal page -----------------------------------------------------
+
+function fmtWhen(ts) {
+  if (!ts) return "—";
+  const days = Math.floor((Date.now() / 1000 - ts) / 86400);
+  return days < 1 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
+}
+
+function journalHTML(j) {
+  if (!j) return `<p class="empty">Loading Sahab's Journal…</p>`;
+  const ts = j.trade_stats || {};
+  const parts = [];
+  parts.push(`<div class="tax">Every scan and every checklist read — not just executed trades — is saved to a local database (backend/data/sahab_journal.db) so it survives a restart and builds into a knowledge base over time.
+    <div class="detail" style="margin-top:6px">${num(j.scans_logged, 0)} scans · ${num(j.checklist_evals_logged, 0)} checklist reads · ${num(j.trades_logged, 0)} fills logged, since ${fmtWhen(j.logging_since)}.</div>
+  </div>`);
+  const scorecard = j.scorecard || [];
+  if (scorecard.length) {
+    const statusPill = (status) => status === "pass" ? `<span class="pill long">pass</span>`
+      : status === "fail" ? `<span class="pill short">fail</span>`
+      : `<span class="pill neutral">not enough data</span>`;
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Dimaag Scorecard</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">Not a single made-up "IQ" — no such validated
+        measure exists for a trading system. Each row below is graded against a bar already used elsewhere in
+        this codebase, computed from real logged data, and says "not enough data yet" rather than guessing.</p>
+      ${scorecard.map(r => `<div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:10px">
+        <div style="flex:1"><b style="font-size:13.5px">${esc(r.criterion)}</b>
+          <div class="detail" style="margin-top:2px">${esc(r.detail)}</div></div>
+        ${statusPill(r.status)}
+      </div>`).join("")}
+    </div>`);
+  }
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">What "good" actually looks like here</h2>
+    <p style="margin:0 0 4px;font-size:13px">SEBI's own study (released 24 Jul 2024, covering FY23) found
+      <b>71% of individual intraday traders in the equity cash segment made a net loss</b> — rising to
+      <b>80%</b> among those who traded more than 500 times a year. Loss-makers spent an extra 57% of their
+      losses on trading costs alone; profit-makers spent only 19% of their profits on costs.</p>
+    <p class="muted" style="margin:0;font-size:13px">We can't honestly promise a ₹ target — nobody can, and
+      anyone who does is guessing. The realistic bar this data sets: most traders like this lose, and the ones
+      who don't are usually the ones costs eat least. So the goal for this paper-trading week isn't a return
+      number — it's a positive expectancy (Dimaag Scorecard, above) at a trade frequency where costs don't
+      eat the edge, before a single rupee goes live.</p>
+  </div>`);
+  parts.push(ts.closed_trades
+    ? `<div class="cardbox" style="margin-top:16px">
+        <h2 class="h" style="font-size:16px">Trade record</h2>
+        <p style="margin:0 0 4px">${ts.closed_trades} closed trade${ts.closed_trades > 1 ? "s" : ""}, ${ts.win_rate_pct}% won</p>
+        <p class="muted" style="margin:0;font-size:13px">Expectancy ${signed(ts.expectancy_r, 2)}R per trade (avg win ${signed(ts.avg_win_r, 2)}R, avg loss ${signed(ts.avg_loss_r, 2)}R). Kelly fraction ${ts.kelly_pct == null ? "—" : ts.kelly_pct + "%"}${ts.kelly_pct != null && ts.kelly_pct <= 0 ? " — no edge yet, the right bet size is zero" : ""}.</p>
+      </div>`
+    : `<p class="empty">No closed trades yet — nothing to score. This fills in once Sahab's Dimaag actually trades.</p>`);
+  const breakdown = j.checklist_item_breakdown || {};
+  const items = Object.entries(breakdown);
+  if (items.length) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Which checklist rules actually matter</h2>
+      <p class="muted" style="margin:0 0 8px;font-size:13px">Average R-multiple of closed trades where each rule passed vs failed at entry.</p>
+      <div class="table-wrap"><table class="datatable"><thead><tr><th>Rule</th><th>Pass</th><th>Fail</th></tr></thead><tbody>
+      ${items.map(([key, b]) => `<tr><td>${esc(key)}</td>
+        <td class="${b.pass.avg_r > 0 ? "up" : b.pass.avg_r < 0 ? "down" : ""}">${b.pass.n ? signed(b.pass.avg_r, 2) + "R (" + b.pass.n + ")" : "—"}</td>
+        <td class="${b.fail.avg_r > 0 ? "up" : b.fail.avg_r < 0 ? "down" : ""}">${b.fail.n ? signed(b.fail.avg_r, 2) + "R (" + b.fail.n + ")" : "—"}</td></tr>`).join("")}
+      </tbody></table></div></div>`);
+  }
+  const ic = j.factor_ic;
+  if (ic) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Does the scan score predict the next move?</h2>
+      <p style="margin:0 0 4px">${ic.ic != null ? `Information Coefficient ${signed(ic.ic, 3)} across ${ic.pairs} session pairs` : "Not enough data yet"}</p>
+      <p class="muted" style="margin:0;font-size:13px">${esc(ic.note || "")}${ic.ic == null ? "" : " (ML4Trading ch 1: rank correlation between today's score and the next session's move — 0 is no predictive power, ±1 is perfect)."}</p>
+    </div>`);
+  }
+  const fj = fnoJournalCache;
+  if (fj) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">F&amp;O knowledge base</h2>
+      <p style="margin:0 0 4px">${num(fj.evaluations_logged, 0)} confidence reads logged, ${num(fj.trades_opened, 0)} trades opened, ${num(fj.closed_trades, 0)} closed${fj.win_rate_pct != null ? ` (${fj.win_rate_pct}% won, expectancy ${signed(fj.expectancy_r, 2)}R)` : ""}.</p>
+      <p class="muted" style="margin:0;font-size:13px">${fj.confidence_ic != null ? `Confidence-to-outcome rank correlation ${signed(fj.confidence_ic, 3)}` : ""} ${esc(fj.confidence_ic_note || "")}</p>
+    </div>`);
+  }
+  return parts.join("");
+}
+
+let fnoJournalCache = null;
+
+async function fetchJournal(force = false) {
+  if (!force && journalCache && Date.now() - journalCache._ts < 60000) return;
+  try {
+    const res = await apiFetch(`/api/journal/summary`);
+    const data = await res.json();
+    data._ts = Date.now();
+    journalCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  try {
+    const res2 = await apiFetch(`/api/fno/journal`);
+    fnoJournalCache = await res2.json();
+  } catch (e) { /* backend not reachable yet */ }
+  if (ui.page === "journal") setHTML($("page-journal"), `<h2 class="h">Sahab's Journal</h2><p class="sub">The knowledge base built from every scan, checklist read and fill.</p>` + journalHTML(journalCache));
+}
+
+function renderJournal() {
+  setHTML($("page-journal"), `<h2 class="h">Sahab's Journal</h2><p class="sub">The knowledge base built from every scan, checklist read and fill.</p>` + journalHTML(journalCache));
+  fetchJournal();
+}
+
+// ---- Trades page --------------------------------------------------------
+
+function tradeAction(t) {
+  const r = t.reason || "";
+  if (t.side === "BUY") return r.endsWith("(long)") ? "Bought" : "Covered short";
+  return r.endsWith("(short)") ? "Sold short" : "Sold";
+}
+
+function renderTrades(s) {
+  const tax = s.tax || {turnover: 0, net_pnl: 0, charges: 0, closed_trades: 0};
+  const taxNote = `<div class="tax">Intraday equity counts as <strong>speculative business income</strong>. So far: turnover <strong>₹${num(tax.turnover, 0)}</strong> (each closed trade's profit or loss, added up without signs), net P&amp;L <strong class="${tone(tax.net_pnl)}">${money(tax.net_pnl)}</strong>, estimated charges <strong>₹${num(tax.charges, 0)}</strong>. Speculative losses only offset speculative gains and carry forward 4 years. Advance tax is due by 15 Jun, 15 Sep, 15 Dec and 15 Mar. Source: Zerodha Varsity, Markets and Taxation; check with a CA.</div>`;
+  const body = s.trades.length ? s.trades.map(t => {
+    const action = tradeAction(t);
+    const opening = action === "Bought" || action === "Sold short";
+    const reason = REASON_TEXT[t.reason] || t.reason || "";
+    return `<tr>
+      <td>${clock(t.ts)}</td><td>${symLink(t.symbol)}</td>
+      <td class="${opening ? (t.side === "BUY" ? "up" : "down") : ""}">${action}</td>
+      <td>${t.quantity}</td><td>${num(t.price)}</td>
+      <td>${esc([reason, t.note].filter(Boolean).join(": ")) || "—"}</td>
+      <td>${t.mode === "live" ? `<span class="pill short">Live</span>` : `<span class="pill neutral">Paper</span>`}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7" class="muted">No orders yet today.</td></tr>`;
+  setHTML($("page-trades"), `
+    <h2 class="h">Trade journal</h2>
+    <p class="sub">Every order today and the reason it was placed.</p>
+    ${taxNote}
+    <div class="table-wrap" style="margin-top:16px"><table class="datatable">
+      <thead><tr><th>Time</th><th>Stock</th><th>Action</th><th>Shares</th><th>Price</th><th>Why</th><th>Mode</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+  `);
+}
+
+// ---- data + orchestration -------------------------------------------------
+
+async function fetchNews(symbol, force = false) {
+  if (!symbol) return;
+  const cached = newsCache[symbol];
+  if (!force && cached && Date.now() - cached._ts < 120000) return;
+  try {
+    const res = await apiFetch(`/api/news/${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    data._ts = Date.now();
+    newsCache[symbol] = data;
+  } catch (e) {
+    newsCache[symbol] = { error: String(e.message || e), headlines: [], _ts: Date.now() };
+  }
+  if (latestState && ui.page === "stock") renderStock(latestState);
+}
+
+function pickDefaultSymbol(s) {
+  if (selectedSymbol) return;
+  const rows = scanRows(s);
+  selectedSymbol = heldSymbols(s)[0] || (s.scanner && s.scanner.active[0]) || (rows[0] && rows[0].symbol) || s.watchlist[0] || null;
+}
+
+function renderPage(s) {
+  if (ui.page === "overview") renderOverview(s);
+  else if (ui.page === "screener") renderScreener(s);
+  else if (ui.page === "stock") renderStock(s);
+  else if (ui.page === "method") renderMethod();
+  else if (ui.page === "portfolio") renderPortfolio(s);
+  else if (ui.page === "journal") renderJournal();
+  else if (ui.page === "trades") renderTrades(s);
+}
+
+function renderAll(s) {
+  if (!s) return;
+  latestState = s;
+  pickDefaultSymbol(s);
+  renderTop(s);
+  renderPage(s);
+}
+
+async function setMode(paperMode) {
+  await apiFetch(`/api/mode`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paper_mode: paperMode }),
+  });
+}
+
+async function triggerScan(btn) {
+  btn.disabled = true;
+  btn.textContent = "Scanning…";
+  try {
+    const res = await apiFetch(`/api/scan`, { method: "POST" });
+    const data = await res.json();
+    btn.textContent = data.started ? "Scan started" : "Already scanning";
+  } catch (e) {
+    btn.textContent = "Engine offline";
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = "Scan now"; }, 8000);
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest("a")) return;
+  const btn = e.target.closest("button");
+  if (btn) {
+    if (btn.id === "btn-home") { navigate("overview"); return; }
+    if (btn.id === "btn-scan") return triggerScan(btn);
+    if (btn.id === "btn-toggle-watch") { ui.showAllWatch = !ui.showAllWatch; return renderScreener(latestState); }
+    if (btn.dataset.sort) { setScreenerSort(btn.dataset.sort); return; }
+    if (btn.id === "btn-fno-toggle") {
+      const turningOn = btn.dataset.fnoEnabled !== "true";
+      if (turningOn && !confirm("Turn F&O on? Combined with Live mode, this lets Trader Sahab buy real option "
+          + "contracts with real premium at risk, sized and confidence-gated automatically — no per-trade "
+          + "confirmation. Paper mode still simulates it safely either way.")) return;
+      return setFnoEnabled(turningOn);
+    }
+    if (btn.dataset.nav) { navigate(btn.dataset.nav); return; }
+    if (btn.dataset.group === "screenerTab") { ui.screenerTab = btn.dataset.tab; return renderScreener(latestState); }
+    if (btn.dataset.group === "centerTab") { ui.centerTab = btn.dataset.tab; return renderStock(latestState); }
+    if (btn.dataset.sym) { navigate("stock", btn.dataset.sym); return; }
+    return;
+  }
+  const toggle = e.target.closest(".opp[data-toggle]");
+  if (toggle) {
+    ui.expandedSymbol = ui.expandedSymbol === toggle.dataset.toggle ? null : toggle.dataset.toggle;
+    renderScreener(latestState);
+  }
+});
+
+window.addEventListener("hashchange", applyRoute);
+
+$("btn-paper").onclick = () => setMode(true);
+$("btn-live").onclick = () => {
+  if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false);
+};
+
+async function refreshKiteStatus() {
+  try {
+    const res = await apiFetch(`/api/kite/status`);
+    const k = await res.json();
+    const label = $("kite-label");
+    const btn = $("btn-connect-kite");
+    if (k.connected && k.using_live_data) {
+      label.textContent = "Kite live prices";
+      btn.textContent = "Reconnect";
+    } else if (k.connected) {
+      label.textContent = "Kite connected";
+      btn.textContent = "Reconnect";
+    } else {
+      label.textContent = k.app_configured ? "Kite not connected" : "Delayed prices";
+      btn.textContent = "Connect Kite";
+    }
+  } catch (e) { /* backend not reachable yet */ }
+}
+
+$("btn-connect-kite").onclick = () => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640");
+window.addEventListener("focus", refreshKiteStatus);
+setInterval(refreshKiteStatus, 15000);
+refreshKiteStatus();
+
+function connectWS() {
+  const ws = new WebSocket(API_BASE.replace("http", "ws") + "/ws?key=" + encodeURIComponent(API_KEY));
+  ws.onmessage = evt => renderAll(JSON.parse(evt.data));
+  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onerror = () => ws.close();
+}
+
+applyRoute();
+connectWS();
+setInterval(async () => {
+  try {
+    const res = await apiFetch(`/api/state`);
+    renderAll(await res.json());
+  } catch (e) { /* the WebSocket is probably already delivering updates */ }
+}, 10000);
+setInterval(() => { if (selectedSymbol && ui.page === "stock") fetchNews(selectedSymbol); }, 60000);
+</script>
+</body>
+</html>
