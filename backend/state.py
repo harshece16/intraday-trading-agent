@@ -24,6 +24,7 @@ class AppState:
         self.paper_mode = paper_mode
         self.running = False
         self.market_status = "unknown"  # "open" | "closed" | "unknown"
+        self.holiday = None  # {"name": str, "next_trading_day": "YYYY-MM-DD"} on an NSE holiday, else None
 
         self.watchlist = []
         self.candles = {}          # symbol -> recent candle window
@@ -76,6 +77,7 @@ class AppState:
                 "paper_mode": self.paper_mode,
                 "running": self.running,
                 "market_status": self.market_status,
+                "holiday": self.holiday,
                 "watchlist": self.watchlist,
                 "indicators": self.indicators,
                 "positions": positions_out,

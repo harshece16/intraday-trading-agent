@@ -396,8 +396,10 @@ function renderTop(s) {
 function renderStance(s) {
   const m = s.market, sc = s.scanner;
   if (!m) {
-    setHTML($("stance-lead"), "Reading the market for the first time…");
-    setHTML($("stance-rest"), "Trader Sahab is downloading prices for all NIFTY 100 stocks. This takes about 30 seconds.");
+    setHTML($("stance-lead"), s.holiday ? `Markets are shut today for ${esc(s.holiday.name)}.` : "Reading the market for the first time…");
+    setHTML($("stance-rest"), s.holiday
+      ? `Trading resumes ${new Date(s.holiday.next_trading_day + "T00:00:00").toLocaleDateString("en-IN", {weekday: "long", day: "numeric", month: "short"})}.`
+      : "Trader Sahab is downloading prices for all NIFTY 100 stocks. This takes about 30 seconds.");
     setHTML($("stance-facts"), "");
     setHTML($("scan-info"), "");
     return;
@@ -420,8 +422,12 @@ function renderStance(s) {
     held ? `${held} open position${held > 1 ? "s" : ""}.` : "No open positions.",
   ];
   if (m.vix_high) sentences.push(`India VIX is high, so new positions are half size.`);
-  if (closed) sentences.push("Trading resumes at 9:15.");
-  setHTML($("stance-lead"), esc(lead));
+  if (s.holiday) {
+    sentences.push(`Markets are closed today for ${s.holiday.name}. Trading resumes ${new Date(s.holiday.next_trading_day + "T00:00:00").toLocaleDateString("en-IN", {weekday: "long", day: "numeric", month: "short"})}.`);
+  } else if (closed) {
+    sentences.push("Trading resumes at 9:15.");
+  }
+  setHTML($("stance-lead"), esc(s.holiday ? `Markets are shut today for ${s.holiday.name}.` : lead));
   setHTML($("stance-rest"), esc(sentences.join(" ")));
 
   const sectors = (sc && sc.sectors) || [];

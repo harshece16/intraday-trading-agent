@@ -21,6 +21,7 @@ import config
 import costs
 import data_provider
 import database
+import holidays
 import news_sentiment
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
@@ -44,7 +45,7 @@ SQUARE_OFF_T = _parse_hhmm(config.SQUARE_OFF_TIME)
 
 def market_phase(now=None) -> str:
     now = now or datetime.now(IST)
-    if now.weekday() >= 5:
+    if now.weekday() >= 5 or holidays.is_holiday(now):
         return "closed"
     t = now.time()
     if t < MARKET_OPEN_T or t >= MARKET_CLOSE_T:
@@ -62,6 +63,7 @@ class TradingEngine:
         self.strategy_params = config.STRATEGY_PARAMS[config.STRATEGY]
         self.kite_executor = None
         self._last_day = None
+        self._last_holiday_logged = None
         self.scanner = Scanner(config.SCANNER) if config.SCANNER.get("enabled") else None
         self._scan_thread = None
         self.size_multiplier = 1.0
@@ -352,6 +354,13 @@ class TradingEngine:
 
         phase = market_phase(now)
         self.state.market_status = "open" if phase in ("open", "square_off_window") else "closed"
+        holiday = holidays.holiday_name(now)
+        self.state.holiday = {"name": holiday, "next_trading_day": holidays.next_trading_day(now).isoformat()} \
+            if holiday else None
+        if holiday and self._last_holiday_logged != now.date():
+            self._last_holiday_logged = now.date()
+            resumes = holidays.next_trading_day(now).strftime("%A, %d %b")
+            self.state.log("system", f"Markets are closed today for {holiday}. Trading resumes {resumes}.")
 
         if self.scanner and self.scanner.due(phase != "closed"):
             self.request_scan()
