@@ -160,8 +160,8 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
             if t < market_open_t:
                 continue
 
-            if allowed_by_day is not None and pos.quantity == 0 \
-                    and symbol not in allowed_by_day.get(ts.date().isoformat(), ()):
+            allowed = allowed_by_day.get(ts.date().isoformat(), {}) if allowed_by_day is not None else None
+            if allowed is not None and pos.quantity == 0 and symbol not in allowed:
                 strat_states[symbol] = None
                 continue
 
@@ -169,20 +169,27 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
             #    including this one — no look-ahead.
             window = candles[: i + 1]
             signal, strat_states[symbol] = strategy_fn(window, prev_state=strat_states[symbol], **strategy_params)
+            st = strat_states[symbol] or {}
 
-            if signal == "BUY" and pos.quantity == 0:
+            # Exits mirror the live engine: the brain's exit condition, or a signal for the other side.
+            if pos.quantity > 0 and (signal in ("SELL", "SHORT") or st.get("exit_long")):
+                equity += _close_position(pos, bar["close"], risk, trades, symbol, ts, "signal", costs_cfg)
+                equity_curve.append(equity)
+            elif pos.quantity < 0 and (signal in ("BUY", "COVER") or st.get("exit_short")):
+                equity += _close_position(pos, bar["close"], risk, trades, symbol, ts, "signal", costs_cfg)
+                equity_curve.append(equity)
+            elif pos.quantity == 0 and signal in ("BUY", "SHORT"):
+                side = "BUY" if signal == "BUY" else "SELL"
+                if isinstance(allowed, dict) and allowed.get(symbol) != ("LONG" if side == "BUY" else "SHORT"):
+                    continue
                 if not risk.can_open_new_position():
                     continue
                 atr_val = compute_atr(window, risk_cfg.get("atr_period", 14)) if risk_cfg.get("use_atr_risk") else None
                 qty = risk.position_size(bar["close"], atr=atr_val)
                 if qty <= 0:
                     continue
-                _open_position(pos, "BUY", bar["close"], qty, atr_val, costs_cfg)
+                _open_position(pos, side, bar["close"], qty, atr_val, costs_cfg)
                 risk.open_positions_count += 1
-
-            elif signal == "SELL" and pos.quantity > 0:
-                equity += _close_position(pos, bar["close"], risk, trades, symbol, ts, "signal", costs_cfg)
-                equity_curve.append(equity)
 
     # Mark-to-market any positions still open at the end of the sample.
     for symbol, pos in positions.items():
@@ -234,6 +241,13 @@ def report(trades, equity_curve, starting_capital, costs_enabled):
     print(f"Net P&L:           {total_pnl:.2f}  ({total_pnl / starting_capital * 100:.2f}% of starting capital)")
     print(f"Max drawdown:      {max_dd:.2f}  ({max_dd_pct:.2f}%)")
     print(f"Exit reasons:      {_count_reasons(trades)}")
+    by_side = {}
+    for t in trades:
+        by_side.setdefault(t["side"], []).append(t)
+    for side, ts_ in sorted(by_side.items()):
+        w = sum(1 for t in ts_ if t["pnl"] > 0)
+        print(f"{side + ':':19s}{len(ts_)} trades, win {w / len(ts_) * 100:.0f}%, "
+              f"gross {sum(t['gross_pnl'] for t in ts_):.0f}, net {sum(t['pnl'] for t in ts_):.0f}")
     print(f"{'='*50}")
     if not costs_enabled:
         print("NOTE: run with costs disabled (--no-costs) — this is a frictionless,")
@@ -261,10 +275,13 @@ def main():
     parser.add_argument("--universe", choices=["nifty100"],
                         help="Scan the NIFTY 100 each day and trade only the scanner's top picks")
     parser.add_argument("--scan-top", type=int, default=5, help="Picks per day in --universe mode")
+    parser.add_argument("--long-only", action="store_true", help="Disable short selling (trader_brain)")
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
-    strategy_params = config.STRATEGY_PARAMS[args.strategy]
+    strategy_params = dict(config.STRATEGY_PARAMS[args.strategy])
+    if args.long_only and args.strategy == "trader_brain":
+        strategy_params["allow_shorts"] = False
     risk_cfg = {**config.RISK, "total_capital": args.capital}
     costs_cfg = ZERO_COSTS if args.no_costs else config.COSTS
 
@@ -282,7 +299,8 @@ def main():
         preloaded = {t[:-3]: c for t, c in intraday.items()}
         symbols = sorted(preloaded)
         sessions = sorted({c["time"][:10] for cs in preloaded.values() for c in cs})
-        picks = scanner.premarket_picks(daily, rows, sessions, args.scan_top, config.SCANNER)
+        picks = scanner.premarket_picks(daily, rows, sessions, args.scan_top, config.SCANNER,
+                                        allow_shorts=not args.long_only)
         freq = Counter(s for day in picks.values() for s in day)
         print(f"Scanner picked {len(freq)} distinct stocks over {len(sessions)} sessions; most often: "
               + ", ".join(f"{s}×{n}" for s, n in freq.most_common(6)))

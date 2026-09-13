@@ -1,23 +1,26 @@
 """
-Market scanner — decides WHAT to trade; Trader Brain then decides WHEN.
+Market scanner — decides WHAT to trade (and which side); Trader Brain then
+decides WHEN.
 
 Professional intraday traders don't stare at a fixed list; before and during
 the session they narrow a liquid universe down to the handful of stocks that
-are actually "in play". This encodes that routine over the NIFTY 100:
+are actually "in play" — leaders to buy on strong days, laggards to short on
+weak ones. This encodes that routine over the NIFTY 100:
 
   Market context   NIFTY trend and day change, breadth (advancers/decliners),
-                   India VIX. Risk-off days get fewer, smaller trades.
+                   India VIX. The bias decides which side gets the slots.
   Tradability      price, turnover and daily ATR% floors — a stock that
                    doesn't move 1.2%+ a day can't pay for intraday costs.
-  Daily setup      daily trend (EMA20/50), 10-day relative strength vs
-                   NIFTY, distance from 52-week high, NR7 / inside-day
+  Daily setup      daily trend (EMA20/50), 10-day relative strength vs NIFTY,
+                   distance from 52-week high/low, NR7 / inside-day
                    compression, daily RSI.
   In play today    gap %, time-of-day-adjusted relative volume, relative
                    strength vs NIFTY today, VWAP side, opening-range
-                   breakout, sector leadership.
+                   breakout/breakdown, sector leadership.
   Catalysts        NSE filings + market news mentioning the company.
-  Event risk       results due today/next session → no new longs.
+  Event risk       results due today/next session → no new trades.
 
+Every stock is scored as a long AND as a short; the stronger side is kept.
 The top candidates get a full Trader Brain read (with per-stock news); the
 best of those become the engine's active watchlist.
 """
@@ -25,7 +28,6 @@ best of those become the engine's active watchlist.
 import bisect
 import logging
 import time
-from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -102,7 +104,9 @@ def daily_profile(bars, nifty_dates, nifty_closes, before_date):
     n_now = _close_on_or_before(nifty_dates, nifty_closes, _date(last))
     n_then = _close_on_or_before(nifty_dates, nifty_closes, _date(bars[-11]))
     rs10 = ret10 - (n_now / n_then - 1) * 100 if n_now and n_then else None
-    high52 = max(b["high"] for b in bars[-250:])
+    year = bars[-250:]
+    high52 = max(b["high"] for b in year)
+    low52 = min(b["low"] for b in year)
     ranges = [b["high"] - b["low"] for b in bars[-7:]]
     return {
         "close": close,
@@ -112,6 +116,7 @@ def daily_profile(bars, nifty_dates, nifty_closes, before_date):
         "rsi": ind.rsi(closes[-100:], 14),
         "rs10": rs10,
         "pct_from_high": (high52 - close) / high52 * 100,
+        "pct_from_low": (close - low52) / low52 * 100,
         "nr7": ranges[-1] == min(ranges),
         "inside_day": last["high"] <= prev["high"] and last["low"] >= prev["low"],
     }
@@ -127,39 +132,61 @@ class _Points:
         self.items.append((pts, text))
 
 
-def premarket_score(p, cfg):
-    """Daily-data-only ranking (usable before the open and in backtests).
-    Returns (score, [(points, reason)], excluded_reason_or_None)."""
+def tradability_exclusion(p, cfg):
     if p["close"] < cfg["min_price"]:
-        return 0.0, [], f"Price ₹{p['close']:.0f} below ₹{cfg['min_price']}"
+        return f"Price ₹{p['close']:.0f} below ₹{cfg['min_price']}"
     if p["turnover_cr"] < cfg["min_turnover_cr"]:
-        return 0.0, [], f"Turnover ₹{p['turnover_cr']:.0f} cr/day too thin (min ₹{cfg['min_turnover_cr']} cr)"
+        return f"Turnover ₹{p['turnover_cr']:.0f} cr/day too thin (min ₹{cfg['min_turnover_cr']} cr)"
     if p["atr_pct"] < cfg["min_atr_pct"]:
-        return 0.0, [], f"Daily ATR {p['atr_pct']:.1f}% — too sluggish to cover costs (min {cfg['min_atr_pct']}%)"
+        return f"Daily ATR {p['atr_pct']:.1f}% — too sluggish to cover costs (min {cfg['min_atr_pct']}%)"
+    return None
 
+
+def premarket_score(p, cfg, side="long"):
+    """Daily-data-only ranking for one side (usable before the open and in backtests).
+    Returns (score, [(points, reason)], excluded_reason_or_None)."""
+    excluded = tradability_exclusion(p, cfg)
+    if excluded:
+        return 0.0, [], excluded
+    s = 1 if side == "long" else -1
     pts = _Points()
-    if p["trend"] == "up":
-        pts.add(20, "Daily uptrend (close > EMA20 > EMA50)")
-    elif p["trend"] == "down":
-        pts.add(-15, "Daily downtrend — longs fight the bigger picture")
+
+    if p["trend"] == ("up" if s > 0 else "down"):
+        pts.add(20, "Daily uptrend (close > EMA20 > EMA50)" if s > 0 else "Daily downtrend (close < EMA20 < EMA50)")
+    elif p["trend"] == ("down" if s > 0 else "up"):
+        pts.add(-15, "Daily downtrend — longs fight the bigger picture" if s > 0
+                else "Daily uptrend — shorts fight the bigger picture")
+
     rs = p["rs10"]
     if rs is not None:
-        if rs > 0.5:
-            pts.add(min(20.0, rs * 4), f"Beat NIFTY by {rs:.1f}% over 10 days (relative strength)")
-        elif rs < -0.5:
-            pts.add(-min(15.0, -rs * 3), f"Lagged NIFTY by {-rs:.1f}% over 10 days")
-    if p["pct_from_high"] <= 3:
+        edge = rs * s
+        if edge > 0.5:
+            pts.add(min(20.0, edge * 4), f"{'Beat' if rs > 0 else 'Lagged'} NIFTY by {abs(rs):.1f}% over 10 days "
+                                         f"(relative {'strength' if rs > 0 else 'weakness'})")
+        elif edge < -0.5:
+            pts.add(-min(15.0, -edge * 3), f"{'Beat' if rs > 0 else 'Lagged'} NIFTY by {abs(rs):.1f}% over 10 days")
+
+    if s > 0 and p["pct_from_high"] <= 3:
         pts.add(10, f"{p['pct_from_high']:.1f}% from 52-week high — little overhead supply")
+    if s < 0 and p["pct_from_low"] <= 3:
+        pts.add(10, f"{p['pct_from_low']:.1f}% from 52-week low — no support underneath")
     if p["nr7"]:
         pts.add(8, "NR7: narrowest daily range in 7 sessions — compression before expansion")
     elif p["inside_day"]:
         pts.add(6, "Inside day — compression before expansion")
+
     r = p["rsi"]
     if r is not None:
-        if r > 75:
-            pts.add(-8, f"Daily RSI {r:.0f} overbought")
-        elif 45 <= r <= 70:
-            pts.add(5, f"Daily RSI {r:.0f} in a healthy momentum zone")
+        if s > 0:
+            if r > 75:
+                pts.add(-8, f"Daily RSI {r:.0f} overbought")
+            elif 45 <= r <= 70:
+                pts.add(5, f"Daily RSI {r:.0f} in a healthy momentum zone")
+        else:
+            if r < 25:
+                pts.add(-8, f"Daily RSI {r:.0f} oversold — short-squeeze risk")
+            elif 30 <= r <= 55:
+                pts.add(5, f"Daily RSI {r:.0f} in a bearish momentum zone")
     if 1.5 <= p["atr_pct"] <= 4.0:
         pts.add(5, f"Daily ATR {p['atr_pct']:.1f}% — enough range to trade")
     return pts.score, pts.items, None
@@ -192,15 +219,19 @@ def intraday_metrics(candles, prof):
     }
 
 
-def intraday_score(m, ctx, sector_rank, n_sectors, industry, catalyst, cfg):
+def intraday_score(m, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long"):
+    s = 1 if side == "long" else -1
     pts = _Points()
+
     g = m["gap_pct"]
-    if g > cfg["max_gap_pct"]:
-        pts.add(-10, f"Gapped up {g:.1f}% — chase and gap-fill risk")
-    elif g >= 0.3:
-        pts.add(6, f"Gap up {g:.1f}% — overnight demand")
-    elif g <= -cfg["max_gap_pct"]:
-        pts.add(-8, f"Gapped down {-g:.1f}%")
+    word = "up" if g > 0 else "down"
+    if g * s > cfg["max_gap_pct"]:
+        pts.add(-10, f"Gapped {word} {abs(g):.1f}% — chase and gap-fill risk")
+    elif g * s >= 0.3:
+        pts.add(6, f"Gap {word} {abs(g):.1f}% — overnight {'demand' if g > 0 else 'supply'}")
+    elif g * s <= -cfg["max_gap_pct"]:
+        pts.add(-8, f"Gapped {word} {abs(g):.1f}% against the trade")
+
     rv = m["rvol"]
     if rv is not None:
         if rv >= 2:
@@ -209,32 +240,36 @@ def intraday_score(m, ctx, sector_rank, n_sectors, industry, catalyst, cfg):
             pts.add(8, f"Relative volume {rv:.1f}×")
         elif rv < 0.7:
             pts.add(-8, f"Relative volume {rv:.1f}× — little interest today")
+
     rs_today = m["chg_pct"] - ctx["nifty"]["chg_pct"]
-    if rs_today > 0.3:
-        pts.add(min(15.0, rs_today * 5), f"Outperforming NIFTY today by {rs_today:.1f}%")
-    elif rs_today < -0.3:
-        pts.add(-min(10.0, -rs_today * 4), f"Underperforming NIFTY today by {-rs_today:.1f}%")
+    verb = "Outperforming" if rs_today > 0 else "Underperforming"
+    if rs_today * s > 0.3:
+        pts.add(min(15.0, abs(rs_today) * 5), f"{verb} NIFTY today by {abs(rs_today):.1f}%")
+    elif rs_today * s < -0.3:
+        pts.add(-min(10.0, abs(rs_today) * 4), f"{verb} NIFTY today by {abs(rs_today):.1f}%")
+
     if m["vwap"]:
-        if m["ltp"] > m["vwap"]:
-            pts.add(5, "Holding above VWAP")
-        else:
-            pts.add(-5, "Below VWAP")
+        above = m["ltp"] > m["vwap"]
+        pts.add(5 if above == (s > 0) else -5, "Holding above VWAP" if above else "Below VWAP")
     if m["bars_today"] > 3:
         if m["ltp"] > m["or_high"]:
-            pts.add(8, "Trading above its 15-min opening range")
+            pts.add(8 if s > 0 else -6, "Trading above its 15-min opening range")
         elif m["ltp"] < m["or_low"]:
-            pts.add(-6, "Below its 15-min opening range")
+            pts.add(8 if s < 0 else -6, "Broke below its 15-min opening range")
+
     if sector_rank is not None and n_sectors >= 6:
         if sector_rank < 3:
-            pts.add(8, f"{industry} is a top-3 sector today")
+            pts.add(8 if s > 0 else -5, f"{industry} is a top-3 sector today")
         elif sector_rank >= n_sectors - 3:
-            pts.add(-5, f"{industry} is a bottom-3 sector today")
+            pts.add(8 if s < 0 else -5, f"{industry} is a bottom-3 sector today")
+
     if catalyst:
-        s = catalyst["score"]
-        if s >= 0.2:
-            pts.add(min(12.0, s * 15), f"Positive catalyst: {catalyst['top'][:80]}")
-        elif s <= -0.3:
-            pts.add(-15, f"Negative catalyst: {catalyst['top'][:80]}")
+        c = catalyst["score"]
+        tone = "Positive" if c > 0 else "Negative"
+        if c * s >= 0.2:
+            pts.add(min(12.0, abs(c) * 15), f"{tone} catalyst: {catalyst['top'][:80]}")
+        elif c * s <= -0.3:
+            pts.add(-15, f"{tone} catalyst against the trade: {catalyst['top'][:80]}")
     return pts.score, pts.items, rs_today
 
 
@@ -296,6 +331,28 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg):
     }
 
 
+def _trend_agrees(daily_trend, side):
+    return daily_trend != ("down" if side == "LONG" else "up")
+
+
+def select_active(eligible, bias, cfg):
+    """Best final scores first; the side against the market bias gets at most
+    counter_trend_active_count slots (longs on risk-off days, shorts on risk-on days)."""
+    against = "LONG" if bias == "risk-off" else "SHORT" if bias == "risk-on" else None
+    active, n_against = [], 0
+    for r in eligible:
+        if len(active) >= cfg["active_count"]:
+            break
+        if not _trend_agrees(r["daily_trend"], r["side"]) or r["final_score"] < cfg["min_score"]:
+            continue
+        if r["side"] == against:
+            if n_against >= cfg["counter_trend_active_count"]:
+                continue
+            n_against += 1
+        active.append(r["symbol"])
+    return active
+
+
 class Scanner:
     def __init__(self, cfg):
         self.cfg = cfg
@@ -311,6 +368,7 @@ class Scanner:
         started = time.time()
         self.last_run = started
         cfg = self.cfg
+        sides = ("long", "short") if cfg.get("allow_shorts", True) else ("long",)
         uni = universe.load()
         if not uni:
             raise RuntimeError("Universe list is empty")
@@ -351,19 +409,29 @@ class Scanner:
 
         for r in rows:
             prof, m, sym = r["_prof"], r["_m"], r["symbol"]
-            pre, pre_items, excluded = premarket_score(prof, cfg)
+            excluded = tradability_exclusion(prof, cfg)
             if not excluded and sym in events:
                 ev = events[sym]
-                excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new longs"
-            intra, intra_items, rs_today = intraday_score(
-                m, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym), cfg)
-            items = sorted(pre_items + intra_items, key=lambda x: -abs(x[0]))
+                excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
+            scored = {}
+            rs_today = None
+            for side in sides:
+                pre, pre_items, _ = premarket_score(prof, cfg, side)
+                intra, intra_items, rs_today = intraday_score(
+                    m, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym), cfg, side)
+                scored[side] = (pre + intra, sorted(pre_items + intra_items, key=lambda x: -abs(x[0])))
+            best = max(scored, key=lambda k: scored[k][0])
+            score, items = scored[best]
             r.update({
-                "score": _r(pre + intra, 1), "final_score": _r(pre + intra, 1), "excluded": excluded,
+                "side": best.upper(),
+                "long_score": _r(scored["long"][0], 1),
+                "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
+                "score": _r(score, 1), "final_score": _r(score, 1), "excluded": excluded,
                 "reasons": [{"points": _r(float(p), 1), "text": t} for p, t in items[:7]],
                 "ltp": _r(m["ltp"]), "gap_pct": _r(m["gap_pct"]), "rvol": _r(m["rvol"]),
                 "rs_today": _r(rs_today), "vwap": _r(m["vwap"]), "atr_pct": _r(prof["atr_pct"]),
-                "daily_trend": prof["trend"], "rs10": _r(prof["rs10"]), "pct_from_high": _r(prof["pct_from_high"]),
+                "daily_trend": prof["trend"], "rs10": _r(prof["rs10"]),
+                "pct_from_high": _r(prof["pct_from_high"]), "pct_from_low": _r(prof["pct_from_low"]),
                 "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]),
                 "catalyst": catalysts.get(sym), "event": events.get(sym), "brain": None,
             })
@@ -381,13 +449,12 @@ class Scanner:
             if brain and "bull_score" in brain:
                 r["brain"] = brain
                 edge = brain["bull_score"] - brain["bear_score"]
+                if r["side"] == "SHORT":
+                    edge = -edge
                 r["final_score"] = _r(r["score"] + max(-15.0, min(15.0, edge * 2)), 1)
 
         eligible.sort(key=lambda r: -r["final_score"])
-        active = [r["symbol"] for r in eligible
-                  if r["daily_trend"] != "down" and r["final_score"] >= cfg["min_score"]][: cfg["active_count"]]
-        if ctx["bias"] == "risk-off":
-            active = active[: cfg["risk_off_active_count"]]
+        active = select_active(eligible, ctx["bias"], cfg)
 
         excluded_rows = sorted((r for r in rows if r["excluded"]), key=lambda r: -r["score"])
         ranked = eligible + excluded_rows
@@ -398,6 +465,7 @@ class Scanner:
             for k in ("_prof", "_m", "_candles"):
                 r.pop(k, None)
 
+        active_sides = {r["symbol"]: r["side"] for r in ranked if r["symbol"] in active}
         self.result = {
             "ts": time.time(),
             "session_date": session,
@@ -405,6 +473,7 @@ class Scanner:
             "scanned": len(rows),
             "excluded_count": len(excluded_rows),
             "active": active,
+            "active_sides": active_sides,
             "market": ctx,
             "sectors": sectors,
             "rows": ranked,
@@ -412,21 +481,28 @@ class Scanner:
         return self.result
 
 
-def premarket_picks(daily, universe_rows, session_dates, top_n, cfg):
-    """Backtest helper: for each session, the top_n stocks by daily-data-only score,
-    ranked with information available before that session's open."""
+def premarket_picks(daily, universe_rows, session_dates, top_n, cfg, allow_shorts=True):
+    """Backtest helper: for each session, {symbol: "LONG"|"SHORT"} for the top_n stocks by
+    daily-data-only score, using only information available before that session's open."""
     nd = daily.get(NIFTY, [])
     nifty_dates = [_date(b) for b in nd]
     nifty_closes = [b["close"] for b in nd]
+    sides = ("LONG", "SHORT") if allow_shorts else ("LONG",)
     picks = {}
     for d in session_dates:
         scored = []
         for u in universe_rows:
             prof = daily_profile(daily.get(yf_ticker(u["symbol"]), []), nifty_dates, nifty_closes, d)
-            if not prof or prof["trend"] == "down":
+            if not prof or tradability_exclusion(prof, cfg):
                 continue
-            score, _, excluded = premarket_score(prof, cfg)
-            if not excluded:
-                scored.append((score, u["symbol"]))
-        picks[d] = [s for _, s in sorted(scored, reverse=True)[:top_n]]
+            best = None
+            for side in sides:
+                if not _trend_agrees(prof["trend"], side):
+                    continue
+                score, _, _ = premarket_score(prof, cfg, side.lower())
+                if best is None or score > best[0]:
+                    best = (score, side)
+            if best:
+                scored.append((best[0], u["symbol"], best[1]))
+        picks[d] = {sym: side for _, sym, side in sorted(scored, reverse=True)[:top_n]}
     return picks

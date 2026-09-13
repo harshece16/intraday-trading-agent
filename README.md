@@ -2,11 +2,12 @@
 
 An intraday trading agent for Indian equities. It works like a disciplined
 technical trader. It **scans the NIFTY 100** to decide *what* is worth trading
-today, using market context, relative strength, volume, sector leadership,
-news and results-day risk. The **Trader Brain** then decides *when* to enter
-and exit, using trend, structure, momentum, levels, candlestick patterns and
-volume. It sizes every trade by risk and explains each decision on a live
-dashboard.
+today and on which side: strong stocks to buy on strong days, weak stocks to
+**short** on weak days. It uses market context, relative strength, volume,
+sector leadership, news and results-day risk. The **Trader Brain** then
+decides *when* to enter and exit, using trend, structure, momentum, levels,
+candlestick patterns and volume. It sizes every trade by risk and explains
+each decision in plain language on a live dashboard.
 
 It runs in **paper mode** by default and can route real orders through
 **Zerodha Kite Connect**.
@@ -46,7 +47,7 @@ It runs in **paper mode** by default and can route real orders through
 | NIFTY daily trend (EMA20/50), day change, holding above its open | Market bias score |
 | Breadth: advancers vs decliners across the NIFTY 100 | ≥ 60% up adds to the score, ≤ 40% subtracts |
 | India VIX ≥ 20 | Counts as risk; new position sizes halved |
-| **Bias** = risk-on / neutral / **risk-off** | Risk-off: at most 2 active stocks and **no new longs** |
+| **Bias** = risk-on / neutral / **risk-off** | Risk-off: **no new longs**, shorts get the slots (at most 2 long picks kept on watch). Risk-on: the mirror image, no new shorts. Neutral: both sides |
 
 ### 2. Scanner — *what* to trade (`scanner.py`, every 5 min open / 60 min closed)
 
@@ -59,8 +60,9 @@ weekly from NSE's list.
 | **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 |
 | **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
-| **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the bull−bear edge adjusts their score by up to ±15 |
-| **Active watchlist** | Top 6 by final score that aren't in a daily downtrend (2 on risk-off days), plus pinned stocks and open positions |
+| **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept |
+| **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
+| **Active watchlist** | Top 6 by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
 
 ### 3. Trader Brain — *when* to trade (`trader_brain.py`)
 
@@ -77,8 +79,19 @@ weekly from NSE's list.
 | Catalyst | News | Sentiment × 2; strongly negative news **vetoes** new longs |
 | **Discipline** | Intraday practice | No entries before 09:30 or after 14:30 · ≥ 3 agreeing categories · bull ≥ 6 and beats bear by ≥ 2 · **one entry per stock per day** |
 
-Exits: ATR stop-loss and take-profit, a Trader Brain exit (bear score ≥ 5
-or broken structure), and auto square-off at 15:15.
+**Shorts** use the same checklist on the bearish evidence: bear score ≥ 6,
+at least 3 agreeing categories, and an edge of 2 or more over the bull score.
+They get the same discipline penalties as longs (fighting the 15-min uptrend
+−2, support within 1 ATR −1.5, thin volume −0.5, RSI washed out −1.5), and
+strongly positive news blocks a new short. The engine also refuses a short
+the scanner ranked as a long, and vice versa. Shorts are MIS (intraday)
+orders and are always covered by the 15:15 square-off. Never hold a cash
+short overnight, because a short delivery goes to exchange auction.
+
+Exits for both sides: the ATR stop-loss and take-profit, the opposite case
+reaching 5 or the swing structure breaking, and the 15:15 square-off.
+`allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and `SCANNER` turns
+shorting off.
 
 ### 4. News sources (`news_sentiment.py`, `nse_feed.py`)
 
@@ -103,23 +116,39 @@ large caps better, and they're free.
 
 ## Dashboard
 
-- **Market strip:** risk-on/off bias (hover for the reasons), NIFTY, VIX,
-  breadth, leading and lagging sectors, last scan time, **Scan now** button.
-- **Opportunities:** all 100 stocks ranked, with change, relative volume,
-  score and status (`ENTRY OK` / `ACTIVE` / `HELD` / `watch` / `avoid`).
-  Hover for the top reasons. Filtered-out stocks show their reason.
-- **Chart:** candles with support, resistance and VWAP lines from the brain.
-- **Why this stock:** the scanner's score breakdown, gap, relative strength,
-  relative volume, ATR, distance from the 52-week high, catalyst, and any
-  event-risk warning.
-- **Trader Brain:** setup, regime, bull vs bear score bars, evidence on
-  each side, patterns, and what's holding an entry back.
-- **Agent Activity:** a plain-English log of scans, watchlist changes,
-  forming setups, trades and **skipped signals with the reason** (risk-off,
-  max positions, event risk…).
-- **Trade Blotter:** every fill with its *why* (setup plus top reasons, or the exit reason).
-- **News:** the selected stock's headlines with source and sentiment, plus
-  today's market catalysts across the universe.
+The dashboard is built to be read, not decoded. Everything is in plain
+sentences, in a light theme (it follows your system's dark mode), and colour
+only means something: green for long or profit, red for short or loss, amber
+for waiting.
+
+- **Headline:** what the agent is doing right now, in one sentence. For
+  example, "The market is weak, so the agent is looking for stocks to
+  short." Below it, what the market did, which stocks it's tracking and on
+  which side (click any name), which are ready to enter, and your open
+  positions. Then NIFTY, VIX, stocks up and down, strongest and weakest
+  sector, and **Scan now**.
+- **Opportunities:** grouped into *Trading now*, *On watch* and *Skipped
+  today* (with the reason, like results due). Each row shows the side, the
+  score, the day's change and the top two reasons.
+- **Selected stock:**
+  - a **plan box** that says *Ready to short*, *Waiting to buy* (with a
+    list of what it's waiting for), *Holding a short position of 33 shares*,
+    or *No trade in this stock today*
+  - key levels, with the chart showing them as dashed lines
+  - the timing read: side-by-side *Case for buying* and *Case for shorting*,
+    each with a meter against the threshold and its evidence
+  - why the scanner ranked the stock where it did
+- **Open positions** and **What the agent is doing:** a sentence log of
+  scans, watchlist changes, forming setups, trades and skipped signals with
+  the reason.
+- **Trade journal:** *Bought*, *Sold short*, *Covered short*, *Sold*, each
+  with its reason.
+- **News:** the selected stock's headlines, each labelled Positive, Negative
+  or Neutral with source and age, plus NIFTY 100 stocks in today's filings
+  and headlines.
+
+Every clickable item is a real button with a visible keyboard focus ring.
+The layout stacks to one column on narrow screens.
 
 ## Backtest results
 
@@ -134,6 +163,21 @@ realistic Zerodha costs + slippage. H1/H2 are the two halves of the sample.
 | Trader Brain + scanner top-5/day, 1 entry/day | 218 | 20% | −₹6,767 | ₹6,979 | **−13.7%** | −5.9k / −7.8k |
 | Same on **15-minute** bars, 4 fixed stocks | 103 | 23% | −₹2,736 | ₹3,525 | **−6.3%** | −3.3k / −3.0k |
 | 15-minute bars, scanner top-5/day | 177 | 23% | −₹8,796 | ₹5,668 | **−14.5%** | −5.7k / −8.8k |
+
+**With short selling** (same period, symmetric long/short rules):
+
+| Setup | Trades | Win % | Gross | Costs | **Net** | Longs / Shorts net |
+|---|---|---|---|---|---|---|
+| 4 fixed stocks, long-only (`--long-only`) | 162 | 20% | −₹5,613 | ₹5,548 | **−11.2%** | −11.2k / — |
+| 4 fixed stocks, long + short | 202 | 25% | −₹3,999 | ₹6,920 | **−10.9%** | −6.3k / −4.6k |
+| **Scanner top-5/day, long + short** | 146 | 25% | −₹3,788 | ₹4,741 | **−8.5%** | −5.8k / −2.7k |
+| 15-minute bars, 4 fixed stocks, long + short | 189 | 29% | −₹5,020 | ₹6,470 | **−11.5%** | −5.6k / −5.9k |
+
+Shorts were the less-bad side in this sample, which was mostly falling
+(27–32% win rate, gross P&L near flat). Scanner picks with both sides are the
+best 5-minute result so far, but still a net loss. The long-only row differs
+slightly from the table above because the symmetric exit rules changed when
+longs close.
 
 What this shows:
 
@@ -163,8 +207,9 @@ The highest-leverage next steps:
 
 1. **Longer history + out-of-sample.** 55 days is tiny. Kite's historical
    API gives years of data. Tune on one period, validate on another.
-2. **Short selling.** The bearish evidence ledger already exists. Risk-off days
-   (74 of 100 stocks down on the last session) currently mean doing nothing.
+2. **Separate thresholds per side.** Shorts behaved differently from longs
+   here. Test whether they deserve their own entry, stop and target settings,
+   on more data than 55 days.
 3. **Structure-based stops** below the swing low that defined the setup,
    instead of a fixed ATR multiple.
 4. **Record live news + scanner snapshots** so catalysts and intraday scan
@@ -233,7 +278,8 @@ pinned symbols), `MARKET_FILTER` (risk-off / VIX behaviour), `NEWS` (sources),
 ## Known limitations
 
 - Net-negative in every backtest. There's no edge yet.
-- Long-only.
+- Shorts are intraday cash (MIS) only. No F&O, and no check for stocks in
+  the exchange's short-sell ban or circuit limits.
 - News, gaps, relative volume and results-day filters can't be backtested
   (no historical data for them).
 - Live analysis uses the still-forming candle, unlike backtests.

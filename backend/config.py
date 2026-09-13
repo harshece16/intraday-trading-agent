@@ -45,6 +45,8 @@ STRATEGY_PARAMS = {
         # One shot per stock per day. Cut losses in every backtest variant and both
         # halves of the sample (it stops re-entering a setup that just failed).
         "max_entries_per_day": 1,
+        # Intraday (MIS) shorts: mirror-image rules on the bearish evidence.
+        "allow_shorts": True,
         "use_news": True,
         "news_weight": 2.0,
         "news_veto": -0.5,          # sentiment at/below this blocks new longs
@@ -63,7 +65,8 @@ SCANNER = {
     "interval_minutes_open": 5,
     "interval_minutes_closed": 60,   # still scans when closed, so the dashboard shows a plan
     "active_count": 6,               # stocks the engine actively evaluates for entries
-    "risk_off_active_count": 2,
+    "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
+    "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
     "deep_analysis": 15,             # top candidates that get a full Trader Brain + news read
     "min_score": 20,
     "pinned": [],                    # always tracked, e.g. ["RELIANCE"]
@@ -77,6 +80,7 @@ SCANNER = {
 
 MARKET_FILTER = {
     "block_new_longs_when_risk_off": True,
+    "block_new_shorts_when_risk_on": True,
     "vix_high": 20.0,
     "vix_high_size_multiplier": 0.5,
 }

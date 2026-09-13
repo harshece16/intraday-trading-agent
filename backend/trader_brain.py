@@ -41,6 +41,7 @@ DEFAULTS = {
     "no_entry_before": "09:30",
     "last_entry_time": "14:30",
     "max_entries_per_day": 1,
+    "allow_shorts": True,
     "adx_trend": 25,
     "adx_range": 20,
     "htf_factor": 3,
@@ -142,7 +143,7 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
     # Higher timeframe
     if htf_trend == "up":
         bull.add("htf", 1.5, "15-min trend is up")
-        bear.add("htf", -1.0, "Bearish case fights the 15-min uptrend")
+        bear.add("htf", -2.0, "Short would fight the 15-min uptrend")
     elif htf_trend == "down":
         bear.add("htf", 1.5, "15-min trend is down")
         bull.add("htf", -2.0, "Long would fight the 15-min downtrend")
@@ -189,6 +190,7 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
             bear.add("volume", 1.0, f"Volume {vol_ratio:.1f}x average on a down bar")
         elif vol_ratio < 0.6:
             bull.add("volume", -0.5, "Thin volume — weak conviction")
+            bear.add("volume", -0.5, "Thin volume — weak conviction")
 
     # 4. Location
     if brk_up:
@@ -209,10 +211,12 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         bear.add("levels", 1.0, f"Rejected at resistance {resistance['price']:.2f}")
     if resistance is not None and resistance["price"] - price < atr_v and not brk_up:
         bull.add("levels", -1.5, f"Resistance {resistance['price']:.2f} within 1 ATR — poor reward:risk")
+    if support is not None and price - support["price"] < atr_v and not brk_dn:
+        bear.add("levels", -1.5, f"Support {support['price']:.2f} within 1 ATR — poor reward:risk for a short")
 
     # 5. Candlestick triggers, weighted by location
     at_value = near_support or abs(last["low"] - e20) <= 0.5 * atr_v or (vwap and abs(last["low"] - vwap) <= 0.5 * atr_v)
-    at_top = near_resistance or (vwap and abs(last["high"] - vwap) <= 0.5 * atr_v)
+    at_top = near_resistance or abs(last["high"] - e20) <= 0.5 * atr_v or (vwap and abs(last["high"] - vwap) <= 0.5 * atr_v)
     for pat in patterns:
         if pat["bias"] == "bullish":
             pts = pat["strength"] * (1.0 if at_value else 0.5)
@@ -223,63 +227,92 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
 
     # 7. News
     news_score = None
-    veto = False
+    long_veto = short_veto = False
     if news and p["use_news"]:
         news_score = news.get("score", 0.0)
         if news_score > 0.15:
             bull.add("news", news_score * p["news_weight"], f"Positive news sentiment ({news_score:+.2f})")
         elif news_score < -0.15:
             bear.add("news", -news_score * p["news_weight"], f"Negative news sentiment ({news_score:+.2f})")
-        if news_score <= p["news_veto"]:
-            veto = True
+        long_veto = news_score <= p["news_veto"]
+        short_veto = news_score >= -p["news_veto"]
 
-    # 8. Decision with discipline rules
+    # 8. Decision with discipline rules — longs and shorts are exact mirrors
     hhmm = last["time"][11:16]
     in_entry_window = p["no_entry_before"] <= hhmm < p["last_entry_time"]
-    exit_long = bear.total >= p["exit_threshold"] or (price < e50 and structure == "downtrend") or veto
+    exit_long = bear.total >= p["exit_threshold"] or (price < e50 and structure == "downtrend") or long_veto
+    exit_short = bull.total >= p["exit_threshold"] or (price > e50 and structure == "uptrend") or short_veto
     long_ok = (
-        in_entry_window and not veto and not exit_long
+        in_entry_window and not long_veto and not exit_long
         and bull.total >= p["entry_threshold"]
         and len(bull.categories) >= p["min_confirmations"]
         and bull.total - bear.total >= p["min_edge"]
     )
+    short_ok = (
+        p["allow_shorts"] and in_entry_window and not short_veto and not exit_short
+        and bear.total >= p["entry_threshold"]
+        and len(bear.categories) >= p["min_confirmations"]
+        and bear.total - bull.total >= p["min_edge"]
+    )
 
     day = last["time"][:10]
     entries_today = prev_state.get("entries_today", 0) if prev_state.get("entry_day") == day else 0
+    can_enter = entries_today < p["max_entries_per_day"]
     signal = None
-    if long_ok and not prev_state.get("long_ok"):
-        if entries_today < p["max_entries_per_day"]:
-            signal = "BUY"
-            entries_today += 1
+    if long_ok and not prev_state.get("long_ok") and can_enter:
+        signal = "BUY"
+        entries_today += 1
+    elif short_ok and not prev_state.get("short_ok") and can_enter:
+        signal = "SHORT"
+        entries_today += 1
     elif exit_long and not prev_state.get("exit_long"):
         signal = "SELL"
+    elif exit_short and not prev_state.get("exit_short"):
+        signal = "COVER"
 
+    bullish_side = bull.total >= bear.total
     if brk_up:
         setup = "Breakout"
-    elif regime == "ranging" and (rsi_v <= 40 or near_support):
+    elif brk_dn:
+        setup = "Breakdown"
+    elif regime == "ranging" and bullish_side and (rsi_v <= 40 or near_support):
         setup = "Range reversal"
+    elif regime == "ranging" and not bullish_side and (rsi_v >= 60 or near_resistance):
+        setup = "Range rejection"
     elif price > e20 > e50 and abs(last["low"] - e20) <= 0.5 * atr_v:
         setup = "Trend pullback"
-    elif bull.total >= bear.total:
-        setup = "Bullish confluence"
+    elif price < e20 < e50 and abs(last["high"] - e20) <= 0.5 * atr_v:
+        setup = "Pullback short"
     else:
-        setup = "Bearish pressure"
+        setup = "Bullish confluence" if bullish_side else "Bearish confluence"
 
+    ledger, other = (bull, bear) if bullish_side else (bear, bull)
+    label = "Bull" if bullish_side else "Bear"
     blockers = []
+    if not bullish_side and not p["allow_shorts"]:
+        blockers.append("Short selling is disabled")
     if not in_entry_window:
         blockers.append(f"Outside entry window ({p['no_entry_before']}–{p['last_entry_time']})")
-    if veto:
-        blockers.append("Strongly negative news — standing aside")
-    if bull.total < p["entry_threshold"]:
-        blockers.append(f"Bull score {bull.total:.1f} below {p['entry_threshold']}")
-    if len(bull.categories) < p["min_confirmations"]:
-        blockers.append(f"Only {len(bull.categories)} confirming categories (need {p['min_confirmations']})")
-    if entries_today >= p["max_entries_per_day"] and signal != "BUY":
+    if bullish_side and long_veto:
+        blockers.append("Strongly negative news — no longs")
+    if not bullish_side and short_veto:
+        blockers.append("Strongly positive news — no shorts")
+    if ledger.total < p["entry_threshold"]:
+        blockers.append(f"{label} score {ledger.total:.1f} below {p['entry_threshold']}")
+    if len(ledger.categories) < p["min_confirmations"]:
+        blockers.append(f"Only {len(ledger.categories)} confirming categories (need {p['min_confirmations']})")
+    if ledger.total - other.total < p["min_edge"]:
+        blockers.append(f"Edge over the opposite case only {ledger.total - other.total:.1f} (need {p['min_edge']})")
+    if not can_enter and signal not in ("BUY", "SHORT"):
         blockers.append(f"Already took {entries_today} entry today in this stock — no revenge trades")
 
     new_state = {
         "long_ok": long_ok,
+        "short_ok": short_ok,
         "exit_long": exit_long,
+        "exit_short": exit_short,
+        "bias": "long" if bullish_side else "short",
+        "shorts_enabled": p["allow_shorts"],
         "setup": setup,
         "regime": regime,
         "structure": structure,
@@ -289,9 +322,10 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         "entry_threshold": p["entry_threshold"],
         "exit_threshold": p["exit_threshold"],
         "confirmations": bull.categories,
+        "bear_confirmations": bear.categories,
         "reasons": bull.reasons(6),
-        "bear_reasons": bear.reasons(4),
-        "blockers": [] if long_ok else blockers,
+        "bear_reasons": bear.reasons(6),
+        "blockers": [] if (long_ok or short_ok) else blockers,
         "patterns": [{"name": x["name"], "bias": x["bias"]} for x in patterns],
         "rsi": _r(rsi_v, 1), "adx": _r(adx, 1), "atr": _r(atr_v),
         "ema20": _r(e20), "ema50": _r(e50), "vwap": _r(vwap) if vwap else None,

@@ -183,16 +183,29 @@ class TradingEngine:
     def _blocked(self, symbol, setup, why):
         self.state.log("blocked", f"{setup} signal skipped — {why}", symbol=symbol, level="warn")
 
-    def _try_enter(self, symbol, ltp, candles, analysis):
+    def _close(self, symbol, ltp, reason, note=None):
+        qty = self.state.positions[symbol]["quantity"]
+        if qty == 0:
+            return
+        self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason, note=note)
+        self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+
+    def _try_enter(self, symbol, side, ltp, candles, analysis):
+        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15)."""
         if self.state.positions[symbol]["quantity"] != 0:
             return
-        setup = analysis.get("setup", "Entry")
+        setup = f"{analysis.get('setup', 'Entry')} ({side.lower()})"
         row = self._scan_row(symbol)
         mkt = self.state.market or {}
+        reasons_txt = "; ".join(mkt.get("reasons", [])[:2])
         if row and row.get("excluded"):
             return self._blocked(symbol, setup, row["excluded"])
-        if mkt.get("bias") == "risk-off" and config.MARKET_FILTER["block_new_longs_when_risk_off"]:
-            return self._blocked(symbol, setup, "market is risk-off (" + "; ".join(mkt.get("reasons", [])[:2]) + ")")
+        if row and row.get("side") and row["side"] != side:
+            return self._blocked(symbol, setup, f"scanner favours {row['side']} for this stock today")
+        if side == "LONG" and mkt.get("bias") == "risk-off" and config.MARKET_FILTER["block_new_longs_when_risk_off"]:
+            return self._blocked(symbol, setup, f"no new longs — market is risk-off ({reasons_txt})")
+        if side == "SHORT" and mkt.get("bias") == "risk-on" and config.MARKET_FILTER.get("block_new_shorts_when_risk_on", True):
+            return self._blocked(symbol, setup, f"no new shorts — market is risk-on ({reasons_txt})")
         if self.risk.daily_loss_limit_hit():
             return self._blocked(symbol, setup, "daily loss limit reached")
         if self.risk.open_positions_count >= config.RISK["max_open_positions"]:
@@ -203,27 +216,31 @@ class TradingEngine:
         if qty <= 0:
             return self._blocked(symbol, setup, "position size rounds to 0 shares")
 
-        why = "; ".join(r["text"] for r in analysis.get("reasons", [])[:3])
+        key = "reasons" if side == "LONG" else "bear_reasons"
+        why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
         note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}" \
             if "bull_score" in analysis else None
-        self._execute(symbol, "BUY", qty, ltp, reason=setup, note=note)
+        self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note)
         with self.state.lock:
             self.state.positions[symbol]["entry_atr"] = atr_val
         self.risk.open_positions_count += 1
 
     def _note_forming_setup(self, symbol, prev, analysis):
-        if not analysis or "bull_score" not in analysis or analysis.get("long_ok"):
+        if not analysis or "bull_score" not in analysis or analysis.get("long_ok") or analysis.get("short_ok"):
             return
         near = analysis["entry_threshold"] - 1.5
-        old = (prev or {}).get("bull_score")
-        if analysis["bull_score"] >= near and (old is None or old < near):
-            waiting = analysis["blockers"][0] if analysis.get("blockers") else "confirmation"
-            self.state.log(
-                "setup",
-                f"{analysis['setup']} forming — bull {analysis['bull_score']:.1f}/{analysis['entry_threshold']:g}; "
-                f"waiting on: {waiting}",
-                symbol=symbol,
-            )
+        waiting = analysis["blockers"][0] if analysis.get("blockers") else "confirmation"
+        for key, side in (("bull_score", "long"), ("bear_score", "short")):
+            if side == "short" and not analysis.get("shorts_enabled", True):
+                continue
+            old = (prev or {}).get(key)
+            if analysis[key] >= near and (old is None or old < near):
+                self.state.log(
+                    "setup",
+                    f"{analysis['setup']} forming ({side}) — {key.split('_')[0]} {analysis[key]:.1f}/"
+                    f"{analysis['entry_threshold']:g}; waiting on: {waiting}",
+                    symbol=symbol,
+                )
 
     def _process_symbol(self, symbol):
         candles = data_provider.get_intraday_candles(symbol, interval=config.CANDLE_INTERVAL, period="5d")
@@ -251,14 +268,18 @@ class TradingEngine:
         if signal:
             self.state.record_signal(symbol, signal, analysis)
 
-        if signal == "BUY":
-            self._try_enter(symbol, ltp, candles, analysis or {})
-        elif signal == "SELL":
-            pos = self.state.positions[symbol]
-            if pos["quantity"] > 0:
-                why = "; ".join(r["text"] for r in (analysis or {}).get("bear_reasons", [])[:2])
-                self._execute(symbol, "SELL", pos["quantity"], ltp, reason="brain_exit", note=why or None)
-                self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+        a = analysis or {}
+        qty = self.state.positions[symbol]["quantity"]
+        # Exits check the brain's exit condition every tick, not only its edge, so an
+        # exit can't be missed when an entry signal for the other side fires on the same bar.
+        if qty > 0 and (signal in ("SELL", "SHORT") or a.get("exit_long")):
+            why = "; ".join(r["text"] for r in a.get("bear_reasons", [])[:2])
+            self._close(symbol, ltp, "brain_exit", why or None)
+        elif qty < 0 and (signal in ("BUY", "COVER") or a.get("exit_short")):
+            why = "; ".join(r["text"] for r in a.get("reasons", [])[:2])
+            self._close(symbol, ltp, "brain_cover", why or None)
+        elif qty == 0 and signal in ("BUY", "SHORT"):
+            self._try_enter(symbol, "LONG" if signal == "BUY" else "SHORT", ltp, candles, a)
 
     # ---- loop -----------------------------------------------------------
 
