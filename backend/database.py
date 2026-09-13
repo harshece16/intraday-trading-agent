@@ -72,6 +72,22 @@ CREATE TABLE IF NOT EXISTS activity (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL, kind TEXT, symbol TEXT, message TEXT, level TEXT
 );
+CREATE TABLE IF NOT EXISTS fno_evaluations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL, underlying TEXT NOT NULL, side TEXT,
+    confidence_score INTEGER, confidence_label TEXT,
+    local_setup_score INTEGER, edge_margin_pts REAL, categories TEXT, regime_clarity_pct INTEGER,
+    system_multiplier REAL, system_reason TEXT,
+    executed INTEGER NOT NULL, block_reason TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_fno_eval_underlying_ts ON fno_evaluations(underlying, ts);
+CREATE TABLE IF NOT EXISTS fno_trades (
+    position_id TEXT PRIMARY KEY, underlying TEXT NOT NULL, tradingsymbol TEXT NOT NULL,
+    is_call INTEGER, strike REAL, expiry TEXT, lot_size INTEGER, lots INTEGER,
+    entry_ts REAL, entry_premium REAL, entry_iv_pct REAL, entry_delta REAL, entry_theta REAL, entry_vega REAL,
+    confidence_score INTEGER, confidence_label TEXT,
+    exit_ts REAL, exit_premium REAL, exit_reason TEXT, realized REAL, r_multiple REAL
+);
 """
 
 
@@ -138,6 +154,88 @@ def record_checklist_eval(symbol, ltp, analysis):
              int(bool(analysis.get("short_ok"))), analysis.get("setup"), analysis.get("regime"),
              analysis.get("always_in"), analysis.get("news_score"), _j(analysis.get("checklist"))),
         )
+
+
+def record_fno_evaluation(underlying, side, conf, executed: bool, block_reason=None):
+    """Every time the engine looks at an underlying for an F&O trade — not
+    just the ones that fire — so the knowledge base grows from every
+    confidence read, the same reason checklist_evals logs every read instead
+    of only executed cash-equity trades. This is what will eventually let a
+    later analysis ask 'does the confidence score actually rank F&O outcomes
+    better than chance?' once enough of these pair up with closed trades."""
+    local = conf.get("local_setup", {})
+    sysm = conf.get("system_evidence", {})
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO fno_evaluations (ts, underlying, side, confidence_score, confidence_label, "
+            "local_setup_score, edge_margin_pts, categories, regime_clarity_pct, system_multiplier, "
+            "system_reason, executed, block_reason) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (time.time(), underlying, side, conf.get("score"), conf.get("label"),
+             local.get("score"), local.get("edge_margin_pts"), local.get("categories"),
+             local.get("regime_clarity_pct"), sysm.get("multiplier"), sysm.get("reason"),
+             int(executed), block_reason),
+        )
+
+
+def record_fno_entry(position_id, pos: dict):
+    """pos is the dict shape trading_engine.py stores in state.fno_positions
+    at entry — a point-in-time snapshot of the Greeks/IV/confidence that
+    justified the trade, frozen before anyone knows how it turns out."""
+    conf = pos.get("confidence") or {}
+    greeks = pos.get("entry_greeks") or {}
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO fno_trades (position_id, underlying, tradingsymbol, is_call, strike, expiry, "
+            "lot_size, lots, entry_ts, entry_premium, entry_iv_pct, entry_delta, entry_theta, entry_vega, "
+            "confidence_score, confidence_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (position_id, pos["underlying"], pos["tradingsymbol"], int(pos["is_call"]), pos["strike"],
+             pos["expiry"], pos["lot_size"], pos["lots"], time.time(), pos["entry_premium"],
+             greeks.get("iv_pct"), greeks.get("delta"), greeks.get("theta"), greeks.get("vega"),
+             conf.get("score"), conf.get("label")),
+        )
+
+
+def record_fno_exit(position_id, exit_premium, exit_reason, realized, r_multiple):
+    with _conn() as c:
+        c.execute(
+            "UPDATE fno_trades SET exit_ts=?, exit_premium=?, exit_reason=?, realized=?, r_multiple=? "
+            "WHERE position_id=?",
+            (time.time(), exit_premium, exit_reason, realized, r_multiple, position_id),
+        )
+
+
+def fno_journal_summary(min_pairs=10):
+    """The F&O-equivalent of journal_summary(): how much evidence exists,
+    and — once there's enough of it — whether the confidence score has
+    actually ranked trades by outcome any better than chance would. Below
+    `min_pairs` closed trades this honestly says so instead of guessing."""
+    with _conn() as c:
+        n_eval = c.execute("SELECT COUNT(*) FROM fno_evaluations").fetchone()[0]
+        n_executed = c.execute("SELECT COUNT(*) FROM fno_evaluations WHERE executed=1").fetchone()[0]
+        rows = c.execute(
+            "SELECT confidence_score, r_multiple FROM fno_trades WHERE r_multiple IS NOT NULL"
+        ).fetchall()
+        closed = c.execute(
+            "SELECT r_multiple FROM fno_trades WHERE r_multiple IS NOT NULL"
+        ).fetchall()
+    out = {"evaluations_logged": n_eval, "trades_opened": n_executed, "closed_trades": len(closed)}
+    if closed:
+        rs = [r[0] for r in closed]
+        wins = [x for x in rs if x > 0]
+        out["win_rate_pct"] = round(len(wins) / len(rs) * 100, 1)
+        out["expectancy_r"] = round(sum(rs) / len(rs), 3)
+    conf_scores = [r["confidence_score"] for r in rows if r["confidence_score"] is not None]
+    r_mults = [r["r_multiple"] for r in rows if r["confidence_score"] is not None]
+    if len(conf_scores) < min_pairs:
+        out["confidence_ic"] = None
+        out["confidence_ic_note"] = (f"Only {len(conf_scores)} closed F&O trades with a recorded confidence "
+                                     f"score — need at least {min_pairs} before asking whether confidence "
+                                     f"actually predicts outcome means anything.")
+    else:
+        out["confidence_ic"] = round(_spearman(conf_scores, r_mults), 3)
+        out["confidence_ic_note"] = ("Rank correlation between entry confidence and the trade's R-multiple — "
+                                     "0 means the confidence score has no relationship to outcome, ±1 is perfect.")
+    return out
 
 
 def record_trade(trade, checklist_snapshot=None):

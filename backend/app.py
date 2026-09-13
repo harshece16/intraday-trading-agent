@@ -115,6 +115,15 @@ def set_fno_enabled(update: FnoUpdate):
     return {"enabled": config.FNO["enabled"]}
 
 
+@app.get("/api/fno/journal")
+def fno_journal():
+    """The F&O-equivalent of /api/journal/summary: how much evidence has
+    accumulated (every evaluation, not just executed trades), and — once
+    there are enough closed trades — whether the confidence score has
+    actually ranked outcomes better than chance."""
+    return database.fno_journal_summary()
+
+
 @app.get("/api/fno/status")
 def fno_status():
     """Whether F&O (options-buying only) is turned on, and the current

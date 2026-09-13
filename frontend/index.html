@@ -1319,8 +1319,18 @@ function journalHTML(j) {
       <p class="muted" style="margin:0;font-size:13px">${esc(ic.note || "")}${ic.ic == null ? "" : " (ML4Trading ch 1: rank correlation between today's score and the next session's move — 0 is no predictive power, ±1 is perfect)."}</p>
     </div>`);
   }
+  const fj = fnoJournalCache;
+  if (fj) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">F&amp;O knowledge base</h2>
+      <p style="margin:0 0 4px">${num(fj.evaluations_logged, 0)} confidence reads logged, ${num(fj.trades_opened, 0)} trades opened, ${num(fj.closed_trades, 0)} closed${fj.win_rate_pct != null ? ` (${fj.win_rate_pct}% won, expectancy ${signed(fj.expectancy_r, 2)}R)` : ""}.</p>
+      <p class="muted" style="margin:0;font-size:13px">${fj.confidence_ic != null ? `Confidence-to-outcome rank correlation ${signed(fj.confidence_ic, 3)}` : ""} ${esc(fj.confidence_ic_note || "")}</p>
+    </div>`);
+  }
   return parts.join("");
 }
+
+let fnoJournalCache = null;
 
 async function fetchJournal(force = false) {
   if (!force && journalCache && Date.now() - journalCache._ts < 60000) return;
@@ -1329,6 +1339,10 @@ async function fetchJournal(force = false) {
     const data = await res.json();
     data._ts = Date.now();
     journalCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  try {
+    const res2 = await fetch(`${API_BASE}/api/fno/journal`);
+    fnoJournalCache = await res2.json();
   } catch (e) { /* backend not reachable yet */ }
   if (ui.page === "journal") setHTML($("page-journal"), `<h2 class="h">Sahab's Journal</h2><p class="sub">The knowledge base built from every scan, checklist read and fill.</p>` + journalHTML(journalCache));
 }

@@ -330,6 +330,7 @@ class TradingEngine:
                 self.state.realized_pnl_today += realized
         self.state.log("trade", f"[F&O] {side} {quantity} {symbol} @ {price:.2f} ({reason})"
                        + (f" — {note}" if note else ""), symbol=symbol, level="trade")
+        return r_multiple
 
     def _fno_ltp(self, tradingsymbol):
         if self.state.paper_mode:
@@ -347,8 +348,12 @@ class TradingEngine:
         if not self.state.paper_mode:
             self._ensure_kite().place_fno_order(pos["tradingsymbol"], "SELL", pos["lots"], pos["lot_size"])
         realized = (ltp - pos["entry_premium"]) * pos["lots"] * pos["lot_size"]
-        self._record_fno_trade(pos["tradingsymbol"], "SELL", pos["lots"] * pos["lot_size"], ltp, reason, note,
-                               realized, pos["position_id"], pos["entry_premium"])
+        r_multiple = self._record_fno_trade(pos["tradingsymbol"], "SELL", pos["lots"] * pos["lot_size"], ltp,
+                                            reason, note, realized, pos["position_id"], pos["entry_premium"])
+        try:
+            database.record_fno_exit(pos["position_id"], ltp, reason, realized, r_multiple)
+        except Exception:
+            logger.exception(f"Failed to journal F&O exit for {underlying}")
         with self.state.lock:
             self.state.fno_positions.pop(underlying, None)
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
@@ -379,9 +384,18 @@ class TradingEngine:
             return
         scorecard = database.journal_summary().get("scorecard", [])
         conf = confidence.score_trade(analysis, side, scorecard)
+
+        def log_eval(executed, block_reason=None):
+            try:
+                database.record_fno_evaluation(underlying, side, conf, executed, block_reason)
+            except Exception:
+                logger.exception(f"Failed to journal F&O evaluation for {underlying}")
+
         if conf["score"] < cfg["min_confidence_to_trade"]:
-            self.state.log("blocked", f"F&O {side} skipped — confidence {conf['score']}/100 below the "
-                           f"{cfg['min_confidence_to_trade']} bar ({conf['explanation']})", symbol=underlying, level="warn")
+            reason = f"confidence {conf['score']}/100 below the {cfg['min_confidence_to_trade']} bar"
+            self.state.log("blocked", f"F&O {side} skipped — {reason} ({conf['explanation']})",
+                           symbol=underlying, level="warn")
+            log_eval(False, reason)
             return
 
         is_call = side == "LONG"
@@ -389,38 +403,43 @@ class TradingEngine:
             underlying, cfg["min_days_to_expiry"], cfg["max_days_to_expiry"],
             prefer_weekly=cfg["prefer_weekly_for_index"] and underlying in cfg["index_underlyings"])
         if not expiry:
-            return self._blocked(underlying, "F&O entry", "no listed expiry in the configured day-range")
+            self._blocked(underlying, "F&O entry", "no listed expiry in the configured day-range")
+            return log_eval(False, "no listed expiry in range")
         spot = analysis.get("ltp") or self.state.indicators.get(underlying, {}).get("ltp")
         if not spot:
-            return
+            return log_eval(False, "no live spot price")
 
         def delta_at_strike(spot_, strike_, t_years_, is_call_):
-            ltp_guess = options_pricing.price(spot_, strike_, t_years_, 0.20, cfg["risk_free_rate_pct"] / 100, is_call_)
             return options_pricing.greeks(spot_, strike_, t_years_, 0.20, cfg["risk_free_rate_pct"] / 100, is_call_)["delta"]
 
         contract = fno_instruments.find_contract(underlying, spot, expiry, is_call, cfg["target_delta"], delta_at_strike)
         if not contract:
-            return self._blocked(underlying, "F&O entry", "no matching strike found for this expiry")
+            self._blocked(underlying, "F&O entry", "no matching strike found for this expiry")
+            return log_eval(False, "no matching strike")
 
+        t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
         premium = self._fno_ltp(contract["tradingsymbol"])
         if premium is None:
             if self.state.paper_mode:
-                t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
                 premium = options_pricing.price(spot, contract["strike"], t_years, 0.20,
                                                 cfg["risk_free_rate_pct"] / 100, is_call)
             else:
-                return self._blocked(underlying, "F&O entry", "could not fetch a live premium quote")
+                self._blocked(underlying, "F&O entry", "could not fetch a live premium quote")
+                return log_eval(False, "no live premium quote")
         if not premium or premium <= 0:
-            return
+            return log_eval(False, "non-positive premium")
 
         lots = fno_risk.lots_to_buy(cfg["capital"], cfg["max_premium_risk_pct"], premium, contract["lot_size"])
         if lots <= 0:
-            return self._blocked(underlying, "F&O entry",
-                                 f"premium {premium:.2f} x lot {contract['lot_size']} too large for the "
-                                 f"{cfg['max_premium_risk_pct']}% of ₹{cfg['capital']:,.0f} F&O allocation")
+            reason = (f"premium {premium:.2f} x lot {contract['lot_size']} too large for the "
+                     f"{cfg['max_premium_risk_pct']}% of ₹{cfg['capital']:,.0f} F&O allocation")
+            self._blocked(underlying, "F&O entry", reason)
+            return log_eval(False, reason)
 
         exits = fno_risk.stop_and_target_premium(premium, cfg["stop_loss_pct_of_premium"], cfg["target_pct_of_premium"])
         max_loss = fno_risk.max_loss(premium, lots, contract["lot_size"])
+        entry_greeks = options_pricing.analyze(premium, spot, contract["strike"], t_years,
+                                               cfg["risk_free_rate_pct"] / 100, is_call)
         if not self.state.paper_mode:
             self._ensure_kite().place_fno_order(contract["tradingsymbol"], "BUY", lots, contract["lot_size"])
         position_id = database.new_position_id()
@@ -430,16 +449,22 @@ class TradingEngine:
         self._record_fno_trade(contract["tradingsymbol"], "BUY", lots * contract["lot_size"], premium,
                                f"fno_{side.lower()}", note, None, position_id, None,
                                checklist_snapshot=analysis.get("checklist"))
+        pos = {
+            "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
+            "strike": contract["strike"], "expiry": expiry.isoformat(),
+            "lots": lots, "lot_size": contract["lot_size"], "entry_premium": premium,
+            "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
+            "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "entry_greeks": entry_greeks,
+            "max_loss": max_loss, "position_id": position_id,
+        }
         with self.state.lock:
-            self.state.fno_positions[underlying] = {
-                "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
-                "strike": contract["strike"], "expiry": expiry.isoformat(),
-                "lots": lots, "lot_size": contract["lot_size"], "entry_premium": premium,
-                "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
-                "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "max_loss": max_loss,
-                "position_id": position_id,
-            }
+            self.state.fno_positions[underlying] = pos
         self.risk.open_positions_count += 1
+        log_eval(True)
+        try:
+            database.record_fno_entry(position_id, pos)
+        except Exception:
+            logger.exception(f"Failed to journal F&O entry for {underlying}")
 
     def _process_fno(self):
         if not self._fno_active():
