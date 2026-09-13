@@ -948,6 +948,14 @@ function methodHTML(m) {
     </div>`);
   }
 
+  const noteCard = (section) => section ? `<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(section.title)}</h2>
+      <p class="muted" style="margin:0 0 4px;font-size:13px">${esc(section.source)}</p>
+      <p style="margin:0;font-size:13px">${esc(section.note)}</p>
+    </div>` : "";
+  parts.push(noteCard(m.reversal_days));
+  parts.push(noteCard(m.volume_confirmation));
+
   const g = m.gaps;
   if (g) {
     parts.push(`<div class="cardbox" style="margin-top:16px">
@@ -1021,6 +1029,23 @@ function journalHTML(j) {
   parts.push(`<div class="tax">Every scan and every checklist read — not just executed trades — is saved to a local database (backend/data/sahab_journal.db) so it survives a restart and builds into a knowledge base over time.
     <div class="detail" style="margin-top:6px">${num(j.scans_logged, 0)} scans · ${num(j.checklist_evals_logged, 0)} checklist reads · ${num(j.trades_logged, 0)} fills logged, since ${fmtWhen(j.logging_since)}.</div>
   </div>`);
+  const scorecard = j.scorecard || [];
+  if (scorecard.length) {
+    const statusPill = (status) => status === "pass" ? `<span class="pill long">pass</span>`
+      : status === "fail" ? `<span class="pill short">fail</span>`
+      : `<span class="pill neutral">not enough data</span>`;
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Dimaag Scorecard</h2>
+      <p class="muted" style="margin:0 0 10px;font-size:13px">Not a single made-up "IQ" — no such validated
+        measure exists for a trading system. Each row below is graded against a bar already used elsewhere in
+        this codebase, computed from real logged data, and says "not enough data yet" rather than guessing.</p>
+      ${scorecard.map(r => `<div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:10px">
+        <div style="flex:1"><b style="font-size:13.5px">${esc(r.criterion)}</b>
+          <div class="detail" style="margin-top:2px">${esc(r.detail)}</div></div>
+        ${statusPill(r.status)}
+      </div>`).join("")}
+    </div>`);
+  }
   parts.push(ts.closed_trades
     ? `<div class="cardbox" style="margin-top:16px">
         <h2 class="h" style="font-size:16px">Trade record</h2>

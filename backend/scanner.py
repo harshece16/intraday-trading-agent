@@ -125,9 +125,11 @@ def daily_profile(bars, nifty_dates, nifty_closes, before_date):
         if var:
             beta = sum((x - mean_i) * (y - mean_s) for x, y in zip(index_rets, stock_rets)) / var
     swing = swing_patterns.scan_daily_patterns(bars, atr_v) if atr_v else []
+    reversal_day = swing_patterns.detect_reversal_day(bars, atr_v) if atr_v else None
     return {
         "beta": beta,
         "swing_patterns": swing,
+        "reversal_day": reversal_day,
         "close": close,
         "atr_pct": atr_v / close * 100 if atr_v else 0.0,
         "turnover_cr": sum(b["close"] * b["volume"] for b in bars[-20:]) / 20 / 1e7,
@@ -203,6 +205,20 @@ def premarket_score(p, cfg, side="long"):
             regime = stats["bull"]  # bull/bear-market split needs a longer regime read than we track; use bull stats
             pts.add(15, f"Confirmed {sw['name']} on the daily chart (Bulkowski: {regime['failure_rate_pct']}% "
                         f"historical failure rate, average move {regime['avg_move_pct']}%, US stocks)")
+
+    rd = p.get("reversal_day")
+    if rd:
+        wants = "bottom" if s > 0 else "top"
+        if rd["kind"] == wants:
+            base = 10
+            if rd["heavy_volume"]:
+                base += 5
+            if rd["outside_day"]:
+                base += 3
+            label = "bottom reversal day" if wants == "bottom" else "top reversal day"
+            climax = " (selling climax — heavy volume)" if wants == "bottom" and rd["heavy_volume"] else \
+                     " (heavy volume)" if rd["heavy_volume"] else ""
+            pts.add(base, f"Murphy {label}{climax}" + (", outside day" if rd["outside_day"] else ""))
 
     r = p["rsi"]
     if r is not None:

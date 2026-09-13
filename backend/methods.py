@@ -12,6 +12,7 @@ import evaluation
 import market_structure
 import news_sentiment
 import risk_manager  # noqa: F401 — imported so this module errors loudly if that one breaks
+import swing_patterns  # noqa: F401 — same
 import trader_brain
 
 
@@ -52,6 +53,20 @@ def get_methods():
                 }
                 for name, stats in bulkowski.PATTERN_STATS.items()
             ],
+        },
+        "reversal_days": {
+            "title": "Reversal days (scanner only)",
+            "source": "Murphy, Technical Analysis of the Financial Markets, ch 4",
+            "note": "A new high (low) for the move followed by a lower (higher) close than the prior day. "
+                    "Heavier volume (a 'selling climax' at a bottom) and an outside day both add weight. "
+                    "A warning sign folded into the scanner's daily score, never a trigger by itself.",
+        },
+        "volume_confirmation": {
+            "title": "On Balance Volume divergence (intraday checklist, volume category)",
+            "source": "Granville (1963), per Murphy, Technical Analysis of the Financial Markets, ch 7",
+            "note": "The OBV line — cumulative volume signed by each bar's close direction — should move "
+                    "the same way as price. When it doesn't over a look-back window, that's an early warning "
+                    "the move lacks real participation, ahead of what one bar's volume ratio alone can show.",
         },
         "gaps": {
             "title": "Gap classification (scanner only)",
@@ -111,9 +126,19 @@ def get_methods():
         "not_yet_used": {
             "title": "Read, but not (yet) built in",
             "items": [
-                {"name": "Murphy, Technical Analysis of the Financial Markets",
-                 "reason": "The PDF is a scanned book with no text layer, and this machine has no OCR tool "
-                           "(tesseract/poppler) installed — it could not be read."},
+                {"name": "Murphy, Technical Analysis of the Financial Markets — Elliott Wave, Point & Figure, "
+                         "time cycles, intermarket analysis (bonds/dollar/commodities), and market-breadth "
+                         "indicators (advance-decline line, McClellan Oscillator, TRIN)",
+                 "reason": "Read in full (OCR'd — the PDF is a scanned book with no text layer; tesseract and "
+                           "poppler were installed this session to read it). Reversal days and On Balance "
+                           "Volume divergence (ch 4 and ch 7) are concrete, verifiable rules and are now wired "
+                           "into the scanner and checklist above. The rest is either too subjective to encode "
+                           "reliably (Elliott Wave's wave-counting requires judgment calls Murphy himself says "
+                           "trained analysts disagree on), redundant with what's already implemented (Point & "
+                           "Figure vs. the candlestick/bar-chart patterns already in place), needs data this "
+                           "system doesn't fetch (market-breadth needs every NSE constituent, not just the "
+                           "watchlist), or doesn't apply to a single-stock intraday cash strategy (intermarket "
+                           "analysis is built for cross-asset macro trading)."},
                 {"name": "NISM Series VIII (Equity Derivatives) workbook",
                  "reason": "Read in full. Almost entirely F&O contract specs, option Greeks/strategies, SPAN "
                            "margining and derivatives law — Sahab's Dimaag trades cash equity intraday only, "

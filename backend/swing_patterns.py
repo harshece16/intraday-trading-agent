@@ -79,6 +79,32 @@ def detect_head_and_shoulders(daily, atr_v, lookback=110, top=True):
     }
 
 
+def detect_reversal_day(daily, atr_v, lookback=20, vol_lookback=20):
+    """Murphy, Technical Analysis of the Financial Markets, ch 4 'Reversal
+    Days': a new high (low) for the move followed by a LOWER (higher) close
+    than the prior day. 'The wider the range for the day and the heavier the
+    volume, the more significant is the signal' — heavy volume on a bottom
+    reversal is what Murphy calls a selling climax; an outside day (today's
+    high and low both exceed yesterday's) adds further significance. This is
+    a warning sign to fold into other evidence, not a trade trigger alone."""
+    if len(daily) < lookback + 2 or not atr_v:
+        return None
+    bars = daily[-(lookback + 1):]
+    today, prev = bars[-1], bars[-2]
+    look = bars[:-1]
+    prior_vol = [b["volume"] for b in bars[:-1]]
+    avg_vol = sum(prior_vol) / len(prior_vol) if prior_vol else 0
+    heavy_volume = avg_vol > 0 and today["volume"] >= 1.5 * avg_vol
+    outside_day = today["high"] > prev["high"] and today["low"] < prev["low"]
+    made_new_high = today["high"] >= max(b["high"] for b in look)
+    made_new_low = today["low"] <= min(b["low"] for b in look)
+    if made_new_high and today["close"] < prev["close"]:
+        return {"kind": "top", "heavy_volume": heavy_volume, "outside_day": outside_day}
+    if made_new_low and today["close"] > prev["close"]:
+        return {"kind": "bottom", "heavy_volume": heavy_volume, "outside_day": outside_day}
+    return None
+
+
 def scan_daily_patterns(daily, atr_v):
     """All confirmed patterns on this daily series, as
     [{"name", "side", "stop", "level"}], most recent context only."""

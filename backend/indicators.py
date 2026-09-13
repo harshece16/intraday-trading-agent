@@ -143,6 +143,45 @@ def volume_ratio(candles, period=20) -> Optional[float]:
     return candles[-1]["volume"] / avg if avg > 0 else None
 
 
+def obv_series(candles):
+    """On Balance Volume (Granville, 1963; per Murphy, Technical Analysis of
+    the Financial Markets, ch 7): cumulative volume signed by each bar's
+    close direction. It's the TREND of this line that matters, not its
+    absolute level."""
+    out = []
+    total = 0.0
+    prev_close = None
+    for c in candles:
+        if prev_close is not None:
+            if c["close"] > prev_close:
+                total += c["volume"]
+            elif c["close"] < prev_close:
+                total -= c["volume"]
+        out.append(total)
+        prev_close = c["close"]
+    return out
+
+
+def obv_divergence(candles, lookback=20):
+    """Murphy ch 7: 'the on balance volume line should follow in the same
+    direction as the price trend ... it's when the volume line fails to move
+    in the same direction that a divergence exists and warns of a possible
+    trend reversal.' Compares price's change over `lookback` bars against
+    OBV's change over the same window; returns "bullish"/"bearish" when they
+    disagree, else None."""
+    if len(candles) < lookback + 1:
+        return None
+    closes = [c["close"] for c in candles]
+    obv = obv_series(candles)
+    price_chg = closes[-1] - closes[-lookback]
+    obv_chg = obv[-1] - obv[-lookback]
+    if price_chg > 0 and obv_chg < 0:
+        return "bearish"
+    if price_chg < 0 and obv_chg > 0:
+        return "bullish"
+    return None
+
+
 def resample(candles, factor):
     """Merge every `factor` bars within the same session into one higher-timeframe bar
     (e.g. 5m x 3 = 15m), for multi-timeframe confirmation without another data fetch."""

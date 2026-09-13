@@ -115,7 +115,8 @@ def _level_name(lv):
 CHECKLIST_SOURCES = {
     "pattern": "Varsity Technical Analysis ch 4-10, and Nison, Japanese Candlestick Charting Techniques",
     "sr": "Varsity Technical Analysis, ch 11 (support & resistance)",
-    "volume": "Varsity Technical Analysis, ch 12 (volume)",
+    "volume": "Varsity Technical Analysis, ch 12 (volume); On Balance Volume divergence per "
+              "Murphy, Technical Analysis of the Financial Markets, ch 7",
     "dow": "Varsity Technical Analysis ch 17-18 (Dow Theory), and Brooks, Trading Price Action Trends (always-in direction)",
     "indicators": "Varsity Technical Analysis, ch 13-16 (moving averages, RSI, MACD)",
     "catalyst": "NSE filings + news sentiment (news_sentiment.py) — the fundamental side of the checklist",
@@ -339,6 +340,15 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
                 bear.add("volume", 1.0, f"Price down on {vol10:.1f}× average volume, smart money selling")
             else:
                 bear.add("volume", -0.5, f"Price down on thin volume ({vol10:.1f}×), weak hands selling")
+
+    # On Balance Volume divergence (Murphy ch 7): the volume trend disagreeing
+    # with the price trend over a longer window is an early warning, ahead of
+    # what a single bar's volume ratio can show.
+    obv_div = ind.obv_divergence(window, p["volume_lookback"] * 2)
+    if obv_div == "bullish":
+        bull.add("volume", 1.0, "OBV rising while price fell — Murphy volume/price divergence")
+    elif obv_div == "bearish":
+        bear.add("volume", 1.0, "OBV falling while price rose — Murphy volume/price divergence")
 
     # 4. Location
     if brk_up:

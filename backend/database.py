@@ -30,6 +30,8 @@ import time
 import uuid
 from pathlib import Path
 
+import evaluation
+
 DB_PATH = Path(__file__).parent / "data" / "sahab_journal.db"
 _local = threading.local()
 
@@ -287,10 +289,16 @@ def journal_summary():
         n_evals = c.execute("SELECT COUNT(*) FROM checklist_evals").fetchone()[0]
         n_trades = c.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
         first_ts = c.execute("SELECT MIN(ts) FROM scans").fetchone()[0]
+        rs = [r[0] for r in c.execute("SELECT r_multiple FROM trades WHERE r_multiple IS NOT NULL").fetchall()]
+    ts, ic = trade_stats(), factor_ic("final_score")
+    n_trials = evaluation.trial_count()
+    dsr = evaluation.deflated_sharpe_ratio(rs, n_trials) if n_trials else \
+        {"dsr": None, "note": "No backtest trials logged yet (run backtester.py) — nothing to compare against."}
     return {
         "scans_logged": n_scans, "checklist_evals_logged": n_evals, "trades_logged": n_trades,
         "logging_since": first_ts,
-        "trade_stats": trade_stats(),
+        "trade_stats": ts,
         "checklist_item_breakdown": checklist_item_breakdown(),
-        "factor_ic": factor_ic("final_score"),
+        "factor_ic": ic,
+        "scorecard": evaluation.scorecard(ts, dsr, ic),
     }
