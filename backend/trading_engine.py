@@ -103,11 +103,12 @@ class TradingEngine:
         self.state.set_watchlist(new_watch)
         self.size_multiplier = config.MARKET_FILTER["vix_high_size_multiplier"] if mkt.get("vix_high") else 1.0
 
-        picks = ", ".join(result["active"]) or "nothing qualifies"
+        picks = ", ".join(result["active"]) or "nothing qualifies yet"
+        mood = {"risk-on": "strong", "risk-off": "weak"}.get(mkt["bias"], "mixed")
         self.state.log(
             "scan",
-            f"Scanned {result['scanned']} stocks in {result['duration_s']:.0f}s · market {mkt['bias']} "
-            f"({'; '.join(mkt['reasons'][:2])}) · {result['excluded_count']} filtered out · active: {picks}",
+            f"Scanned {result['scanned']} stocks in {result['duration_s']:.0f}s. The market looks {mood}: "
+            f"{'; '.join(mkt['reasons'][:2])}. {result['excluded_count']} skipped. Tracking {picks}.",
         )
         rows = {r["symbol"]: r for r in result["rows"]}
         for sym in new_watch:
