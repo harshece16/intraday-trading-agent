@@ -32,10 +32,14 @@ WATCHLIST = ["RELIANCE", "TCS", "INFY", "HDFCBANK"]
 # 5m is a reasonable default — 1m data is noisy and yfinance only keeps ~7 days of it.
 CANDLE_INTERVAL = "5m"
 
-STRATEGY = "trader_brain"  # or "sma_crossover" / "rsi_reversion"
+STRATEGY = "sahab_dimaag"  # or "sma_crossover" / "rsi_reversion" — displayed as "Sahab's Dimaag"
+STRATEGY_DISPLAY_NAMES = {
+    "sahab_dimaag": "Sahab's Dimaag", "sma_crossover": "SMA Crossover", "rsi_reversion": "RSI Reversion",
+}
 STRATEGY_PARAMS = {
-    # Multi-factor confluence engine — see trader_brain.py for every rule.
-    "trader_brain": {
+    # Sahab's Dimaag ("Sahab's brain") — the Varsity-checklist decision engine.
+    # Implemented in trader_brain.py; see that file for every rule.
+    "sahab_dimaag": {
         "entry_threshold": 6.0,     # bullish evidence points needed to buy
         "min_confirmations": 3,     # distinct categories that must agree (trend, momentum, levels, ...)
         "min_edge": 2.0,            # bull score must beat bear score by this much
@@ -79,7 +83,7 @@ SCANNER = {
     "active_count": 6,               # stocks the engine actively evaluates for entries
     "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
-    "deep_analysis": 15,             # top candidates that get a full Trader Brain + news read
+    "deep_analysis": 15,             # top candidates that get a full Sahab's Dimaag + news read
     "min_score": 20,
     "pinned": [],                    # always tracked, e.g. ["RELIANCE"]
     # Tradability floors (intraday checklist: liquid, moves enough to beat costs)

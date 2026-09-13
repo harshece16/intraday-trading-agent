@@ -1,5 +1,7 @@
 """
-Trader Brain — a confluence strategy that encodes the checklist a
+Sahab's Dimaag ("Sahab's brain" — Trader Sahab's decision engine, module
+name trader_brain.py kept for history) — a confluence strategy that encodes
+the checklist a
 professionally trained technical trader (CMT / NISM curriculum, Dow theory,
 Nison candlesticks, Wyckoff volume principles) runs before taking a trade:
 

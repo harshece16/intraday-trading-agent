@@ -311,12 +311,12 @@ def main():
     parser.add_argument("--universe", choices=["nifty100"],
                         help="Scan the NIFTY 100 each day and trade only the scanner's top picks")
     parser.add_argument("--scan-top", type=int, default=5, help="Picks per day in --universe mode")
-    parser.add_argument("--long-only", action="store_true", help="Disable short selling (trader_brain)")
+    parser.add_argument("--long-only", action="store_true", help="Disable short selling (sahab_dimaag)")
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
     strategy_params = dict(config.STRATEGY_PARAMS[args.strategy])
-    if args.long_only and args.strategy == "trader_brain":
+    if args.long_only and args.strategy == "sahab_dimaag":
         strategy_params["allow_shorts"] = False
     risk_cfg = {**config.RISK, "total_capital": args.capital}
     costs_cfg = ZERO_COSTS if args.no_costs else config.COSTS

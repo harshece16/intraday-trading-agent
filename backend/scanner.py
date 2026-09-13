@@ -1,5 +1,5 @@
 """
-Market scanner — decides WHAT to trade (and which side); Trader Brain then
+Market scanner — decides WHAT to trade (and which side); Sahab's Dimaag then
 decides WHEN.
 
 Professional intraday traders don't stare at a fixed list; before and during
@@ -21,7 +21,7 @@ weak ones. This encodes that routine over the NIFTY 100:
   Event risk       results due today/next session → no new trades.
 
 Every stock is scored as a long AND as a short; the stronger side is kept.
-The top candidates get a full Trader Brain read (with per-stock news); the
+The top candidates get a full Sahab's Dimaag read (with per-stock news); the
 best of those become the engine's active watchlist.
 """
 
@@ -481,7 +481,7 @@ class Scanner:
             })
 
         eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
-        brain_params = config.STRATEGY_PARAMS.get("trader_brain", {})
+        brain_params = config.STRATEGY_PARAMS.get("sahab_dimaag", {})
         for r in eligible[: cfg["deep_analysis"]]:
             news = None
             if cfg.get("use_news", True):

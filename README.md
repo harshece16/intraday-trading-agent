@@ -5,7 +5,7 @@ a disciplined technical trader. It **scans the NIFTY 100** to decide *what*
 is worth trading today and on which side: strong stocks to buy on strong
 days, weak stocks to **short** on weak days. It uses market context,
 relative strength, volume, sector leadership, news and results-day risk. The
-**Trader Brain** then decides *when* to enter and exit, following
+**Sahab's Dimaag** then decides *when* to enter and exit, following
 **Zerodha Varsity's own Grand Checklist** — a candlestick pattern, a stop at
 support or resistance, above-average volume, Dow Theory trend agreement, and
 a minimum reward-to-risk — the same checklist Varsity's Technical Analysis
@@ -65,7 +65,7 @@ weekly from NSE's list.
 | **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
 | **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept |
-| **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
+| **Deep read** | The top 15 get a full Sahab's Dimaag analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
 | **Active watchlist** | Top 6 by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
 
 ### 3. The Rule Book — how the sources connect
@@ -250,9 +250,9 @@ realistic Zerodha costs + slippage. H1/H2 are the two halves of the sample.
 | Setup | Trades | Win % | Gross | Costs | **Net** | H1 / H2 |
 |---|---|---|---|---|---|---|
 | SMA crossover, 4 fixed stocks | 108 | 19% | −₹4,178 | ₹3,699 | **−7.9%** | — |
-| Trader Brain, 4 fixed stocks, unlimited re-entries | 452 | 19% | −₹13,602 | ₹15,485 | **−29.1%** | −12.6k / −16.4k |
-| **Trader Brain, 4 fixed stocks, 1 entry/stock/day (current default)** | 162 | 21% | −₹4,938 | ₹5,548 | **−10.5%** | −4.3k / −6.2k |
-| Trader Brain + scanner top-5/day, 1 entry/day | 218 | 20% | −₹6,767 | ₹6,979 | **−13.7%** | −5.9k / −7.8k |
+| Sahab's Dimaag, 4 fixed stocks, unlimited re-entries | 452 | 19% | −₹13,602 | ₹15,485 | **−29.1%** | −12.6k / −16.4k |
+| **Sahab's Dimaag, 4 fixed stocks, 1 entry/stock/day (current default)** | 162 | 21% | −₹4,938 | ₹5,548 | **−10.5%** | −4.3k / −6.2k |
+| Sahab's Dimaag + scanner top-5/day, 1 entry/day | 218 | 20% | −₹6,767 | ₹6,979 | **−13.7%** | −5.9k / −7.8k |
 | Same on **15-minute** bars, 4 fixed stocks | 103 | 23% | −₹2,736 | ₹3,525 | **−6.3%** | −3.3k / −3.0k |
 | 15-minute bars, scanner top-5/day | 177 | 23% | −₹8,796 | ₹5,668 | **−14.5%** | −5.7k / −8.8k |
 

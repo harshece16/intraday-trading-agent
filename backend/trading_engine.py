@@ -359,7 +359,8 @@ class TradingEngine:
     async def run_forever(self):
         self.state.running = True
         self.state.log("system", f"Trader Sahab started in {'paper' if self.state.paper_mode else 'live'} mode "
-                                 f"with the {config.STRATEGY} strategy.")
+                                 f"with {config.STRATEGY_DISPLAY_NAMES.get(config.STRATEGY, config.STRATEGY)} "
+                                 f"calling the shots.")
         while self.state.running:
             await asyncio.get_event_loop().run_in_executor(None, self.tick)
             await asyncio.sleep(config.POLL_INTERVAL_SECONDS)

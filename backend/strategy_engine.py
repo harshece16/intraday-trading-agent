@@ -94,5 +94,5 @@ def rsi_reversion_signal(
 STRATEGY_FUNCTIONS = {
     "sma_crossover": sma_crossover_signal,
     "rsi_reversion": rsi_reversion_signal,
-    "trader_brain": trader_brain_signal,
+    "sahab_dimaag": trader_brain_signal,  # displayed as "Sahab's Dimaag" — implemented in trader_brain.py
 }
