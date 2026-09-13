@@ -14,15 +14,20 @@ import asyncio
 import logging
 import math
 import threading
+import time
 from datetime import datetime, time as dtime
 from zoneinfo import ZoneInfo
 
 import config
+import confidence
 import costs
 import data_provider
 import database
+import fno_instruments
+import fno_risk
 import holidays
 import news_sentiment
+import options_pricing
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
 from scanner import Scanner
@@ -295,6 +300,167 @@ class TradingEngine:
             pos["position_id"] = position_id
         self.risk.open_positions_count += 1
 
+    # ---- F&O (options-buying only — see fno_risk.py) ---------------------
+
+    def _fno_active(self) -> bool:
+        return bool(config.FNO.get("enabled")) and fno_instruments.available()
+
+    def _fno_underlyings(self):
+        explicit = config.FNO.get("underlyings") or []
+        if explicit:
+            return explicit
+        return list((self.state.scanner or {}).get("active", []))
+
+    def _record_fno_trade(self, symbol, side, quantity, price, reason, note, realized, position_id,
+                          initial_risk, checklist_snapshot=None):
+        r_multiple = (realized / (initial_risk * quantity)) if realized is not None and initial_risk and quantity else None
+        mode = "paper" if self.state.paper_mode else "live"
+        trade = {
+            "id": database.new_position_id(), "position_id": position_id, "ts": time.time(),
+            "symbol": symbol, "side": side, "quantity": quantity, "price": price, "mode": mode,
+            "reason": reason, "note": note, "realized": realized, "charges": 0.0,
+            "initial_risk": initial_risk, "r_multiple": r_multiple,
+        }
+        database.record_trade(trade, checklist_snapshot=checklist_snapshot)
+        with self.state.lock:
+            self.state.trades.insert(0, trade)
+        if realized:
+            self.risk.record_realized_pnl(realized)
+            with self.state.lock:
+                self.state.realized_pnl_today += realized
+        self.state.log("trade", f"[F&O] {side} {quantity} {symbol} @ {price:.2f} ({reason})"
+                       + (f" — {note}" if note else ""), symbol=symbol, level="trade")
+
+    def _fno_ltp(self, tradingsymbol):
+        if self.state.paper_mode:
+            # No separate paper data feed for options premium — approximate with the last
+            # Black-Scholes premium computed at entry-time IV; good enough for a paper fill,
+            # never used for a live order (live always reads a real quote below).
+            return None
+        return self._ensure_kite().get_fno_ltp(tradingsymbol)
+
+    def _close_fno(self, underlying, reason, note=None):
+        pos = self.state.fno_positions.get(underlying)
+        if not pos:
+            return
+        ltp = self._fno_ltp(pos["tradingsymbol"]) or pos.get("ltp") or pos["entry_premium"]
+        if not self.state.paper_mode:
+            self._ensure_kite().place_fno_order(pos["tradingsymbol"], "SELL", pos["lots"], pos["lot_size"])
+        realized = (ltp - pos["entry_premium"]) * pos["lots"] * pos["lot_size"]
+        self._record_fno_trade(pos["tradingsymbol"], "SELL", pos["lots"] * pos["lot_size"], ltp, reason, note,
+                               realized, pos["position_id"], pos["entry_premium"])
+        with self.state.lock:
+            self.state.fno_positions.pop(underlying, None)
+        self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+
+    def _check_fno_stop_take(self, underlying):
+        pos = self.state.fno_positions.get(underlying)
+        if not pos:
+            return False
+        ltp = self._fno_ltp(pos["tradingsymbol"])
+        if ltp is None:
+            return False
+        with self.state.lock:
+            pos["ltp"] = ltp
+            pos["unrealized_pnl"] = (ltp - pos["entry_premium"]) * pos["lots"] * pos["lot_size"]
+        if ltp <= pos["stop_premium"]:
+            self._close_fno(underlying, "fno_stop_loss", f"premium fell to {ltp:.2f} (stop {pos['stop_premium']:.2f})")
+            return True
+        if ltp >= pos["target_premium"]:
+            self._close_fno(underlying, "fno_take_profit", f"premium rose to {ltp:.2f} (target {pos['target_premium']:.2f})")
+            return True
+        return False
+
+    def _try_enter_fno(self, underlying, side, analysis):
+        cfg = config.FNO
+        if underlying in self.state.fno_positions:
+            return  # one open contract per underlying at a time
+        if self.risk.daily_loss_limit_hit() or self.risk.open_positions_count >= config.RISK["max_open_positions"]:
+            return
+        scorecard = database.journal_summary().get("scorecard", [])
+        conf = confidence.score_trade(analysis, side, scorecard)
+        if conf["score"] < cfg["min_confidence_to_trade"]:
+            self.state.log("blocked", f"F&O {side} skipped — confidence {conf['score']}/100 below the "
+                           f"{cfg['min_confidence_to_trade']} bar ({conf['explanation']})", symbol=underlying, level="warn")
+            return
+
+        is_call = side == "LONG"
+        expiry = fno_instruments.nearest_expiry(
+            underlying, cfg["min_days_to_expiry"], cfg["max_days_to_expiry"],
+            prefer_weekly=cfg["prefer_weekly_for_index"] and underlying in cfg["index_underlyings"])
+        if not expiry:
+            return self._blocked(underlying, "F&O entry", "no listed expiry in the configured day-range")
+        spot = analysis.get("ltp") or self.state.indicators.get(underlying, {}).get("ltp")
+        if not spot:
+            return
+
+        def delta_at_strike(spot_, strike_, t_years_, is_call_):
+            ltp_guess = options_pricing.price(spot_, strike_, t_years_, 0.20, cfg["risk_free_rate_pct"] / 100, is_call_)
+            return options_pricing.greeks(spot_, strike_, t_years_, 0.20, cfg["risk_free_rate_pct"] / 100, is_call_)["delta"]
+
+        contract = fno_instruments.find_contract(underlying, spot, expiry, is_call, cfg["target_delta"], delta_at_strike)
+        if not contract:
+            return self._blocked(underlying, "F&O entry", "no matching strike found for this expiry")
+
+        premium = self._fno_ltp(contract["tradingsymbol"])
+        if premium is None:
+            if self.state.paper_mode:
+                t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
+                premium = options_pricing.price(spot, contract["strike"], t_years, 0.20,
+                                                cfg["risk_free_rate_pct"] / 100, is_call)
+            else:
+                return self._blocked(underlying, "F&O entry", "could not fetch a live premium quote")
+        if not premium or premium <= 0:
+            return
+
+        lots = fno_risk.lots_to_buy(cfg["capital"], cfg["max_premium_risk_pct"], premium, contract["lot_size"])
+        if lots <= 0:
+            return self._blocked(underlying, "F&O entry",
+                                 f"premium {premium:.2f} x lot {contract['lot_size']} too large for the "
+                                 f"{cfg['max_premium_risk_pct']}% of ₹{cfg['capital']:,.0f} F&O allocation")
+
+        exits = fno_risk.stop_and_target_premium(premium, cfg["stop_loss_pct_of_premium"], cfg["target_pct_of_premium"])
+        max_loss = fno_risk.max_loss(premium, lots, contract["lot_size"])
+        if not self.state.paper_mode:
+            self._ensure_kite().place_fno_order(contract["tradingsymbol"], "BUY", lots, contract["lot_size"])
+        position_id = database.new_position_id()
+        note = (f"{'Call' if is_call else 'Put'} bought on a {side.lower()} signal, confidence {conf['score']}/100 "
+                f"({conf['label']}). Max loss capped at ₹{max_loss:,.0f} (the premium paid) — "
+                f"stop {exits['stop_premium']:.2f}, target {exits['target_premium']:.2f}.")
+        self._record_fno_trade(contract["tradingsymbol"], "BUY", lots * contract["lot_size"], premium,
+                               f"fno_{side.lower()}", note, None, position_id, None,
+                               checklist_snapshot=analysis.get("checklist"))
+        with self.state.lock:
+            self.state.fno_positions[underlying] = {
+                "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
+                "strike": contract["strike"], "expiry": expiry.isoformat(),
+                "lots": lots, "lot_size": contract["lot_size"], "entry_premium": premium,
+                "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
+                "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "max_loss": max_loss,
+                "position_id": position_id,
+            }
+        self.risk.open_positions_count += 1
+
+    def _process_fno(self):
+        if not self._fno_active():
+            return
+        for underlying in list(self.state.fno_positions.keys()):
+            try:
+                self._check_fno_stop_take(underlying)
+            except Exception:
+                logger.exception(f"F&O stop/target check failed for {underlying}")
+        for underlying in self._fno_underlyings():
+            analysis = self.state.strategy_state.get(underlying)
+            if not analysis or "bull_score" not in analysis:
+                continue
+            side = "LONG" if analysis.get("long_ok") else "SHORT" if analysis.get("short_ok") else None
+            if not side:
+                continue
+            try:
+                self._try_enter_fno(underlying, side, analysis)
+            except Exception:
+                logger.exception(f"F&O entry check failed for {underlying}")
+
     def _note_forming_setup(self, symbol, prev, analysis):
         if not analysis or "bull_score" not in analysis or analysis.get("long_ok") or analysis.get("short_ok"):
             return
@@ -382,6 +548,8 @@ class TradingEngine:
             if any(p["quantity"] for p in self.state.positions.values()):
                 self.state.log("risk", "Square-off time — closing all open positions", level="warn")
                 self._square_off_all()
+            for underlying in list(self.state.fno_positions.keys()):
+                self._close_fno(underlying, "fno_auto_square_off")
         elif phase == "open":
             for symbol in list(self.state.watchlist):
                 try:
@@ -395,6 +563,10 @@ class TradingEngine:
                     if self._last_errors.get(symbol) != msg:
                         self._last_errors[symbol] = msg
                         self.state.log("error", msg, symbol=symbol, level="error")
+            try:
+                self._process_fno()
+            except Exception:
+                logger.exception("F&O processing failed")
 
         with self.state.lock:
             self.state.last_update_ts = now.timestamp()

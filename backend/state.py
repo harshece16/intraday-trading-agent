@@ -34,6 +34,11 @@ class AppState:
         self.indicators = {}       # symbol -> latest analysis snapshot, for display
         # symbol -> {"quantity": int, "avg_price": float, "entry_atr": float|None}
         self.positions = {}
+        # underlying NSE symbol -> one open long-option position (see fno_risk.py:
+        # options-buying only, so "quantity" here is always > 0 — there is no short side).
+        # {"tradingsymbol", "underlying", "is_call", "lots", "lot_size", "entry_premium",
+        #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id"}
+        self.fno_positions = {}
         self.set_watchlist(watchlist)
 
         self.market = None         # market context from the latest scan
@@ -87,6 +92,7 @@ class AppState:
                 "watchlist": self.watchlist,
                 "indicators": self.indicators,
                 "positions": positions_out,
+                "fno_positions": self.fno_positions,
                 "market": self.market,
                 "scanner": self.scanner,
                 "activity": self.activity[:80],

@@ -1075,6 +1075,14 @@ function methodHTML(m) {
   }
 
   parts.push(ruleSection(m.risk));
+  if (m.fno) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">${esc(m.fno.title)}</h2>
+      <p class="muted" style="margin:0 0 4px;font-size:13px">${esc(m.fno.source)}</p>
+      <p style="margin:0 0 10px;font-size:13px">${esc(m.fno.note)}</p>
+      <div class="rb-row">${m.fno.rules.map(r => `<div class="rb-chip" title="${esc(r.source)}"><b>${esc(r.name)}</b><span>${esc(r.source)}</span></div>`).join("")}</div>
+    </div>`);
+  }
 
   const nyu = m.not_yet_used;
   if (nyu) {
@@ -1095,6 +1103,7 @@ function renderMethod() {
 // ---- Portfolio page -----------------------------------------------------
 
 let portfolioCache = null;
+let fnoCache = null;
 
 async function fetchPortfolio(force = false) {
   if (!force && portfolioCache && Date.now() - portfolioCache._ts < 20000) return;
@@ -1104,7 +1113,64 @@ async function fetchPortfolio(force = false) {
     data._ts = Date.now();
     portfolioCache = data;
   } catch (e) { /* backend not reachable yet */ }
+  try {
+    const res2 = await fetch(`${API_BASE}/api/fno/status`);
+    fnoCache = await res2.json();
+  } catch (e) { /* backend not reachable yet */ }
   if (ui.page === "portfolio") setHTML($("page-portfolio"), portfolioHTML(portfolioCache, latestState));
+}
+
+async function setFnoEnabled(enabled) {
+  try {
+    await fetch(`${API_BASE}/api/fno/enable`, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({enabled}),
+    });
+  } catch (e) { /* backend not reachable yet */ }
+  await fetchPortfolio(true);
+  renderPortfolio(latestState);
+}
+
+function confidencePill(score) {
+  const cls = score >= 75 ? "long" : score >= 50 ? "wait" : score >= 25 ? "neutral" : "short";
+  return `<span class="pill ${cls}">${score}/100</span>`;
+}
+
+function fnoHTML(fno) {
+  if (!fno) return `<p class="empty">Loading F&amp;O status…</p>`;
+  const parts = [];
+  parts.push(`<div class="cardbox">
+    <h2 class="h" style="font-size:16px">F&amp;O (options-buying only)</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">Buys calls on a LONG signal, puts on a SHORT
+      signal — never writes/sells options or trades futures (see the Technical Analysis page for why).
+      A separate switch from Paper/Live: an order only reaches Kite when both this is ON and the header
+      says Live.</p>
+    <div class="rb-row" style="margin-bottom:12px">
+      <div class="rb-chip"><b>Capital ring-fenced</b><span>₹${num(fno.capital, 0)}</span></div>
+      <div class="rb-chip"><b>Max premium risk/trade</b><span>${fno.max_premium_risk_pct}%</span></div>
+      <div class="rb-chip"><b>Confidence bar to trade</b><span>${fno.min_confidence_to_trade}/100</span></div>
+    </div>
+    <button class="btn ${fno.enabled ? "primary" : ""}" id="btn-fno-toggle" data-fno-enabled="${fno.enabled}">
+      ${fno.enabled ? "F&O is ON — turn off" : "Turn F&O on"}
+    </button>
+    ${!fno.kite_connected ? `<p class="empty" style="margin-top:8px">Kite isn't connected — F&amp;O needs
+      it for live option quotes and contract data even in paper mode.</p>` : ""}
+  </div>`);
+
+  const positions = Object.entries(fno.open_positions || {});
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">Open F&amp;O positions</h2>
+    ${!positions.length ? `<p class="empty">No open option positions.</p>` : positions.map(([underlying, pos]) => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--rule)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <b>${esc(pos.tradingsymbol)}</b>
+          ${pos.confidence ? confidencePill(pos.confidence.score) : ""}
+        </div>
+        <div class="detail" style="margin-top:4px">${pos.lots} lot(s) of ${pos.lot_size} × entry premium
+          ${num(pos.entry_premium)}, now ${num(pos.ltp)} <span class="${tone(pos.unrealized_pnl)}">(${money(pos.unrealized_pnl)})</span>.
+          Stop ${num(pos.stop_premium)}, target ${num(pos.target_premium)}. Max loss was capped at ₹${num(pos.max_loss, 0)}.</div>
+      </div>`).join("")}
+  </div>`);
+  return parts.join("");
 }
 
 function paperPositionsHTML(positions) {
@@ -1164,6 +1230,7 @@ function portfolioHTML(p, s) {
     <h2 class="h" style="font-size:16px">Today's open positions (${p.kite_connected ? "live" : "paper"})</h2>
     ${paperPositionsHTML(p.paper_positions)}
   </div>`);
+  parts.push(`<div style="margin-top:16px">${fnoHTML(fnoCache)}</div>`);
   if (s) {
     parts.push(`<div class="cardbox" style="margin-top:16px">
       <h2 class="h" style="font-size:16px">Today's P&amp;L</h2>
@@ -1375,6 +1442,13 @@ document.addEventListener("click", e => {
     if (btn.id === "btn-scan") return triggerScan(btn);
     if (btn.id === "btn-toggle-watch") { ui.showAllWatch = !ui.showAllWatch; return renderScreener(latestState); }
     if (btn.dataset.sort) { setScreenerSort(btn.dataset.sort); return; }
+    if (btn.id === "btn-fno-toggle") {
+      const turningOn = btn.dataset.fnoEnabled !== "true";
+      if (turningOn && !confirm("Turn F&O on? Combined with Live mode, this lets Trader Sahab buy real option "
+          + "contracts with real premium at risk, sized and confidence-gated automatically — no per-trade "
+          + "confirmation. Paper mode still simulates it safely either way.")) return;
+      return setFnoEnabled(turningOn);
+    }
     if (btn.dataset.nav) { navigate(btn.dataset.nav); return; }
     if (btn.dataset.group === "screenerTab") { ui.screenerTab = btn.dataset.tab; return renderScreener(latestState); }
     if (btn.dataset.group === "centerTab") { ui.centerTab = btn.dataset.tab; return renderStock(latestState); }

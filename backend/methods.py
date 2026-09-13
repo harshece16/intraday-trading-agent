@@ -8,10 +8,13 @@ statistic here is imported from the module that uses it live.
 import brooks
 import bulkowski
 import candlestick_patterns
+import config
 import evaluation
+import fno_risk  # noqa: F401 — imported so this module errors loudly if that one breaks
 import market_structure
 import news_sentiment
-import risk_manager  # noqa: F401 — imported so this module errors loudly if that one breaks
+import options_pricing  # noqa: F401 — same
+import risk_manager  # noqa: F401 — same
 import swing_patterns  # noqa: F401 — same
 import trader_brain
 
@@ -123,6 +126,31 @@ def get_methods():
                  "source": "Grinold's fundamental law of active management, cited in Jansen, Machine Learning for Trading, ch 1"},
             ],
         },
+        "fno": {
+            "title": f"F&O (options-buying only) — {'ON' if config.FNO['enabled'] else 'OFF'}",
+            "source": "NISM Series VIII, Equity Derivatives workbook",
+            "note": f"Buys calls on a LONG signal, puts on a SHORT signal — same checklist, capped-risk "
+                    f"instrument. Writing/selling and futures are deliberately excluded: NISM's own text says "
+                    f"a long option's maximum loss is the premium paid, full stop, while a short call's "
+                    f"maximum loss 'has to be unlimited' — a fundamentally different risk shape from everything "
+                    f"else this codebase sizes to a known, bounded loss. Greeks (Delta, Gamma, Theta, Vega) use "
+                    f"NISM's own definitions, computed via Black-Scholes-Merton with volatility solved from the "
+                    f"contract's live premium (Kite gives OHLC + OI for F&O, not IV directly). "
+                    f"Ring-fenced to ₹{config.FNO['capital']:,.0f} of capital, max "
+                    f"{config.FNO['max_premium_risk_pct']:.0f}% of that per trade (the entire premium risked), "
+                    f"gated by a per-trade confidence score that's capped low whenever the Dimaag Scorecard "
+                    f"hasn't proven a real system-wide edge yet — see the Journal page.",
+            "rules": [
+                {"name": "Delta — premium change per unit move in the underlying", "source": "NISM Series VIII"},
+                {"name": "Gamma — change in delta per unit move (delta's own speed)", "source": "NISM Series VIII"},
+                {"name": "Theta — premium change per day closer to expiry (time decay)", "source": "NISM Series VIII"},
+                {"name": "Vega — premium change per 1-point change in volatility", "source": "NISM Series VIII"},
+                {"name": "Black-Scholes-Merton pricing + implied-volatility solve",
+                 "source": "Black & Scholes (1973); Merton (1973) — standard industry model, not NSE-specific"},
+                {"name": "Expiry >= 5 days out only (avoids the sharpest theta decay window)",
+                 "source": "NISM Series VIII + Murphy on time decay"},
+            ],
+        },
         "not_yet_used": {
             "title": "Read, but not (yet) built in",
             "items": [
@@ -139,12 +167,14 @@ def get_methods():
                            "system doesn't fetch (market-breadth needs every NSE constituent, not just the "
                            "watchlist), or doesn't apply to a single-stock intraday cash strategy (intermarket "
                            "analysis is built for cross-asset macro trading)."},
-                {"name": "NISM Series VIII (Equity Derivatives) workbook",
-                 "reason": "Read in full. Almost entirely F&O contract specs, option Greeks/strategies, SPAN "
-                           "margining and derivatives law — Sahab's Dimaag trades cash equity intraday only, "
-                           "so very little applies yet. One confirmed, unused fact: NSE penalises increasing a "
-                           "position during a Market Wide Position Limit ban (1% of value, ₹5,000-₹1,00,000) — "
-                           "relevant only if this agent ever trades F&O."},
+                {"name": "NISM Series VIII (Equity Derivatives) workbook — the parts not yet used",
+                 "reason": "Read in full. Its Greeks and long-option payoff definitions now power the F&O "
+                           "section above. Still not built in: SPAN margining (this engine never writes/sells "
+                           "options, so it never posts margin), and the Market Wide Position Limit ban — NSE "
+                           "penalises INCREASING a position once market-wide F&O open interest in a stock "
+                           "crosses its limit (1% of value, ₹5,000-₹1,00,000 penalty), which could in principle "
+                           "block a new option-buy too. There's no live MWPL-status check in code yet — a real "
+                           "gap if F&O volume grows, not something to assume away."},
                 {"name": "Gradient boosting, deep time series, autoencoders, GANs, reinforcement learning, "
                          "RAG/knowledge graphs (Jansen, Machine Learning for Trading, ch 9-24)",
                  "reason": "Need thousands of examples or months of history; a week of paper trading isn't "

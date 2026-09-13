@@ -44,6 +44,29 @@ class KiteExecutor:
     def get_positions(self):
         return self.kite.positions()["net"]
 
+    def place_fno_order(self, tradingsymbol: str, side: str, lots: int, lot_size: int):
+        """BUY-only (see fno_risk.py) NFO order — MIS product, same
+        same-day-square-off discipline as the rest of this engine. `side`
+        here is always "BUY" to open (long call/put) or "SELL" to close;
+        there is no short-side entry."""
+        from kiteconnect import KiteConnect
+        order_id = self.kite.place_order(
+            variety=KiteConnect.VARIETY_REGULAR,
+            exchange=KiteConnect.EXCHANGE_NFO,
+            tradingsymbol=tradingsymbol,
+            transaction_type=side,
+            quantity=lots * lot_size,
+            product=KiteConnect.PRODUCT_MIS,
+            order_type=KiteConnect.ORDER_TYPE_MARKET,
+            market_protection=config.KITE_MARKET_PROTECTION_PCT,
+        )
+        logger.info(f"[LIVE F&O] {side} {lots} lot(s) {tradingsymbol} -> order {order_id}")
+        return order_id
+
+    def get_fno_ltp(self, tradingsymbol: str) -> float:
+        quote = self.kite.ltp(f"NFO:{tradingsymbol}")
+        return quote[f"NFO:{tradingsymbol}"]["last_price"]
+
     def get_holdings(self):
         """Long-term equity holdings (T+1 settled, not today's intraday MIS
         positions) — Kite Connect's holdings() endpoint, free of charge."""

@@ -149,6 +149,29 @@ SQUARE_OFF_TIME = "15:15"
 
 POLL_INTERVAL_SECONDS = 30
 
+# F&O (options-buying only — see backend/fno_risk.py's docstring for why
+# writing/selling and futures are deliberately out of scope). This is a
+# SEPARATE opt-in from PAPER_MODE_DEFAULT/the dashboard's Live toggle: an
+# order only reaches Kite when BOTH paper_mode is off AND enabled is True
+# here, so switching cash equity live never silently turns this on too.
+FNO = {
+    "enabled": False,
+    "capital": 10000.0,             # ring-fenced sub-allocation of RISK.total_capital, not the whole account
+    "max_premium_risk_pct": 20.0,   # % of FNO capital a single trade's premium may risk (its whole max loss)
+    "min_confidence_to_trade": 60,  # 0-100 confidence.py score; below this, no order (see confidence.py)
+    "underlyings": [],              # NSE symbols to trade options on; empty = every symbol the scanner already tracks
+    "index_underlyings": ["NIFTY", "BANKNIFTY"],
+    "prefer_weekly_for_index": False,   # nearest MONTHLY expiry by default — weekly theta decay is the
+                                         # single biggest documented cause of retail option-buyer losses
+    "min_days_to_expiry": 5,        # skip contracts expiring too soon — same theta-decay reasoning
+    "max_days_to_expiry": 35,
+    "target_delta": 0.45,           # near-the-money: enough sensitivity to the underlying's move to matter,
+                                     # without paying for pure time value far ITM/OTM
+    "stop_loss_pct_of_premium": 40.0,   # exit if premium held falls this % from entry
+    "target_pct_of_premium": 80.0,      # exit if premium held rises this % from entry
+    "risk_free_rate_pct": 7.0,      # for the Black-Scholes IV solve — approx. India 91-day T-bill
+}
+
 # Approximate retail intraday-equity (MIS) cost structure, modeled on
 # Zerodha's published tariff (percentages change occasionally — check your
 # broker's current cost sheet before relying on these for sizing decisions).

@@ -101,6 +101,35 @@ def get_methods():
     return methods.get_methods()
 
 
+class FnoUpdate(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/fno/enable")
+def set_fno_enabled(update: FnoUpdate):
+    """Separate opt-in from paper_mode/the Live toggle — an F&O order only
+    ever reaches Kite when BOTH this is True AND state.paper_mode is False."""
+    config.FNO["enabled"] = update.enabled
+    state.log("system", f"F&O (options-buying) {'enabled' if update.enabled else 'disabled'} via the dashboard",
+              level="warn" if update.enabled else "info")
+    return {"enabled": config.FNO["enabled"]}
+
+
+@app.get("/api/fno/status")
+def fno_status():
+    """Whether F&O (options-buying only) is turned on, and the current
+    Dimaag Scorecard-driven confidence gate that has to clear before any
+    order fires — see confidence.py and fno_risk.py."""
+    return {
+        "enabled": config.FNO["enabled"],
+        "kite_connected": bool(config.KITE_ACCESS_TOKEN),
+        "capital": config.FNO["capital"],
+        "min_confidence_to_trade": config.FNO["min_confidence_to_trade"],
+        "max_premium_risk_pct": config.FNO["max_premium_risk_pct"],
+        "open_positions": state.fno_positions,
+    }
+
+
 @app.get("/api/portfolio")
 def get_portfolio():
     """Real Kite holdings + margins when Kite is connected (free Kite Connect
@@ -108,7 +137,8 @@ def get_portfolio():
     state, which exist regardless of Kite."""
     with state.lock:
         positions = {sym: pos for sym, pos in state.positions.items() if pos["quantity"] != 0}
-    out = {"paper_positions": positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN)}
+        fno_positions = dict(state.fno_positions)
+    out = {"paper_positions": positions, "fno_positions": fno_positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN)}
     if config.KITE_ACCESS_TOKEN:
         try:
             kite = engine._ensure_kite()
