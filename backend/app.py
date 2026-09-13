@@ -14,8 +14,9 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 import config
 import data_provider
@@ -50,6 +51,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Public only because Zerodha's own redirect must reach it, and it can't
+# carry our custom header — /kite/callback only ever exchanges a one-time
+# token against OUR api_secret, so reaching it without the key can't read or
+# change anything by itself. Everything else — including /kite/login, since
+# nothing should be able to kick off a new Kite session but us — requires
+# config.DASHBOARD_API_KEY, as an X-Api-Key header or a ?key= query param
+# (the latter for the WebSocket and the Connect-Kite popup, neither of which
+# can set a custom header).
+PUBLIC_PATHS = {"/kite/callback"}
+
+
+class ApiKeyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+            return await call_next(request)
+        key = request.headers.get("x-api-key") or request.query_params.get("key")
+        if key != config.DASHBOARD_API_KEY:
+            return JSONResponse({"detail": "Missing or invalid API key."}, status_code=401)
+        return await call_next(request)
+
+
+app.add_middleware(ApiKeyMiddleware)
+logger.warning(f"Dashboard API key (enter this into the dashboard once): {config.DASHBOARD_API_KEY}")
 
 
 @app.get("/api/state")
@@ -276,6 +302,12 @@ def kite_callback(request_token: Optional[str] = None, status: Optional[str] = N
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    # BaseHTTPMiddleware (ApiKeyMiddleware, above) never sees websocket-scope
+    # connections, so the key is checked here instead, as a query param
+    # (browsers can't set a custom header on a WebSocket handshake).
+    if websocket.query_params.get("key") != config.DASHBOARD_API_KEY:
+        await websocket.close(code=4401)
+        return
     await websocket.accept()
     try:
         while True:

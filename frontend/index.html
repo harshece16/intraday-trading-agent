@@ -316,6 +316,33 @@ const API_OVERRIDE = new URLSearchParams(window.location.search).get("api");
 const API_BASE = API_OVERRIDE && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(API_OVERRIDE)
   ? API_OVERRIDE
   : window.location.hostname === "" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}:8000`;
+
+// The backend requires this on every request except the Kite OAuth endpoints
+// (see app.py's ApiKeyMiddleware) — asked for once, then remembered per browser.
+function getApiKey() {
+  let key = null;
+  const fromUrl = new URLSearchParams(window.location.search).get("key");
+  try { key = fromUrl || localStorage.getItem("dashboardApiKey"); } catch (e) { /* private window etc. */ }
+  if (fromUrl) { try { localStorage.setItem("dashboardApiKey", fromUrl); } catch (e) { /* ignore */ } }
+  if (!key) {
+    key = prompt("Enter the dashboard API key (see backend/.dashboard_key.json or the startup log):") || "";
+    try { localStorage.setItem("dashboardApiKey", key); } catch (e) { /* ignore */ }
+  }
+  return key;
+}
+const API_KEY = getApiKey();
+
+async function apiFetch(path, options = {}) {
+  const headers = {...(options.headers || {}), "X-Api-Key": API_KEY};
+  const res = await fetch(`${API_BASE}${path}`, {...options, headers});
+  if (res.status === 401) {
+    try { localStorage.removeItem("dashboardApiKey"); } catch (e) { /* ignore */ }
+    alert("Dashboard API key was rejected — reloading to ask again.");
+    location.reload();
+  }
+  return res;
+}
+
 const IST_OFFSET_S = 19800;
 const REASON_TEXT = {
   stop_loss: "Stop-loss hit", take_profit: "Target hit", auto_square_off: "15:15 square-off",
@@ -960,7 +987,7 @@ function renderChart(s) {
 async function fetchCandles(symbol) {
   if (!series) return;
   try {
-    const res = await fetch(`${API_BASE}/api/candles/${encodeURIComponent(symbol)}`);
+    const res = await apiFetch(`/api/candles/${encodeURIComponent(symbol)}`);
     const data = await res.json();
     if (symbol !== selectedSymbol) return;
     series.setData((data.candles || []).map(c => ({
@@ -976,7 +1003,7 @@ async function fetchCandles(symbol) {
 async function fetchMethods(force = false) {
   if (!force && methodsCache && Date.now() - methodsCache._ts < 300000) return;
   try {
-    const res = await fetch(`${API_BASE}/api/methods`);
+    const res = await apiFetch(`/api/methods`);
     const data = await res.json();
     data._ts = Date.now();
     methodsCache = data;
@@ -1108,13 +1135,13 @@ let fnoCache = null;
 async function fetchPortfolio(force = false) {
   if (!force && portfolioCache && Date.now() - portfolioCache._ts < 20000) return;
   try {
-    const res = await fetch(`${API_BASE}/api/portfolio`);
+    const res = await apiFetch(`/api/portfolio`);
     const data = await res.json();
     data._ts = Date.now();
     portfolioCache = data;
   } catch (e) { /* backend not reachable yet */ }
   try {
-    const res2 = await fetch(`${API_BASE}/api/fno/status`);
+    const res2 = await apiFetch(`/api/fno/status`);
     fnoCache = await res2.json();
   } catch (e) { /* backend not reachable yet */ }
   if (ui.page === "portfolio") setHTML($("page-portfolio"), portfolioHTML(portfolioCache, latestState));
@@ -1122,7 +1149,7 @@ async function fetchPortfolio(force = false) {
 
 async function setFnoEnabled(enabled) {
   try {
-    await fetch(`${API_BASE}/api/fno/enable`, {
+    await apiFetch(`/api/fno/enable`, {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({enabled}),
     });
   } catch (e) { /* backend not reachable yet */ }
@@ -1335,13 +1362,13 @@ let fnoJournalCache = null;
 async function fetchJournal(force = false) {
   if (!force && journalCache && Date.now() - journalCache._ts < 60000) return;
   try {
-    const res = await fetch(`${API_BASE}/api/journal/summary`);
+    const res = await apiFetch(`/api/journal/summary`);
     const data = await res.json();
     data._ts = Date.now();
     journalCache = data;
   } catch (e) { /* backend not reachable yet */ }
   try {
-    const res2 = await fetch(`${API_BASE}/api/fno/journal`);
+    const res2 = await apiFetch(`/api/fno/journal`);
     fnoJournalCache = await res2.json();
   } catch (e) { /* backend not reachable yet */ }
   if (ui.page === "journal") setHTML($("page-journal"), `<h2 class="h">Sahab's Journal</h2><p class="sub">The knowledge base built from every scan, checklist read and fill.</p>` + journalHTML(journalCache));
@@ -1393,7 +1420,7 @@ async function fetchNews(symbol, force = false) {
   const cached = newsCache[symbol];
   if (!force && cached && Date.now() - cached._ts < 120000) return;
   try {
-    const res = await fetch(`${API_BASE}/api/news/${encodeURIComponent(symbol)}`);
+    const res = await apiFetch(`/api/news/${encodeURIComponent(symbol)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     data._ts = Date.now();
@@ -1429,7 +1456,7 @@ function renderAll(s) {
 }
 
 async function setMode(paperMode) {
-  await fetch(`${API_BASE}/api/mode`, {
+  await apiFetch(`/api/mode`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ paper_mode: paperMode }),
   });
@@ -1439,7 +1466,7 @@ async function triggerScan(btn) {
   btn.disabled = true;
   btn.textContent = "Scanning…";
   try {
-    const res = await fetch(`${API_BASE}/api/scan`, { method: "POST" });
+    const res = await apiFetch(`/api/scan`, { method: "POST" });
     const data = await res.json();
     btn.textContent = data.started ? "Scan started" : "Already scanning";
   } catch (e) {
@@ -1485,7 +1512,7 @@ $("btn-live").onclick = () => {
 
 async function refreshKiteStatus() {
   try {
-    const res = await fetch(`${API_BASE}/api/kite/status`);
+    const res = await apiFetch(`/api/kite/status`);
     const k = await res.json();
     const label = $("kite-label");
     const btn = $("btn-connect-kite");
@@ -1502,13 +1529,13 @@ async function refreshKiteStatus() {
   } catch (e) { /* backend not reachable yet */ }
 }
 
-$("btn-connect-kite").onclick = () => window.open(`${API_BASE}/kite/login`, "kite-login", "width=480,height=640");
+$("btn-connect-kite").onclick = () => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640");
 window.addEventListener("focus", refreshKiteStatus);
 setInterval(refreshKiteStatus, 15000);
 refreshKiteStatus();
 
 function connectWS() {
-  const ws = new WebSocket(API_BASE.replace("http", "ws") + "/ws");
+  const ws = new WebSocket(API_BASE.replace("http", "ws") + "/ws?key=" + encodeURIComponent(API_KEY));
   ws.onmessage = evt => renderAll(JSON.parse(evt.data));
   ws.onclose = () => setTimeout(connectWS, 2000);
   ws.onerror = () => ws.close();
@@ -1518,7 +1545,7 @@ applyRoute();
 connectWS();
 setInterval(async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/state`);
+    const res = await apiFetch(`/api/state`);
     renderAll(await res.json());
   } catch (e) { /* the WebSocket is probably already delivering updates */ }
 }, 10000);

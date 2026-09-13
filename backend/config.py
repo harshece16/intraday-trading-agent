@@ -4,6 +4,7 @@ Configuration for the intraday trading dashboard.
 
 import json
 import os
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,6 +21,31 @@ if SESSION_FILE.exists():
         _session = json.loads(SESSION_FILE.read_text())
     except (json.JSONDecodeError, OSError):
         _session = {}
+
+# Required on every dashboard request except the two Kite OAuth endpoints
+# Zerodha itself must reach (/kite/login, /kite/callback) — see app.py's
+# ApiKeyMiddleware. Exists because this backend sometimes needs to be
+# reachable from the public internet (e.g. an ngrok tunnel, just to let
+# Zerodha's login redirect through) and has real control surface — flipping
+# to live trading, enabling F&O — that must not be reachable by anyone who
+# merely finds that URL. Auto-generated once and persisted locally so you
+# never have to think of one; read it from backend/.dashboard_key.json (or
+# the startup log) and enter it into the dashboard once when it asks.
+_KEY_FILE = Path(__file__).parent / ".dashboard_key.json"
+
+
+def _load_or_create_dashboard_key() -> str:
+    if _KEY_FILE.exists():
+        try:
+            return json.loads(_KEY_FILE.read_text())["key"]
+        except (json.JSONDecodeError, KeyError, OSError):
+            pass
+    key = secrets.token_urlsafe(32)
+    _KEY_FILE.write_text(json.dumps({"key": key}))
+    return key
+
+
+DASHBOARD_API_KEY = os.environ.get("DASHBOARD_API_KEY") or _load_or_create_dashboard_key()
 
 # PAPER_MODE True = simulated orders only (default, safe).
 # Flip via the dashboard toggle or by setting this False + restarting.
