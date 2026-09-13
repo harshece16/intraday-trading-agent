@@ -203,6 +203,43 @@ and carry forward 4 years (ch 5), and advance tax is due 15 Jun / 15 Sep / 15
 Dec / 15 Mar if trading as a business (ch 6). Informational only — it is not
 tax advice; the panel says so and names Varsity as its source.
 
+### 9. Sahab's Journal — a persistent audit trail (`database.py`)
+
+Everything above happens in memory and used to vanish on restart. It's now
+also written to a local SQLite database (`backend/data/sahab_journal.db`,
+gitignored — it's runtime data, not source):
+
+- **Every scan**, with the full ranked list, not just the picks.
+- **Every checklist read** on an active-watchlist stock, roughly every 30
+  seconds during market hours — whether or not it led to a trade. The
+  checklist is deliberately strict, so trades stay rare; this is what turns
+  a week into a few thousand data points instead of a handful.
+- **Every fill**, with the checklist snapshot that justified an entry
+  attached, and the realized R-multiple once the matching exit closes the
+  position (linked by a shared `position_id`).
+
+This is built around the [ML4Trading](https://github.com/stefan-jansen/machine-learning-for-trading)
+book's own opening argument, "the process is your edge" — see
+`research/ml4t_integration_plan.md` for the full reasoning, including what
+the book covers that we deliberately are *not* attempting yet (deep
+learning, RL, synthetic data), and why. Two things from it are wired in now:
+
+- **Information Coefficient** (`database.factor_ic()`): rank correlation
+  between a stock's scan-time score and its move on the *next* session it
+  was scanned — a legitimate way to ask "does this score predict anything?"
+  that works on tens of observations, not thousands. Honestly reports "not
+  enough data" below 20 session-pairs rather than a number nobody should trust.
+- **Deflated Sharpe Ratio** (`evaluation.py`, Bailey & López de Prado): every
+  `backtester.py` run is logged as a trial (`backend/data/backtest_trials.json`);
+  the DSR corrects a backtest's Sharpe ratio for how many configurations
+  have already been tried, since trying enough configurations makes one
+  look good by chance alone.
+
+The dashboard's **Journal** tab (next to Activity and Trades) shows all of
+this: how much has been logged, win rate and expectancy on real fills, and
+which checklist rules actually separated winners from losers — updating as
+the week of paper trading runs.
+
 ## Dashboard
 
 The dashboard is built to be read, not decoded. Everything is in plain
@@ -393,5 +430,6 @@ pinned symbols), `MARKET_FILTER` (risk-off / VIX behaviour), `NEWS` (sources),
 - News, gaps, relative volume and results-day filters can't be backtested
   (no historical data for them).
 - Live analysis uses the still-forming candle, unlike backtests.
-- State isn't persisted, and live positions aren't reconciled with `kite.positions()`.
+- Live positions and the current watchlist still reset on restart (only
+  history is persisted, in `sahab_journal.db`), and aren't reconciled with `kite.positions()`.
 - Single-user, no API auth, CORS open. Local use only.

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 import config
 import data_provider
+import database
 import news_sentiment
 import universe
 from state import AppState
@@ -89,6 +90,24 @@ def get_news(symbol: str):
 def get_activity(limit: int = 200):
     with state.lock:
         return state.activity[:limit]
+
+
+@app.get("/api/journal/summary")
+def journal_summary():
+    """Sahab's Journal — the knowledge base built from everything logged to
+    database.py: every scan, every checklist read (not just executed
+    trades), and every fill, so it grows far faster than the trade count
+    alone. Win rate/expectancy need closed trades; the Information
+    Coefficient needs the scanner to have seen the same stock on two
+    different sessions, and says so honestly when there isn't enough yet."""
+    return database.journal_summary()
+
+
+@app.get("/api/journal/trades")
+def journal_trades(limit: int = 200):
+    """Trade history that survives a restart — unlike state.trades, which
+    resets to empty every time the process restarts."""
+    return database.recent_trades(limit)
 
 
 class ModeUpdate(BaseModel):

@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 import config
 import costs
 import data_provider
+import database
 import news_sentiment
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
@@ -94,6 +95,10 @@ class TradingEngine:
             logger.exception("Scan failed")
             self.state.log("error", f"Scan failed: {exc}", level="error")
             return
+        try:
+            database.record_scan(result)
+        except Exception:
+            logger.exception("Failed to journal the scan")
 
         held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
         new_watch = list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["active"] + held))
@@ -136,17 +141,22 @@ class TradingEngine:
 
     # ---- execution ------------------------------------------------------
 
-    def _execute(self, symbol, side, qty, price, reason="signal", note=None):
+    def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
+                position_id=None, initial_risk=None):
         charges = costs.leg_cost(side, price, qty, config.COSTS)
         if self.state.paper_mode:
             realized = execute_paper_order(self.state, symbol, side, qty, price, reason=reason, note=note,
-                                           charges=charges)
+                                           charges=charges, checklist_snapshot=checklist_snapshot,
+                                           position_id=position_id, initial_risk=initial_risk)
         else:
             executor = self._ensure_kite()
             executor.place_order(symbol, side, qty)
             realized = self.state.apply_fill(symbol, side, qty, price)
+            r_multiple = (realized / (initial_risk * qty)) if initial_risk and qty else None
             self.state.record_trade(symbol, side, qty, price, mode="live", reason=reason, note=note,
-                                    realized=realized, charges=charges)
+                                    realized=realized, charges=charges, position_id=position_id,
+                                    initial_risk=initial_risk, r_multiple=r_multiple,
+                                    checklist_snapshot=checklist_snapshot)
         if realized:
             self.risk.record_realized_pnl(realized)
         pnl = f" · P&L ₹{realized:,.0f}" if realized else ""
@@ -164,7 +174,8 @@ class TradingEngine:
                 price = data_provider.get_ltp(symbol)
             except Exception:
                 price = pos["avg_price"]
-            self._execute(symbol, side, abs(pos["quantity"]), price, reason="auto_square_off")
+            self._execute(symbol, side, abs(pos["quantity"]), price, reason="auto_square_off",
+                         position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
         self.risk.open_positions_count = 0
 
     def _check_stop_take(self, symbol, ltp) -> bool:
@@ -184,7 +195,8 @@ class TradingEngine:
             return False
         exit_side = "SELL" if qty > 0 else "BUY"
         self._execute(symbol, exit_side, abs(qty), ltp, reason="stop_loss" if hit_stop else "take_profit",
-                      note=f"stop {stop:.2f} / target {target:.2f}")
+                      note=f"stop {stop:.2f} / target {target:.2f}",
+                      position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
         return True
 
@@ -208,10 +220,12 @@ class TradingEngine:
         self.state.log("blocked", f"{setup} signal skipped — {why}", symbol=symbol, level="warn")
 
     def _close(self, symbol, ltp, reason, note=None):
-        qty = self.state.positions[symbol]["quantity"]
+        pos = self.state.positions[symbol]
+        qty = pos["quantity"]
         if qty == 0:
             return
-        self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason, note=note)
+        self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason, note=note,
+                      position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
 
     def _try_enter(self, symbol, side, ltp, candles, analysis):
@@ -255,13 +269,16 @@ class TradingEngine:
             why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
             note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}" \
                 if "bull_score" in analysis else None
-        self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note)
+        position_id = database.new_position_id()
+        self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
+                      checklist_snapshot=analysis.get("checklist"), position_id=position_id)
         with self.state.lock:
             pos = self.state.positions[symbol]
             pos["entry_atr"] = atr_val
             pos["stop_price"] = stop_price
             pos["target_price"] = plan["target"] if plan else None
             pos["initial_risk"] = abs(ltp - stop_price) if stop_price else self.risk._stop_distance(ltp, atr_val)
+            pos["position_id"] = position_id
         self.risk.open_positions_count += 1
 
     def _note_forming_setup(self, symbol, prev, analysis):
@@ -302,6 +319,10 @@ class TradingEngine:
         with self.state.lock:
             self.state.strategy_state[symbol] = analysis
             self.state.indicators[symbol] = {**(analysis or {}), "ltp": ltp}
+        try:
+            database.record_checklist_eval(symbol, ltp, analysis)
+        except Exception:
+            logger.exception(f"Failed to journal the checklist read for {symbol}")
 
         self._note_forming_setup(symbol, prev, analysis)
         if signal:

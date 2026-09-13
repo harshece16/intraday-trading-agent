@@ -8,12 +8,14 @@ import threading
 import time
 import uuid
 
+import database
+
 ACTIVITY_LIMIT = 300
 
 
 def _new_position():
     return {"quantity": 0, "avg_price": 0.0, "entry_atr": None,
-            "stop_price": None, "target_price": None, "initial_risk": None}
+            "stop_price": None, "target_price": None, "initial_risk": None, "position_id": None}
 
 
 class AppState:
@@ -51,11 +53,11 @@ class AppState:
                 self.positions.setdefault(s, _new_position())
 
     def log(self, kind, message, symbol=None, level="info"):
+        ts = time.time()
         with self.lock:
-            self.activity.insert(0, {
-                "ts": time.time(), "kind": kind, "symbol": symbol, "message": message, "level": level,
-            })
+            self.activity.insert(0, {"ts": ts, "kind": kind, "symbol": symbol, "message": message, "level": level})
             del self.activity[ACTIVITY_LIMIT:]
+        database.record_activity(kind, message, symbol=symbol, level=level, ts=ts)
 
     def snapshot(self):
         """Return a plain-dict snapshot safe to JSON-serialize for the API/WebSocket."""
@@ -116,14 +118,18 @@ class AppState:
             pos["quantity"] = new_qty
             return realized
 
-    def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None, charges=None):
+    def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None,
+                     charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None):
+        trade = {
+            "id": str(uuid.uuid4())[:8], "position_id": position_id,
+            "symbol": symbol, "side": side, "quantity": quantity,
+            "price": price, "mode": mode, "ts": time.time(),
+            "reason": reason, "note": note, "realized": realized, "charges": charges,
+            "initial_risk": initial_risk, "r_multiple": r_multiple,
+        }
         with self.lock:
-            self.trades.insert(0, {
-                "id": str(uuid.uuid4())[:8],
-                "symbol": symbol, "side": side, "quantity": quantity,
-                "price": price, "mode": mode, "ts": time.time(),
-                "reason": reason, "note": note, "realized": realized, "charges": charges,
-            })
+            self.trades.insert(0, trade)
+        database.record_trade(trade, checklist_snapshot=checklist_snapshot)
 
     def _tax_summary(self):
         """Intraday equity is speculative business income (Varsity Markets & Taxation ch 3-6).
@@ -137,8 +143,8 @@ class AppState:
         }
 
     def record_signal(self, symbol, signal, detail=None):
+        ts = time.time()
         with self.lock:
-            self.signals_log.insert(0, {
-                "symbol": symbol, "signal": signal, "detail": detail, "ts": time.time(),
-            })
+            self.signals_log.insert(0, {"symbol": symbol, "signal": signal, "detail": detail, "ts": ts})
             del self.signals_log[100:]
+        database.record_signal(symbol, signal, detail=detail, ts=ts)

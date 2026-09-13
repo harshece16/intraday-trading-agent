@@ -316,6 +316,7 @@ let latestState = null;
 let lastChartedSymbol = null;
 let lastChartFetchTs = 0;
 const newsCache = {};
+let journalCache = null;
 
 const $ = id => document.getElementById(id);
 function setHTML(el, html) {
@@ -743,12 +744,69 @@ function tradeAction(t) {
   return r.endsWith("(short)") ? "Sold short" : "Sold";
 }
 
+function fmtWhen(ts) {
+  if (!ts) return "—";
+  const days = Math.floor((Date.now() / 1000 - ts) / 86400);
+  return days < 1 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
+}
+
+function journalHTML(j) {
+  if (!j) return `<li class="empty">Loading Sahab's Journal…</li>`;
+  const ts = j.trade_stats || {};
+  const rows = [
+    `<li class="tax">Every scan and every checklist read — not just executed trades — is saved to a local database (backend/data/sahab_journal.db) so it survives a restart and builds into a knowledge base over time.
+      <div class="detail" style="margin-top:6px">${num(j.scans_logged, 0)} scans · ${num(j.checklist_evals_logged, 0)} checklist reads · ${num(j.trades_logged, 0)} fills logged, since ${fmtWhen(j.logging_since)}.</div>
+    </li>`,
+  ];
+  rows.push(ts.closed_trades
+    ? `<li><div class="meta"><span><span class="kind">Trade record</span></span></div>
+        <div class="body">${ts.closed_trades} closed trade${ts.closed_trades > 1 ? "s" : ""}, ${ts.win_rate_pct}% won</div>
+        <div class="detail">Expectancy ${signed(ts.expectancy_r, 2)}R per trade (avg win ${signed(ts.avg_win_r, 2)}R, avg loss ${signed(ts.avg_loss_r, 2)}R). Kelly fraction ${ts.kelly_pct == null ? "—" : ts.kelly_pct + "%"}${ts.kelly_pct != null && ts.kelly_pct <= 0 ? " — no edge yet, the right bet size is zero" : ""}.</div>
+      </li>`
+    : `<li class="empty">No closed trades yet — nothing to score. This fills in once Sahab's Dimaag actually trades.</li>`);
+  const breakdown = j.checklist_item_breakdown || {};
+  const items = Object.entries(breakdown);
+  if (items.length) {
+    rows.push(`<li><div class="meta"><span><span class="kind">Which checklist rules actually matter</span></span></div>
+      <div class="detail">Average R-multiple of closed trades where each rule passed vs failed at entry.</div>
+      <table style="width:100%;margin-top:6px;font-size:12.5px"><tbody>
+      ${items.map(([key, b]) => `<tr><td class="k" style="padding:2px 8px 2px 0">${esc(key)}</td>
+        <td class="${b.pass.avg_r > 0 ? "up" : b.pass.avg_r < 0 ? "down" : ""}">pass ${b.pass.n ? signed(b.pass.avg_r, 2) + "R (" + b.pass.n + ")" : "—"}</td>
+        <td class="${b.fail.avg_r > 0 ? "up" : b.fail.avg_r < 0 ? "down" : ""}">fail ${b.fail.n ? signed(b.fail.avg_r, 2) + "R (" + b.fail.n + ")" : "—"}</td></tr>`).join("")}
+      </tbody></table></li>`);
+  }
+  const ic = j.factor_ic;
+  if (ic) {
+    rows.push(`<li><div class="meta"><span><span class="kind">Does the scan score predict the next move?</span></span></div>
+      <div class="body">${ic.ic != null ? `Information Coefficient ${signed(ic.ic, 3)} across ${ic.pairs} session pairs` : "Not enough data yet"}</div>
+      <div class="detail">${esc(ic.note || "")}${ic.ic == null ? "" : " (ML4Trading ch 1: rank correlation between today's score and the next session's move — 0 is no predictive power, ±1 is perfect)."}</div>
+    </li>`);
+  }
+  return rows.join("");
+}
+
+async function fetchJournal(force = false) {
+  if (!force && journalCache && Date.now() - journalCache._ts < 60000) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/journal/summary`);
+    const data = await res.json();
+    data._ts = Date.now();
+    journalCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  if (ui.right === "journal" && latestState) renderRight(latestState);
+}
+
 function renderRight(s) {
   const activity = s.activity || [];
   setHTML($("right-tabs"), tabsHTML("right", ui.right, [
     ["activity", "Activity", activity.length],
     ["trades", "Trades", s.trades.length],
+    ["journal", "Journal"],
   ]));
+  if (ui.right === "journal") {
+    fetchJournal();
+    return setHTML($("right-content"), journalHTML(journalCache));
+  }
   if (ui.right === "activity") {
     setHTML($("right-content"), activity.length ? activity.map(a => `
       <li>

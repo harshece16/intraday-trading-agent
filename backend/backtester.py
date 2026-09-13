@@ -33,6 +33,7 @@ from zoneinfo import ZoneInfo
 
 import config
 import data_provider
+import evaluation
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 from risk_manager import RiskManager
 from trading_engine import _parse_hhmm
@@ -225,7 +226,7 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
     return trades, equity_curve
 
 
-def report(trades, equity_curve, starting_capital, costs_enabled):
+def report(trades, equity_curve, starting_capital, costs_enabled, n_trials=1):
     if not trades:
         print("\nNo trades were generated — try a longer --days window, a different")
         print("strategy, or check that the symbols/interval returned data at all.")
@@ -284,6 +285,12 @@ def report(trades, equity_curve, starting_capital, costs_enabled):
             kelly = 1.0 if not losses_r else 0.0
         print(f"Expectancy:        {sum(rs) / len(rs):+.2f}R per trade (avg win {avg_w:+.2f}R, avg loss {avg_l:+.2f}R)")
         print(f"Kelly fraction:    {kelly:.1%}" + ("  (no edge: the right bet size is zero)" if kelly <= 0 else ""))
+        dsr = evaluation.deflated_sharpe_ratio(rs, n_trials)
+        if dsr["dsr"] is not None:
+            print(f"Deflated Sharpe:   {dsr['dsr']:.1%} probability of real skill, after correcting for "
+                  f"{n_trials} backtest configurations tried so far (raw Sharpe {dsr['sharpe']:+.2f})")
+        else:
+            print(f"Deflated Sharpe:   n/a — {dsr['note']}")
     print(f"{'='*50}")
     if not costs_enabled:
         print("NOTE: run with costs disabled (--no-costs) — this is a frictionless,")
@@ -349,7 +356,9 @@ def main():
     trades, equity_curve = run_backtest(symbols, args.strategy, strategy_params, risk_cfg,
                                          args.interval, args.days, costs_cfg,
                                          preloaded=preloaded, allowed_by_day=picks)
-    report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs)
+    trial_label = f"{args.strategy} {label} {args.interval} {args.days}d" + (" long-only" if args.long_only else "")
+    n_trials = evaluation.log_trial(trial_label)
+    report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs, n_trials=n_trials)
 
 
 if __name__ == "__main__":
