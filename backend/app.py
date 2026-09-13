@@ -101,6 +101,24 @@ def get_methods():
     return methods.get_methods()
 
 
+@app.get("/api/portfolio")
+def get_portfolio():
+    """Real Kite holdings + margins when Kite is connected (free Kite Connect
+    endpoints); always includes today's paper/live intraday positions from
+    state, which exist regardless of Kite."""
+    with state.lock:
+        positions = {sym: pos for sym, pos in state.positions.items() if pos["quantity"] != 0}
+    out = {"paper_positions": positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN)}
+    if config.KITE_ACCESS_TOKEN:
+        try:
+            kite = engine._ensure_kite()
+            out["holdings"] = kite.get_holdings()
+            out["margins"] = kite.get_margins()
+        except Exception as exc:
+            out["error"] = f"Could not reach Kite: {exc}"
+    return out
+
+
 @app.get("/api/journal/summary")
 def journal_summary():
     """Sahab's Journal — the knowledge base built from everything logged to

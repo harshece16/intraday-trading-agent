@@ -43,3 +43,12 @@ class KiteExecutor:
 
     def get_positions(self):
         return self.kite.positions()["net"]
+
+    def get_holdings(self):
+        """Long-term equity holdings (T+1 settled, not today's intraday MIS
+        positions) — Kite Connect's holdings() endpoint, free of charge."""
+        return self.kite.holdings()
+
+    def get_margins(self):
+        """Available cash/margin by segment — Kite Connect's margins() endpoint."""
+        return self.kite.margins()

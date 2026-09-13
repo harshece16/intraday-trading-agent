@@ -94,6 +94,9 @@
   .segmented button { border: 0; background: none; padding: 0 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink-2); }
   .segmented .paper[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22, 34, 48, 0.14); }
   .segmented .live[aria-pressed="true"] { background: var(--short); color: #fff; }
+  .countdown { font-size: 12px; color: var(--ink-2); white-space: nowrap; margin-left: 2px; }
+  .session-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; overflow: hidden; }
+  .session-bar-fill { height: 100%; width: 0%; background: var(--long); transition: width 1s linear; }
 
   .pagenav {
     position: sticky; top: 57px; z-index: 4; display: flex; gap: 4px; overflow-x: auto;
@@ -172,6 +175,12 @@
     width: 100%; padding: 14px 4px; border: 0; border-bottom: 1px solid var(--rule); background: none; text-align: left; cursor: pointer;
   }
   .opp:hover { background: var(--surface); }
+  .opp.expanded { background: var(--sunken); }
+  .opp-detail { padding: 4px 4px 18px; border-bottom: 1px solid var(--rule); }
+  .sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 4px; font-size: 13px; color: var(--ink-2); }
+  .sortbtn { height: 26px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+  .sortbtn:hover { border-color: var(--ink-3); }
+  .sortbtn.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
   .opp-name { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; font-size: 15px; }
   .opp-score { text-align: right; font-weight: 600; font-size: 15px; }
   .opp-why { font-size: 13px; line-height: 1.4; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -278,7 +287,7 @@
 <body>
 
 <header class="topbar">
-  <button class="brand" id="btn-home"><span class="dot" id="market-dot"></span><b>Trader Sahab</b><span id="market-status">Connecting…</span></button>
+  <button class="brand" id="btn-home"><span class="dot" id="market-dot"></span><b>Trader Sahab</b><span id="market-status">Connecting…</span><span id="market-countdown" class="countdown"></span></button>
   <div class="stat"><small>Realized today</small><strong id="realized">₹0</strong></div>
   <div class="stat"><small>Open P&amp;L</small><strong id="unrealized">₹0</strong></div>
   <span class="divider"></span>
@@ -287,6 +296,7 @@
     <button class="paper" id="btn-paper" aria-pressed="true">Paper</button>
     <button class="live" id="btn-live" aria-pressed="false">Live</button>
   </div>
+  <div class="session-bar"><div class="session-bar-fill" id="session-bar-fill"></div></div>
 </header>
 
 <nav class="pagenav" id="pagenav"></nav>
@@ -297,6 +307,7 @@
 <main id="page-journal" class="page" hidden></main>
 <main id="page-trades" class="page" hidden></main>
 <main id="page-method" class="page" hidden></main>
+<main id="page-portfolio" class="page" hidden></main>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
@@ -316,10 +327,10 @@ const KIND_TEXT = {
 };
 const PAGES = [
   ["overview", "Overview"], ["screener", "Screener"], ["method", "Technical Analysis"],
-  ["journal", "Journal"], ["trades", "Trades"],
+  ["portfolio", "Portfolio"], ["journal", "Journal"], ["trades", "Trades"],
 ];
 
-const ui = { page: "overview", screenerTab: "trading", centerTab: "timing", showAllWatch: false };
+const ui = { page: "overview", screenerTab: "trading", centerTab: "timing", showAllWatch: false, screenerSort: null, expandedSymbol: null };
 let selectedSymbol = null;
 let chart = null, series = null;
 let priceLines = [];
@@ -434,7 +445,7 @@ function applyRoute() {
   ui.page = r.page;
   if (r.page === "stock") selectedSymbol = r.symbol;
   renderNav();
-  ["overview", "screener", "stock", "method", "journal", "trades"].forEach(p => { $("page-" + p).hidden = p !== ui.page; });
+  ["overview", "screener", "stock", "method", "portfolio", "journal", "trades"].forEach(p => { $("page-" + p).hidden = p !== ui.page; });
   if (latestState) renderPage(latestState);
   if (r.page === "stock") fetchNews(r.symbol);
 }
@@ -447,10 +458,38 @@ function renderNav() {
 
 // ---- top bar ----------------------------------------------------------
 
+function hhmmToMinutes(hhmm) {
+  const [h, m] = (hhmm || "0:0").split(":").map(Number);
+  return h * 60 + m;
+}
+
+function sessionInfo(s) {
+  if (!s.server_ts) return null;
+  const ist = new Date(s.server_ts * 1000 + 5.5 * 3600 * 1000); // shift to IST, read with getUTC*
+  const nowMin = ist.getUTCHours() * 60 + ist.getUTCMinutes() + ist.getUTCSeconds() / 60;
+  const openMin = hhmmToMinutes(s.market_open);
+  const closeMin = hhmmToMinutes(s.market_close);
+  if (s.market_status === "open") {
+    const pct = Math.max(0, Math.min(100, (nowMin - openMin) / (closeMin - openMin) * 100));
+    const left = Math.max(0, Math.round(closeMin - nowMin));
+    return {label: `Closes in ${Math.floor(left / 60)}h ${left % 60}m`, pct};
+  }
+  if (!s.next_open) return null;
+  const diffMin = Math.max(0, Math.round((new Date(s.next_open).getTime() - s.server_ts * 1000) / 60000));
+  const h = Math.floor(diffMin / 60), m = diffMin % 60;
+  const label = h >= 24
+    ? `Opens ${new Date(s.next_open).toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"})}, ${s.market_open}`
+    : `Opens in ${h}h ${m}m`;
+  return {label, pct: 0};
+}
+
 function renderTop(s) {
   const open = s.market_status === "open";
   $("market-dot").className = "dot" + (open ? " open" : "");
   $("market-status").textContent = `${open ? "Market open" : "Market closed"}${s.last_update_ts ? `, updated ${clock(s.last_update_ts)}` : ""}`;
+  const si = sessionInfo(s);
+  $("market-countdown").textContent = si ? `· ${si.label}` : "";
+  $("session-bar-fill").style.width = `${si ? si.pct : 0}%`;
   const r = $("realized");
   r.textContent = money(s.realized_pnl_today);
   r.className = tone(s.realized_pnl_today);
@@ -576,13 +615,20 @@ function oppRow(s, r, held) {
   const flag = held.has(r.symbol) ? `<span class="pill solid">Holding</span>` : isReady(s, r) ? `<span class="pill solid">Ready</span>` : "";
   const why = r.excluded || (r.reasons || []).slice(0, 2).map(x => x.text).join("; ");
   const rule = primaryRule(r);
-  return `<button class="opp" data-sym="${esc(r.symbol)}">
+  const expanded = ui.expandedSymbol === r.symbol;
+  const summary = `<div class="opp${expanded ? " expanded" : ""}" data-toggle="${esc(r.symbol)}">
     <span class="opp-score" title="Scan score">${r.excluded ? "—" : num(r.final_score, 0)}</span>
     <span><span class="opp-name">${esc(r.symbol)} ${r.excluded ? `<span class="pill neutral">Skipped</span>` : sidePill(r.side)} ${flag}${rule ? ` <span class="rule-tag" title="From this stock's Trader Brain read">${esc(rule)}</span>` : ""}</span>
       <div class="opp-why">${esc(why)}</div></span>
     <span class="opp-why">${esc(r.name || "")}</span>
     <span class="opp-chg ${tone(r.chg_pct)}">${pct(r.chg_pct)}</span>
-  </button>`;
+  </div>`;
+  if (!expanded) return summary;
+  const a = analysisFor(s, r.symbol);
+  const detail = ruleBookHTML(r, a && a.b) || `<p class="empty" style="margin:0">No rule-book detail yet for this stock.</p>`;
+  return `${summary}<div class="opp-detail">${detail}
+    <button class="btn" data-sym="${esc(r.symbol)}" style="margin-top:10px">Open full page →</button>
+  </div>`;
 }
 
 function renderScreener(s) {
@@ -606,18 +652,50 @@ function renderScreener(s) {
     watch: "Ranked candidates that didn't make the active list.",
     skipped: "Filtered out today, with the reason.",
   }[ui.screenerTab];
-  let shown = list;
-  if (ui.screenerTab === "watch" && !ui.showAllWatch) shown = list.slice(0, 20);
+  let shown = sortRows(list, ui.screenerSort);
+  if (ui.screenerTab === "watch" && !ui.showAllWatch) shown = shown.slice(0, 20);
   let rowsHTML = shown.length ? shown.map(r => oppRow(s, r, held)).join("") : `<p class="empty">Nothing here right now.</p>`;
   if (ui.screenerTab === "watch" && list.length > 20) {
     rowsHTML += `<button class="more" id="btn-toggle-watch">${ui.showAllWatch ? "Show top 20" : `Show all ${list.length}`}</button>`;
   }
   setHTML($("page-screener"), `
     <h2 class="h">Screener</h2>
-    <p class="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. ${intro}</p>
+    <p class="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. ${intro} Click a row to expand its rule book inline.</p>
     <div class="tabs">${tabs}</div>
+    ${sortBarHTML()}
     <div>${rowsHTML}</div>
   `);
+}
+
+function sortBarHTML() {
+  const opts = [["score", "Score"], ["chg_pct", "Change %"], ["symbol", "Symbol"]];
+  const sort = ui.screenerSort;
+  return `<div class="sortbar">Sort by ${opts.map(([key, label]) => {
+    const active = sort && sort.key === key;
+    const arrow = active ? (sort.dir === "asc" ? "↑" : "↓") : "";
+    return `<button class="sortbtn${active ? " active" : ""}" data-sort="${key}">${label} ${arrow}</button>`;
+  }).join("")}${sort ? `<button class="sortbtn" data-sort="clear">Reset</button>` : ""}</div>`;
+}
+
+function sortRows(rows, sort) {
+  if (!sort || !sort.key) return rows;
+  const dir = sort.dir === "asc" ? 1 : -1;
+  const val = r => sort.key === "symbol" ? r.symbol : (sort.key === "score" ? r.final_score : r[sort.key]);
+  return [...rows].sort((a, b) => {
+    const va = val(a), vb = val(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === "string") return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+}
+
+function setScreenerSort(key) {
+  if (key === "clear") { ui.screenerSort = null; }
+  else if (ui.screenerSort && ui.screenerSort.key === key) { ui.screenerSort.dir = ui.screenerSort.dir === "asc" ? "desc" : "asc"; }
+  else { ui.screenerSort = {key, dir: key === "symbol" ? "asc" : "desc"}; }
+  renderScreener(latestState);
 }
 
 // ---- Stock page -----------------------------------------------------------
@@ -1014,6 +1092,95 @@ function renderMethod() {
   fetchMethods();
 }
 
+// ---- Portfolio page -----------------------------------------------------
+
+let portfolioCache = null;
+
+async function fetchPortfolio(force = false) {
+  if (!force && portfolioCache && Date.now() - portfolioCache._ts < 20000) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/portfolio`);
+    const data = await res.json();
+    data._ts = Date.now();
+    portfolioCache = data;
+  } catch (e) { /* backend not reachable yet */ }
+  if (ui.page === "portfolio") setHTML($("page-portfolio"), portfolioHTML(portfolioCache, latestState));
+}
+
+function paperPositionsHTML(positions) {
+  const rows = Object.entries(positions || {});
+  if (!rows.length) return `<p class="empty">No open paper/live positions right now.</p>`;
+  return `<div class="table-wrap"><table class="datatable"><thead><tr>
+    <th>Symbol</th><th>Qty</th><th>Avg price</th><th>LTP</th><th>Unrealized</th><th>Stop</th><th>Target</th>
+    </tr></thead><tbody>
+    ${rows.map(([sym, p]) => `<tr><td>${esc(sym)}</td>
+      <td class="${p.quantity > 0 ? "up" : "down"}">${p.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(p.quantity)}</td>
+      <td>${num(p.avg_price)}</td><td>${p.ltp != null ? num(p.ltp) : "—"}</td>
+      <td class="${tone(p.unrealized_pnl)}">${p.unrealized_pnl != null ? money(p.unrealized_pnl) : "—"}</td>
+      <td>${p.stop_price != null ? num(p.stop_price) : "—"}</td>
+      <td>${p.target_price != null ? num(p.target_price) : "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+function kiteHoldingsHTML(holdings) {
+  if (!holdings || !holdings.length) return `<p class="empty">No T+1 settled holdings in this Kite account.</p>`;
+  return `<div class="table-wrap"><table class="datatable"><thead><tr>
+    <th>Symbol</th><th>Qty</th><th>Avg cost</th><th>LTP</th><th>P&amp;L</th><th>P&amp;L %</th>
+    </tr></thead><tbody>
+    ${holdings.map(h => {
+      const pnlPct = h.average_price ? (h.last_price - h.average_price) / h.average_price * 100 : 0;
+      return `<tr><td>${esc(h.tradingsymbol)}</td><td>${h.quantity}</td><td>${num(h.average_price)}</td>
+        <td>${num(h.last_price)}</td><td class="${tone(h.pnl)}">${money(h.pnl)}</td>
+        <td class="${tone(pnlPct)}">${pct(pnlPct)}</td></tr>`;
+    }).join("")}
+    </tbody></table></div>`;
+}
+
+function portfolioHTML(p, s) {
+  if (!p) return `<p class="empty">Loading portfolio…</p>`;
+  const parts = [];
+  if (p.error) {
+    parts.push(`<div class="tax">${esc(p.error)}</div>`);
+  }
+  if (p.kite_connected && p.margins) {
+    const eq = (p.margins.equity || {}).available || {};
+    parts.push(`<div class="cardbox">
+      <h2 class="h" style="font-size:16px">Kite margins (equity segment)</h2>
+      <div class="rb-row">
+        <div class="rb-chip"><b>Cash</b><span>${money(eq.cash || 0)}</span></div>
+        <div class="rb-chip"><b>Live balance</b><span>${money(eq.live_balance ?? eq.cash ?? 0)}</span></div>
+        <div class="rb-chip"><b>Used margin</b><span>${money((p.margins.equity || {}).utilised ? (p.margins.equity.utilised.debits || 0) : 0)}</span></div>
+      </div>
+    </div>`);
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Kite holdings</h2>
+      ${kiteHoldingsHTML(p.holdings)}
+    </div>`);
+  } else {
+    parts.push(`<div class="tax">Kite isn't connected, so this shows today's paper positions only. Click
+      "Connect" in the header to see real holdings and margins once you go live.</div>`);
+  }
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">Today's open positions (${p.kite_connected ? "live" : "paper"})</h2>
+    ${paperPositionsHTML(p.paper_positions)}
+  </div>`);
+  if (s) {
+    parts.push(`<div class="cardbox" style="margin-top:16px">
+      <h2 class="h" style="font-size:16px">Today's P&amp;L</h2>
+      <div class="rb-row">
+        <div class="rb-chip"><b>Realized</b><span class="${tone(s.realized_pnl_today)}">${money(s.realized_pnl_today)}</span></div>
+        <div class="rb-chip"><b>Unrealized</b><span class="${tone(s.unrealized_pnl)}">${money(s.unrealized_pnl)}</span></div>
+      </div>
+    </div>`);
+  }
+  return parts.join("");
+}
+
+function renderPortfolio(s) {
+  setHTML($("page-portfolio"), portfolioHTML(portfolioCache, s));
+  fetchPortfolio();
+}
+
 // ---- Journal page -----------------------------------------------------
 
 function fmtWhen(ts) {
@@ -1046,6 +1213,18 @@ function journalHTML(j) {
       </div>`).join("")}
     </div>`);
   }
+  parts.push(`<div class="cardbox" style="margin-top:16px">
+    <h2 class="h" style="font-size:16px">What "good" actually looks like here</h2>
+    <p style="margin:0 0 4px;font-size:13px">SEBI's own study (released 24 Jul 2024, covering FY23) found
+      <b>71% of individual intraday traders in the equity cash segment made a net loss</b> — rising to
+      <b>80%</b> among those who traded more than 500 times a year. Loss-makers spent an extra 57% of their
+      losses on trading costs alone; profit-makers spent only 19% of their profits on costs.</p>
+    <p class="muted" style="margin:0;font-size:13px">We can't honestly promise a ₹ target — nobody can, and
+      anyone who does is guessing. The realistic bar this data sets: most traders like this lose, and the ones
+      who don't are usually the ones costs eat least. So the goal for this paper-trading week isn't a return
+      number — it's a positive expectancy (Dimaag Scorecard, above) at a trade frequency where costs don't
+      eat the edge, before a single rupee goes live.</p>
+  </div>`);
   parts.push(ts.closed_trades
     ? `<div class="cardbox" style="margin-top:16px">
         <h2 class="h" style="font-size:16px">Trade record</h2>
@@ -1155,6 +1334,7 @@ function renderPage(s) {
   else if (ui.page === "screener") renderScreener(s);
   else if (ui.page === "stock") renderStock(s);
   else if (ui.page === "method") renderMethod();
+  else if (ui.page === "portfolio") renderPortfolio(s);
   else if (ui.page === "journal") renderJournal();
   else if (ui.page === "trades") renderTrades(s);
 }
@@ -1190,14 +1370,22 @@ async function triggerScan(btn) {
 document.addEventListener("click", e => {
   if (e.target.closest("a")) return;
   const btn = e.target.closest("button");
-  if (!btn) return;
-  if (btn.id === "btn-home") { navigate("overview"); return; }
-  if (btn.id === "btn-scan") return triggerScan(btn);
-  if (btn.id === "btn-toggle-watch") { ui.showAllWatch = !ui.showAllWatch; return renderScreener(latestState); }
-  if (btn.dataset.nav) { navigate(btn.dataset.nav); return; }
-  if (btn.dataset.group === "screenerTab") { ui.screenerTab = btn.dataset.tab; return renderScreener(latestState); }
-  if (btn.dataset.group === "centerTab") { ui.centerTab = btn.dataset.tab; return renderStock(latestState); }
-  if (btn.dataset.sym) { navigate("stock", btn.dataset.sym); return; }
+  if (btn) {
+    if (btn.id === "btn-home") { navigate("overview"); return; }
+    if (btn.id === "btn-scan") return triggerScan(btn);
+    if (btn.id === "btn-toggle-watch") { ui.showAllWatch = !ui.showAllWatch; return renderScreener(latestState); }
+    if (btn.dataset.sort) { setScreenerSort(btn.dataset.sort); return; }
+    if (btn.dataset.nav) { navigate(btn.dataset.nav); return; }
+    if (btn.dataset.group === "screenerTab") { ui.screenerTab = btn.dataset.tab; return renderScreener(latestState); }
+    if (btn.dataset.group === "centerTab") { ui.centerTab = btn.dataset.tab; return renderStock(latestState); }
+    if (btn.dataset.sym) { navigate("stock", btn.dataset.sym); return; }
+    return;
+  }
+  const toggle = e.target.closest(".opp[data-toggle]");
+  if (toggle) {
+    ui.expandedSymbol = ui.expandedSymbol === toggle.dataset.toggle ? null : toggle.dataset.toggle;
+    renderScreener(latestState);
+  }
 });
 
 window.addEventListener("hashchange", applyRoute);

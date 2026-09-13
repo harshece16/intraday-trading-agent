@@ -4,8 +4,11 @@ Multi-source news + sentiment.
 Sources, in order of trust:
   1. NSE corporate filings (official, see nse_feed.py)            weight 1.5
   2. Marketaux (optional, needs MARKETAUX_API_KEY; entity sentiment) weight 1.2
-  3. Google News RSS, India edition (free, no key, broad coverage)  weight 1.0
-  4. Yahoo Finance headlines (fallback only)                        weight 0.6
+  3. Alpha Vantage (optional, needs ALPHAVANTAGE_API_KEY; real       weight 1.2
+     sentiment scores, but market-wide discovery only — see
+     _alphavantage() for why it can't target one NSE symbol)
+  4. Google News RSS, India edition (free, no key, broad coverage)  weight 1.0
+  5. Yahoo Finance headlines (fallback only)                        weight 0.6
 
 Headlines are de-duplicated, scored (lexicon unless the source supplies its
 own sentiment), weighted by source trust x relevance (does it actually name
@@ -38,7 +41,7 @@ CACHE_TTL_SECONDS = 900
 DISCOVERY_TTL_SECONDS = 600
 HALF_LIFE_HOURS = 12
 MAX_AGE_HOURS = 72
-SOURCE_WEIGHT = {"NSE filing": 1.5, "Marketaux": 1.2, "Google News": 1.0, "Yahoo": 0.6}
+SOURCE_WEIGHT = {"NSE filing": 1.5, "Marketaux": 1.2, "Alpha Vantage": 1.2, "Google News": 1.0, "Yahoo": 0.6}
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 
 MARKET_QUERIES = (
@@ -66,6 +69,7 @@ ALIASES = {
 _cache = {}
 _discovery = {"ts": 0.0, "data": {}}
 _mx_budget = {"date": None, "used": 0}
+_av_budget = {"date": None, "used": 0}
 _lock = threading.Lock()
 
 
@@ -181,6 +185,43 @@ def _marketaux(extra_params):
     return out
 
 
+def _alphavantage_allowed():
+    if not config.NEWS.get("alphavantage_api_key"):
+        return False
+    today = datetime.now(timezone.utc).date()
+    with _lock:
+        if _av_budget["date"] != today:
+            _av_budget.update(date=today, used=0)
+        if _av_budget["used"] >= config.NEWS.get("alphavantage_daily_limit", 20):
+            return False
+        _av_budget["used"] += 1
+        return True
+
+
+def _alphavantage(extra_params):
+    """Alpha Vantage NEWS_SENTIMENT: a broad market feed with real per-article
+    sentiment (overall_sentiment_score), used only for market-wide discovery
+    and filtered locally by company name — its `tickers` filter is built
+    around US-listed symbols (it can't reliably target an NSE symbol like
+    RELIANCE or SBIN), so we don't use it as a per-symbol source."""
+    if not _alphavantage_allowed():
+        return []
+    params = {"function": "NEWS_SENTIMENT", "apikey": config.NEWS["alphavantage_api_key"], **extra_params}
+    resp = requests.get("https://www.alphavantage.co/query", params=params, timeout=12)
+    resp.raise_for_status()
+    data = resp.json()
+    out = []
+    for art in data.get("feed", []) or []:
+        try:
+            published = datetime.strptime(art["time_published"], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+        except (KeyError, ValueError):
+            published = None
+        out.append({"title": art.get("title") or "", "summary": art.get("summary") or "", "published": published,
+                    "source": "Alpha Vantage", "publisher": art.get("source"), "url": art.get("url"),
+                    "score": art.get("overall_sentiment_score")})
+    return out
+
+
 def _aggregate(items, patterns=None):
     now = datetime.now(timezone.utc)
     seen, scored = set(), []
@@ -268,6 +309,11 @@ def market_catalysts(universe_rows):
             headlines.extend(_marketaux({"limit": 3}))
         except Exception as exc:
             logger.warning(f"Marketaux discovery failed: {exc}")
+    if cfg.get("alphavantage_api_key"):
+        try:
+            headlines.extend(_alphavantage({"topics": "financial_markets", "limit": 200}))
+        except Exception as exc:
+            logger.warning(f"Alpha Vantage discovery failed: {exc}")
     filings = nse_feed.announcements_by_symbol() if cfg.get("use_nse_filings", True) else {}
 
     by_symbol = {}

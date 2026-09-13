@@ -43,6 +43,18 @@ MARKET_CLOSE_T = _parse_hhmm(config.MARKET_CLOSE)
 SQUARE_OFF_T = _parse_hhmm(config.SQUARE_OFF_TIME)
 
 
+def next_session_open(now=None) -> str:
+    """ISO datetime (IST) of the next moment trading opens — later today if
+    we're before today's open on a trading day, otherwise the next date that
+    isn't a weekend or an NSE holiday. Powers the dashboard's countdown."""
+    now = now or datetime.now(IST)
+    if now.weekday() < 5 and not holidays.is_holiday(now) and now.time() < MARKET_OPEN_T:
+        open_date = now.date()
+    else:
+        open_date = holidays.next_trading_day(now)
+    return datetime.combine(open_date, MARKET_OPEN_T, tzinfo=IST).isoformat()
+
+
 def market_phase(now=None) -> str:
     now = now or datetime.now(IST)
     if now.weekday() >= 5 or holidays.is_holiday(now):
@@ -354,6 +366,7 @@ class TradingEngine:
 
         phase = market_phase(now)
         self.state.market_status = "open" if phase in ("open", "square_off_window") else "closed"
+        self.state.next_open = next_session_open(now)
         holiday = holidays.holiday_name(now)
         self.state.holiday = {"name": holiday, "next_trading_day": holidays.next_trading_day(now).isoformat()} \
             if holiday else None

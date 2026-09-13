@@ -108,6 +108,14 @@ NEWS = {
     # Optional: free key (100 requests/day) from marketaux.com adds entity-level sentiment.
     "marketaux_api_key": os.environ.get("MARKETAUX_API_KEY", ""),
     "marketaux_daily_limit": 90,
+    # Optional: free key from alphavantage.co adds real sentiment-scored articles
+    # (not lexicon-scored) to the broad market discovery feed only — its free tier
+    # is a hard 25 requests/day, far too tight to spend on a per-stock request, and
+    # its ticker filter is US-market-centric so it can't reliably target NSE symbols
+    # anyway. One discovery call a day, filtered locally by company name, is the
+    # efficient way to spend that budget.
+    "alphavantage_api_key": os.environ.get("ALPHAVANTAGE_API_KEY", ""),
+    "alphavantage_daily_limit": 20,
 }
 
 RISK = {

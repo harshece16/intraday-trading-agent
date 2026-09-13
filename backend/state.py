@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 
+import config
 import database
 
 ACTIVITY_LIMIT = 300
@@ -25,6 +26,7 @@ class AppState:
         self.running = False
         self.market_status = "unknown"  # "open" | "closed" | "unknown"
         self.holiday = None  # {"name": str, "next_trading_day": "YYYY-MM-DD"} on an NSE holiday, else None
+        self.next_open = None  # ISO datetime (IST) of the next session open, for the dashboard countdown
 
         self.watchlist = []
         self.candles = {}          # symbol -> recent candle window
@@ -78,6 +80,10 @@ class AppState:
                 "running": self.running,
                 "market_status": self.market_status,
                 "holiday": self.holiday,
+                "next_open": self.next_open,
+                "market_open": config.MARKET_OPEN,
+                "market_close": config.MARKET_CLOSE,
+                "server_ts": time.time(),
                 "watchlist": self.watchlist,
                 "indicators": self.indicators,
                 "positions": positions_out,
