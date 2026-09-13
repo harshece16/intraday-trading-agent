@@ -28,6 +28,7 @@ This is a disciplined decision process, not a guarantee. Backtest it
 results over as much data as you can get.
 """
 
+import brooks
 import indicators as ind
 import market_structure as ms
 from candlestick_patterns import detect_patterns
@@ -92,6 +93,8 @@ PATTERN_BARS = {
     "Bullish Engulfing": 2, "Bearish Engulfing": 2, "Piercing Line": 2, "Dark Cloud Cover": 2,
     "Bullish Harami": 2, "Bearish Harami": 2, "Tweezer Bottom": 2, "Tweezer Top": 2,
     "Morning Star": 3, "Evening Star": 3, "Three White Soldiers": 3, "Three Black Crows": 3,
+    "Abandoned Baby Bottom": 3, "Abandoned Baby Top": 3,
+    "Rising Three Methods": 5, "Falling Three Methods": 5,
 }
 _LEVEL_NAMES = {
     "swing": "a tested swing level", "prev_day_high": "yesterday's high", "prev_day_low": "yesterday's low",
@@ -108,18 +111,22 @@ def _level_name(lv):
 
 
 CHECKLIST_SOURCES = {
-    "pattern": "Varsity Technical Analysis, ch 4-10 (candlestick patterns)",
+    "pattern": "Varsity Technical Analysis ch 4-10, and Nison, Japanese Candlestick Charting Techniques",
     "sr": "Varsity Technical Analysis, ch 11 (support & resistance)",
     "volume": "Varsity Technical Analysis, ch 12 (volume)",
-    "dow": "Varsity Technical Analysis, ch 17-18 (Dow Theory)",
+    "dow": "Varsity Technical Analysis ch 17-18 (Dow Theory), and Brooks, Trading Price Action Trends (always-in direction)",
     "indicators": "Varsity Technical Analysis, ch 13-16 (moving averages, RSI, MACD)",
-    "rrr": "Varsity Technical Analysis, ch 18.5 (Reward-to-Risk Ratio)",
+    "catalyst": "NSE filings + news sentiment (news_sentiment.py) — the fundamental side of the checklist",
+    "rrr": "Varsity Technical Analysis ch 18.5 (Reward-to-Risk), targets from Bulkowski's measured pattern moves when available",
 }
 
 
-def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p):
-    """Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18) for one side.
-    Required: pattern, stop at S&R, volume, Dow trend, RRR. Indicators only change the size."""
+def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
+               always_in, news_score, p):
+    """Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18) for one side,
+    plus two connections Varsity doesn't make explicit: Al Brooks' "always-in" direction
+    alongside Dow Theory, and today's news catalyst alongside the chart. Required: pattern,
+    stop at S&R, volume, trend, RRR. Indicators and the catalyst only change the size."""
     s = 1 if side == "long" else -1
     bias = "bullish" if s > 0 else "bearish"
     level_word = "support" if s > 0 else "resistance"
@@ -160,15 +167,24 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
     item("volume", "Above-average volume", vol10 is not None and vol10 > 1.0,
          f"Volume is {vol10:.1f}× its {p['volume_lookback']}-candle average" if vol10 is not None else "No volume data")
 
+    always_in_side = "long" if s > 0 else "short"
+    brooks_ok = always_in == always_in_side
     dow_ok = htf_trend == ("up" if s > 0 else "down") or (
         htf_trend == "flat" and structure != ("downtrend" if s > 0 else "uptrend"))
-    item("dow", "Dow Theory trend agrees", dow_ok, f"15-minute trend is {htf_trend}, swing structure is {structure}")
+    item("dow", "Trend agrees (Dow Theory or Brooks always-in)", dow_ok or brooks_ok,
+         f"15-min trend {htf_trend}, structure {structure}, Brooks always-in {always_in}")
 
     hist = macd_v["hist"]
     ind_ok = hist * s > 0 and (rsi_v < 75 if s > 0 else rsi_v > 25)
     item("indicators", "Indicators confirm (MACD and RSI)", ind_ok,
          f"MACD histogram {'above' if hist > 0 else 'below'} zero, RSI {rsi_v:.0f}"
          + ("" if ind_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
+
+    cat_ok = news_score is None or news_score * s >= -0.15
+    news_word = "no notable news" if news_score is None or abs(news_score) < 0.05 \
+        else f"news sentiment {news_score:+.2f}"
+    item("catalyst", "News catalyst doesn't contradict the trade", cat_ok,
+         f"{news_word}" + ("" if cat_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
 
     if risk > 0:
         beyond = [lv["price"] for lv in levels
@@ -192,7 +208,7 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         "passed": all(i["ok"] for i in items if i["required"]),
         "pattern": pattern["name"] if pattern else None,
         "entry": _r(price), "stop": _r(stop), "target": _r(target), "rrr": _r(rrr),
-        "size_factor": 1.0 if ind_ok else p["indicator_miss_size"],
+        "size_factor": p["indicator_miss_size"] if not (ind_ok and cat_ok) else 1.0,
     }
 
 
@@ -386,8 +402,11 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         and bear.total - bull.total >= p["min_edge"]
     )
 
-    cl_long = _checklist("long", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p)
-    cl_short = _checklist("short", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v, p) \
+    always_in = brooks.always_in_direction(window)
+    cl_long = _checklist("long", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
+                        always_in, news_score, p)
+    cl_short = _checklist("short", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
+                          always_in, news_score, p) \
         if p["allow_shorts"] else None
     if p["entry_mode"] == "checklist":
         # Varsity exits are the pattern stop, the S&R target and the square-off, not score swings.
@@ -470,6 +489,7 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         "regime": regime,
         "structure": structure,
         "htf_trend": htf_trend,
+        "always_in": always_in,
         "bull_score": _r(bull.total),
         "bear_score": _r(bear.total),
         "entry_threshold": p["entry_threshold"],

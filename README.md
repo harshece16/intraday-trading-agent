@@ -68,7 +68,35 @@ weekly from NSE's list.
 | **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
 | **Active watchlist** | Top 6 by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
 
-### 3. The Varsity Checklist — *when* to trade (`trader_brain.py`)
+### 3. The Rule Book — how the sources connect
+
+Every trade decision is one connected chain, not separate silos: a chart
+pattern (Nison or Bulkowski) needs a stop at a real level (Varsity) needs
+volume behind it (Varsity) needs the trend to agree (Dow Theory *or* Brooks'
+"always-in" direction) needs the day's news to not contradict it (NSE
+filings + Google News) needs a reward-to-risk worth taking (Varsity, with
+Bulkowski's measured average move as the target when a daily pattern applies)
+needs a position size that survives a string of losses (Tharp). Every one of
+those checks is visible on the dashboard's Timing Read tab, with its exact
+source cited, both while a trade is being considered and afterwards in the
+journal — so the reasoning is never hidden in a score.
+
+| Source | What it contributes |
+|---|---|
+| Zerodha Varsity, Technical Analysis | The Grand Checklist itself: pattern, S/R stop, volume, Dow Theory, RRR |
+| Nison, *Japanese Candlestick Charting Techniques* | Candlestick patterns, incl. Abandoned Baby and Rising/Falling Three Methods |
+| Bulkowski, *Encyclopedia of Chart Patterns* | Daily-chart Double Top/Bottom and Head-and-Shoulders detection, gap classification, real failure-rate/average-move stats |
+| Brooks, *Trading Price Action Trends* | The "always-in" trend direction, alongside Dow Theory |
+| News (NSE filings + Google News) | The catalyst check — degrades or vetoes a trade the news contradicts |
+| Tharp, *Trade Your Way to Financial Freedom* | Percent Risk / Percent Volatility position sizing, R-multiples, expectancy, Kelly fraction |
+| NISM Series VIII | Derivatives/margin background (F&O not yet traded by this agent) |
+
+Murphy's *Technical Analysis of the Financial Markets* could not be read —
+that PDF is a scanned book with no text layer, and this machine has no OCR
+tool (`tesseract`/`poppler`) installed. Its classical content overlaps
+heavily with Varsity's own Technical Analysis module, which is implemented.
+
+### 4. The Varsity Checklist — *when* to trade (`trader_brain.py`)
 
 Trader Sahab's default entry logic (`entry_mode: "checklist"`) is Zerodha
 Varsity's **Grand Checklist**, read directly from the Technical Analysis
@@ -76,15 +104,16 @@ module (chapters 4–18) and implemented rule for rule instead of paraphrased:
 
 | Varsity rule | Chapter | What Trader Sahab checks |
 |---|---|---|
-| A recognisable candlestick pattern, after the right prior trend | ch 4–10 | One of 20 patterns (`candlestick_patterns.py`), sized sanely (0.3–3× ATR) |
+| A recognisable candlestick pattern, after the right prior trend | ch 4–10 | One of 24 patterns (`candlestick_patterns.py`), sized sanely (0.3–3× ATR) — includes Nison's Abandoned Baby and Rising/Falling Three Methods |
 | The stop-loss sits at support or resistance | ch 11 | The pattern's low/high must land within 0.5 ATR of a swing, previous-day, opening-range, Fibonacci or CPR level |
 | Above-average volume on the signal candle | ch 12 | Volume vs its 10-candle average (Varsity's volume-trend table: price up + volume up = smart money buying) |
-| Dow Theory agrees | ch 17–18 | The 15-minute trend and swing structure must not contradict the trade |
+| The trend agrees | ch 17–18 | Dow Theory (15-minute trend, swing structure) **or** Brooks' "always-in" direction (`brooks.py`) — either confirms |
 | Indicators confirm, but only to size the bet | ch 15.4 | MACD and RSI: if they agree, full size; if not, Varsity's own worked example ("300 shares instead of 500") — 60% size |
+| *(new, not in Varsity)* News doesn't contradict the trade | — | NSE filings + Google News sentiment; strongly opposed news vetoes the entry outright, mildly opposed news sizes it down like a missed indicator |
 | Reward-to-risk of at least 1.5, net of costs | ch 18.5 | Target = next level beyond entry (or 2R if none); RRR is computed after estimated round-trip costs |
 
-**A trade needs every required point** (pattern, S/R, volume, Dow, RRR);
-indicators only scale the size. This is stricter than the older
+**A trade needs every required point** (pattern, S/R, volume, trend, RRR);
+indicators and news only scale the size. This is stricter than the older
 confluence-score system (`entry_mode: "confluence"`, kept for comparison) and
 trades far less often — see the backtest table below.
 
@@ -93,7 +122,15 @@ sources: **Fibonacci retracements** (ch 16 — 23.6/38.2/50/61.8% of the last
 swing) and the **Central Pivot Range** (ch 22 — pivot, top and bottom from
 the previous session's high/low/close), in `market_structure.py`.
 
-### 4. The confluence engine (legacy, `entry_mode: "confluence"`)
+Separately, at the **scanner** level (daily bars, not the intraday
+checklist), `swing_patterns.py` detects confirmed Bulkowski Double
+Top/Bottom and Head-and-Shoulders patterns and scores them with his actual
+measured failure rate and average move, and `bulkowski.classify_gap()`
+labels today's gap as area/breakaway/continuation/exhaustion using his
+gap-closure statistics — both surfaced as cited reasons in the scanner's
+"Why it ranks" tab.
+
+### 5. The confluence engine (legacy, `entry_mode: "confluence"`)
 
 | What a trained trader checks | Source | Rule |
 |---|---|---|
@@ -123,7 +160,7 @@ the opposite case reaching 5 or the swing structure breaking, and the 15:15
 square-off. `allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and
 `SCANNER` turns shorting off.
 
-### 5. Position sizing and stops (Varsity Risk Management module)
+### 6. Position sizing and stops (Varsity Risk Management module)
 
 - **Percentage-risk sizing** (ch 11–13): risk 1% of capital divided by the
   stop distance — the pattern's structural stop when the checklist supplies
@@ -136,7 +173,7 @@ square-off. `allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and
   the system's expectancy in R per trade, and the Kelly fraction (negative
   means the correct bet size is zero, however good the entries feel).
 
-### 4. News sources (`news_sentiment.py`, `nse_feed.py`)
+### 7. News sources (`news_sentiment.py`, `nse_feed.py`)
 
 | Source | Cost | Used for | Weight |
 |---|---|---|---|
@@ -157,7 +194,7 @@ EODHD's free tier gives about 2–4 news calls a day, and Alpha Vantage allows
 25 requests a day in total. NSE filings plus Google News cover Indian
 large caps better, and they're free.
 
-### 6. Taxation panel (Varsity Markets & Taxation module)
+### 8. Taxation panel (Varsity Markets & Taxation module)
 
 Intraday equity is **speculative business income** under Indian tax law (ch
 3): the Trades tab shows running trade-wise turnover, net P&L, estimated

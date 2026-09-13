@@ -133,4 +133,28 @@ def detect_patterns(candles, atr_val):
             and c1["close"] <= c2["open"] <= c1["open"] and c2["close"] <= c3["open"] <= c2["open"]:
         add("Three Black Crows", "bearish", 2)
 
+    # Abandoned Baby (Nison ch 5): a stricter morning/evening star — both
+    # gaps are real gaps (high/low don't overlap), not just gapped bodies.
+    if trend == "down" and _bear(c1) and r1 and b1 >= 0.6 * r1 and b2 <= 0.3 * r2 \
+            and c2["high"] < c1["low"] and _bull(c3) and c3["low"] > c2["high"]:
+        add("Abandoned Baby Bottom", "bullish", 3)
+    if trend == "up" and _bull(c1) and r1 and b1 >= 0.6 * r1 and b2 <= 0.3 * r2 \
+            and c2["low"] > c1["high"] and _bear(c3) and c3["high"] < c2["low"]:
+        add("Abandoned Baby Top", "bearish", 3)
+
+    # Rising/Falling Three Methods (Nison ch 7, continuation): a tall trend
+    # bar, three small counter-trend bars staying inside its range, then
+    # another tall bar resuming the trend.
+    if len(candles) >= 15:
+        c0 = candles[-5]
+        mid = candles[-4:-1]
+        r0 = _range(c0)
+        if r0 and _body(c0) >= 0.6 * r0:
+            inside = all(min(c0["open"], c0["close"]) <= m["low"] and m["high"] <= max(c0["open"], c0["close"])
+                        for m in mid)
+            if _bull(c0) and inside and all(_bear(m) for m in mid) and _bull(c3) and c3["close"] > c0["close"]:
+                add("Rising Three Methods", "bullish", 2)
+            elif _bear(c0) and inside and all(_bull(m) for m in mid) and _bear(c3) and c3["close"] < c0["close"]:
+                add("Falling Three Methods", "bearish", 2)
+
     return found

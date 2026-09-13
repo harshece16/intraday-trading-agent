@@ -32,10 +32,12 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+import bulkowski
 import config
 import indicators as ind
 import news_sentiment
 import nse_feed
+import swing_patterns
 import universe
 from trader_brain import trader_brain_signal
 
@@ -122,8 +124,10 @@ def daily_profile(bars, nifty_dates, nifty_closes, before_date):
         var = sum((x - mean_i) ** 2 for x in index_rets)
         if var:
             beta = sum((x - mean_i) * (y - mean_s) for x, y in zip(index_rets, stock_rets)) / var
+    swing = swing_patterns.scan_daily_patterns(bars, atr_v) if atr_v else []
     return {
         "beta": beta,
+        "swing_patterns": swing,
         "close": close,
         "atr_pct": atr_v / close * 100 if atr_v else 0.0,
         "turnover_cr": sum(b["close"] * b["volume"] for b in bars[-20:]) / 20 / 1e7,
@@ -190,6 +194,16 @@ def premarket_score(p, cfg, side="long"):
     elif p["inside_day"]:
         pts.add(6, "Inside day — compression before expansion")
 
+    swing_side = "long" if s > 0 else "short"
+    for sw in p.get("swing_patterns", []):
+        if sw["side"] != swing_side:
+            continue
+        stats = bulkowski.PATTERN_STATS.get(sw["name"])
+        if stats:
+            regime = stats["bull"]  # bull/bear-market split needs a longer regime read than we track; use bull stats
+            pts.add(15, f"Confirmed {sw['name']} on the daily chart (Bulkowski: {regime['failure_rate_pct']}% "
+                        f"historical failure rate, average move {regime['avg_move_pct']}%, US stocks)")
+
     r = p["rsi"]
     if r is not None:
         if s > 0:
@@ -234,18 +248,28 @@ def intraday_metrics(candles, prof):
     }
 
 
-def intraday_score(m, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long"):
+def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long"):
     s = 1 if side == "long" else -1
     pts = _Points()
 
     g = m["gap_pct"]
     word = "up" if g > 0 else "down"
-    if g * s > cfg["max_gap_pct"]:
-        pts.add(-10, f"Gapped {word} {abs(g):.1f}% — chase and gap-fill risk")
-    elif g * s >= 0.3:
-        pts.add(6, f"Gap {word} {abs(g):.1f}% — overnight {'demand' if g > 0 else 'supply'}")
-    elif g * s <= -cfg["max_gap_pct"]:
-        pts.add(-8, f"Gapped {word} {abs(g):.1f}% against the trade")
+    if abs(g) >= 0.5:
+        kind, close_pct = bulkowski.classify_gap(g, prof["trend"], prof["pct_from_high"], prof["pct_from_low"],
+                                                  prof["atr_pct"])
+        if kind == "breakaway" and g * s > 0:
+            pts.add(10, f"{word.capitalize()} breakaway gap {abs(g):.1f}% (Bulkowski: only {close_pct}% of "
+                        f"breakaway gaps close within a week — likely to persist)")
+        elif kind == "exhaustion":
+            pts.add(-8 if g * s > 0 else 6,
+                    f"{word.capitalize()} gap {abs(g):.1f}% looks like exhaustion, not breakaway (Bulkowski: "
+                    f"{close_pct}% of these close within a week — extended trend, high fade risk)")
+        elif g * s > cfg["max_gap_pct"]:
+            pts.add(-10, f"Gapped {word} {abs(g):.1f}% — chase and gap-fill risk")
+        elif g * s >= 0.3:
+            pts.add(6, f"{kind.capitalize()} gap {word} {abs(g):.1f}%")
+        elif g * s <= -cfg["max_gap_pct"]:
+            pts.add(-8, f"Gapped {word} {abs(g):.1f}% against the trade")
 
     rv = m["rvol"]
     if rv is not None:
@@ -436,7 +460,8 @@ class Scanner:
             for side in sides:
                 pre, pre_items, _ = premarket_score(prof, cfg, side)
                 intra, intra_items, rs_today = intraday_score(
-                    m, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym), cfg, side)
+                    m, prof, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym),
+                    cfg, side)
                 scored[side] = (pre + intra, sorted(pre_items + intra_items, key=lambda x: -abs(x[0])))
             best = max(scored, key=lambda k: scored[k][0])
             score, items = scored[best]
@@ -452,6 +477,7 @@ class Scanner:
                 "pct_from_high": _r(prof["pct_from_high"]), "pct_from_low": _r(prof["pct_from_low"]),
                 "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]), "beta": _r(prof["beta"]),
                 "catalyst": catalysts.get(sym), "event": events.get(sym), "brain": None,
+                "swing_patterns": prof.get("swing_patterns", []),
             })
 
         eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])

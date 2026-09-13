@@ -2,9 +2,12 @@
 Risk manager — enforces position sizing and loss limits before any order
 (paper or live) is allowed through.
 
-Stop/target distance is ATR-based when `use_atr_risk` is set and an ATR
-value is supplied (adapts to each symbol's actual volatility); otherwise it
-falls back to the fixed `stop_loss_pct` / `take_profit_pct`.
+Position sizing is Van Tharp's **Percent Risk Model** (*Trade Your Way to
+Financial Freedom*, ch 9, Model 3): risk a fixed % of capital per trade,
+divided by the stop distance. The stop distance itself follows his **Percent
+Volatility Model** (ch 9, Model 4) when ATR is available — sized off each
+symbol's own volatility instead of a flat percentage — or a structural stop
+(the pattern's own low/high) when the caller supplies one.
 """
 
 from __future__ import annotations

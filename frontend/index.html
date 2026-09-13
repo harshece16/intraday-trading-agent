@@ -581,8 +581,12 @@ function scanHTML(r) {
   const f = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
   const cat = r.catalyst
     ? `<p class="note"><span class="${sentiment(r.catalyst.score).cls}">${sentiment(r.catalyst.score).word} catalyst.</span> ${esc(r.catalyst.top)}</p>` : "";
+  const swing = (r.swing_patterns || []).map(sw =>
+    `<p class="note">Confirmed <strong>${esc(sw.name)}</strong> on the daily chart (${sw.side}), Bulkowski's neckline/confirmation level ${num(sw.level)}, structural stop ${num(sw.stop)}. Source: Bulkowski, <em>Encyclopedia of Chart Patterns</em> — a daily-chart, US-stock statistic used here as a directional weight, not a guarantee for this market or timeframe.</p>`
+  ).join("");
   return `<p class="lede">Ranked #${r.rank} of ${latestState ? scanRows(latestState).length : 100}. As a long it scores ${signed(r.long_score, 0)}, as a short ${signed(r.short_score, 0)}; the stronger side is kept.</p>
     <ul class="evidence">${reasons || `<li><span></span><span class="muted">No strong factors either way.</span></li>`}</ul>
+    ${swing}
     <dl class="facts-grid">
       ${f("Opening gap", pct(r.gap_pct))}
       ${f("Versus NIFTY today", `<span class="${tone(r.rs_today)}">${pct(r.rs_today)}</span>`)}
