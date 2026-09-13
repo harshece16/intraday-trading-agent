@@ -40,6 +40,7 @@ DEFAULTS = {
     "exit_threshold": 5.0,
     "no_entry_before": "09:30",
     "last_entry_time": "14:30",
+    "max_entries_per_day": 1,
     "adx_trend": 25,
     "adx_range": 20,
     "htf_factor": 3,
@@ -243,9 +244,13 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         and bull.total - bear.total >= p["min_edge"]
     )
 
+    day = last["time"][:10]
+    entries_today = prev_state.get("entries_today", 0) if prev_state.get("entry_day") == day else 0
     signal = None
     if long_ok and not prev_state.get("long_ok"):
-        signal = "BUY"
+        if entries_today < p["max_entries_per_day"]:
+            signal = "BUY"
+            entries_today += 1
     elif exit_long and not prev_state.get("exit_long"):
         signal = "SELL"
 
@@ -269,6 +274,8 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         blockers.append(f"Bull score {bull.total:.1f} below {p['entry_threshold']}")
     if len(bull.categories) < p["min_confirmations"]:
         blockers.append(f"Only {len(bull.categories)} confirming categories (need {p['min_confirmations']})")
+    if entries_today >= p["max_entries_per_day"] and signal != "BUY":
+        blockers.append(f"Already took {entries_today} entry today in this stock — no revenge trades")
 
     new_state = {
         "long_ok": long_ok,
@@ -294,6 +301,8 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         "news_score": news_score,
         "news_headlines": (news or {}).get("headlines", [])[:3],
         "bar_time": last["time"],
+        "entry_day": day,
+        "entries_today": entries_today,
     }
     return signal, new_state
 

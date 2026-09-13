@@ -103,6 +103,9 @@ def _get_intraday_candles_yfinance(symbol: str, interval: str, period: str):
     # yfinance sometimes returns a MultiIndex column set for single tickers
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
+    # yfinance returns UTC; strategies read session dates and HH:MM from the ISO string as IST.
+    if df.index.tz is not None:
+        df.index = df.index.tz_convert("Asia/Kolkata")
 
     candles = []
     for ts, row in df.iterrows():

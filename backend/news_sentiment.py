@@ -1,147 +1,286 @@
 """
-News sentiment from free Yahoo Finance headlines, scored with a
-finance-specific lexicon (earnings beats/misses, rating changes, order wins,
-regulatory probes, promoter pledges, ...).
+Multi-source news + sentiment.
 
-Recent headlines count more (12h half-life), headlines that actually name the
-company count more than loosely related ones, and results are cached per
-symbol so the 30s engine loop doesn't hammer Yahoo. Any failure returns a
-neutral score — news is supporting evidence, never a reason to crash.
+Sources, in order of trust:
+  1. NSE corporate filings (official, see nse_feed.py)            weight 1.5
+  2. Marketaux (optional, needs MARKETAUX_API_KEY; entity sentiment) weight 1.2
+  3. Google News RSS, India edition (free, no key, broad coverage)  weight 1.0
+  4. Yahoo Finance headlines (fallback only)                        weight 0.6
 
-Lexicon scoring is crude next to a real NLP model: it can't read sarcasm,
-context, or "priced in". Treat it as a tilt, not a signal on its own.
+Headlines are de-duplicated, scored (lexicon unless the source supplies its
+own sentiment), weighted by source trust x relevance (does it actually name
+the company?) x recency (12h half-life), and scaled by evidence mass so one
+stale headline can't dominate.
+
+get_sentiment(symbol)       -> per-stock view, cached 15 min
+market_catalysts(universe)  -> which universe stocks are in the news today, cached 10 min
 """
 
+import email.utils
 import logging
-import math
 import re
+import threading
 import time
-from datetime import datetime, timezone
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
+
+import requests
+
+import config
+import nse_feed
+import universe
+from sentiment_lexicon import score_text
 
 logger = logging.getLogger("trading_bot")
 
 CACHE_TTL_SECONDS = 900
+DISCOVERY_TTL_SECONDS = 600
 HALF_LIFE_HOURS = 12
 MAX_AGE_HOURS = 72
+SOURCE_WEIGHT = {"NSE filing": 1.5, "Marketaux": 1.2, "Google News": 1.0, "Yahoo": 0.6}
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 
-# Yahoo headlines usually use the company name, not the NSE ticker.
+MARKET_QUERIES = (
+    "Nifty stocks to watch when:1d",
+    "stocks in news today NSE when:1d",
+    "NSE shares surge when:1d",
+    "NSE shares fall when:1d",
+    "order win shares NSE when:2d",
+    "brokerage target price upgrade shares India when:2d",
+)
+
+# Headlines often use a name that differs from the NSE symbol or the listed company name.
 ALIASES = {
-    "RELIANCE": ["reliance"],
-    "TCS": ["tcs", "tata consultancy"],
-    "INFY": ["infosys"],
-    "HDFCBANK": ["hdfc bank"],
-    "ICICIBANK": ["icici bank"],
-    "SBIN": ["sbi", "state bank of india"],
-    "BHARTIARTL": ["airtel", "bharti"],
-    "ITC": ["itc"],
-    "LT": ["larsen", "l&t"],
-    "HINDUNILVR": ["hindustan unilever", "hul"],
+    "TCS": ["tcs"], "INFY": ["infosys"], "HDFCBANK": ["hdfc bank"], "ICICIBANK": ["icici bank"],
+    "SBIN": ["sbi", "state bank of india"], "BHARTIARTL": ["airtel", "bharti airtel"], "LT": ["l&t", "larsen"],
+    "HINDUNILVR": ["hul", "hindustan unilever"], "M&M": ["mahindra & mahindra", "m&m"],
+    "BAJFINANCE": ["bajaj finance"], "KOTAKBANK": ["kotak mahindra bank", "kotak bank"],
+    "MARUTI": ["maruti suzuki", "maruti"], "SUNPHARMA": ["sun pharma"], "AXISBANK": ["axis bank"],
+    "TATAMOTORS": ["tata motors"], "TATASTEEL": ["tata steel"], "ULTRACEMCO": ["ultratech"],
+    "RELIANCE": ["reliance industries", "ril"], "ONGC": ["ongc"], "NTPC": ["ntpc"], "ITC": ["itc"],
+    "ETERNAL": ["zomato", "blinkit", "eternal ltd"], "TITAN": ["titan company"], "TRENT": ["trent ltd", "zudio"],
+    "DMART": ["avenue supermarts", "dmart"], "BEL": ["bharat electronics"], "HAL": ["hindustan aeronautics"],
 }
 
-POSITIVE = {
-    "beats estimates": 2.0, "beat estimates": 2.0, "tops estimates": 2.0, "beats": 1.0,
-    "record profit": 2.0, "record revenue": 1.5, "profit rises": 1.5, "profit jumps": 1.5,
-    "profit surges": 1.8, "revenue growth": 1.0, "margin expansion": 1.2,
-    "upgrade": 1.5, "upgraded": 1.5, "upgrades": 1.5, "outperform": 1.0, "overweight": 0.8,
-    "buy rating": 1.2, "target raised": 1.2, "raises target": 1.2,
-    "raises guidance": 1.8, "raises outlook": 1.8,
-    "order win": 1.5, "wins order": 1.5, "bags order": 1.5, "secures order": 1.5, "contract win": 1.3,
-    "buyback": 1.3, "bonus issue": 1.0, "dividend": 0.6, "stake increase": 0.8,
-    "acquisition": 0.6, "acquires": 0.6, "partnership": 0.5, "expansion": 0.6, "approval": 0.8,
-    "strong demand": 1.0, "debt free": 1.0, "deleveraging": 0.8,
-    "surge": 1.0, "surges": 1.0, "soars": 1.0, "rallies": 0.8, "jumps": 0.8, "gains": 0.5,
-    "record high": 0.8, "all-time high": 0.8, "bullish": 0.8,
-}
-
-NEGATIVE = {
-    "misses estimates": 2.0, "miss estimates": 2.0, "misses": 1.0,
-    "profit falls": 1.5, "profit drops": 1.5, "profit declines": 1.5, "net loss": 1.5, "loss widens": 1.8,
-    "margin pressure": 1.0, "weak demand": 1.0, "headwinds": 0.8,
-    "downgrade": 1.5, "downgraded": 1.5, "downgrades": 1.5, "underperform": 1.0, "underweight": 0.8,
-    "sell rating": 1.2, "target cut": 1.2, "cuts target": 1.2,
-    "cuts guidance": 1.8, "lowers guidance": 1.8, "cuts outlook": 1.8,
-    "probe": 1.3, "investigation": 1.2, "raid": 1.5, "fraud": 2.0, "scam": 2.0,
-    "penalty": 1.2, "sebi order": 1.0, "ban": 1.0, "lawsuit": 1.0, "default": 1.5,
-    "resigns": 1.0, "resignation": 1.0, "pledge": 0.8, "stake sale": 0.8,
-    "layoffs": 0.8, "strike": 0.8, "recall": 1.0, "outage": 0.8, "warning": 0.8,
-    "plunge": 1.2, "plunges": 1.2, "slumps": 1.0, "tumbles": 1.0, "crash": 1.5, "falls": 0.5,
-    "bearish": 0.8,
-}
-
-_NEGATORS = r"(?:not|no|fails to|failed to|didn't|did not)\s+"
 _cache = {}
+_discovery = {"ts": 0.0, "data": {}}
+_mx_budget = {"date": None, "used": 0}
+_lock = threading.Lock()
 
 
-def _score_text(text):
-    text = text.lower()
-    raw = 0.0
-    for lexicon, sign in ((POSITIVE, 1), (NEGATIVE, -1)):
-        for phrase in sorted(lexicon, key=len, reverse=True):
-            pattern = r"\b" + re.escape(phrase) + r"\b"
-            negated = len(re.findall(_NEGATORS + pattern, text))
-            total = len(re.findall(pattern, text))
-            if total:
-                raw += sign * lexicon[phrase] * (total - 2 * negated)
-                text = re.sub(pattern, " ", text)
-    return math.tanh(raw / 2)
+def short_name(name):
+    n = re.sub(r"\(.*?\)", "", name or "")
+    n = re.sub(r"\b(Ltd|Limited)\.?\s*$", "", n.strip())
+    return n.strip(" .,")
 
 
-def _parse_item(item):
-    content = item.get("content", item)
-    title = content.get("title") or ""
-    summary = content.get("summary") or content.get("description") or ""
-    published = None
-    if content.get("pubDate"):
+_FINANCE_CONTEXT = r"\W+(?:ltd|limited|shares?|stocks?|share price|q[1-4]|results|target|nse|bse)\b"
+
+
+def name_patterns(symbol, name):
+    """Regexes that must match for a headline to count as being about this company.
+    Single-word names ("Eternal", "Titan", "Trent") also need finance wording right
+    after them, otherwise ordinary English headlines match."""
+    plain = set(ALIASES.get(symbol.upper(), []))
+    contextual = set()
+    if name:
+        n = short_name(name).lower()
+        (contextual if " " not in n else plain).add(n)
+    if len(symbol) >= 3 and symbol.isalpha() and symbol.lower() not in plain:
+        contextual.add(symbol.lower())
+    pats = [re.compile(r"(?<![\w&])" + re.escape(n) + r"(?![\w&])", re.I) for n in plain if n]
+    pats += [re.compile(r"(?<![\w&])" + re.escape(n) + _FINANCE_CONTEXT, re.I) for n in contextual if n]
+    return pats
+
+
+def search_query(symbol, name):
+    names = [short_name(name)] if name else [symbol]
+    names += [a for a in ALIASES.get(symbol.upper(), []) if len(a) > 3][:2]
+    quoted = " OR ".join(f'"{n}"' for n in dict.fromkeys(names))
+    return f"({quoted}) (share OR shares OR stock) when:2d"
+
+
+def _google_news(query):
+    url = "https://news.google.com/rss/search?q=" + quote(query) + "&hl=en-IN&gl=IN&ceid=IN:en"
+    resp = requests.get(url, headers={"User-Agent": UA}, timeout=12)
+    resp.raise_for_status()
+    out = []
+    for item in ET.fromstring(resp.content).iter("item"):
+        title = item.findtext("title") or ""
+        publisher = item.findtext("source") or ""
+        if publisher and title.endswith(" - " + publisher):
+            title = title[: -len(publisher) - 3]
         try:
-            published = datetime.fromisoformat(content["pubDate"].replace("Z", "+00:00"))
-        except ValueError:
-            pass
-    elif item.get("providerPublishTime"):
-        published = datetime.fromtimestamp(item["providerPublishTime"], tz=timezone.utc)
-    return title, summary, published
+            published = email.utils.parsedate_to_datetime(item.findtext("pubDate"))
+        except (TypeError, ValueError):
+            published = None
+        out.append({"title": title.strip(), "summary": "", "published": published, "source": "Google News",
+                    "publisher": publisher, "url": item.findtext("link")})
+    return out
 
 
-def _fetch(symbol):
+def _yahoo(symbol):
     import yfinance as yf
-    ticker = symbol if symbol.endswith(".NS") else f"{symbol}.NS"
-    return yf.Ticker(ticker).news or []
+    out = []
+    for item in yf.Ticker(f"{symbol}.NS").news or []:
+        content = item.get("content", item)
+        published = None
+        if content.get("pubDate"):
+            try:
+                published = datetime.fromisoformat(content["pubDate"].replace("Z", "+00:00"))
+            except ValueError:
+                pass
+        url = (content.get("canonicalUrl") or {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else None
+        out.append({"title": content.get("title") or "", "summary": content.get("summary") or "",
+                    "published": published, "source": "Yahoo",
+                    "publisher": (content.get("provider") or {}).get("displayName"), "url": url})
+    return out
 
 
-def get_sentiment(symbol):
-    cached = _cache.get(symbol)
+def _marketaux_allowed():
+    if not config.NEWS.get("marketaux_api_key"):
+        return False
+    today = datetime.now(timezone.utc).date()
+    with _lock:
+        if _mx_budget["date"] != today:
+            _mx_budget.update(date=today, used=0)
+        if _mx_budget["used"] >= config.NEWS.get("marketaux_daily_limit", 90):
+            return False
+        _mx_budget["used"] += 1
+        return True
+
+
+def _marketaux(extra_params):
+    """Marketaux /v1/news/all filtered to Indian-listed entities. Its per-entity
+    sentiment_score is used directly instead of the lexicon."""
+    if not _marketaux_allowed():
+        return []
+    params = {
+        "api_token": config.NEWS["marketaux_api_key"], "language": "en", "countries": "in",
+        "filter_entities": "true",
+        "published_after": (datetime.now(timezone.utc) - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M"),
+        **extra_params,
+    }
+    resp = requests.get("https://api.marketaux.com/v1/news/all", params=params, timeout=12)
+    resp.raise_for_status()
+    out = []
+    for art in resp.json().get("data", []):
+        try:
+            published = datetime.fromisoformat((art.get("published_at") or "").replace("Z", "+00:00"))
+        except ValueError:
+            published = None
+        base = {"title": art.get("title") or "", "summary": art.get("description") or "", "published": published,
+                "source": "Marketaux", "publisher": art.get("source"), "url": art.get("url")}
+        entities = art.get("entities") or []
+        for ent in entities:
+            out.append({**base, "symbol": (ent.get("symbol") or "").split(".")[0].upper(),
+                        "score": ent.get("sentiment_score")})
+        if not entities:
+            out.append(base)
+    return out
+
+
+def _aggregate(items, patterns=None):
+    now = datetime.now(timezone.utc)
+    seen, scored = set(), []
+    weighted = weight_sum = 0.0
+    for it in items:
+        key = re.sub(r"\W+", "", it["title"].lower())[:80]
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        age_h = (now - it["published"]).total_seconds() / 3600 if it.get("published") else 24.0
+        if age_h > MAX_AGE_HOURS:
+            continue
+        age_h = max(age_h, 0.0)
+        text = f"{it['title']}. {it.get('summary', '')}"
+        s = it["score"] if it.get("score") is not None else score_text(text)
+        trusted = it["source"] in ("NSE filing", "Marketaux")
+        if not (patterns is None or trusted or any(p.search(text) for p in patterns)):
+            continue  # search results that never name the company are noise, not evidence
+        w = SOURCE_WEIGHT.get(it["source"], 1.0) * 0.5 ** (age_h / HALF_LIFE_HOURS)
+        weighted += w * s
+        weight_sum += w
+        scored.append((w * (abs(s) + 0.1), {
+            "title": it["title"], "score": round(s, 2), "age_h": round(age_h, 1), "source": it["source"],
+            "publisher": it.get("publisher"), "url": it.get("url"),
+        }))
+    score = max(-1.0, min(1.0, weighted / weight_sum * min(1.0, weight_sum / 2.0))) if weight_sum else 0.0
+    scored.sort(key=lambda x: -x[0])
+    return round(score, 3), [h for _, h in scored]
+
+
+def get_sentiment(symbol, company_name=None):
+    key = symbol.upper()
+    cached = _cache.get(key)
     if cached and time.time() - cached[0] < CACHE_TTL_SECONDS:
         return cached[1]
 
-    result = {"score": 0.0, "count": 0, "headlines": []}
-    try:
-        items = _fetch(symbol)
-        names = [symbol.lower()] + ALIASES.get(symbol.upper(), [])
-        now = datetime.now(timezone.utc)
-        weighted = weight_sum = 0.0
-        scored = []
-        for item in items:
-            title, summary, published = _parse_item(item)
-            if not title:
-                continue
-            age_h = (now - published).total_seconds() / 3600 if published else 24.0
-            if age_h > MAX_AGE_HOURS:
-                continue
-            text = f"{title}. {summary}"
-            relevance = 1.0 if any(re.search(r"\b" + re.escape(n) + r"\b", text.lower()) for n in names) else 0.4
-            s = _score_text(text)
-            w = relevance * 0.5 ** (age_h / HALF_LIFE_HOURS)
-            weighted += w * s
-            weight_sum += w
-            scored.append({"title": title, "score": round(s, 2), "age_h": round(age_h, 1)})
+    if company_name is None:
+        company_name = universe.by_symbol().get(key, {}).get("name")
+    patterns = name_patterns(key, company_name)
+    cfg = config.NEWS
+    items, sources, errors = [], {}, []
 
-        if weight_sum > 0:
-            # Scale by evidence mass so one stale, loosely related headline can't dominate.
-            result["score"] = round(max(-1.0, min(1.0, weighted / weight_sum * min(1.0, weight_sum / 1.5))), 3)
-        result["count"] = len(scored)
-        result["headlines"] = sorted(scored, key=lambda h: h["age_h"])[:5]
-    except Exception as exc:
-        logger.warning(f"News sentiment unavailable for {symbol}: {exc}")
-        result["error"] = str(exc)
+    def collect(label, fn):
+        try:
+            got = fn()
+            items.extend(got)
+            sources[label] = len(got)
+        except Exception as exc:
+            errors.append(f"{label}: {exc}")
 
-    _cache[symbol] = (time.time(), result)
+    if cfg.get("use_nse_filings", True):
+        collect("NSE filing", lambda: nse_feed.announcements_by_symbol().get(key, []))
+    if cfg.get("use_google_news", True):
+        collect("Google News", lambda: _google_news(search_query(key, company_name)))
+    if cfg.get("marketaux_api_key"):
+        name = short_name(company_name) if company_name else key
+        collect("Marketaux", lambda: [i for i in _marketaux({"search": name, "limit": 3})
+                                      if i.get("symbol") in (None, key)])
+    if cfg.get("use_yahoo", True) and not sources.get("Google News"):
+        collect("Yahoo", lambda: _yahoo(key))
+
+    score, headlines = _aggregate(items, patterns)
+    result = {"score": score, "count": len(headlines), "headlines": headlines[:8], "sources": sources}
+    if errors:
+        result["errors"] = errors
+        logger.warning(f"News for {key}: {'; '.join(errors)}")
+    _cache[key] = (time.time(), result)
     return result
+
+
+def market_catalysts(universe_rows):
+    """Which universe stocks are in today's market news / filings, with a catalyst score each."""
+    if time.time() - _discovery["ts"] < DISCOVERY_TTL_SECONDS:
+        return _discovery["data"]
+    cfg = config.NEWS
+    headlines = []
+    if cfg.get("use_google_news", True):
+        for q in MARKET_QUERIES:
+            try:
+                headlines.extend(_google_news(q))
+            except Exception as exc:
+                logger.warning(f"Google News query failed ({q}): {exc}")
+    if cfg.get("marketaux_api_key"):
+        try:
+            headlines.extend(_marketaux({"limit": 3}))
+        except Exception as exc:
+            logger.warning(f"Marketaux discovery failed: {exc}")
+    filings = nse_feed.announcements_by_symbol() if cfg.get("use_nse_filings", True) else {}
+
+    by_symbol = {}
+    for row in universe_rows:
+        sym = row["symbol"]
+        pats = name_patterns(sym, row["name"])
+        matched = [h for h in headlines if h.get("symbol") == sym or any(p.search(h["title"]) for p in pats)]
+        matched += filings.get(sym, [])
+        if not matched:
+            continue
+        score, scored = _aggregate(matched)
+        if scored and abs(score) >= 0.05:
+            by_symbol[sym] = {"score": score, "count": len(scored), "top": scored[0]["title"], "headlines": scored[:3]}
+
+    _discovery.update(ts=time.time(), data=by_symbol)
+    return by_symbol

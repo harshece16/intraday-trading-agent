@@ -42,6 +42,9 @@ STRATEGY_PARAMS = {
         "exit_threshold": 5.0,      # bearish evidence that closes a long
         "no_entry_before": "09:30", # skip the opening-auction volatility
         "last_entry_time": "14:30", # no fresh intraday risk late in the session
+        # One shot per stock per day. Cut losses in every backtest variant and both
+        # halves of the sample (it stops re-entering a setup that just failed).
+        "max_entries_per_day": 1,
         "use_news": True,
         "news_weight": 2.0,
         "news_veto": -0.5,          # sentiment at/below this blocks new longs
@@ -50,6 +53,41 @@ STRATEGY_PARAMS = {
     # counter-trend entries; volume_filter requires above-average volume.
     "sma_crossover": {"fast": 9, "slow": 21, "trend_period": 50, "volume_filter": True},
     "rsi_reversion": {"period": 14, "oversold": 30, "overbought": 70, "trend_period": 50},
+}
+
+# Market scanner — picks WHAT to trade from the NIFTY 100 (see scanner.py).
+# When enabled, the engine's watchlist = pinned + the scanner's active picks
+# + any symbol with an open position; WATCHLIST above is used only when disabled.
+SCANNER = {
+    "enabled": True,
+    "interval_minutes_open": 5,
+    "interval_minutes_closed": 60,   # still scans when closed, so the dashboard shows a plan
+    "active_count": 6,               # stocks the engine actively evaluates for entries
+    "risk_off_active_count": 2,
+    "deep_analysis": 15,             # top candidates that get a full Trader Brain + news read
+    "min_score": 20,
+    "pinned": [],                    # always tracked, e.g. ["RELIANCE"]
+    # Tradability floors (intraday checklist: liquid, moves enough to beat costs)
+    "min_price": 100,
+    "min_turnover_cr": 50,
+    "min_atr_pct": 1.2,
+    "max_gap_pct": 3.0,
+    "use_news": True,
+}
+
+MARKET_FILTER = {
+    "block_new_longs_when_risk_off": True,
+    "vix_high": 20.0,
+    "vix_high_size_multiplier": 0.5,
+}
+
+NEWS = {
+    "use_nse_filings": True,         # official NSE corporate announcements
+    "use_google_news": True,         # Google News RSS, India edition (free, no key)
+    "use_yahoo": True,               # fallback when Google returns nothing
+    # Optional: free key (100 requests/day) from marketaux.com adds entity-level sentiment.
+    "marketaux_api_key": os.environ.get("MARKETAUX_API_KEY", ""),
+    "marketaux_daily_limit": 90,
 }
 
 RISK = {

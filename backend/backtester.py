@@ -85,7 +85,10 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
     return net_pnl
 
 
-def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, days, costs_cfg=None):
+def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, days, costs_cfg=None,
+                 preloaded=None, allowed_by_day=None):
+    """preloaded: {symbol: candles} to skip per-symbol downloads.
+    allowed_by_day: {"YYYY-MM-DD": [symbols]} — new entries only in that day's picks."""
     costs_cfg = costs_cfg if costs_cfg is not None else config.COSTS
     risk = RiskManager(risk_cfg)
     strategy_fn = STRATEGY_FUNCTIONS[strategy_name]
@@ -94,7 +97,8 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
 
     data = {}
     for symbol in symbols:
-        candles = data_provider.get_intraday_candles(symbol, interval=interval, period=f"{days}d")
+        candles = preloaded.get(symbol, []) if preloaded is not None else \
+            data_provider.get_intraday_candles(symbol, interval=interval, period=f"{days}d")
         if len(candles) < 60:
             print(f"  skipping {symbol}: only {len(candles)} bars returned (need >=60)")
             continue
@@ -154,6 +158,11 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
                     equity_curve.append(equity)
                 continue
             if t < market_open_t:
+                continue
+
+            if allowed_by_day is not None and pos.quantity == 0 \
+                    and symbol not in allowed_by_day.get(ts.date().isoformat(), ()):
+                strat_states[symbol] = None
                 continue
 
             # 3) Strategy signal, computed only from bars up to and
@@ -249,6 +258,9 @@ def main():
     parser.add_argument("--capital", type=float, default=config.RISK["total_capital"])
     parser.add_argument("--no-costs", action="store_true",
                          help="Disable brokerage/STT/slippage modeling (frictionless, for comparison only)")
+    parser.add_argument("--universe", choices=["nifty100"],
+                        help="Scan the NIFTY 100 each day and trade only the scanner's top picks")
+    parser.add_argument("--scan-top", type=int, default=5, help="Picks per day in --universe mode")
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
@@ -256,10 +268,33 @@ def main():
     risk_cfg = {**config.RISK, "total_capital": args.capital}
     costs_cfg = ZERO_COSTS if args.no_costs else config.COSTS
 
-    print(f"Backtesting {args.strategy} on {symbols} ({args.interval} bars, {args.days} days)"
+    preloaded = picks = None
+    label = str(symbols)
+    if args.universe:
+        from collections import Counter
+        import scanner
+        import universe
+        rows = universe.load()
+        tickers = [scanner.yf_ticker(r["symbol"]) for r in rows]
+        print(f"Downloading daily + {args.interval} history for {len(rows)} NIFTY 100 stocks...")
+        daily = scanner.download_batch(tickers + [scanner.NIFTY], "2y", "1d")
+        intraday = scanner.download_batch(tickers, f"{args.days}d", args.interval)
+        preloaded = {t[:-3]: c for t, c in intraday.items()}
+        symbols = sorted(preloaded)
+        sessions = sorted({c["time"][:10] for cs in preloaded.values() for c in cs})
+        picks = scanner.premarket_picks(daily, rows, sessions, args.scan_top, config.SCANNER)
+        freq = Counter(s for day in picks.values() for s in day)
+        print(f"Scanner picked {len(freq)} distinct stocks over {len(sessions)} sessions; most often: "
+              + ", ".join(f"{s}×{n}" for s, n in freq.most_common(6)))
+        print("(Backtest picks use daily data only — gap, relative volume, news and results-day "
+              "filters need live/intraday context and aren't replayed.)")
+        label = f"NIFTY 100 scanner, top {args.scan_top}/day"
+
+    print(f"Backtesting {args.strategy} on {label} ({args.interval} bars, {args.days} days)"
           f"{' [costs disabled]' if args.no_costs else ' [with realistic costs]'}...")
     trades, equity_curve = run_backtest(symbols, args.strategy, strategy_params, risk_cfg,
-                                         args.interval, args.days, costs_cfg)
+                                         args.interval, args.days, costs_cfg,
+                                         preloaded=preloaded, allowed_by_day=picks)
     report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs)
 
 

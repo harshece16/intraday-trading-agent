@@ -1,0 +1,138 @@
+"""
+Official NSE feeds: corporate announcements (order wins, acquisitions,
+buybacks, resignations, pledges...) and the event calendar (results / board
+meetings). These are the primary catalyst source — companies must file here
+before or as news breaks.
+
+These are the JSON endpoints behind nseindia.com's own pages, not a
+documented public API: they need browser-like headers and can change or
+rate-limit without notice. Responses are cached (announcements 10 min,
+calendar 6 h) and any failure returns the last good data or nothing.
+"""
+
+import logging
+import threading
+import time
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import requests
+
+from sentiment_lexicon import score_text
+
+logger = logging.getLogger("trading_bot")
+IST = ZoneInfo("Asia/Kolkata")
+BASE = "https://www.nseindia.com"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+# Filing categories that carry no price information.
+ROUTINE = (
+    "shareholders meeting", "analysts/institutional", "trading window", "newspaper", "certificate",
+    "loss of share", "duplicate share", "investor presentation", "esop", "esos", "transcript",
+    "audio", "recording", "compliance", "74(5)", "record date",
+)
+# Category tilt, checked in order (first match wins).
+TILTS = (
+    ("default", -1.0), ("fraud", -1.0), ("insolvency", -1.0), ("pledge", -0.5), ("resignation", -0.4),
+    ("litigation", -0.3), ("buy back", 0.8), ("buyback", 0.8), ("bagging", 0.8), ("receiving of order", 0.8),
+    ("order", 0.6), ("contract", 0.5), ("bonus", 0.6), ("acquisition", 0.4), ("dividend", 0.3),
+)
+
+_session = {"s": None, "created": 0.0}
+_cache = {}
+_lock = threading.Lock()
+
+
+def _fetch(path, referer, ttl):
+    with _lock:
+        hit = _cache.get(path)
+        if hit and time.time() - hit[0] < ttl:
+            return hit[1]
+        err = "unknown"
+        for attempt in range(2):
+            if _session["s"] is None or attempt == 1 or time.time() - _session["created"] > 1800:
+                s = requests.Session()
+                s.headers.update(HEADERS)
+                try:
+                    s.get(BASE + "/", timeout=15)  # sets anti-bot cookies even when it returns 403
+                except requests.RequestException:
+                    pass
+                _session.update(s=s, created=time.time())
+            try:
+                resp = _session["s"].get(BASE + path, headers={"Referer": BASE + referer}, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    _cache[path] = (time.time(), data)
+                    return data
+                err = f"HTTP {resp.status_code}"
+            except (requests.RequestException, ValueError) as exc:
+                err = str(exc)
+        logger.warning(f"NSE {path} unavailable ({err})")
+        return hit[1] if hit else None
+
+
+def announcements_by_symbol():
+    """{SYMBOL: [news item, ...]} for price-relevant filings from the last ~2 days."""
+    today = datetime.now(IST).date()
+    frm = (today - timedelta(days=2)).strftime("%d-%m-%Y")
+    path = f"/api/corporate-announcements?index=equities&from_date={frm}&to_date={today.strftime('%d-%m-%Y')}"
+    data = _fetch(path, "/companies-listing/corporate-filings-announcements", 600)
+    if not data:
+        data = _fetch("/api/corporate-announcements?index=equities", "/companies-listing/corporate-filings-announcements", 600) or []
+
+    out = {}
+    for a in data if isinstance(data, list) else []:
+        symbol = (a.get("symbol") or "").upper()
+        desc = a.get("desc") or ""
+        text = a.get("attchmntText") or ""
+        d = desc.lower()
+        if not symbol or any(k in d for k in ROUTINE):
+            continue
+        tilt = next((w for k, w in TILTS if k in d), 0.0)
+        score = max(-1.0, min(1.0, tilt + 0.6 * score_text(f"{desc}. {text}")))
+        if abs(score) < 0.1:
+            continue
+        try:
+            published = datetime.strptime(a.get("an_dt", ""), "%d-%b-%Y %H:%M:%S").replace(tzinfo=IST)
+        except ValueError:
+            published = None
+        out.setdefault(symbol, []).append({
+            "title": f"{desc}: {text[:180]}".strip(": "),
+            "summary": "",
+            "published": published,
+            "source": "NSE filing",
+            "publisher": "NSE",
+            "url": a.get("attchmntFile"),
+            "score": round(score, 2),
+        })
+    return out
+
+
+def _next_trading_day(d):
+    n = d + timedelta(days=1)
+    while n.weekday() >= 5:
+        n += timedelta(days=1)
+    return n
+
+
+def results_calendar():
+    """{SYMBOL: {"date", "purpose"}} for results due today or on the next trading day."""
+    data = _fetch("/api/event-calendar", "/companies-listing/corporate-filings-event-calendar", 21600) or []
+    today = datetime.now(IST).date()
+    horizon = _next_trading_day(today)
+    out = {}
+    for e in data if isinstance(data, list) else []:
+        text = f"{e.get('purpose', '')} {e.get('bm_desc', '')}".lower()
+        if "result" not in text:
+            continue
+        try:
+            d = datetime.strptime(e.get("date", ""), "%d-%b-%Y").date()
+        except ValueError:
+            continue
+        if today <= d <= horizon and e.get("symbol"):
+            out[e["symbol"].upper()] = {"date": e["date"], "purpose": e.get("purpose") or "Financial Results"}
+    return out

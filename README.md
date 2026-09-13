@@ -1,206 +1,241 @@
-# Intraday Trading Agent — "Trader Brain" for NSE (Zerodha)
+# Intraday Trading Agent — NSE (Zerodha)
 
-An intraday trading agent for Indian equities. It watches a list of NSE
-stocks, analyses them the way a professionally trained technical trader
-would — trend, market structure, momentum, support/resistance, candlestick
-patterns, volume and news — and trades only when several independent pieces
-of evidence agree. It runs in **paper mode** by default and can route real
-orders through **Zerodha Kite Connect**. A web dashboard shows positions,
-trades, and *why* the agent wants to buy, sell, or wait.
+An intraday trading agent for Indian equities. It works like a disciplined
+technical trader. It **scans the NIFTY 100** to decide *what* is worth trading
+today, using market context, relative strength, volume, sector leadership,
+news and results-day risk. The **Trader Brain** then decides *when* to enter
+and exit, using trend, structure, momentum, levels, candlestick patterns and
+volume. It sizes every trade by risk and explains each decision on a live
+dashboard.
+
+It runs in **paper mode** by default and can route real orders through
+**Zerodha Kite Connect**.
 
 ## ⚠️ Read this first
 
-- **No strategy here is proven profitable, and none can guarantee profit.**
-  Current honest backtest results are in [Backtest results](#backtest-results)
-  — the agent is still net-negative after costs. Treat this as a disciplined,
-  well-instrumented decision engine that still needs an edge, not a money
-  machine. Never go live on anything the backtester (with costs on) says loses.
-- **"Certified trader" means the knowledge, not a licence.** The rules are
-  modelled on what CMT / NISM-certified technical traders study. Software
-  can't hold a certification, and if you ever offer this agent's signals or
-  trades *to other people*, SEBI's Research Analyst / Investment Adviser
-  regulations apply to you.
-- **Starts in paper mode.** No real orders until you click LIVE (with
-  confirmation) *and* set up Kite credentials.
-- **yfinance data is ~15 min delayed.** Fine for testing logic, not for real
-  execution. Kite's paid data (~₹500/month) gives real-time candles.
-- **Stops are checked every poll (30s)**, not by the broker. A fast move can
-  blow through a stop before the engine sees it — use broker-side stop orders
-  once live.
-- **Auto square-off at 15:15 IST.** Confirm this matches your broker's MIS cut-off.
-- **SEBI retail algo rules** (mandatory from 2026-04-01) require a static IP
-  whitelisted on your Kite app, and market orders need `market_protection`
-  (handled in `kite_broker.py`).
+- **It is not profitable yet.** Every configuration in the
+  [backtests](#backtest-results) loses money after costs. The best current
+  default loses ~10% over 55 days. This is a well-instrumented, explainable
+  decision engine that still needs an edge. Don't trade real money with it.
+- **Most retail intraday traders lose.** SEBI's own studies of Indian
+  retail traders found large majorities losing money in both intraday cash
+  and F&O. Costs (brokerage, STT, slippage) are the main reason, and the
+  backtests here show the same thing.
+- **Earlier results in this README were wrong.** yfinance returns
+  timestamps in UTC, and the strategy read them as IST. Its 09:30–14:30
+  entry window therefore only allowed trades from about 15:00 to 15:15 IST.
+  That's fixed (`data_provider.py`, `scanner.download_batch`), and all
+  numbers below are from the corrected code.
+- **"Certified trader" describes the knowledge, not a licence.** The rules
+  follow what CMT/NISM-trained technical traders study. If you ever offer
+  this agent's signals to other people, SEBI's Research Analyst / Investment
+  Adviser rules apply.
+- **Starts in PAPER mode.** No real orders until you click LIVE and set up Kite.
+- **Data caveats:** yfinance is ~15 minutes delayed. The NSE feeds are the
+  JSON endpoints behind nseindia.com's own pages, not a documented API, so
+  they can change or rate-limit. Google News RSS is unofficial.
+- **Live trading needs a static IP** whitelisted on your Kite app (a SEBI
+  rule). Run the backend on a VPS with a fixed IPv4 and whitelist that.
 
-## The Trader Brain
+## How the agent decides
 
-`backend/trader_brain.py` is the default strategy (`STRATEGY = "trader_brain"`
-in `config.py`). It encodes a trader's pre-trade checklist as a scored
-**evidence ledger**: each rule adds (or subtracts) points to a *bullish* or
-*bearish* case, tagged with a category.
+### 1. Market context (every scan)
 
-### Knowledge base → code
+| Signal | Effect |
+|---|---|
+| NIFTY daily trend (EMA20/50), day change, holding above its open | Market bias score |
+| Breadth: advancers vs decliners across the NIFTY 100 | ≥ 60% up adds to the score, ≤ 40% subtracts |
+| India VIX ≥ 20 | Counts as risk; new position sizes halved |
+| **Bias** = risk-on / neutral / **risk-off** | Risk-off: at most 2 active stocks and **no new longs** |
 
-| What a trained trader knows | Source discipline | Where it lives | How it's used |
+### 2. Scanner — *what* to trade (`scanner.py`, every 5 min open / 60 min closed)
+
+The universe is the NIFTY 100 (large, liquid, F&O-eligible stocks), refreshed
+weekly from NSE's list.
+
+| Stage | Rules (points) |
+|---|---|
+| **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** |
+| **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 |
+| **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
+| **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
+| **Deep read** | The top 15 get a full Trader Brain analysis with per-stock news; the bull−bear edge adjusts their score by up to ±15 |
+| **Active watchlist** | Top 6 by final score that aren't in a daily downtrend (2 on risk-off days), plus pinned stocks and open positions |
+
+### 3. Trader Brain — *when* to trade (`trader_brain.py`)
+
+| What a trained trader checks | Source | Rule |
+|---|---|---|
+| Regime first | CMT / Wilder ADX | ADX ≥ 25 trending, < 20 ranging; RSI and Bollinger are read differently in each |
+| Higher timeframe | Multi-timeframe analysis | 5m resampled to 15m; a long against the 15m downtrend −2 |
+| Trend + VWAP | CMT, institutional practice | Price > EMA20 > EMA50 +2 · above session VWAP +1 |
+| Structure | Dow Theory | Higher highs + higher lows +1; a broken structure below EMA50 forces an exit |
+| Location | Price action | S/R zones from clustered swing points, previous-day H/L/C, opening range · breakout on volume +2 · resistance within 1 ATR −1.5 |
+| Momentum | CMT | MACD crossover/histogram · RSI 50–70 in trends, ≤ 35 in ranges · stochastic turns · RSI ≥ 78 −1.5 (don't chase) |
+| Trigger | Nison candlesticks | 20 patterns conditioned on the prior trend; full weight only at a value area; noise bars ignored |
+| Participation | Wyckoff | Volume ≥ 1.5× average on the trigger bar +1 |
+| Catalyst | News | Sentiment × 2; strongly negative news **vetoes** new longs |
+| **Discipline** | Intraday practice | No entries before 09:30 or after 14:30 · ≥ 3 agreeing categories · bull ≥ 6 and beats bear by ≥ 2 · **one entry per stock per day** |
+
+Exits: ATR stop-loss and take-profit, a Trader Brain exit (bear score ≥ 5
+or broken structure), and auto square-off at 15:15.
+
+### 4. News sources (`news_sentiment.py`, `nse_feed.py`)
+
+| Source | Cost | Used for | Weight |
 |---|---|---|---|
-| Identify the regime before choosing a playbook | CMT (ADX / Wilder) | `indicators.adx` | ADX ≥ 25 trending, < 20 ranging; RSI and Bollinger are read differently in each |
-| Trade with the higher timeframe | Multi-timeframe analysis | `indicators.resample` | 5m bars merged into 15m; a long against a 15m downtrend is penalised |
-| Trend = EMA alignment + price vs VWAP | CMT, institutional intraday practice | `indicators.ema`, `session_vwap` | Price > EMA20 > EMA50 and above VWAP builds the bull case |
-| Higher highs & higher lows | Dow Theory | `market_structure.swing_points`, `structure_trend` | Confirms or breaks the trend; a broken structure below EMA50 exits longs |
-| Support/resistance are where price turned before | Price action | `market_structure.key_levels` | Swing points clustered within ½ ATR, plus previous-day H/L/C and the opening range |
-| Buy breakouts with volume, don't buy into resistance | Wyckoff / price action | `breakout_above`, `volume_ratio` | Breakout on ≥1.2× volume scores +2; resistance within 1 ATR scores −1.5 (poor reward:risk) |
-| Momentum confirmation | CMT (MACD, RSI, Stochastic) | `indicators.macd`, `rsi`, `stochastic` | MACD crossovers/histogram; RSI 50–70 = strength in a trend, ≤ 35 = opportunity only in a range |
-| Don't chase | Risk discipline | `trader_brain` | RSI ≥ 78 subtracts points |
-| Candlestick patterns only matter in context | Nison, *Japanese Candlestick Charting* | `candlestick_patterns.py` | 20 patterns (hammer, engulfing, morning/evening star, soldiers/crows, harami, tweezers, marubozu…) conditioned on the prior trend; full weight only at a value area (support, EMA20, VWAP) |
-| Ignore noise bars | Price action | `detect_patterns` | Bars with range < 0.3 ATR are ignored |
-| News is a catalyst | Fundamental awareness | `news_sentiment.py` | Yahoo headlines scored with a finance lexicon (beats/misses, upgrades, order wins, probes, pledges…), recency-weighted; strongly negative news **vetoes** new longs |
-| Avoid the open and late-session entries | Intraday discipline | `no_entry_before`, `last_entry_time` | No entries before 09:30 or after 14:30 |
-| Several independent confirmations, not one indicator | Confluence trading | `min_confirmations`, `min_edge` | Needs a score ≥ 6, ≥ 3 agreeing categories, and bull − bear ≥ 2 |
-| Size by risk, never over-leverage | Risk management | `risk_manager.py` | 1% risk per trade with an ATR stop, each position capped at 33% of capital, daily loss limit |
+| **NSE corporate announcements** | Free | Order wins, acquisitions, buybacks, resignations, pledges, credit ratings (routine filings ignored) | 1.5 |
+| **NSE event calendar** | Free | Results due today/next session → stock excluded | filter |
+| **Google News RSS (India)** | Free, no key | Per-stock headlines plus market-wide "stocks in news" discovery | 1.0 |
+| **Marketaux** (optional) | Free tier 100 requests/day | Per-entity sentiment scores; set `MARKETAUX_API_KEY` | 1.2 |
+| Yahoo Finance | Free | Fallback when Google returns nothing | 0.6 |
 
-### Decision rules
+Headlines are de-duplicated and must actually name the company. They're
+scored with an India-tuned finance lexicon (`sentiment_lexicon.py`), unless
+the source provides its own sentiment. Each is weighted by source × recency
+(12h half-life), and the total is scaled by the amount of evidence.
+Marketaux's handling of Indian symbols hasn't been checked against a live key.
 
-- **BUY** when the bull score first crosses the threshold with enough
-  confirmations, a clear margin over the bear score, inside the entry
-  window, and no news veto. The signal is edge-triggered, so the agent won't
-  re-enter the same setup right after being stopped out.
-- **SELL (exit long)** when the bear score reaches `exit_threshold`, the trend
-  structure breaks below EMA50, or strongly negative news appears. The
-  ATR stop-loss / take-profit and 15:15 square-off still apply on top.
-- Every decision is **explained**: the dashboard's *Trader Brain* panel shows
-  the setup (Breakout / Trend pullback / Range reversal…), regime, bull vs.
-  bear score bars, the top reasons on each side, detected patterns, key
-  levels, news headlines, and what's blocking an entry.
+**Why not other APIs:** Finnhub's news sentiment covers US companies only,
+EODHD's free tier gives about 2–4 news calls a day, and Alpha Vantage allows
+25 requests a day in total. NSE filings plus Google News cover Indian
+large caps better, and they're free.
 
-All thresholds are in `STRATEGY_PARAMS["trader_brain"]` in `config.py`.
+## Dashboard
+
+- **Market strip:** risk-on/off bias (hover for the reasons), NIFTY, VIX,
+  breadth, leading and lagging sectors, last scan time, **Scan now** button.
+- **Opportunities:** all 100 stocks ranked, with change, relative volume,
+  score and status (`ENTRY OK` / `ACTIVE` / `HELD` / `watch` / `avoid`).
+  Hover for the top reasons. Filtered-out stocks show their reason.
+- **Chart:** candles with support, resistance and VWAP lines from the brain.
+- **Why this stock:** the scanner's score breakdown, gap, relative strength,
+  relative volume, ATR, distance from the 52-week high, catalyst, and any
+  event-risk warning.
+- **Trader Brain:** setup, regime, bull vs bear score bars, evidence on
+  each side, patterns, and what's holding an entry back.
+- **Agent Activity:** a plain-English log of scans, watchlist changes,
+  forming setups, trades and **skipped signals with the reason** (risk-off,
+  max positions, event risk…).
+- **Trade Blotter:** every fill with its *why* (setup plus top reasons, or the exit reason).
+- **News:** the selected stock's headlines with source and sentiment, plus
+  today's market catalysts across the universe.
 
 ## Backtest results
 
-55 days of 5-minute bars, RELIANCE / TCS / INFY / HDFCBANK, ₹1,00,000
-capital, realistic Zerodha costs + slippage (run 2026-09-13):
+55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
+realistic Zerodha costs + slippage. H1/H2 are the two halves of the sample.
 
-| Strategy | Trades | Win rate | Gross P&L | Costs | **Net P&L** |
-|---|---|---|---|---|---|
-| `sma_crossover` (old default) | 92 | 23% | −₹36,559 | ₹18,520 | **−55.1%** |
-| `trader_brain`, uncapped sizing | 65 | 29% | −₹15,774 | ₹14,358 | **−30.1%** |
-| `trader_brain` + 33% position cap (current) | 70 | 24% | −₹1,089 | ₹2,430 | **−3.5%** |
+| Setup | Trades | Win % | Gross | Costs | **Net** | H1 / H2 |
+|---|---|---|---|---|---|---|
+| SMA crossover, 4 fixed stocks | 108 | 19% | −₹4,178 | ₹3,699 | **−7.9%** | — |
+| Trader Brain, 4 fixed stocks, unlimited re-entries | 452 | 19% | −₹13,602 | ₹15,485 | **−29.1%** | −12.6k / −16.4k |
+| **Trader Brain, 4 fixed stocks, 1 entry/stock/day (current default)** | 162 | 21% | −₹4,938 | ₹5,548 | **−10.5%** | −4.3k / −6.2k |
+| Trader Brain + scanner top-5/day, 1 entry/day | 218 | 20% | −₹6,767 | ₹6,979 | **−13.7%** | −5.9k / −7.8k |
+| Same on **15-minute** bars, 4 fixed stocks | 103 | 23% | −₹2,736 | ₹3,525 | **−6.3%** | −3.3k / −3.0k |
+| 15-minute bars, scanner top-5/day | 177 | 23% | −₹8,796 | ₹5,668 | **−14.5%** | −5.7k / −8.8k |
 
-What this says:
+What this shows:
 
-- The confluence engine loses far less than the simple crossover, and the
-  sizing fix removed most of the damage. Before the cap, a tight 5-minute
-  ATR stop sized trades at a median ₹4.8 lakh — about 5× the account.
-- It is **still not profitable**. Gross P&L is roughly break-even, and costs
-  make it negative. Stop-losses remain the largest source of losses.
-- Changing the entry threshold (5–8) or confirmations (3→4) only moved net
-  P&L between −1.7% and −3.9%. None of those is a real edge, and choosing
-  the "best" one on 55 days would be curve-fitting.
-- News is **neutral in backtests** because historical headlines aren't
-  available, so the news rules are untested.
+- **Overtrading was the biggest leak.** Allowing unlimited re-entries
+  produced 8 trades a day on 4 stocks. Limiting each stock to one entry a day
+  cut losses in every variant and in both halves, so it's now the default.
+- **Slower bars help.** 15-minute bars roughly halved the loss on fixed
+  stocks, because fewer, larger moves are less eaten by costs. The live
+  scanner is still built around 5-minute bars, so switching needs care.
+- **The scanner's daily-only picks didn't beat a fixed list** of four mega-caps
+  in backtest. The backtest can't replay the scanner's intraday relative
+  volume, gap, news or results-day filters, which is most of what it does live.
+- **Gross P&L is negative everywhere.** This isn't only a cost problem:
+  the entries themselves don't have an edge yet.
 
-### Most promising next steps toward an actual edge
+```bash
+cd backend
+python backtester.py --strategy trader_brain --days 55
+python backtester.py --strategy trader_brain --universe nifty100 --scan-top 5
+python backtester.py --strategy trader_brain --interval 15m
+python backtester.py --no-costs   # frictionless, for reference only
+```
 
-1. **More data and out-of-sample testing.** 55 days is tiny. Kite's
-   historical API gives years of 5m data. Tune on one period, validate on another.
-2. **Trade less, trade bigger moves.** At ~₹35 per trade in costs, 5-minute
-   scalps need to capture more. Try 15-minute signals, or require
-   ATR-to-cost ratios that make the trade worth taking.
-3. **Short selling.** MIS allows intraday shorts. The bear ledger already
-   exists but is only used for exits, which leaves half the opportunities unused.
-4. **Stock selection.** Rank a larger universe (e.g. NIFTY 100) by relative
-   strength and volume, and trade the day's leaders instead of a fixed list.
-5. **Better stops.** Place the stop beyond the swing low/support that
-   defined the setup, instead of a fixed ATR multiple.
-6. **Better news understanding.** Replace the lexicon with an LLM or a
-   FinBERT-style model, and record live headlines so they can be backtested later.
+## Improving the brain
+
+The highest-leverage next steps:
+
+1. **Longer history + out-of-sample.** 55 days is tiny. Kite's historical
+   API gives years of data. Tune on one period, validate on another.
+2. **Short selling.** The bearish evidence ledger already exists. Risk-off days
+   (74 of 100 stocks down on the last session) currently mean doing nothing.
+3. **Structure-based stops** below the swing low that defined the setup,
+   instead of a fixed ATR multiple.
+4. **Record live news + scanner snapshots** so catalysts and intraday scan
+   rules can be backtested later.
+5. **Learn from better sources.** Books worth adding as knowledge (bring
+   your own legally obtained copies): Zerodha Varsity modules (free, Indian
+   markets), NISM Series VIII workbook, Murphy's *Technical Analysis of the
+   Financial Markets*, Nison's *Japanese Candlestick Charting Techniques*,
+   Brooks' *Trading Price Action* series, Bulkowski's *Encyclopedia of Chart
+   Patterns*, Tharp's *Trade Your Way to Financial Freedom* (position sizing),
+   Chan's *Algorithmic Trading*, and López de Prado's *Advances in Financial
+   Machine Learning* (backtest overfitting).
 
 ## Architecture
 
 ```
 webapp/
 ├── backend/
-│   ├── app.py                   # FastAPI: REST + WebSocket, runs the engine loop
-│   ├── config.py                # watchlist, strategy + thresholds, risk, costs, market hours
-│   ├── trader_brain.py          # ★ confluence strategy: evidence ledger → BUY / SELL / wait
-│   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, volume ratio, resampling
-│   ├── candlestick_patterns.py  # context-aware candlestick pattern recognition
-│   ├── market_structure.py      # swings, Dow trend, S/R zones, prev-day & opening range, breakouts
-│   ├── news_sentiment.py        # Yahoo headlines → recency-weighted finance-lexicon sentiment
-│   ├── strategy_engine.py       # strategy registry (+ legacy sma_crossover / rsi_reversion)
-│   ├── risk_manager.py          # position sizing, notional cap, ATR stops/targets, daily loss limit
-│   ├── trading_engine.py        # background loop: data → stops → signal → risk → execute
-│   ├── backtester.py            # replays history through the same strategy/risk code, with costs
-│   ├── costs.py                 # brokerage, STT, exchange, SEBI, GST, stamp duty, slippage
-│   ├── data_provider.py         # Kite real-time data when connected, yfinance otherwise
-│   ├── state.py                 # shared in-memory state + fill accounting
-│   ├── paper_broker.py          # simulated execution (default)
-│   ├── kite_broker.py           # live execution via Kite Connect
-│   └── generate_access_token.py # daily Kite login (sessions expire each day)
-└── frontend/
-    └── index.html               # single-file dashboard (vanilla JS + lightweight-charts)
+│   ├── app.py                   # FastAPI: REST + WebSocket, runs the engine
+│   ├── config.py                # SCANNER, MARKET_FILTER, NEWS, STRATEGY_PARAMS, RISK, COSTS
+│   ├── trading_engine.py        # loop: scan → per-stock brain → market/risk gates → execute → activity log
+│   ├── scanner.py               # ★ NIFTY 100 ranking: market context, tradability, setup, in-play, catalysts
+│   ├── trader_brain.py          # ★ confluence timing strategy with explanations
+│   ├── news_sentiment.py        # ★ multi-source news aggregation + market catalyst discovery
+│   ├── nse_feed.py              # ★ NSE announcements + results calendar
+│   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
+│   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
+│   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, resampling
+│   ├── candlestick_patterns.py  # context-aware pattern recognition
+│   ├── market_structure.py      # swings, Dow trend, S/R zones, breakouts
+│   ├── risk_manager.py          # risk sizing, 33% notional cap, ATR stops, daily loss limit
+│   ├── backtester.py            # same strategy/risk code over history, with costs; --universe mode
+│   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
+│   └── data/nifty100.csv
+└── frontend/index.html          # single-file dashboard
 ```
-
-Every `POLL_INTERVAL_SECONDS` during market hours, for each symbol, the engine
-fetches candles, checks the open position's stop/target first, runs the
-strategy (fetching cached news sentiment if the strategy uses it), sizes the
-trade through the risk manager, executes in paper or live mode, and publishes
-the full analysis to the dashboard.
 
 ## Setup
 
-1. **Install**
-   ```bash
-   cd webapp/backend
-   python3 -m venv .venv && source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-2. **Run the backend**
-   ```bash
-   uvicorn app:app --reload --port 8000
-   ```
-3. **Open the dashboard**: open `frontend/index.html` in a browser (or
-   `python3 -m http.server 5500` from `frontend/`). Analysis appears once the
-   market is open and enough candles have loaded (~80 bars).
-4. **Configure** `backend/config.py`: `WATCHLIST`, `STRATEGY`,
-   `STRATEGY_PARAMS["trader_brain"]`, `RISK`, market times.
-
-### Backtesting
-
 ```bash
-cd backend
-python backtester.py --strategy trader_brain --days 55
-python backtester.py --strategy sma_crossover --days 55
-python backtester.py --symbols SBIN,ICICIBANK --strategy trader_brain
-python backtester.py --no-costs   # frictionless, for reference only
+cd webapp/backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export MARKETAUX_API_KEY=...        # optional
+uvicorn app:app --port 8000
 ```
 
-Re-run with costs on after **every** rule change.
+Then open `frontend/index.html`, or serve it with `python3 -m http.server 5500`
+from `frontend/`. The first scan runs within a minute, even when the market is
+closed (it shows the last session). To point the dashboard at a backend on
+another local port, add `?api=http://localhost:8765` to the URL.
 
-### Going live (only after paper + backtest results justify it)
+Main settings in `config.py`: `SCANNER` (universe filters, active count,
+pinned symbols), `MARKET_FILTER` (risk-off / VIX behaviour), `NEWS` (sources),
+`STRATEGY_PARAMS["trader_brain"]`, and `RISK`.
 
-1. Create an app at https://developers.kite.trade and subscribe to Kite
-   Connect (~₹500/month, includes real-time data). Note the API key and secret.
-2. **Whitelist a static IP** on the app (a SEBI requirement). Use an ISP
-   static IP or an India-hosted VPS.
-3. `export KITE_API_KEY=... KITE_API_SECRET=...`
-4. Each morning: `python generate_access_token.py`, or click **Connect Kite**
-   on the dashboard. The token is saved to `backend/.kite_session.json`
-   (gitignored — never commit it).
-5. Click **LIVE** and confirm.
+### Going live (only once backtests and paper results justify it)
 
-This setup trades one personal account at well under 10 orders/second,
-which is why it doesn't need formal algo registration. Don't scale order
-frequency up without registering.
+1. Create an app at https://developers.kite.trade and subscribe (~₹500/month, includes real-time data).
+2. Whitelist a **static IPv4** on the app. Use a VPS in India, and run the backend there.
+3. `export KITE_API_KEY=... KITE_API_SECRET=...`, then log in each morning
+   (`python generate_access_token.py` or **Connect Kite**). The token is
+   saved to the gitignored `.kite_session.json`.
+4. Click **LIVE** and confirm.
 
 ## Known limitations
 
-- Still net-negative in backtests (see above). Building an edge is the main work left.
-- Long-only. The bearish analysis is used for exits, not short entries.
-- News can't be backtested, and lexicon sentiment is crude.
-- The live loop evaluates the still-forming candle, so live signals can
-  differ slightly from backtests, which use completed bars.
-- State isn't persisted, so a restart clears positions and history.
-- Live positions are a local mirror, not reconciled with `kite.positions()`.
-  Partial fills, rejections, or manual trades will make them diverge.
+- Net-negative in every backtest. There's no edge yet.
+- Long-only.
+- News, gaps, relative volume and results-day filters can't be backtested
+  (no historical data for them).
+- Live analysis uses the still-forming candle, unlike backtests.
+- State isn't persisted, and live positions aren't reconciled with `kite.positions()`.
 - Single-user, no API auth, CORS open. Local use only.
-- yfinance is unofficial and can rate-limit or change format.

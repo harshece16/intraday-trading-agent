@@ -9,154 +9,190 @@
     --bg: #0D1117;
     --panel: #12181F;
     --panel-border: #232B36;
+    --row-line: #171D26;
     --text: #E6E9EE;
     --text-dim: #7C8798;
     --green: #3ECF8E;
     --red: #F0555A;
     --amber: #E8A73C;
     --accent: #5B8DEF;
+    --violet: #B79CF0;
     --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
     --sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 13px;
+    display: flex; flex-direction: column; min-height: 100vh;
   }
   a { color: inherit; }
+  .k { color: var(--text-dim); }
+  .small { font-size: 11px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
 
   header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--panel-border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    padding: 12px 22px; border-bottom: 1px solid var(--panel-border);
   }
   .brand { display: flex; align-items: baseline; gap: 10px; }
-  .brand-mark {
-    width: 9px; height: 9px; border-radius: 50%;
-    background: var(--text-dim);
-  }
+  .brand-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--text-dim); }
   .brand-mark.open { background: var(--green); box-shadow: 0 0 8px var(--green); }
   .brand-mark.closed { background: var(--red); }
   .brand h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
   .brand .status-text { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
-
-  .controls { display: flex; align-items: center; gap: 14px; }
+  .controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .pnl-summary { display: flex; gap: 18px; font-family: var(--mono); }
   .pnl-summary .label { color: var(--text-dim); font-size: 11px; display: block; }
   .pnl-summary .value { font-size: 16px; font-weight: 600; }
-  .pos { color: var(--green); }
-  .neg { color: var(--red); }
-
-  .mode-toggle {
-    display: flex; align-items: center; gap: 8px;
-    border: 1px solid var(--panel-border);
-    border-radius: 6px;
-    padding: 6px 10px;
-    background: var(--panel);
+  .mode-toggle, .kite-status {
+    display: flex; align-items: center; gap: 8px; border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 6px 10px; background: var(--panel);
   }
   .mode-toggle button {
-    background: none; border: none; color: var(--text-dim);
-    font-family: var(--mono); font-size: 12px; cursor: pointer;
-    padding: 4px 10px; border-radius: 4px;
+    background: none; border: none; color: var(--text-dim); font-family: var(--mono);
+    font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 4px;
   }
   .mode-toggle button.active.paper { background: #1B2A24; color: var(--green); }
   .mode-toggle button.active.live { background: #2A1B1B; color: var(--red); }
-
-  .kite-status {
-    display: flex; align-items: center; gap: 8px;
-    border: 1px solid var(--panel-border);
-    border-radius: 6px;
-    padding: 6px 10px;
-    background: var(--panel);
-    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
-  }
+  .kite-status { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
   .kite-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
   .kite-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
   .kite-dot.stale { background: var(--amber); }
-  .kite-status button {
-    background: var(--accent); color: #fff; border: none; border-radius: 4px;
+  .btn {
+    background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 4px;
     padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;
   }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .market-strip {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px;
+    padding: 8px 22px; border-bottom: 1px solid var(--panel-border);
+    background: var(--panel); font-family: var(--mono); font-size: 12px;
+  }
+  .strip-spacer { flex: 1; }
+  .bias { padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; cursor: help; }
+  .bias.risk-on { background: #1B2A24; color: var(--green); }
+  .bias.risk-off { background: #2A1B1B; color: var(--red); }
+  .bias.neutral { background: #2A241B; color: var(--amber); }
 
   main {
-    display: grid;
-    grid-template-columns: 280px 1fr 320px;
-    grid-template-rows: 1fr 260px;
-    gap: 1px;
-    background: var(--panel-border);
-    height: calc(100vh - 57px);
+    flex: 1; min-height: 0; display: grid; gap: 1px; background: var(--panel-border);
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr) minmax(320px, 370px);
+    grid-template-rows: minmax(0, 1fr) 290px;
   }
-  .panel { background: var(--bg); padding: 16px 18px; overflow-y: auto; }
+  .panel { background: var(--bg); padding: 14px 16px; overflow-y: auto; min-height: 0; }
   .panel h2 {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
-    color: var(--text-dim); font-weight: 600; margin: 0 0 12px 0;
+    color: var(--text-dim); font-weight: 600; margin: 0 0 10px 0;
   }
-
-  /* Watchlist */
-  .watch-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 8px; border-radius: 6px; cursor: pointer;
-    margin-bottom: 2px;
+  .panel h2 .k { text-transform: none; letter-spacing: 0; font-weight: 400; font-family: var(--mono); }
+  #scanner-panel { grid-column: 1; grid-row: 1; padding-top: 0; }
+  #scanner-panel h2 { position: sticky; top: 0; background: var(--bg); padding-top: 14px; padding-bottom: 6px; margin: 0; z-index: 2; }
+  .chart-panel { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; }
+  #detail-panel { grid-column: 3; grid-row: 1; }
+  #activity-panel { grid-column: 1; grid-row: 2; }
+  .blotter { grid-column: 2; grid-row: 2; }
+  #news-panel { grid-column: 3; grid-row: 2; }
+  @media (max-width: 1100px) {
+    body { height: auto; }
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    #scanner-panel, .chart-panel, #detail-panel, #activity-panel, .blotter, #news-panel {
+      grid-column: 1; grid-row: auto; max-height: 560px;
+    }
+    .chart-panel { height: 440px; }
   }
-  .watch-row:hover { background: var(--panel); }
-  .watch-row.selected { background: var(--panel); border-left: 2px solid var(--accent); }
-  .watch-sym { font-weight: 600; }
-  .watch-sub { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
-  .watch-price { font-family: var(--mono); text-align: right; }
-  .watch-price .px { font-size: 14px; }
-  .watch-price .sig { font-size: 10px; display: block; }
+  .empty-state { color: var(--text-dim); font-size: 12px; padding: 10px 0; line-height: 1.5; }
 
-  /* Chart panel */
-  .chart-panel { grid-row: 1; grid-column: 2; display: flex; flex-direction: column; }
-  #chart { flex: 1; min-height: 0; }
-  .chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-  .chart-header .sym { font-size: 20px; font-weight: 700; }
+  /* Scanner */
+  .scan-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  .scan-table th {
+    position: sticky; top: 36px; background: var(--bg); z-index: 1; text-align: left;
+    color: var(--text-dim); font-weight: 500; font-size: 10px; padding: 6px 4px; border-bottom: 1px solid var(--panel-border);
+  }
+  .scan-table td { padding: 6px 4px; border-bottom: 1px solid var(--row-line); vertical-align: middle; }
+  .scan-table tr.row { cursor: pointer; }
+  .scan-table tr.row:hover td, .scan-table tr.selected td { background: var(--panel); }
+  .scan-table tr.selected td:first-child { box-shadow: inset 2px 0 var(--accent); }
+  .scan-table tr.excluded td { opacity: 0.55; }
+  .num { text-align: right; white-space: nowrap; }
+  .sym { font-family: var(--sans); font-weight: 600; }
+  .sub { display: block; max-width: 140px; font-family: var(--sans); font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scorebar { display: inline-block; width: 38px; height: 5px; background: var(--panel); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .scorebar i { display: block; height: 100%; background: var(--accent); }
+  .status { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+  .status.ACTIVE { background: #1B2A24; color: var(--green); }
+  .status.WATCH { background: var(--panel); color: var(--text-dim); }
+  .status.AVOID { background: #2A1B1B; color: var(--red); }
+  .status.HELD { background: #1B2233; color: var(--accent); }
+  .status.ENTRY { background: var(--green); color: #0D1117; font-weight: 600; }
+  .toggle-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; padding: 10px 0; font-family: var(--mono); }
+
+  /* Chart */
+  .chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 10px; }
+  .sym-big { font-size: 20px; font-weight: 700; }
   .chart-header .px { font-family: var(--mono); font-size: 20px; }
+  .chart-legend { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 8px; min-height: 14px; }
+  .chart-legend i { display: inline-block; width: 12px; height: 0; border-top: 2px dashed; vertical-align: middle; margin: 0 4px 0 10px; }
+  #chart { flex: 1; min-height: 0; }
 
-  /* Positions/risk panel */
-  .position-card {
-    border: 1px solid var(--panel-border); border-radius: 6px;
-    padding: 10px 12px; margin-bottom: 8px;
-  }
+  /* Detail: selection + brain */
+  .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .big { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+  .warn-box { border: 1px solid #4A3A1B; background: #1E1A12; color: var(--amber); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin: 8px 0; }
+  .brain-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-family: var(--mono); font-size: 12px; }
+  .brain-setup { font-family: var(--sans); font-weight: 600; font-size: 13px; }
+  .brain-tags { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+  .score-row { display: grid; grid-template-columns: 34px 1fr 36px; gap: 8px; align-items: center; font-family: var(--mono); font-size: 11px; margin: 4px 0; }
+  .score-track { position: relative; height: 6px; background: var(--panel); border-radius: 3px; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-mark { position: absolute; top: -2px; width: 2px; height: 10px; background: var(--text); opacity: 0.6; }
+  .brain-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-family: var(--mono); font-size: 11px; margin: 10px 0; }
+  .brain-list { list-style: none; padding: 0; margin: 4px 0 0 0; font-size: 12px; }
+  .brain-list li { padding: 3px 0; display: flex; gap: 8px; line-height: 1.35; }
+  .brain-list .pts { font-family: var(--mono); font-size: 11px; min-width: 32px; flex-shrink: 0; }
+  .brain-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-top: 10px; }
+  .chip { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; margin: 3px 4px 0 0; background: var(--panel); }
+  .chip.bullish { color: var(--green); } .chip.bearish { color: var(--red); } .chip.neutral { color: var(--amber); }
+  .position-card { border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
   .position-card .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; }
-  .position-card .row .k { color: var(--text-dim); }
-  .empty-state { color: var(--text-dim); font-size: 12px; padding: 10px 0; }
+
+  /* Activity */
+  .act { display: grid; grid-template-columns: 42px 66px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--row-line); font-size: 12px; line-height: 1.4; }
+  .act .t { font-family: var(--mono); color: var(--text-dim); font-size: 11px; }
+  .kind { font-family: var(--mono); font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--panel); color: var(--text-dim); text-align: center; height: fit-content; }
+  .kind.trade { color: var(--green); }
+  .kind.blocked, .kind.risk { color: var(--amber); }
+  .kind.error { color: var(--red); }
+  .kind.scan, .kind.watchlist { color: var(--accent); }
+  .kind.setup { color: var(--violet); }
+  .symlink { font-weight: 600; cursor: pointer; }
+  .symlink:hover { color: var(--accent); }
 
   /* Blotter */
-  .blotter { grid-column: 1 / span 3; grid-row: 2; padding: 14px 18px; }
-  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
-  th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
-  td { padding: 6px 8px; border-bottom: 1px solid #171D26; }
+  table.trades { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  table.trades th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
+  table.trades td { padding: 6px 8px; border-bottom: 1px solid var(--row-line); }
+  .why { max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--sans); }
   .side-buy { color: var(--green); }
   .side-sell { color: var(--red); }
   .badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-family: var(--mono); }
   .badge.paper { background: #1B2A24; color: var(--green); }
   .badge.live { background: #2A1B1B; color: var(--red); }
 
-  /* Trader Brain */
-  .brain-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .brain-setup { font-weight: 600; }
-  .brain-tags { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
-  .score-row { display: grid; grid-template-columns: 34px 1fr 36px; gap: 8px; align-items: center; font-family: var(--mono); font-size: 11px; margin: 4px 0; }
-  .score-track { position: relative; height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; }
-  .score-fill { height: 100%; border-radius: 3px; }
-  .score-mark { position: absolute; top: -2px; width: 2px; height: 10px; background: var(--text); opacity: 0.6; }
-  .brain-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-family: var(--mono); font-size: 11px; margin: 10px 0; }
-  .brain-stats .k { color: var(--text-dim); }
-  .brain-list { list-style: none; padding: 0; margin: 6px 0 0 0; font-size: 12px; }
-  .brain-list li { padding: 3px 0; display: flex; gap: 8px; }
-  .brain-list .pts { font-family: var(--mono); font-size: 11px; min-width: 34px; }
-  .brain-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-top: 10px; }
-  .chip { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; margin: 3px 4px 0 0; background: var(--panel); }
-  .chip.bullish { color: var(--green); } .chip.bearish { color: var(--red); } .chip.neutral { color: var(--amber); }
-  .news-item { font-size: 11px; color: var(--text-dim); padding: 3px 0; }
+  /* News */
+  .news-item { padding: 6px 0; border-bottom: 1px solid var(--row-line); font-size: 12px; line-height: 1.4; }
+  .news-item a { text-decoration: none; }
+  .news-item a:hover { text-decoration: underline; }
+  .news-item[data-sym] { cursor: pointer; }
+  .src { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .score-tag { font-family: var(--mono); font-size: 11px; margin-right: 4px; }
 
-  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
 </style>
 </head>
@@ -173,10 +209,10 @@
       <div><span class="label">Realized</span><span class="value" id="realized-pnl">₹0</span></div>
       <div><span class="label">Unrealized</span><span class="value" id="unrealized-pnl">₹0</span></div>
     </div>
-    <div class="kite-status" id="kite-status">
+    <div class="kite-status">
       <span class="kite-dot" id="kite-dot"></span>
       <span id="kite-label">Kite: checking…</span>
-      <button id="btn-connect-kite">Connect Kite</button>
+      <button class="btn primary" id="btn-connect-kite">Connect Kite</button>
     </div>
     <div class="mode-toggle">
       <button id="btn-paper" class="active paper">PAPER</button>
@@ -185,53 +221,110 @@
   </div>
 </header>
 
+<div class="market-strip" id="market-strip"><span class="k">Market context: connecting…</span></div>
+
 <main>
-  <section class="panel" id="watchlist-panel">
-    <h2>Watchlist</h2>
-    <div id="watchlist"></div>
+  <section class="panel" id="scanner-panel">
+    <h2><span>Opportunities · NIFTY 100</span><span class="k" id="scan-meta"></span></h2>
+    <div id="scanner"></div>
   </section>
 
   <section class="panel chart-panel">
     <div class="chart-header">
-      <span class="sym" id="chart-sym">—</span>
+      <div><span class="sym-big" id="chart-sym">—</span> <span class="k small" id="chart-name"></span></div>
       <span class="px" id="chart-px">—</span>
     </div>
+    <div class="chart-legend" id="chart-legend"></div>
     <div id="chart"></div>
   </section>
 
-  <section class="panel" id="positions-panel">
-    <h2>Trader Brain · <span id="brain-sym">—</span></h2>
+  <section class="panel" id="detail-panel">
+    <div id="selection"></div>
+    <h2 style="margin-top:16px"><span>Trader Brain · entry timing</span><span class="k" id="brain-src"></span></h2>
     <div id="brain"></div>
-    <h2 style="margin-top:20px">Open Positions</h2>
+    <h2 style="margin-top:18px">Open Positions</h2>
     <div id="positions"></div>
-    <h2 style="margin-top:20px">Recent Signals</h2>
-    <div id="signals"></div>
+  </section>
+
+  <section class="panel" id="activity-panel">
+    <h2><span>Agent Activity</span><span class="k" id="activity-count"></span></h2>
+    <div id="activity"></div>
   </section>
 
   <section class="panel blotter">
     <h2>Trade Blotter</h2>
-    <table>
-      <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Mode</th></tr></thead>
+    <table class="trades">
+      <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Why</th><th>Mode</th></tr></thead>
       <tbody id="blotter-body"></tbody>
     </table>
   </section>
+
+  <section class="panel" id="news-panel">
+    <h2><span id="news-title">News</span><span class="k" id="news-sources"></span></h2>
+    <div id="news"></div>
+    <h2 style="margin-top:16px">Market catalysts</h2>
+    <div id="catalysts"></div>
+  </section>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
-const API_BASE = window.location.hostname === "" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}:8000`;
+// ?api=http://localhost:8765 points the dashboard at a backend on another local port.
+const API_OVERRIDE = new URLSearchParams(window.location.search).get("api");
+const API_BASE = API_OVERRIDE && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(API_OVERRIDE)
+  ? API_OVERRIDE
+  : window.location.hostname === "" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}:8000`;
+const IST_OFFSET_S = 19800;
 let selectedSymbol = null;
+let userSelected = false;
 let chart, series;
+let priceLines = [];
+let priceLineKey = "";
 let latestState = null;
+let showExcluded = false;
+let lastChartedSymbol = null;
+let lastChartFetchTs = 0;
+const newsCache = {};
 
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+}
+function fmtNum(n, d = 2) {
+  return n === null || n === undefined || Number.isNaN(Number(n)) ? "—" : Number(n).toFixed(d);
+}
+function fmtPct(n, d = 2) {
+  if (n === null || n === undefined) return "—";
+  return `${n > 0 ? "+" : ""}${Number(n).toFixed(d)}%`;
+}
+function signed(n, d = 1) {
+  return n === null || n === undefined ? "—" : `${n >= 0 ? "+" : ""}${Number(n).toFixed(d)}`;
+}
+function cls(n) { return n > 0 ? "pos" : n < 0 ? "neg" : ""; }
 function fmtMoney(n) {
   if (n === null || n === undefined) return "—";
   const sign = n < 0 ? "-" : "";
   return `${sign}₹${Math.abs(n).toLocaleString("en-IN", {maximumFractionDigits: 0})}`;
 }
+function fmtTime(ts) { return new Date(ts * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}); }
+function safeUrl(u) { return typeof u === "string" && /^https?:\/\//i.test(u) ? u : null; }
+
+function scanRows(s) { return (s.scanner && s.scanner.rows) || []; }
+function rowFor(s, sym) { return scanRows(s).find(r => r.symbol === sym) || null; }
+function heldSymbols(s) { return Object.entries(s.positions).filter(([, p]) => p.quantity !== 0).map(([k]) => k); }
+function analysisFor(s, sym) {
+  const live = sym && s.indicators[sym];
+  if (live && live.bull_score !== undefined) return {b: live, live: true};
+  const r = sym && rowFor(s, sym);
+  if (r && r.brain) return {b: r.brain, live: false};
+  return null;
+}
 
 function initChart() {
   const el = document.getElementById("chart");
+  if (typeof LightweightCharts === "undefined") {
+    el.innerHTML = `<div class="empty-state">Chart library failed to load (no access to the CDN?) — scanner, brain, news and trading still work.</div>`;
+    return;
+  }
   chart = LightweightCharts.createChart(el, {
     layout: { background: { color: "transparent" }, textColor: "#7C8798", fontFamily: "IBM Plex Mono, monospace" },
     grid: { vertLines: { color: "#171D26" }, horzLines: { color: "#171D26" } },
@@ -240,87 +333,149 @@ function initChart() {
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
   });
   series = chart.addCandlestickSeries({
-    upColor: "#3ECF8E", downColor: "#F0555A",
-    borderVisible: false, wickUpColor: "#3ECF8E", wickDownColor: "#F0555A",
+    upColor: "#3ECF8E", downColor: "#F0555A", borderVisible: false, wickUpColor: "#3ECF8E", wickDownColor: "#F0555A",
   });
   new ResizeObserver(entries => {
     for (const entry of entries) chart.resize(entry.contentRect.width, entry.contentRect.height);
   }).observe(el);
 }
 
-function renderWatchlist(state) {
-  const container = document.getElementById("watchlist");
-  container.innerHTML = "";
-  state.watchlist.forEach(sym => {
-    const ind = state.indicators[sym] || {};
-    const pos = state.positions[sym] || {};
-    const row = document.createElement("div");
-    row.className = "watch-row" + (sym === selectedSymbol ? " selected" : "");
-    row.onclick = () => { selectedSymbol = sym; renderAll(latestState); };
-    const heldTag = pos.quantity ? `${pos.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(pos.quantity)}` : "flat";
-    row.innerHTML = `
+function pickDefaultSymbol(s) {
+  const rows = scanRows(s);
+  const valid = sym => sym && (rowFor(s, sym) || s.watchlist.includes(sym) || s.positions[sym]);
+  if (userSelected && valid(selectedSymbol)) return;
+  const next = heldSymbols(s)[0] || (s.scanner && s.scanner.active[0]) || (rows[0] && rows[0].symbol) || s.watchlist[0] || null;
+  if (next !== selectedSymbol) {
+    selectedSymbol = next;
+    if (next) fetchNews(next);
+  }
+}
+
+function selectSymbol(sym) {
+  selectedSymbol = sym;
+  userSelected = true;
+  fetchNews(sym);
+  renderAll(latestState);
+}
+
+function renderHeader(s) {
+  document.getElementById("market-dot").className = "brand-mark " + (s.market_status === "open" ? "open" : "closed");
+  document.getElementById("status-text").textContent =
+    `Market ${s.market_status} · engine update ${s.last_update_ts ? fmtTime(s.last_update_ts) : "—"}`;
+  const rp = document.getElementById("realized-pnl");
+  rp.textContent = fmtMoney(s.realized_pnl_today);
+  rp.className = "value " + (s.realized_pnl_today >= 0 ? "pos" : "neg");
+  const up = document.getElementById("unrealized-pnl");
+  up.textContent = fmtMoney(s.unrealized_pnl);
+  up.className = "value " + (s.unrealized_pnl >= 0 ? "pos" : "neg");
+  document.getElementById("btn-paper").classList.toggle("active", s.paper_mode);
+  document.getElementById("btn-live").classList.toggle("active", !s.paper_mode);
+}
+
+function renderMarket(s) {
+  const el = document.getElementById("market-strip");
+  const m = s.market, sc = s.scanner;
+  const scanBtn = `<button class="btn" id="btn-scan">Scan now</button>`;
+  if (!m) {
+    el.innerHTML = `<span class="k">Market context: waiting for the first scan (downloads data for 100 stocks, ~30s)…</span><span class="strip-spacer"></span>${scanBtn}`;
+    return;
+  }
+  const sectors = (sc && sc.sectors) || [];
+  const sectorTxt = list => list.map(x => `${esc(x.industry)} <span class="${cls(x.chg_pct)}">${fmtPct(x.chg_pct, 1)}</span>`).join(" · ") || "—";
+  el.innerHTML = `
+    <span class="bias ${esc(m.bias)}" title="${esc(m.reasons.join(" · "))}">${esc(m.bias.toUpperCase())}</span>
+    <span><span class="k">NIFTY</span> ${fmtNum(m.nifty.ltp, 1)} <span class="${cls(m.nifty.chg_pct)}">${fmtPct(m.nifty.chg_pct)}</span> <span class="k">daily ${esc(m.nifty.trend)}</span></span>
+    <span><span class="k">VIX</span> <span class="${m.vix_high ? "neg" : ""}">${fmtNum(m.vix, 1)}</span></span>
+    <span><span class="k">Breadth</span> <span class="pos">${m.breadth.adv}▲</span> <span class="neg">${m.breadth.dec}▼</span></span>
+    <span><span class="k">Leading</span> ${sectorTxt(sectors.slice(0, 3))}</span>
+    <span><span class="k">Lagging</span> ${sectorTxt(sectors.slice(-2).reverse())}</span>
+    <span class="strip-spacer"></span>
+    <span class="k">${s.market_status !== "open" ? `last session ${esc(m.session_date)} · ` : ""}scanned ${sc ? fmtTime(sc.ts) : "—"}</span>
+    ${scanBtn}`;
+}
+
+function renderScanner(s) {
+  const el = document.getElementById("scanner");
+  const rows = scanRows(s);
+  const held = new Set(heldSymbols(s));
+  document.getElementById("scan-meta").textContent = s.scanner
+    ? `${s.scanner.scanned} scanned · ${s.scanner.active.length} active` : "";
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-state">The scanner is warming up — the first scan ranks all NIFTY 100 stocks and takes about 30 seconds.</div>` +
+      s.watchlist.map(sym => `<div class="news-item" data-sym="${esc(sym)}"><span class="sym">${esc(sym)}</span></div>`).join("");
+    return;
+  }
+  const visible = rows.filter(r => showExcluded || !r.excluded);
+  const maxScore = Math.max(40, ...rows.map(r => r.final_score || 0));
+  const labels = {ACTIVE: "ACTIVE", WATCH: "watch", AVOID: "avoid", HELD: "HELD", ENTRY: "ENTRY OK"};
+  const body = visible.map(r => {
+    const a = analysisFor(s, r.symbol);
+    let status = r.status;
+    if (held.has(r.symbol)) status = "HELD";
+    else if (r.status === "ACTIVE" && a && a.b.long_ok) status = "ENTRY";
+    const tip = r.excluded || (r.reasons || []).slice(0, 3).map(x => x.text).join(" · ");
+    const width = Math.max(0, Math.min(100, (r.final_score / maxScore) * 100));
+    return `<tr class="row ${r.symbol === selectedSymbol ? "selected" : ""} ${r.excluded ? "excluded" : ""}" data-sym="${esc(r.symbol)}" title="${esc(tip)}">
+      <td class="k">${r.rank}</td>
+      <td><span class="sym">${esc(r.symbol)}</span><span class="sub">${esc(r.industry)}</span></td>
+      <td class="num ${cls(r.chg_pct)}">${fmtPct(r.chg_pct, 1)}</td>
+      <td class="num">${r.rvol == null ? "—" : fmtNum(r.rvol, 1) + "×"}</td>
+      <td class="num"><span class="scorebar"><i style="width:${width}%"></i></span>${fmtNum(r.final_score, 0)}</td>
+      <td class="num"><span class="status ${status}">${labels[status]}</span></td>
+    </tr>`;
+  }).join("");
+  const toggle = s.scanner.excluded_count
+    ? `<button class="toggle-link" id="btn-toggle-excluded">${showExcluded ? "Hide filtered-out stocks" : `Show ${s.scanner.excluded_count} filtered-out stocks`}</button>` : "";
+  el.innerHTML = `<table class="scan-table">
+    <thead><tr><th>#</th><th>Stock</th><th class="num">Chg</th><th class="num">RVol</th><th class="num">Score</th><th class="num">Status</th></tr></thead>
+    <tbody>${body}</tbody></table>${toggle}`;
+}
+
+function renderSelection(s) {
+  const el = document.getElementById("selection");
+  const sym = selectedSymbol;
+  if (!sym) { el.innerHTML = `<div class="empty-state">Select a stock from Opportunities.</div>`; return; }
+  const r = rowFor(s, sym);
+  if (!r) {
+    el.innerHTML = `<h2>Why ${esc(sym)}</h2><div class="empty-state">Not in the latest scan — tracked because it is pinned or held.</div>`;
+    return;
+  }
+  const reasons = (r.reasons || []).map(x =>
+    `<li><span class="pts ${x.points >= 0 ? "pos" : "neg"}">${signed(x.points, 0)}</span><span>${esc(x.text)}</span></li>`).join("");
+  const cat = r.catalyst ? `<div class="brain-sub">Catalyst</div><div class="news-item"><span class="score-tag ${cls(r.catalyst.score)}">${signed(r.catalyst.score, 2)}</span>${esc(r.catalyst.top)}</div>` : "";
+  el.innerHTML = `
+    <div class="detail-head">
       <div>
-        <div class="watch-sym">${sym}</div>
-        <div class="watch-sub">${heldTag}</div>
+        <span class="sym-big">${esc(r.symbol)}</span> <span class="status ${esc(r.status)}">${esc(r.status)}</span>
+        <div class="k small">${esc(r.name)} · ${esc(r.industry)}</div>
       </div>
-      <div class="watch-price">
-        <div class="px">${ind.ltp ? ind.ltp.toFixed(2) : "—"}</div>
-      </div>`;
-    container.appendChild(row);
-  });
+      <div class="num"><div class="big">${fmtNum(r.final_score, 0)}</div><div class="k small">scan score · #${r.rank}</div></div>
+    </div>
+    ${r.excluded ? `<div class="warn-box">${esc(r.excluded)}</div>` : ""}
+    <div class="brain-stats">
+      <span><span class="k">Gap</span> ${fmtPct(r.gap_pct, 1)}</span>
+      <span><span class="k">vs NIFTY</span> <span class="${cls(r.rs_today)}">${fmtPct(r.rs_today, 1)}</span></span>
+      <span><span class="k">Rel vol</span> ${r.rvol == null ? "—" : fmtNum(r.rvol, 1) + "×"}</span>
+      <span><span class="k">Daily ATR</span> ${fmtNum(r.atr_pct, 1)}%</span>
+      <span><span class="k">10d RS</span> <span class="${cls(r.rs10)}">${fmtPct(r.rs10, 1)}</span></span>
+      <span><span class="k">From 52w hi</span> ${fmtNum(r.pct_from_high, 1)}%</span>
+      <span><span class="k">Daily trend</span> ${esc(r.daily_trend)}</span>
+      <span><span class="k">Turnover</span> ₹${fmtNum(r.turnover_cr, 0)} cr</span>
+    </div>
+    <div class="brain-sub">Why the scanner ranks it here</div>
+    <ul class="brain-list">${reasons || `<li class="k">No strong factors either way</li>`}</ul>
+    ${cat}`;
 }
 
-let lastChartedSymbol = null;
-let lastChartFetchTs = 0;
-
-function renderChart(state) {
-  if (!selectedSymbol && state.watchlist.length) selectedSymbol = state.watchlist[0];
-  document.getElementById("chart-sym").textContent = selectedSymbol || "—";
-  const ind = (selectedSymbol && state.indicators[selectedSymbol]) || {};
-  document.getElementById("chart-px").textContent = ind.ltp ? ind.ltp.toFixed(2) : "—";
-
-  const now = Date.now();
-  const symbolChanged = selectedSymbol && selectedSymbol !== lastChartedSymbol;
-  const staleData = now - lastChartFetchTs > 20000; // refresh at most every 20s
-  if (selectedSymbol && (symbolChanged || staleData)) {
-    lastChartedSymbol = selectedSymbol;
-    lastChartFetchTs = now;
-    fetchCandles(selectedSymbol);
-  }
-}
-
-function renderPositions(state) {
-  const container = document.getElementById("positions");
-  const held = Object.entries(state.positions).filter(([, p]) => p.quantity !== 0);
-  if (!held.length) {
-    container.innerHTML = `<div class="empty-state">No open positions.</div>`;
-    return;
-  }
-  container.innerHTML = held.map(([sym, p]) => `
-    <div class="position-card">
-      <div class="row"><span class="k">${sym}</span><span>${p.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(p.quantity)}</span></div>
-      <div class="row"><span class="k">Avg</span><span>${p.avg_price.toFixed(2)}</span></div>
-      <div class="row"><span class="k">LTP</span><span>${p.ltp ? p.ltp.toFixed(2) : "—"}</span></div>
-      <div class="row"><span class="k">P&L</span><span class="${p.unrealized_pnl >= 0 ? "pos" : "neg"}">${p.unrealized_pnl !== null ? fmtMoney(p.unrealized_pnl) : "—"}</span></div>
-    </div>`).join("");
-}
-
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
-}
-
-function fmtNum(n, d = 2) {
-  return n === null || n === undefined ? "—" : Number(n).toFixed(d);
-}
-
-function renderBrain(state) {
+function renderBrain(s) {
   const el = document.getElementById("brain");
-  document.getElementById("brain-sym").textContent = selectedSymbol || "—";
-  const b = (selectedSymbol && state.indicators[selectedSymbol]) || {};
-  if (b.bull_score === undefined) {
-    el.innerHTML = `<div class="empty-state">Waiting for enough candles to analyse…</div>`;
+  const a = analysisFor(s, selectedSymbol);
+  document.getElementById("brain-src").textContent = a ? (a.live ? "live" : "from last scan") : "";
+  if (!a) {
+    el.innerHTML = `<div class="empty-state">No timing read yet — the brain runs on the scanner's top candidates and on every active stock while the market is open.</div>`;
     return;
   }
+  const b = a.b;
   const scale = Math.max(12, b.bull_score, b.bear_score, b.entry_threshold * 1.5);
   const bar = (label, val, thr, color) => `
     <div class="score-row">
@@ -331,95 +486,181 @@ function renderBrain(state) {
       </div>
       <span>${fmtNum(val, 1)}</span>
     </div>`;
-  const list = (items) => items.map(r => `
-    <li><span class="pts ${r.points >= 0 ? "pos" : "neg"}">${r.points >= 0 ? "+" : ""}${fmtNum(r.points, 1)}</span><span>${esc(r.text)}</span></li>`).join("");
+  const list = items => items.map(r =>
+    `<li><span class="pts ${r.points >= 0 ? "pos" : "neg"}">${signed(r.points, 1)}</span><span>${esc(r.text)}</span></li>`).join("");
   const status = b.long_ok ? `<span class="pos">ENTRY OK</span>` : b.exit_long ? `<span class="neg">EXIT ZONE</span>` : `<span style="color:var(--amber)">WAIT</span>`;
-
   el.innerHTML = `
-    <div class="brain-head">
-      <span class="brain-setup">${esc(b.setup)}</span>${status}
-    </div>
+    <div class="brain-head"><span class="brain-setup">${esc(b.setup)}</span>${status}</div>
     <div class="brain-tags">${esc(b.regime)} · structure ${esc(b.structure)} · 15m ${esc(b.htf_trend)}</div>
     ${bar("BULL", b.bull_score, b.entry_threshold, "var(--green)")}
     ${bar("BEAR", b.bear_score, b.exit_threshold, "var(--red)")}
     <div class="brain-stats">
       <span><span class="k">RSI</span> ${fmtNum(b.rsi, 1)}</span><span><span class="k">ADX</span> ${fmtNum(b.adx, 1)}</span>
       <span><span class="k">VWAP</span> ${fmtNum(b.vwap)}</span><span><span class="k">Vol×</span> ${fmtNum(b.volume_ratio)}</span>
-      <span><span class="k">Sup</span> ${fmtNum(b.support)}</span><span><span class="k">Res</span> ${fmtNum(b.resistance)}</span>
+      <span><span class="k">Support</span> ${fmtNum(b.support)}</span><span><span class="k">Resist.</span> ${fmtNum(b.resistance)}</span>
     </div>
     ${b.patterns && b.patterns.length ? `<div>${b.patterns.map(p => `<span class="chip ${esc(p.bias)}">${esc(p.name)}</span>`).join("")}</div>` : ""}
-    <div class="brain-sub">Why bullish</div><ul class="brain-list">${list(b.reasons || []) || `<li class="k">nothing yet</li>`}</ul>
-    ${b.bear_reasons && b.bear_reasons.length ? `<div class="brain-sub">Why bearish</div><ul class="brain-list">${list(b.bear_reasons)}</ul>` : ""}
-    ${b.blockers && b.blockers.length ? `<div class="brain-sub">Holding back because</div><ul class="brain-list">${b.blockers.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-    ${b.news_headlines && b.news_headlines.length ? `<div class="brain-sub">News · sentiment ${b.news_score >= 0 ? "+" : ""}${fmtNum(b.news_score)}</div>
-      ${b.news_headlines.map(h => `<div class="news-item"><span class="${h.score >= 0 ? "pos" : "neg"}">${h.score >= 0 ? "+" : ""}${fmtNum(h.score)}</span> ${esc(h.title)} · ${fmtNum(h.age_h, 0)}h</div>`).join("")}` : ""}`;
+    <div class="brain-sub">Bullish evidence</div><ul class="brain-list">${list(b.reasons || []) || `<li class="k">nothing yet</li>`}</ul>
+    ${b.bear_reasons && b.bear_reasons.length ? `<div class="brain-sub">Bearish evidence</div><ul class="brain-list">${list(b.bear_reasons)}</ul>` : ""}
+    ${b.blockers && b.blockers.length ? `<div class="brain-sub">Holding back because</div><ul class="brain-list">${b.blockers.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
 }
 
-function renderSignals(state) {
-  const container = document.getElementById("signals");
-  if (!state.signals_log.length) {
-    container.innerHTML = `<div class="empty-state">No signals yet.</div>`;
-    return;
-  }
-  container.innerHTML = state.signals_log.slice(0, 8).map(s => `
-    <div class="position-card">
-      <div class="row"><span class="k">${s.symbol}</span><span class="${s.signal === "BUY" ? "pos" : "neg"}">${s.signal}</span></div>
-      <div class="row"><span class="k">${new Date(s.ts * 1000).toLocaleTimeString()}</span><span class="k">${esc(s.detail && s.detail.setup)}</span></div>
+function renderPositions(s) {
+  const el = document.getElementById("positions");
+  const held = Object.entries(s.positions).filter(([, p]) => p.quantity !== 0);
+  if (!held.length) { el.innerHTML = `<div class="empty-state">No open positions.</div>`; return; }
+  el.innerHTML = held.map(([sym, p]) => `
+    <div class="position-card" data-sym="${esc(sym)}">
+      <div class="row"><span class="sym">${esc(sym)}</span><span>${p.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(p.quantity)}</span></div>
+      <div class="row"><span class="k">Avg / LTP</span><span>${fmtNum(p.avg_price)} / ${fmtNum(p.ltp)}</span></div>
+      <div class="row"><span class="k">P&amp;L</span><span class="${p.unrealized_pnl >= 0 ? "pos" : "neg"}">${p.unrealized_pnl !== null ? fmtMoney(p.unrealized_pnl) : "—"}</span></div>
     </div>`).join("");
 }
 
-function renderBlotter(state) {
+function renderActivity(s) {
+  const el = document.getElementById("activity");
+  const items = s.activity || [];
+  document.getElementById("activity-count").textContent = items.length ? `${items.length} events` : "";
+  if (!items.length) { el.innerHTML = `<div class="empty-state">Nothing yet — the engine logs scans, watchlist changes, forming setups, trades and skipped signals here.</div>`; return; }
+  el.innerHTML = items.map(a => `
+    <div class="act">
+      <span class="t">${fmtTime(a.ts)}</span>
+      <span class="kind ${esc(a.kind)}">${esc(a.kind)}</span>
+      <span>${a.symbol ? `<span class="symlink" data-sym="${esc(a.symbol)}">${esc(a.symbol)}</span> ` : ""}${esc(a.message)}</span>
+    </div>`).join("");
+}
+
+function renderBlotter(s) {
   const body = document.getElementById("blotter-body");
-  body.innerHTML = state.trades.map(t => `
-    <tr>
-      <td>${new Date(t.ts * 1000).toLocaleTimeString()}</td>
-      <td>${t.symbol}</td>
-      <td class="${t.side === "BUY" ? "side-buy" : "side-sell"}">${t.side}</td>
+  if (!s.trades.length) {
+    body.innerHTML = `<tr><td colspan="7" class="k">No trades yet today.</td></tr>`;
+    return;
+  }
+  body.innerHTML = s.trades.map(t => {
+    const why = [t.reason, t.note].filter(Boolean).join(" — ");
+    return `<tr>
+      <td>${fmtTime(t.ts)}</td>
+      <td><span class="symlink" data-sym="${esc(t.symbol)}">${esc(t.symbol)}</span></td>
+      <td class="${t.side === "BUY" ? "side-buy" : "side-sell"}">${esc(t.side)}</td>
       <td>${t.quantity}</td>
-      <td>${t.price.toFixed(2)}</td>
-      <td><span class="badge ${t.mode}">${t.mode.toUpperCase()}</span></td>
-    </tr>`).join("");
+      <td>${fmtNum(t.price)}</td>
+      <td class="why" title="${esc(why)}">${esc(why) || "—"}</td>
+      <td><span class="badge ${esc(t.mode)}">${esc(t.mode).toUpperCase()}</span></td>
+    </tr>`;
+  }).join("");
 }
 
-function renderHeader(state) {
-  const dot = document.getElementById("market-dot");
-  const statusText = document.getElementById("status-text");
-  dot.className = "brand-mark " + (state.market_status === "open" ? "open" : "closed");
-  statusText.textContent = `Market ${state.market_status} · last update ${state.last_update_ts ? new Date(state.last_update_ts * 1000).toLocaleTimeString() : "—"}`;
+function renderNews(s) {
+  const sym = selectedSymbol;
+  const n = sym && newsCache[sym];
+  const title = document.getElementById("news-title");
+  const sources = document.getElementById("news-sources");
+  const el = document.getElementById("news");
+  title.innerHTML = sym ? `News · ${esc(sym)}${n && !n.error ? ` · <span class="${cls(n.score)}">${signed(n.score, 2)}</span>` : ""}` : "News";
+  sources.textContent = n && n.sources ? Object.entries(n.sources).map(([k, v]) => `${k} ${v}`).join(" · ") : "";
+  if (!sym) el.innerHTML = `<div class="empty-state">Select a stock.</div>`;
+  else if (!n) el.innerHTML = `<div class="empty-state">Loading headlines…</div>`;
+  else if (n.error) el.innerHTML = `<div class="empty-state">News unavailable: ${esc(n.error)}</div>`;
+  else if (!n.headlines.length) el.innerHTML = `<div class="empty-state">No headlines in the last 72h.</div>`;
+  else el.innerHTML = n.headlines.map(h => {
+    const url = safeUrl(h.url);
+    const text = url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}</a>` : esc(h.title);
+    const publisher = h.publisher && h.publisher !== h.source ? ` · ${esc(h.publisher)}` : "";
+    return `<div class="news-item"><span class="score-tag ${cls(h.score)}">${signed(h.score, 2)}</span>${text}
+      <div class="src">${esc(h.source)}${publisher} · ${fmtNum(h.age_h, 0)}h ago</div></div>`;
+  }).join("");
 
-  document.getElementById("realized-pnl").textContent = fmtMoney(state.realized_pnl_today);
-  document.getElementById("realized-pnl").className = "value " + (state.realized_pnl_today >= 0 ? "pos" : "neg");
-  document.getElementById("unrealized-pnl").textContent = fmtMoney(state.unrealized_pnl);
-  document.getElementById("unrealized-pnl").className = "value " + (state.unrealized_pnl >= 0 ? "pos" : "neg");
-
-  document.getElementById("btn-paper").classList.toggle("active", state.paper_mode);
-  document.getElementById("btn-live").classList.toggle("active", !state.paper_mode);
+  const cats = scanRows(s).filter(r => r.catalyst).sort((a, b) => Math.abs(b.catalyst.score) - Math.abs(a.catalyst.score)).slice(0, 8);
+  document.getElementById("catalysts").innerHTML = cats.length ? cats.map(r => `
+    <div class="news-item" data-sym="${esc(r.symbol)}">
+      <span class="sym">${esc(r.symbol)}</span> <span class="score-tag ${cls(r.catalyst.score)}">${signed(r.catalyst.score, 2)}</span>
+      <div class="src">${esc(r.catalyst.top)}</div>
+    </div>`).join("") : `<div class="empty-state">No universe stocks in today's filings or market headlines yet.</div>`;
 }
 
-function renderAll(state) {
-  if (!state) return;
-  latestState = state;
-  renderHeader(state);
-  renderWatchlist(state);
-  renderChart(state);
-  renderBrain(state);
-  renderPositions(state);
-  renderSignals(state);
-  renderBlotter(state);
+function updatePriceLines(a) {
+  if (!series) return;
+  const b = a ? a.b : null;
+  const key = b ? [b.support, b.resistance, b.vwap].join("|") : "";
+  if (key === priceLineKey) return;
+  priceLineKey = key;
+  priceLines.forEach(l => series.removePriceLine(l));
+  priceLines = [];
+  const legend = [];
+  const add = (price, color, label) => {
+    if (!price) return;
+    priceLines.push(series.createPriceLine({ price, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: label }));
+    legend.push(`<i style="border-color:${color}"></i>${label} ${fmtNum(price)}`);
+  };
+  if (b) {
+    add(b.support, "#3ECF8E", "support");
+    add(b.resistance, "#F0555A", "resistance");
+    add(b.vwap, "#5B8DEF", "VWAP");
+  }
+  document.getElementById("chart-legend").innerHTML = legend.join("");
+}
+
+function renderChart(s) {
+  const sym = selectedSymbol;
+  const r = sym && rowFor(s, sym);
+  document.getElementById("chart-sym").textContent = sym || "—";
+  document.getElementById("chart-name").textContent = r ? r.name : "";
+  const ltp = (sym && s.indicators[sym] && s.indicators[sym].ltp) || (r && r.ltp);
+  document.getElementById("chart-px").textContent = ltp ? fmtNum(ltp) : "—";
+  const now = Date.now();
+  if (sym && (sym !== lastChartedSymbol || now - lastChartFetchTs > 20000)) {
+    if (sym !== lastChartedSymbol) priceLineKey = "__reset__";
+    lastChartedSymbol = sym;
+    lastChartFetchTs = now;
+    fetchCandles(sym);
+  }
+  updatePriceLines(analysisFor(s, sym));
 }
 
 async function fetchCandles(symbol) {
+  if (!series) return;
   try {
-    const res = await fetch(`${API_BASE}/api/candles/${symbol}`);
+    const res = await fetch(`${API_BASE}/api/candles/${encodeURIComponent(symbol)}`);
     const data = await res.json();
-    if (!data.candles || !data.candles.length) return;
-    const formatted = data.candles.map(c => ({
-      time: Math.floor(new Date(c.time).getTime() / 1000),
+    if (symbol !== selectedSymbol) return;
+    series.setData((data.candles || []).map(c => ({
+      time: Math.floor(new Date(c.time).getTime() / 1000) + IST_OFFSET_S,
       open: c.open, high: c.high, low: c.low, close: c.close,
-    }));
-    series.setData(formatted);
+    })));
     chart.timeScale().fitContent();
-  } catch (e) { /* data provider may not have data yet on first tick */ }
+  } catch (e) { /* backend may not have data yet */ }
+}
+
+async function fetchNews(symbol, force = false) {
+  if (!symbol) return;
+  const cached = newsCache[symbol];
+  if (!force && cached && Date.now() - cached._ts < 120000) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/news/${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    data._ts = Date.now();
+    newsCache[symbol] = data;
+  } catch (e) {
+    newsCache[symbol] = { error: String(e.message || e), headlines: [], _ts: Date.now() };
+  }
+  if (latestState) renderNews(latestState);
+}
+
+function renderAll(s) {
+  if (!s) return;
+  latestState = s;
+  pickDefaultSymbol(s);
+  renderHeader(s);
+  renderMarket(s);
+  renderScanner(s);
+  renderChart(s);
+  renderSelection(s);
+  renderBrain(s);
+  renderPositions(s);
+  renderActivity(s);
+  renderBlotter(s);
+  renderNews(s);
 }
 
 async function setMode(paperMode) {
@@ -428,6 +669,29 @@ async function setMode(paperMode) {
     body: JSON.stringify({ paper_mode: paperMode }),
   });
 }
+
+async function triggerScan(btn) {
+  btn.disabled = true;
+  btn.textContent = "Scanning…";
+  try {
+    const res = await fetch(`${API_BASE}/api/scan`, { method: "POST" });
+    const data = await res.json();
+    btn.textContent = data.started ? "Scan started" : (data.message || data.detail || "Busy");
+  } catch (e) {
+    btn.textContent = "Backend offline";
+  }
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest("a")) return;
+  if (e.target.id === "btn-scan") return triggerScan(e.target);
+  if (e.target.id === "btn-toggle-excluded") {
+    showExcluded = !showExcluded;
+    return renderScanner(latestState);
+  }
+  const el = e.target.closest("[data-sym]");
+  if (el) selectSymbol(el.dataset.sym);
+});
 
 document.getElementById("btn-paper").onclick = () => setMode(true);
 document.getElementById("btn-live").onclick = () => {
@@ -441,7 +705,6 @@ async function refreshKiteStatus() {
     const dot = document.getElementById("kite-dot");
     const label = document.getElementById("kite-label");
     const btn = document.getElementById("btn-connect-kite");
-
     if (s.connected && s.using_live_data) {
       dot.className = "kite-dot live";
       const since = s.generated_at ? new Date(s.generated_at).toLocaleTimeString() : "";
@@ -449,15 +712,11 @@ async function refreshKiteStatus() {
       btn.textContent = "Reconnect";
     } else if (s.connected) {
       dot.className = "kite-dot stale";
-      label.textContent = "Kite: connected (still on yfinance data)";
+      label.textContent = "Kite: connected (yfinance data)";
       btn.textContent = "Reconnect";
-    } else if (s.app_configured) {
-      dot.className = "kite-dot";
-      label.textContent = "Kite: not connected today";
-      btn.textContent = "Connect Kite";
     } else {
       dot.className = "kite-dot";
-      label.textContent = "Kite: not set up";
+      label.textContent = s.app_configured ? "Kite: not connected today" : "Kite: not set up";
       btn.textContent = "Connect Kite";
     }
   } catch (e) { /* backend not reachable yet */ }
@@ -466,30 +725,26 @@ async function refreshKiteStatus() {
 document.getElementById("btn-connect-kite").onclick = () => {
   window.open(`${API_BASE}/kite/login`, "kite-login", "width=480,height=640");
 };
-
-// The login popup closes itself on success — catch that by re-checking
-// status whenever this tab regains focus, not just on a fixed interval.
 window.addEventListener("focus", refreshKiteStatus);
 setInterval(refreshKiteStatus, 15000);
 refreshKiteStatus();
 
 function connectWS() {
-  const wsUrl = API_BASE.replace("http", "ws") + "/ws";
-  const ws = new WebSocket(wsUrl);
-  ws.onmessage = (evt) => renderAll(JSON.parse(evt.data));
+  const ws = new WebSocket(API_BASE.replace("http", "ws") + "/ws");
+  ws.onmessage = evt => renderAll(JSON.parse(evt.data));
   ws.onclose = () => setTimeout(connectWS, 2000);
   ws.onerror = () => ws.close();
 }
 
 initChart();
 connectWS();
-// Fallback poll in case WebSocket is unavailable
 setInterval(async () => {
   try {
     const res = await fetch(`${API_BASE}/api/state`);
     renderAll(await res.json());
   } catch (e) { /* WS likely already handling updates */ }
 }, 10000);
+setInterval(() => { if (selectedSymbol) fetchNews(selectedSymbol); }, 60000);
 </script>
 </body>
 </html>

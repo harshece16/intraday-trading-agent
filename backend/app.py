@@ -12,20 +12,23 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 import config
 import data_provider
+import news_sentiment
+import universe
 from state import AppState
 from trading_engine import TradingEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("trading_bot")
 
-state = AppState(watchlist=config.WATCHLIST, paper_mode=config.PAPER_MODE_DEFAULT)
+initial_watchlist = list(config.SCANNER.get("pinned", [])) if config.SCANNER.get("enabled") else config.WATCHLIST
+state = AppState(watchlist=initial_watchlist, paper_mode=config.PAPER_MODE_DEFAULT)
 engine = TradingEngine(state)
 
 
@@ -55,7 +58,37 @@ def get_state():
 @app.get("/api/candles/{symbol}")
 def get_candles(symbol: str):
     with state.lock:
-        return {"symbol": symbol, "candles": state.candles.get(symbol, [])}
+        candles = list(state.candles.get(symbol) or [])
+    if not candles and engine.scanner:
+        candles = engine.scanner.intraday.get(symbol, [])
+    return {"symbol": symbol, "candles": candles}
+
+
+@app.get("/api/scanner")
+def get_scanner():
+    return state.scanner or {"rows": [], "active": [], "market": None}
+
+
+@app.post("/api/scan")
+def trigger_scan():
+    if not engine.scanner:
+        raise HTTPException(status_code=400, detail="Scanner is disabled (config.SCANNER['enabled'])")
+    started = engine.request_scan()
+    return {"started": started, "message": "Scan started" if started else "A scan is already running"}
+
+
+@app.get("/api/news/{symbol}")
+def get_news(symbol: str):
+    sym = symbol.upper()
+    if sym not in universe.by_symbol() and sym not in state.watchlist:
+        raise HTTPException(status_code=404, detail=f"Unknown symbol {sym}")
+    return {"symbol": sym, **news_sentiment.get_sentiment(sym)}
+
+
+@app.get("/api/activity")
+def get_activity(limit: int = 200):
+    with state.lock:
+        return state.activity[:limit]
 
 
 class ModeUpdate(BaseModel):
@@ -66,23 +99,28 @@ class ModeUpdate(BaseModel):
 def set_mode(update: ModeUpdate):
     with state.lock:
         state.paper_mode = update.paper_mode
-    logger.warning(f"Mode switched to {'PAPER' if update.paper_mode else 'LIVE'} via dashboard")
+    mode = "PAPER" if update.paper_mode else "LIVE"
+    logger.warning(f"Mode switched to {mode} via dashboard")
+    state.log("system", f"Mode switched to {mode} via dashboard", level="warn")
     return {"paper_mode": state.paper_mode}
 
 
 class WatchlistUpdate(BaseModel):
-    symbols: list[str]
+    symbols: list
 
 
 @app.post("/api/watchlist")
 def set_watchlist(update: WatchlistUpdate):
-    with state.lock:
-        state.watchlist = update.symbols
-        for s in update.symbols:
-            state.candles.setdefault(s, [])
-            state.strategy_state.setdefault(s, None)
-            state.indicators.setdefault(s, {})
-            state.positions.setdefault(s, {"quantity": 0, "avg_price": 0.0, "entry_atr": None})
+    """With the scanner on, these become pinned symbols tracked alongside its picks."""
+    symbols = [str(s).strip().upper() for s in update.symbols if str(s).strip()]
+    held = [s for s, p in state.positions.items() if p["quantity"] != 0]
+    if engine.scanner:
+        config.SCANNER["pinned"] = symbols
+        active = (state.scanner or {}).get("active", [])
+        state.set_watchlist(list(dict.fromkeys(symbols + active + held)))
+    else:
+        state.set_watchlist(list(dict.fromkeys(symbols + held)))
+    state.log("watchlist", f"Pinned symbols set to {', '.join(symbols) or 'none'} via dashboard")
     return {"watchlist": state.watchlist}
 
 
@@ -99,10 +137,7 @@ def kite_status():
 
 @app.get("/kite/login")
 def kite_login():
-    """Step 1 of the in-app 'Connect Kite' flow — redirects to Zerodha's
-    login page. Requires KITE_API_KEY to already be set (from creating an
-    app at developers.kite.trade); this endpoint can't create that app for
-    you, only use it once it exists."""
+    """Step 1 of the in-app 'Connect Kite' flow — redirects to Zerodha's login page."""
     if not config.KITE_API_KEY:
         return HTMLResponse(
             "<h3>Kite isn't set up yet</h3>"
@@ -120,9 +155,7 @@ def kite_login():
 
 @app.get("/kite/callback")
 def kite_callback(request_token: Optional[str] = None, status: Optional[str] = None):
-    """Step 2 — Kite redirects here after login. This URL must be
-    registered as the app's exact Redirect URL in the Kite Connect
-    dashboard, or Kite will refuse to send the user back here at all."""
+    """Step 2 — Kite redirects here after login (must match the app's registered Redirect URL)."""
     if status != "success" or not request_token:
         return HTMLResponse(
             "<h3>Kite login didn't complete</h3><p>Close this tab and try again from the dashboard.</p>",
@@ -146,6 +179,7 @@ def kite_callback(request_token: Optional[str] = None, status: Optional[str] = N
     data_provider.reset_kite_client()
     engine.reset_kite_executor()
     logger.warning("Kite connected via the dashboard's in-app login flow")
+    state.log("system", "Kite connected — real-time data and live order routing available")
 
     return HTMLResponse(
         "<h3>Kite connected ✓</h3>"
