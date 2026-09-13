@@ -1,0 +1,45 @@
+"""
+Live order execution via Zerodha Kite Connect. Only invoked when
+state.paper_mode is False. Order placement is on Kite's free API tier —
+market data for signals still comes from yfinance (data_provider.py), this
+module is only used to actually send BUY/SELL orders and read positions.
+
+Setup: run generate_access_token.py (see that file) to obtain today's
+access token before going live — Kite sessions expire daily. You must also
+whitelist a static IP on your Kite Connect developer dashboard before any
+live order will be accepted — see the README's "Going live" section.
+"""
+
+import logging
+
+import config
+
+logger = logging.getLogger("trading_bot")
+
+
+class KiteExecutor:
+    def __init__(self, api_key: str, access_token: str):
+        from kiteconnect import KiteConnect
+        self.kite = KiteConnect(api_key=api_key)
+        self.kite.set_access_token(access_token)
+
+    def place_order(self, symbol: str, side: str, quantity: int):
+        from kiteconnect import KiteConnect
+        order_id = self.kite.place_order(
+            variety=KiteConnect.VARIETY_REGULAR,
+            exchange=KiteConnect.EXCHANGE_NSE,
+            tradingsymbol=symbol,
+            transaction_type=side,
+            quantity=quantity,
+            product=KiteConnect.PRODUCT_MIS,  # intraday margin product
+            order_type=KiteConnect.ORDER_TYPE_MARKET,
+            # Required since SEBI's 2026-04-01 retail algo rules — a MARKET
+            # order placed with market_protection unset (or 0) is rejected.
+            # This caps how far from the last price the order can fill.
+            market_protection=config.KITE_MARKET_PROTECTION_PCT,
+        )
+        logger.info(f"[LIVE] {side} {quantity} {symbol} -> order {order_id}")
+        return order_id
+
+    def get_positions(self):
+        return self.kite.positions()["net"]

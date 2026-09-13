@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intraday Desk</title>
+<style>
+  :root {
+    --bg: #0D1117;
+    --panel: #12181F;
+    --panel-border: #232B36;
+    --text: #E6E9EE;
+    --text-dim: #7C8798;
+    --green: #3ECF8E;
+    --red: #F0555A;
+    --amber: #E8A73C;
+    --accent: #5B8DEF;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+  a { color: inherit; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-mark {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .brand-mark.open { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .brand-mark.closed { background: var(--red); }
+  .brand h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
+  .brand .status-text { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+
+  .controls { display: flex; align-items: center; gap: 14px; }
+  .pnl-summary { display: flex; gap: 18px; font-family: var(--mono); }
+  .pnl-summary .label { color: var(--text-dim); font-size: 11px; display: block; }
+  .pnl-summary .value { font-size: 16px; font-weight: 600; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  .mode-toggle {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--panel);
+  }
+  .mode-toggle button {
+    background: none; border: none; color: var(--text-dim);
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    padding: 4px 10px; border-radius: 4px;
+  }
+  .mode-toggle button.active.paper { background: #1B2A24; color: var(--green); }
+  .mode-toggle button.active.live { background: #2A1B1B; color: var(--red); }
+
+  .kite-status {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--panel);
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  }
+  .kite-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .kite-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .kite-dot.stale { background: var(--amber); }
+  .kite-status button {
+    background: var(--accent); color: #fff; border: none; border-radius: 4px;
+    padding: 4px 10px; font-family: var(--mono); font-size: 11px; cursor: pointer;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-rows: 1fr 260px;
+    gap: 1px;
+    background: var(--panel-border);
+    height: calc(100vh - 57px);
+  }
+  .panel { background: var(--bg); padding: 16px 18px; overflow-y: auto; }
+  .panel h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-dim); font-weight: 600; margin: 0 0 12px 0;
+  }
+
+  /* Watchlist */
+  .watch-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 8px; border-radius: 6px; cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .watch-row:hover { background: var(--panel); }
+  .watch-row.selected { background: var(--panel); border-left: 2px solid var(--accent); }
+  .watch-sym { font-weight: 600; }
+  .watch-sub { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+  .watch-price { font-family: var(--mono); text-align: right; }
+  .watch-price .px { font-size: 14px; }
+  .watch-price .sig { font-size: 10px; display: block; }
+
+  /* Chart panel */
+  .chart-panel { grid-row: 1; grid-column: 2; display: flex; flex-direction: column; }
+  #chart { flex: 1; min-height: 0; }
+  .chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .chart-header .sym { font-size: 20px; font-weight: 700; }
+  .chart-header .px { font-family: var(--mono); font-size: 20px; }
+
+  /* Positions/risk panel */
+  .position-card {
+    border: 1px solid var(--panel-border); border-radius: 6px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .position-card .row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; }
+  .position-card .row .k { color: var(--text-dim); }
+  .empty-state { color: var(--text-dim); font-size: 12px; padding: 10px 0; }
+
+  /* Blotter */
+  .blotter { grid-column: 1 / span 3; grid-row: 2; padding: 14px 18px; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  th { text-align: left; color: var(--text-dim); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
+  td { padding: 6px 8px; border-bottom: 1px solid #171D26; }
+  .side-buy { color: var(--green); }
+  .side-sell { color: var(--red); }
+  .badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-family: var(--mono); }
+  .badge.paper { background: #1B2A24; color: var(--green); }
+  .badge.live { background: #2A1B1B; color: var(--red); }
+
+  /* Trader Brain */
+  .brain-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .brain-setup { font-weight: 600; }
+  .brain-tags { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+  .score-row { display: grid; grid-template-columns: 34px 1fr 36px; gap: 8px; align-items: center; font-family: var(--mono); font-size: 11px; margin: 4px 0; }
+  .score-track { position: relative; height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-mark { position: absolute; top: -2px; width: 2px; height: 10px; background: var(--text); opacity: 0.6; }
+  .brain-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-family: var(--mono); font-size: 11px; margin: 10px 0; }
+  .brain-stats .k { color: var(--text-dim); }
+  .brain-list { list-style: none; padding: 0; margin: 6px 0 0 0; font-size: 12px; }
+  .brain-list li { padding: 3px 0; display: flex; gap: 8px; }
+  .brain-list .pts { font-family: var(--mono); font-size: 11px; min-width: 34px; }
+  .brain-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-top: 10px; }
+  .chip { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; margin: 3px 4px 0 0; background: var(--panel); }
+  .chip.bullish { color: var(--green); } .chip.bearish { color: var(--red); } .chip.neutral { color: var(--amber); }
+  .news-item { font-size: 11px; color: var(--text-dim); padding: 3px 0; }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-mark" id="market-dot"></span>
+    <h1>Intraday Desk</h1>
+    <span class="status-text" id="status-text">connecting…</span>
+  </div>
+  <div class="controls">
+    <div class="pnl-summary">
+      <div><span class="label">Realized</span><span class="value" id="realized-pnl">₹0</span></div>
+      <div><span class="label">Unrealized</span><span class="value" id="unrealized-pnl">₹0</span></div>
+    </div>
+    <div class="kite-status" id="kite-status">
+      <span class="kite-dot" id="kite-dot"></span>
+      <span id="kite-label">Kite: checking…</span>
+      <button id="btn-connect-kite">Connect Kite</button>
+    </div>
+    <div class="mode-toggle">
+      <button id="btn-paper" class="active paper">PAPER</button>
+      <button id="btn-live" class="live">LIVE</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="watchlist-panel">
+    <h2>Watchlist</h2>
+    <div id="watchlist"></div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="chart-header">
+      <span class="sym" id="chart-sym">—</span>
+      <span class="px" id="chart-px">—</span>
+    </div>
+    <div id="chart"></div>
+  </section>
+
+  <section class="panel" id="positions-panel">
+    <h2>Trader Brain · <span id="brain-sym">—</span></h2>
+    <div id="brain"></div>
+    <h2 style="margin-top:20px">Open Positions</h2>
+    <div id="positions"></div>
+    <h2 style="margin-top:20px">Recent Signals</h2>
+    <div id="signals"></div>
+  </section>
+
+  <section class="panel blotter">
+    <h2>Trade Blotter</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Mode</th></tr></thead>
+      <tbody id="blotter-body"></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+<script>
+const API_BASE = window.location.hostname === "" ? "http://localhost:8000" : `${window.location.protocol}//${window.location.hostname}:8000`;
+let selectedSymbol = null;
+let chart, series;
+let latestState = null;
+
+function fmtMoney(n) {
+  if (n === null || n === undefined) return "—";
+  const sign = n < 0 ? "-" : "";
+  return `${sign}₹${Math.abs(n).toLocaleString("en-IN", {maximumFractionDigits: 0})}`;
+}
+
+function initChart() {
+  const el = document.getElementById("chart");
+  chart = LightweightCharts.createChart(el, {
+    layout: { background: { color: "transparent" }, textColor: "#7C8798", fontFamily: "IBM Plex Mono, monospace" },
+    grid: { vertLines: { color: "#171D26" }, horzLines: { color: "#171D26" } },
+    rightPriceScale: { borderColor: "#232B36" },
+    timeScale: { borderColor: "#232B36", timeVisible: true, secondsVisible: false },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  });
+  series = chart.addCandlestickSeries({
+    upColor: "#3ECF8E", downColor: "#F0555A",
+    borderVisible: false, wickUpColor: "#3ECF8E", wickDownColor: "#F0555A",
+  });
+  new ResizeObserver(entries => {
+    for (const entry of entries) chart.resize(entry.contentRect.width, entry.contentRect.height);
+  }).observe(el);
+}
+
+function renderWatchlist(state) {
+  const container = document.getElementById("watchlist");
+  container.innerHTML = "";
+  state.watchlist.forEach(sym => {
+    const ind = state.indicators[sym] || {};
+    const pos = state.positions[sym] || {};
+    const row = document.createElement("div");
+    row.className = "watch-row" + (sym === selectedSymbol ? " selected" : "");
+    row.onclick = () => { selectedSymbol = sym; renderAll(latestState); };
+    const heldTag = pos.quantity ? `${pos.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(pos.quantity)}` : "flat";
+    row.innerHTML = `
+      <div>
+        <div class="watch-sym">${sym}</div>
+        <div class="watch-sub">${heldTag}</div>
+      </div>
+      <div class="watch-price">
+        <div class="px">${ind.ltp ? ind.ltp.toFixed(2) : "—"}</div>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+let lastChartedSymbol = null;
+let lastChartFetchTs = 0;
+
+function renderChart(state) {
+  if (!selectedSymbol && state.watchlist.length) selectedSymbol = state.watchlist[0];
+  document.getElementById("chart-sym").textContent = selectedSymbol || "—";
+  const ind = (selectedSymbol && state.indicators[selectedSymbol]) || {};
+  document.getElementById("chart-px").textContent = ind.ltp ? ind.ltp.toFixed(2) : "—";
+
+  const now = Date.now();
+  const symbolChanged = selectedSymbol && selectedSymbol !== lastChartedSymbol;
+  const staleData = now - lastChartFetchTs > 20000; // refresh at most every 20s
+  if (selectedSymbol && (symbolChanged || staleData)) {
+    lastChartedSymbol = selectedSymbol;
+    lastChartFetchTs = now;
+    fetchCandles(selectedSymbol);
+  }
+}
+
+function renderPositions(state) {
+  const container = document.getElementById("positions");
+  const held = Object.entries(state.positions).filter(([, p]) => p.quantity !== 0);
+  if (!held.length) {
+    container.innerHTML = `<div class="empty-state">No open positions.</div>`;
+    return;
+  }
+  container.innerHTML = held.map(([sym, p]) => `
+    <div class="position-card">
+      <div class="row"><span class="k">${sym}</span><span>${p.quantity > 0 ? "LONG" : "SHORT"} ${Math.abs(p.quantity)}</span></div>
+      <div class="row"><span class="k">Avg</span><span>${p.avg_price.toFixed(2)}</span></div>
+      <div class="row"><span class="k">LTP</span><span>${p.ltp ? p.ltp.toFixed(2) : "—"}</span></div>
+      <div class="row"><span class="k">P&L</span><span class="${p.unrealized_pnl >= 0 ? "pos" : "neg"}">${p.unrealized_pnl !== null ? fmtMoney(p.unrealized_pnl) : "—"}</span></div>
+    </div>`).join("");
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+}
+
+function fmtNum(n, d = 2) {
+  return n === null || n === undefined ? "—" : Number(n).toFixed(d);
+}
+
+function renderBrain(state) {
+  const el = document.getElementById("brain");
+  document.getElementById("brain-sym").textContent = selectedSymbol || "—";
+  const b = (selectedSymbol && state.indicators[selectedSymbol]) || {};
+  if (b.bull_score === undefined) {
+    el.innerHTML = `<div class="empty-state">Waiting for enough candles to analyse…</div>`;
+    return;
+  }
+  const scale = Math.max(12, b.bull_score, b.bear_score, b.entry_threshold * 1.5);
+  const bar = (label, val, thr, color) => `
+    <div class="score-row">
+      <span class="k">${label}</span>
+      <div class="score-track">
+        <div class="score-fill" style="width:${Math.max(0, val) / scale * 100}%;background:${color}"></div>
+        <div class="score-mark" style="left:${thr / scale * 100}%"></div>
+      </div>
+      <span>${fmtNum(val, 1)}</span>
+    </div>`;
+  const list = (items) => items.map(r => `
+    <li><span class="pts ${r.points >= 0 ? "pos" : "neg"}">${r.points >= 0 ? "+" : ""}${fmtNum(r.points, 1)}</span><span>${esc(r.text)}</span></li>`).join("");
+  const status = b.long_ok ? `<span class="pos">ENTRY OK</span>` : b.exit_long ? `<span class="neg">EXIT ZONE</span>` : `<span style="color:var(--amber)">WAIT</span>`;
+
+  el.innerHTML = `
+    <div class="brain-head">
+      <span class="brain-setup">${esc(b.setup)}</span>${status}
+    </div>
+    <div class="brain-tags">${esc(b.regime)} · structure ${esc(b.structure)} · 15m ${esc(b.htf_trend)}</div>
+    ${bar("BULL", b.bull_score, b.entry_threshold, "var(--green)")}
+    ${bar("BEAR", b.bear_score, b.exit_threshold, "var(--red)")}
+    <div class="brain-stats">
+      <span><span class="k">RSI</span> ${fmtNum(b.rsi, 1)}</span><span><span class="k">ADX</span> ${fmtNum(b.adx, 1)}</span>
+      <span><span class="k">VWAP</span> ${fmtNum(b.vwap)}</span><span><span class="k">Vol×</span> ${fmtNum(b.volume_ratio)}</span>
+      <span><span class="k">Sup</span> ${fmtNum(b.support)}</span><span><span class="k">Res</span> ${fmtNum(b.resistance)}</span>
+    </div>
+    ${b.patterns && b.patterns.length ? `<div>${b.patterns.map(p => `<span class="chip ${esc(p.bias)}">${esc(p.name)}</span>`).join("")}</div>` : ""}
+    <div class="brain-sub">Why bullish</div><ul class="brain-list">${list(b.reasons || []) || `<li class="k">nothing yet</li>`}</ul>
+    ${b.bear_reasons && b.bear_reasons.length ? `<div class="brain-sub">Why bearish</div><ul class="brain-list">${list(b.bear_reasons)}</ul>` : ""}
+    ${b.blockers && b.blockers.length ? `<div class="brain-sub">Holding back because</div><ul class="brain-list">${b.blockers.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+    ${b.news_headlines && b.news_headlines.length ? `<div class="brain-sub">News · sentiment ${b.news_score >= 0 ? "+" : ""}${fmtNum(b.news_score)}</div>
+      ${b.news_headlines.map(h => `<div class="news-item"><span class="${h.score >= 0 ? "pos" : "neg"}">${h.score >= 0 ? "+" : ""}${fmtNum(h.score)}</span> ${esc(h.title)} · ${fmtNum(h.age_h, 0)}h</div>`).join("")}` : ""}`;
+}
+
+function renderSignals(state) {
+  const container = document.getElementById("signals");
+  if (!state.signals_log.length) {
+    container.innerHTML = `<div class="empty-state">No signals yet.</div>`;
+    return;
+  }
+  container.innerHTML = state.signals_log.slice(0, 8).map(s => `
+    <div class="position-card">
+      <div class="row"><span class="k">${s.symbol}</span><span class="${s.signal === "BUY" ? "pos" : "neg"}">${s.signal}</span></div>
+      <div class="row"><span class="k">${new Date(s.ts * 1000).toLocaleTimeString()}</span><span class="k">${esc(s.detail && s.detail.setup)}</span></div>
+    </div>`).join("");
+}
+
+function renderBlotter(state) {
+  const body = document.getElementById("blotter-body");
+  body.innerHTML = state.trades.map(t => `
+    <tr>
+      <td>${new Date(t.ts * 1000).toLocaleTimeString()}</td>
+      <td>${t.symbol}</td>
+      <td class="${t.side === "BUY" ? "side-buy" : "side-sell"}">${t.side}</td>
+      <td>${t.quantity}</td>
+      <td>${t.price.toFixed(2)}</td>
+      <td><span class="badge ${t.mode}">${t.mode.toUpperCase()}</span></td>
+    </tr>`).join("");
+}
+
+function renderHeader(state) {
+  const dot = document.getElementById("market-dot");
+  const statusText = document.getElementById("status-text");
+  dot.className = "brand-mark " + (state.market_status === "open" ? "open" : "closed");
+  statusText.textContent = `Market ${state.market_status} · last update ${state.last_update_ts ? new Date(state.last_update_ts * 1000).toLocaleTimeString() : "—"}`;
+
+  document.getElementById("realized-pnl").textContent = fmtMoney(state.realized_pnl_today);
+  document.getElementById("realized-pnl").className = "value " + (state.realized_pnl_today >= 0 ? "pos" : "neg");
+  document.getElementById("unrealized-pnl").textContent = fmtMoney(state.unrealized_pnl);
+  document.getElementById("unrealized-pnl").className = "value " + (state.unrealized_pnl >= 0 ? "pos" : "neg");
+
+  document.getElementById("btn-paper").classList.toggle("active", state.paper_mode);
+  document.getElementById("btn-live").classList.toggle("active", !state.paper_mode);
+}
+
+function renderAll(state) {
+  if (!state) return;
+  latestState = state;
+  renderHeader(state);
+  renderWatchlist(state);
+  renderChart(state);
+  renderBrain(state);
+  renderPositions(state);
+  renderSignals(state);
+  renderBlotter(state);
+}
+
+async function fetchCandles(symbol) {
+  try {
+    const res = await fetch(`${API_BASE}/api/candles/${symbol}`);
+    const data = await res.json();
+    if (!data.candles || !data.candles.length) return;
+    const formatted = data.candles.map(c => ({
+      time: Math.floor(new Date(c.time).getTime() / 1000),
+      open: c.open, high: c.high, low: c.low, close: c.close,
+    }));
+    series.setData(formatted);
+    chart.timeScale().fitContent();
+  } catch (e) { /* data provider may not have data yet on first tick */ }
+}
+
+async function setMode(paperMode) {
+  await fetch(`${API_BASE}/api/mode`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paper_mode: paperMode }),
+  });
+}
+
+document.getElementById("btn-paper").onclick = () => setMode(true);
+document.getElementById("btn-live").onclick = () => {
+  if (confirm("Switch to LIVE trading? Real orders will be placed on Zerodha.")) setMode(false);
+};
+
+async function refreshKiteStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/kite/status`);
+    const s = await res.json();
+    const dot = document.getElementById("kite-dot");
+    const label = document.getElementById("kite-label");
+    const btn = document.getElementById("btn-connect-kite");
+
+    if (s.connected && s.using_live_data) {
+      dot.className = "kite-dot live";
+      const since = s.generated_at ? new Date(s.generated_at).toLocaleTimeString() : "";
+      label.textContent = `Kite: live data${since ? " · since " + since : ""}`;
+      btn.textContent = "Reconnect";
+    } else if (s.connected) {
+      dot.className = "kite-dot stale";
+      label.textContent = "Kite: connected (still on yfinance data)";
+      btn.textContent = "Reconnect";
+    } else if (s.app_configured) {
+      dot.className = "kite-dot";
+      label.textContent = "Kite: not connected today";
+      btn.textContent = "Connect Kite";
+    } else {
+      dot.className = "kite-dot";
+      label.textContent = "Kite: not set up";
+      btn.textContent = "Connect Kite";
+    }
+  } catch (e) { /* backend not reachable yet */ }
+}
+
+document.getElementById("btn-connect-kite").onclick = () => {
+  window.open(`${API_BASE}/kite/login`, "kite-login", "width=480,height=640");
+};
+
+// The login popup closes itself on success — catch that by re-checking
+// status whenever this tab regains focus, not just on a fixed interval.
+window.addEventListener("focus", refreshKiteStatus);
+setInterval(refreshKiteStatus, 15000);
+refreshKiteStatus();
+
+function connectWS() {
+  const wsUrl = API_BASE.replace("http", "ws") + "/ws";
+  const ws = new WebSocket(wsUrl);
+  ws.onmessage = (evt) => renderAll(JSON.parse(evt.data));
+  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onerror = () => ws.close();
+}
+
+initChart();
+connectWS();
+// Fallback poll in case WebSocket is unavailable
+setInterval(async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/state`);
+    renderAll(await res.json());
+  } catch (e) { /* WS likely already handling updates */ }
+}, 10000);
+</script>
+</body>
+</html>
