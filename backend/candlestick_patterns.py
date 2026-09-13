@@ -9,6 +9,18 @@ whose range is tiny relative to ATR are ignored as noise.
 Returns [{"name", "bias": "bullish"|"bearish"|"neutral", "strength": 1-3}].
 """
 
+# Every name detect_patterns() can produce, for the dashboard's Technical
+# Analysis reference page — kept as one list here so it can't drift out of
+# sync with what's actually implemented below.
+PATTERN_NAMES = [
+    "Doji", "Bullish Marubozu", "Bearish Marubozu", "Hammer", "Hanging Man",
+    "Shooting Star", "Inverted Hammer", "Bullish Engulfing", "Bearish Engulfing",
+    "Piercing Line", "Dark Cloud Cover", "Bullish Harami", "Bearish Harami",
+    "Tweezer Bottom", "Tweezer Top", "Inside Bar", "Morning Star", "Evening Star",
+    "Three White Soldiers", "Three Black Crows", "Abandoned Baby Bottom",
+    "Abandoned Baby Top", "Rising Three Methods", "Falling Three Methods",
+]
+
 
 def _body(c):
     return abs(c["close"] - c["open"])

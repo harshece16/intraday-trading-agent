@@ -20,6 +20,7 @@ from pydantic import BaseModel
 import config
 import data_provider
 import database
+import methods
 import news_sentiment
 import universe
 from state import AppState
@@ -90,6 +91,14 @@ def get_news(symbol: str):
 def get_activity(limit: int = 200):
     with state.lock:
         return state.activity[:limit]
+
+
+@app.get("/api/methods")
+def get_methods():
+    """Every technique Sahab's Dimaag actually trades on, assembled from the
+    real constants those modules use — not a hand-written page that could
+    drift out of sync with the code."""
+    return methods.get_methods()
 
 
 @app.get("/api/journal/summary")
