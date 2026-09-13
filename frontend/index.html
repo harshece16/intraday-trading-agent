@@ -213,6 +213,10 @@
   .rb-chip span { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   #stk-chart { height: 320px; margin: 26px 0 4px; }
+  .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 0 0 20px; font-size: 12px; color: var(--ink-2); }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .chart-legend i { width: 12px; height: 2px; border-radius: 1px; }
+  .chart-legend i.dash { width: 12px; height: 0; border-top: 2px dashed; background: none; }
   .chart-empty { height: 100%; display: grid; place-items: center; border-radius: 8px; background: var(--sunken); font-size: 14px; color: var(--ink-2); }
   .tab-content { padding-top: 18px; }
   .lede { margin: 0 0 16px; max-width: 80ch; font-size: 14px; color: var(--ink-2); }
@@ -359,7 +363,8 @@ const PAGES = [
 
 const ui = { page: "overview", screenerTab: "trading", centerTab: "timing", showAllWatch: false, screenerSort: null, expandedSymbol: null };
 let selectedSymbol = null;
-let chart = null, series = null;
+let chart = null, series = null, emaSeries20 = null, emaSeries50 = null, volumeSeries = null;
+let patternMarkerKey = "";
 let priceLines = [];
 let priceLineKey = "";
 let latestState = null;
@@ -913,6 +918,14 @@ function renderStock(s) {
     <div id="stk-plan">${planHTML(s, r, a && a.b, pos)}</div>
     <div id="stk-rulebook">${ruleBookHTML(r, a && a.b)}</div>
     <div id="stk-chart"></div>
+    <div class="chart-legend">
+      <span><i style="background:var(--focus)"></i>EMA 20</span>
+      <span><i style="background:var(--book)"></i>EMA 50</span>
+      <span><i class="dash" style="border-color:var(--ink-2)"></i>Plan entry</span>
+      <span><i class="dash" style="border-color:var(--short)"></i>Stop</span>
+      <span><i class="dash" style="border-color:var(--long)"></i>Target</span>
+      <span class="muted">— the checklist's trade plan if taken, not a price forecast</span>
+    </div>
     <div class="tabs" id="stk-tabs">${tabsHTML("centerTab", ui.centerTab, [
       ["timing", "Timing read"], ["scan", "Why it ranks"], ["news", "News", news && !news.error ? news.count : undefined],
     ])}</div>
@@ -932,10 +945,11 @@ function initChartIfNeeded() {
   const el = $("stk-chart");
   if (!el) return;
   if (chart && chartEl === el) return; // still attached to the live DOM node
-  if (chart) { chart.remove(); chart = null; series = null; } // renderStock replaced the container; rebuild into the new one
+  if (chart) { chart.remove(); chart = null; series = null; emaSeries20 = null; emaSeries50 = null; volumeSeries = null; } // renderStock replaced the container; rebuild into the new one
   chartEl = el;
   priceLines = [];
   priceLineKey = ""; // force price lines to be redrawn on the new series
+  patternMarkerKey = "";
   if (typeof LightweightCharts === "undefined") {
     el.innerHTML = `<div class="chart-empty">The chart library didn't load. Check the internet connection; everything else still works.</div>`;
     return;
@@ -949,27 +963,65 @@ function initChartIfNeeded() {
   });
   const up = cssVar("--long"), down = cssVar("--short");
   series = chart.addCandlestickSeries({ upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down });
+  series.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } }); // leave room for the volume panel below
+  emaSeries20 = chart.addLineSeries({ color: cssVar("--focus"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  emaSeries50 = chart.addLineSeries({ color: cssVar("--book"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  volumeSeries = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", priceLineVisible: false, lastValueVisible: false });
+  volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   new ResizeObserver(entries => {
     for (const entry of entries) chart.resize(entry.contentRect.width, entry.contentRect.height);
   }).observe(el);
   lastChartedSymbol = null; // force a fresh fetch into the newly (re)created chart element
 }
 
-function updatePriceLines(a) {
+// Entry/stop/target are the checklist's actual computed trade plan — a real,
+// risk-defined "if this triggers, here's the plan" line, never a predicted
+// future price. This app has no calibrated forecasting model (the Dimaag
+// Scorecard's Information Coefficient is currently negative), so nothing
+// here draws a projected price path; only the plan a real trade would use.
+function updatePriceLines(a, r) {
   if (!series) return;
   const b = a ? a.b : null;
-  const key = b ? [selectedSymbol, b.support, b.resistance, b.vwap].join("|") : selectedSymbol;
+  const side = r && r.side ? r.side.toLowerCase() : (b && b.bias === "short" ? "short" : "long");
+  const cl = b && b.checklist ? (b.checklist[side] || b.checklist.long) : null;
+  const key = b ? [selectedSymbol, b.support, b.resistance, b.vwap, cl && cl.entry, cl && cl.stop, cl && cl.target].join("|") : selectedSymbol;
   if (key === priceLineKey) return;
   priceLineKey = key;
   priceLines.forEach(l => series.removePriceLine(l));
   priceLines = [];
   if (!b) return;
-  const add = (price, color, title) => {
-    if (price) priceLines.push(series.createPriceLine({ price, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title }));
+  const add = (price, color, title, dashed = true) => {
+    if (price) priceLines.push(series.createPriceLine({
+      price, color, lineWidth: dashed ? 1 : 2,
+      lineStyle: dashed ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid,
+      axisLabelVisible: true, title,
+    }));
   };
   add(b.support, cssVar("--long"), "Support");
   add(b.resistance, cssVar("--short"), "Resistance");
   add(b.vwap, cssVar("--focus"), "VWAP");
+  if (cl && cl.stop != null) {
+    add(cl.entry, cssVar("--ink-2"), `Plan entry (${side})`, false);
+    add(cl.stop, cssVar("--short"), `Stop (${cl.rrr != null ? "RRR " + num(cl.rrr, 1) : "risk"})`, false);
+    add(cl.target, cssVar("--long"), "Target", false);
+  }
+}
+
+function updatePatternMarkers(a) {
+  if (!series) return;
+  const b = a ? a.b : null;
+  const patterns = (b && b.patterns) || [];
+  const key = `${selectedSymbol}|${b ? b.bar_time : ""}|${patterns.map(p => p.name).join(",")}`;
+  if (key === patternMarkerKey) return;
+  patternMarkerKey = key;
+  if (!patterns.length || !b || !b.bar_time) { series.setMarkers([]); return; }
+  const time = Math.floor(new Date(b.bar_time).getTime() / 1000) + IST_OFFSET_S;
+  series.setMarkers(patterns.map(p => ({
+    time, position: p.bias === "bearish" ? "aboveBar" : "belowBar",
+    color: p.bias === "bearish" ? cssVar("--short") : p.bias === "bullish" ? cssVar("--long") : cssVar("--ink-3"),
+    shape: p.bias === "bearish" ? "arrowDown" : p.bias === "bullish" ? "arrowUp" : "circle",
+    text: p.name,
+  })));
 }
 
 function renderChart(s) {
@@ -981,7 +1033,21 @@ function renderChart(s) {
     lastChartFetchTs = now;
     fetchCandles(sym);
   }
-  updatePriceLines(analysisFor(s, sym));
+  const a = analysisFor(s, sym);
+  updatePriceLines(a, rowFor(s, sym));
+  updatePatternMarkers(a);
+}
+
+// Same formula as backend/indicators.py's ema_series() — recomputed client-side
+// from the same candles already on the chart, not a separate/guessed value.
+function emaSeriesJS(values, period) {
+  const out = new Array(values.length).fill(null);
+  if (values.length < period) return out;
+  const k = 2 / (period + 1);
+  let e = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out[period - 1] = e;
+  for (let i = period; i < values.length; i++) { e = values[i] * k + e * (1 - k); out[i] = e; }
+  return out;
 }
 
 async function fetchCandles(symbol) {
@@ -990,9 +1056,16 @@ async function fetchCandles(symbol) {
     const res = await apiFetch(`/api/candles/${encodeURIComponent(symbol)}`);
     const data = await res.json();
     if (symbol !== selectedSymbol) return;
-    series.setData((data.candles || []).map(c => ({
-      time: Math.floor(new Date(c.time).getTime() / 1000) + IST_OFFSET_S,
-      open: c.open, high: c.high, low: c.low, close: c.close,
+    const candles = data.candles || [];
+    const times = candles.map(c => Math.floor(new Date(c.time).getTime() / 1000) + IST_OFFSET_S);
+    series.setData(candles.map((c, i) => ({ time: times[i], open: c.open, high: c.high, low: c.low, close: c.close })));
+    const closes = candles.map(c => c.close);
+    const e20 = emaSeriesJS(closes, 20), e50 = emaSeriesJS(closes, 50);
+    if (emaSeries20) emaSeries20.setData(times.map((t, i) => ({time: t, value: e20[i]})).filter(p => p.value != null));
+    if (emaSeries50) emaSeries50.setData(times.map((t, i) => ({time: t, value: e50[i]})).filter(p => p.value != null));
+    if (volumeSeries) volumeSeries.setData(candles.map((c, i) => ({
+      time: times[i], value: c.volume || 0,
+      color: c.close >= c.open ? cssVar("--long-bg") : cssVar("--short-bg"),
     })));
     chart.timeScale().fitContent();
   } catch (e) { /* the backend may not have candles for this stock yet */ }
