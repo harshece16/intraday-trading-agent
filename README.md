@@ -446,31 +446,43 @@ your Kite account, sizing can look perfectly fine on the dashboard and still
 get rejected by Kite for insufficient margin the moment an order goes live.
 
 `_sync_capital()` closes that gap: once Kite is connected, every tick (max
-once per 5 minutes) it reads the real equity `live_balance` from
-`kite.get_margins()` and writes it straight into `config.RISK["total_capital"]`
-in place — `RiskManager` holds a reference to that same dict, so the very
-next `position_size()` call uses the real figure, no restart needed. Applies
-in paper mode too, on purpose: a paper day should test against what a live
-day could actually size, not a fictional balance. Toggle it off with
-`config.RISK["sync_capital_with_kite"] = False` to pin the number manually
-instead. The Portfolio page's Kite margins card shows the synced amount and
-when it last refreshed, alongside the fuller `utilised` breakdown Kite's
-`margins()` endpoint returns (span, exposure, option premium, M2M, holding
-sales) — not just cash and a used-margin total.
+once per 5 minutes, but immediately on a Paper↔Live switch — see below) it
+reads the real equity `live_balance` from `kite.get_margins()` and writes an
+effective figure straight into `config.RISK["total_capital"]` in place —
+`RiskManager` holds a reference to that same dict, so the very next
+`position_size()` call uses it, no restart needed. Toggle the whole thing off
+with `config.RISK["sync_capital_with_kite"] = False` to pin the number
+manually instead. The Portfolio page's Kite margins card shows the synced
+amount and when it last refreshed, alongside the fuller `utilised` breakdown
+Kite's `margins()` endpoint returns (span, exposure, option premium, M2M,
+holding sales) — not just cash and a used-margin total.
 
-One consequence worth being explicit about: **this makes real account size a
-real constraint on whether any cash-equity trade can fire at all.** At 1%
-risk, ₹500 (or the ₹683 this account actually holds as of this write-up)
-produces a stop-distance-based position size of 0 shares for essentially
-every NIFTY-100 stock's real ATR — the risk-per-trade in rupees is smaller
-than one share's stop distance. This isn't a bug to patch around; it's the
-Van Tharp model doing exactly what it's supposed to do. The honest ways
-around it are: fund the account with more real capital (sizing then reflects
-it automatically, no config edit needed), rely on F&O's premium-based sizing
-instead (cheaper per unit, but confidence-gated — see §9, currently failing
-since the live Information Coefficient is negative), or accept that a small
-account is a pipeline/connectivity test rather than a real trading day until
-it's funded further.
+**In LIVE mode**, that effective figure IS the real balance — no exceptions,
+since a live order actually spends real money. **In PAPER mode**, it's
+`config.RISK["paper_capital"]` (a fixed test figure, ₹1,00,000 by default)
+instead — added after a real account's balance turned out too small for a
+useful mock trading day to review (see the account-size consequence below).
+The real balance is never hidden, just set aside: `state.real_capital` always
+holds it regardless of mode, so the Overview page's Autonomous Trading card
+can show both — "Paper capital (simulated): ₹1,00,000" next to "Real Kite
+balance: ₹5,683" — and the Go Live confirmation dialog always quotes the real
+figure, since that's what sizing snaps back to the instant Live is turned on
+(the mode-switch bypasses the normal 5-minute throttle specifically so that
+snap-back is immediate, not "eventually").
+
+One consequence worth being explicit about: **real account size is a real
+constraint on whether any cash-equity LIVE trade can fire at all.** At 1%
+risk, an account in the low thousands of rupees produces a stop-distance-
+based position size of 0 shares for most NIFTY-100 stocks' real ATR — the
+risk-per-trade in rupees is smaller than one share's stop distance. This
+isn't a bug to patch around; it's the Van Tharp model doing exactly what it's
+supposed to do. The honest ways around it are: fund the account with more
+real capital (live sizing then reflects it automatically, no config edit
+needed), rely on F&O's premium-based sizing instead (cheaper per unit, but
+confidence-gated — see §9, currently failing since the live Information
+Coefficient is negative), or use paper mode's fixed test capital to review
+how the system behaves at a realistic size while the real account is still
+being funded.
 
 ### 16. Day Plan (`day_plan.py`) — capital planning without a fabricated return
 

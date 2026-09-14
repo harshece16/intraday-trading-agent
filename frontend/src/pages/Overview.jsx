@@ -28,14 +28,17 @@ function AutonomyCard({ s }) {
   }, []);
 
   const live = !s.paper_mode;
-  const capital = s.risk_total_capital;
+  const capital = s.risk_total_capital;      // whatever's actually sizing trades right now
+  const realCapital = s.real_capital;        // always the true Kite balance, regardless of mode
+  const usingPaperFigure = !live && realCapital != null && capital !== realCapital;
 
   async function goLive() {
     const msg =
       `This turns on real order placement — Trader Sahab will buy and sell on Zerodha automatically from now on, ` +
       `every ~30 seconds, on its own rules, with no per-trade confirmation from you or anyone else. It runs whether ` +
       `or not you're watching.\n\n` +
-      `Real capital right now: ₹${capital?.toLocaleString("en-IN") ?? "—"} (synced from your Kite account).\n` +
+      `Real capital right now: ₹${(realCapital ?? capital)?.toLocaleString("en-IN") ?? "—"} (synced from your Kite account` +
+      `${usingPaperFigure ? " — NOT the paper figure below, sizing snaps to this the moment you go live" : ""}).\n` +
       `F&O (options): ${fno?.enabled ? "ON" : "OFF"} — turn it on separately from Portfolio if you want option trades too.\n\n` +
       `Turn it back to Paper any time from this same control — that takes effect immediately, no confirmation needed.\n\n` +
       `Go live now?`;
@@ -69,14 +72,27 @@ function AutonomyCard({ s }) {
         </button>
       </div>
       <div className="rb-row" style={{ marginTop: 12 }}>
-        <div className="rb-chip"><b>Real capital</b><span>{money(capital)}</span></div>
+        <div className="rb-chip">
+          <b>{usingPaperFigure ? "Paper capital (simulated)" : "Real capital"}</b>
+          <span>{money(capital)}</span>
+        </div>
+        {usingPaperFigure && (
+          <div className="rb-chip"><b>Real Kite balance</b><span>{money(realCapital)}</span></div>
+        )}
         <div className="rb-chip"><b>F&amp;O (options)</b><span>{fno ? (fno.enabled ? "ON" : "OFF") : "…"}</span></div>
         <div className="rb-chip"><b>Alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
       </div>
-      {!live && capital != null && capital < 2000 && (
+      {usingPaperFigure && (
         <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-          At ₹{capital.toLocaleString("en-IN")}, the 1% risk model sizes most stocks to 0 shares — going live at this
-          capital likely places few or no cash-equity trades until the account is funded further.{" "}
+          Paper mode is sizing against a fixed ₹{capital.toLocaleString("en-IN")} test figure
+          (config.RISK.paper_capital), not your real ₹{realCapital.toLocaleString("en-IN")} Kite balance — set this
+          up so simulated trades actually get sized. Going live snaps sizing back to the real balance immediately.
+        </p>
+      )}
+      {live && capital != null && capital < 2000 && (
+        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+          At ₹{capital.toLocaleString("en-IN")}, the 1% risk model sizes most stocks to 0 shares — expect few or no
+          cash-equity trades until the account is funded further.{" "}
           <Link className="more" to="/day-plan">See exactly which picks would size →</Link>
         </p>
       )}

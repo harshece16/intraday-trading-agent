@@ -86,6 +86,7 @@ class TradingEngine:
         self.size_multiplier = 1.0
         self._last_errors = {}
         self._last_capital_sync = 0.0
+        self._last_synced_paper_mode = None
         self._premarket_thread = None
         self._last_premarket_run_date = None
         self._last_premarket_seed_date = None
@@ -102,30 +103,52 @@ class TradingEngine:
         self.kite_executor = None
 
     def _sync_capital(self):
-        """Refreshes RISK['total_capital'] from the real Kite equity balance
-        (see config.RISK['sync_capital_with_kite']'s docstring for why).
-        RiskManager holds a reference to config.RISK, not a copy, so mutating
-        the key in place — same pattern as config.FNO['enabled'] — takes
-        effect on the very next position_size() call, no restart needed.
-        Throttled to once every 5 minutes since margins() is a live network call."""
+        """Refreshes RISK['total_capital'] — the real Kite equity balance in
+        LIVE mode (see config.RISK['sync_capital_with_kite']'s docstring for
+        why), or the fixed config.RISK['paper_capital'] in PAPER mode (see
+        that key's docstring — real accounts are often funded too low for a
+        realistic test day). Always fetches the real balance regardless of
+        mode and stores it separately on state.real_capital, so the dashboard
+        can show "what going live would actually use" even while paper mode
+        is sized against a different, bigger number. RiskManager holds a
+        reference to config.RISK, not a copy, so mutating total_capital in
+        place — same pattern as config.FNO['enabled'] — takes effect on the
+        very next position_size() call, no restart needed. Throttled to once
+        every 5 minutes since margins() is a live network call."""
         if not config.RISK.get("sync_capital_with_kite") or not config.KITE_ACCESS_TOKEN:
             return
         now = time.time()
-        if now - self._last_capital_sync < 300:
+        # Never let a fresh Paper<->Live switch wait out the throttle — capital
+        # must reflect the new mode immediately, not up to 5 minutes later.
+        mode_changed = self.state.paper_mode != self._last_synced_paper_mode
+        if not mode_changed and now - self._last_capital_sync < 300:
             return
         self._last_capital_sync = now
+        self._last_synced_paper_mode = self.state.paper_mode
         try:
             margins = self._ensure_kite().get_margins()
             live_balance = float(margins["equity"]["available"]["live_balance"])
         except Exception as exc:
             logger.warning(f"Capital sync with Kite failed: {exc}")
             return
-        changed = config.RISK["total_capital"] != live_balance
-        config.RISK["total_capital"] = live_balance
+
         with self.state.lock:
-            self.state.capital_sync = {"amount": live_balance, "synced_at": now, "source": "kite"}
+            self.state.real_capital = live_balance
+
+        if self.state.paper_mode:
+            effective, source = float(config.RISK.get("paper_capital", live_balance)), "paper_capital_config"
+        else:
+            effective, source = live_balance, "kite"
+
+        changed = config.RISK["total_capital"] != effective
+        config.RISK["total_capital"] = effective
+        with self.state.lock:
+            self.state.capital_sync = {"amount": effective, "synced_at": now, "source": source, "real_kite_balance": live_balance}
         if changed:
-            self.state.log("risk", f"Risk capital synced to real Kite balance: ₹{live_balance:,.0f}")
+            if source == "paper_capital_config":
+                self.state.log("risk", f"Paper capital set to ₹{effective:,.0f} (real Kite balance is ₹{live_balance:,.0f})")
+            else:
+                self.state.log("risk", f"Risk capital synced to real Kite balance: ₹{effective:,.0f}")
 
     # ---- scanning -------------------------------------------------------
 

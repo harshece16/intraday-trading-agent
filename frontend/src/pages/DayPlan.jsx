@@ -135,7 +135,8 @@ export default function DayPlan() {
       <div className="cardbox" style={{ marginTop: 16 }}>
         <h2 className="h" style={{ fontSize: 16 }}>What actually happened today</h2>
         <p className="muted" style={{ margin: "0 0 10px", fontSize: 12.5 }}>
-          {dateLabel(o.date)} — real fills only, sized against the account's real capital that day
+          {dateLabel(o.date)} — {o.mode === "paper" ? "paper" : "real"} fills only, sized against{" "}
+          {o.mode === "paper" ? "the fixed paper-mode test capital" : "the account's real capital"} that day
           ({money(o.capital_used_today)}), not the hypothetical amount above.
         </p>
         <div className="rb-row">

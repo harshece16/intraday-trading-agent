@@ -166,13 +166,20 @@ RISK = {
     # sync_capital_with_kite below), so position sizing is never computed
     # against a stale number that doesn't match what's actually funded.
     "total_capital": 100000,
-    # Keep total_capital equal to the real Kite account balance instead of this
-    # static number. On by design: sizing math against a fictional capital figure
-    # can pass every check here and still get rejected by Kite for insufficient
-    # margin on a live order — syncing removes that whole failure class. Applies
-    # in paper mode too, on purpose, so a paper day tests against what a live
-    # day could actually size. Set False to pin total_capital manually instead.
+    # In LIVE mode, keep total_capital equal to the real Kite account balance
+    # instead of a static number — sizing math against a fictional capital
+    # figure can pass every check here and still get rejected by Kite for
+    # insufficient margin on a live order; syncing removes that whole failure
+    # class. Set False to pin total_capital manually (both modes) instead.
     "sync_capital_with_kite": True,
+    # In PAPER mode, size against this fixed figure instead of the real Kite
+    # balance — real accounts are often funded far below what a realistic
+    # test day needs (₹683 sizes to 0 shares for nearly every NIFTY-100
+    # stock at 1% risk), which would make paper mode produce no trades to
+    # review. This never touches real money either way; it only changes what
+    # the simulator sizes against. Live mode always uses the real balance
+    # above, regardless of this number.
+    "paper_capital": 100000.0,
     # ATR-based stop/target adapt to each symbol's actual volatility instead
     # of a flat percentage — set False to use stop_loss_pct/take_profit_pct only.
     "use_atr_risk": True,

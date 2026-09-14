@@ -53,7 +53,13 @@ class AppState:
         # Set by trading_engine._sync_capital() whenever RISK['total_capital'] is
         # refreshed from the real Kite account — lets the dashboard show that the
         # risk model's capital figure is real money, not a stale config guess.
-        self.capital_sync = None  # {"amount": float, "synced_at": epoch, "source": "kite"} | None
+        self.capital_sync = None  # {"amount": float, "synced_at": epoch, "source": ..., "real_kite_balance": float} | None
+        # Always the real Kite equity balance, regardless of mode — separate
+        # from capital_sync["amount"]/risk_total_capital, which is whatever
+        # RiskManager is actually sizing against right now (paper_capital in
+        # paper mode, this same real number in live mode). Lets the dashboard
+        # show "what going live would actually use" even mid-paper-session.
+        self.real_capital = None
         # scanner.run_premarket()'s cached result — see trading_engine's
         # request_premarket_scan()/_run_premarket_scan(). Owned here (not a
         # module-level dict in app.py) so the engine itself can read it to seed
@@ -113,6 +119,7 @@ class AppState:
                 "last_update_ts": self.last_update_ts,
                 "last_error": self.last_error,
                 "risk_total_capital": config.RISK["total_capital"],
+                "real_capital": self.real_capital,
                 "capital_sync": self.capital_sync,
                 "kite_connected": bool(config.KITE_ACCESS_TOKEN),
             }

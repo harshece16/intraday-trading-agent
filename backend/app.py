@@ -260,7 +260,7 @@ def get_day_plan(capital: float = 5000.0):
     rows, source = day_plan.pick_rows(scanner_result, premarket_result)
     plan_data = day_plan.plan(capital, rows)
     plan_data["source"] = source
-    outcome_data = day_plan.outcome(config.RISK["total_capital"])
+    outcome_data = day_plan.outcome(config.RISK["total_capital"], paper_mode=state.paper_mode)
     return {"plan": plan_data, "outcome": outcome_data}
 
 

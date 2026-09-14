@@ -88,7 +88,7 @@ def plan(capital: float, rows: list) -> dict:
     }
 
 
-def outcome(capital_used_today: float) -> dict:
+def outcome(capital_used_today: float, paper_mode: bool = True) -> dict:
     now = datetime.now(IST)
     start_of_day = datetime(now.year, now.month, now.day, tzinfo=IST).timestamp()
     trades = database.trades_between(start_of_day)
@@ -98,6 +98,7 @@ def outcome(capital_used_today: float) -> dict:
     max_daily_loss = abs(capital_used_today) * config.RISK["max_daily_loss_pct"] / 100
     return {
         "date": now.date().isoformat(),
+        "mode": "paper" if paper_mode else "live",
         "capital_used_today": capital_used_today,
         "trades": trades,
         "trade_count": len(trades),
