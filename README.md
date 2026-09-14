@@ -44,6 +44,13 @@ buying calls/puts once the checklist and a confidence gate both clear.
   OAuth redirect (`/kite/callback`) — see [Setup](#setup). Without this,
   anyone who could reach the backend (e.g. via a tunnel used for the Kite
   login step) could flip it to live trading or enable F&O.
+- **News sentiment can optionally be read by an LLM** (Claude Haiku 4.5)
+  instead of the keyword lexicon — off by default, costs real (small) money
+  once you turn it on, and is not a price predictor: it scores a headline's
+  tone toward the company, nothing more. See
+  [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below
+  for exactly what it does and doesn't claim, and why raw "ask an LLM to
+  predict the stock" isn't a feature here at all.
 - **"Certified trader" describes the knowledge, not a licence.** The rules
   follow what CMT/NISM-trained technical traders study. If you ever offer
   this agent's signals to other people, SEBI's Research Analyst / Investment
@@ -282,6 +289,10 @@ and sizing; `costs.py` models Zerodha's published intraday tariff.
 | **Alpha Vantage (optional, added this session)** | Free tier 25/day (used at 20/day) | Real per-article sentiment, **market-wide discovery only** — its `tickers` filter can't reliably target NSE symbols and its budget is too tight for per-stock calls; set `ALPHAVANTAGE_API_KEY` | 1.2 |
 | Yahoo Finance | Free | Fallback when Google returns nothing | 0.6 |
 
+The weight column above is about *trust*, not *how a headline gets scored*.
+Scoring is a separate step (`llm_sentiment.py` / `sentiment_lexicon.py`) —
+see [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below.
+
 NSE bulk/block deals ("smart money" signal) were researched as a possible
 addition but not built — it needs scraping an undocumented NSE endpoint, not
 yet worth the added dependency.
@@ -315,6 +326,59 @@ it power the Scorecard above: the **Information Coefficient**
 and the **Deflated Sharpe Ratio** (`evaluation.py`, every `backtester.py` run
 logged as a trial in `backend/data/backtest_trials.json`).
 
+### 12. LLM-read news sentiment (`llm_sentiment.py`)
+
+The one LLM integration in this codebase, and deliberately narrow. Added
+after explicitly declining a broader ask ("use an LLM to predict the
+stock") — that request is answered in full in
+[High-Level Design](#high-level-design) below, but the short version: an
+LLM has no live market feed and no calibration for numeric forecasting: it
+generates the most statistically fluent continuation of a prompt, not a
+prediction, and that isn't a limitation prompting can fix.
+
+What it *does* do: reads a headline's actual text — via Claude Haiku 4.5 —
+and returns a sentiment score in the same `[-1, 1]` range
+`sentiment_lexicon.score_text()` already returned, catching negation,
+hedging language, and which company a multi-company article is really
+about, which keyword matching can miss. It is a drop-in upgrade to one
+existing scoring step, not a new prediction surface — and its value isn't
+assumed: `database.factor_ic()` measures whether the resulting score
+predicts anything, the same honesty check applied to every other signal in
+this codebase.
+
+- **Off by default.** Needs `ANTHROPIC_API_KEY`; even with a key set, a
+  separate runtime toggle (`config.NEWS["use_llm_sentiment"]`, flippable
+  from the Technical Analysis page with no restart) has to be on too.
+- **Real usage tracking, not an estimate.** Every API response reports its
+  own `input_tokens`/`output_tokens`; those are summed per day and priced
+  at Haiku 4.5's published rate ($1/M input, $5/M output, verified against
+  anthropic.com/claude/haiku on 2026-09-14 — re-check if it's been a
+  while). The dashboard panel polls this live every 15s.
+- **A daily call budget** (`config.NEWS["llm_daily_limit"]`, default 500)
+  and a **permanent per-headline cache** (a headline's text doesn't change
+  once published, so it's never re-scored or re-billed).
+- **Falls back to the lexicon** on any error, disabled state, missing key,
+  or exhausted budget — this can never block a scan or a checklist read.
+
+### 13. Holdings diagnostic (`portfolio_diagnostic.py`)
+
+Runs the *exact same* indicators the scanner uses on the NIFTY 100 (trend
+via EMA 20/50, `indicators.rsi()`, distance from the 52-week high/low,
+`market_structure.key_levels()` for support/resistance,
+`swing_patterns.scan_daily_patterns()` / `detect_reversal_day()` for
+confirmed daily patterns) against your actual Kite holdings — not a
+separate, lighter-weight read.
+
+This exists because a user asked for return predictions on their real
+portfolio, and that's a line worth being explicit about: those holdings are
+real money, most aren't NIFTY-100 intraday-style stocks this engine was
+built to read, and producing a growth forecast for them would be
+personalized investment advice — out of scope regardless of what the
+technical read shows. What *is* in scope: naming today's actual technical
+posture (`"Uptrend, RSI overbought"`, `"Within 3% of its 52-week low"`,
+`"Possible top reversal today (Murphy ch 4)"`) so you have a second,
+consistent pair of eyes on the chart. The decision stays yours.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -327,7 +391,13 @@ amber for waiting, violet for a book/rule citation.
 Every piece of jargon (VWAP, RRR, ADX, the option Greeks, DSR, IC, Kelly,
 confidence, ...) has a hover/focus-explained tooltip — a dotted underline
 signals it, keyboard-focusable so it works without a mouse. The stock chart
-supports mouse-wheel zoom, pinch-zoom, and kinetic-scroll panning.
+(Lightweight Charts v5) supports mouse-wheel zoom, pinch-zoom, and
+kinetic-scroll panning, and layers on top of the candles: EMA 20/50 trend
+lines (recomputed client-side from the same candles, not a separate value),
+a volume histogram panel, the checklist's actual entry/stop/target as
+labeled price lines, and arrows marking the latest detected candlestick
+pattern — explicitly **not** a projected price path, see
+[Enhancing the chart](#enhancing-the-chart-componentschartjsx) below.
 
 - **Overview** — one-sentence headline of what the agent is doing, a market
   countdown ("opens in 2h 14m" / a live session-progress bar, computed
@@ -341,12 +411,21 @@ supports mouse-wheel zoom, pinch-zoom, and kinetic-scroll panning.
   checklist categories, all 24 candlestick patterns, Bulkowski's daily
   patterns and gap stats, Murphy's reversal days and OBV divergence, trend/
   level/momentum rules, news source weights, position-sizing methods, the
-  F&O section (Greeks, pricing model), and an honest "read but not (yet)
-  built in" list with the specific reason each item doesn't apply.
+  F&O section (Greeks, pricing model), a live LLM-sentiment usage panel
+  (real token counts, actual cost so far, an on/off toggle), and an honest
+  "read but not (yet) built in" list with the specific reason each item
+  doesn't apply.
 - **Portfolio** — real Kite holdings + margins once connected (free Kite
   Connect endpoints), today's paper/live positions regardless of Kite, open
   F&O positions with live Greeks/confidence, and the F&O on/off toggle (its
-  own confirmation dialog, separate from the cash-equity Live switch).
+  own confirmation dialog, separate from the cash-equity Live switch). A
+  link from here opens **Holdings diagnostic** (`/portfolio/diagnostic`) —
+  today's technical read (trend, RSI, 52-week distance, support/resistance,
+  confirmed daily patterns) on every real Kite holding, using the exact same
+  indicators the scanner runs on the NIFTY 100. Deliberately **not** a buy/
+  sell call or a return forecast — see
+  [Holdings diagnostic](#holdings-diagnostic-portfolio_diagnosticpy) below
+  for why that line is drawn where it is.
 - **Journal** — the Dimaag Scorecard, the F&O knowledge base summary, the
   honest SEBI-sourced benchmark panel ("What good actually looks like
   here" — not a promised return number), trade record, which checklist
@@ -462,6 +541,8 @@ webapp/
 │   ├── methods.py               # ★ assembles the Technical Analysis page from real code constants
 │   ├── holidays.py              # NSE trading holiday calendar
 │   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
+│   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
+│   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
 │   ├── nse_feed.py              # ★ NSE announcements + results calendar
 │   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
 │   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
@@ -479,11 +560,218 @@ webapp/
     │   ├── App.jsx                # routing (react-router) + layout shell
     │   ├── api.js                 # apiFetch, dashboard-key handling, useAppState() WebSocket hook
     │   ├── helpers.js             # domain helpers shared across pages (scanRows, analysisFor, primaryRule, ...)
-    │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary
-    │   ├── components/            # Header, Chart (Lightweight Charts v5 wrapper), RuleBook, Tip, Pill, ...
-    │   └── pages/                 # Overview, Screener, Stock, TechnicalAnalysis, Portfolio, Journal, Trades
+    │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary (GLOSSARY)
+    │   ├── components/
+    │   │   ├── Header.jsx          # topbar: market status/countdown, realized/open P&L, Kite connect, Paper/Live
+    │   │   ├── Chart.jsx            # ★ Lightweight Charts v5 wrapper — see Low-Level Design below
+    │   │   ├── Tip.jsx              # the hover/focus glossary tooltip
+    │   │   ├── RuleBook.jsx · Pill.jsx · SymLink.jsx · Feed.jsx
+    │   │   └── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
+    │   └── pages/
+    │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
+    │       ├── TechnicalAnalysis.jsx
+    │       ├── Portfolio.jsx
+    │       ├── PortfolioDiagnostic.jsx # ★ renders portfolio_diagnostic.py's read on your holdings
+    │       └── Journal.jsx
     └── legacy/index.html          # the original single-file version, kept working for reference
 ```
+
+## High-Level Design
+
+```mermaid
+flowchart TB
+    subgraph Client["Your browser"]
+        SPA["React SPA (Vite)\nhash-free routing, WebSocket state"]
+    end
+
+    subgraph Backend["FastAPI backend — single process"]
+        API["REST + WebSocket\nApiKeyMiddleware gates every route\nexcept /kite/callback"]
+        Engine["TradingEngine loop\n(async, runs forever)"]
+        Scanner["scanner.py\nNIFTY 100 ranking"]
+        Brain["trader_brain.py\nGrand Checklist — shared by cash & F&O"]
+        Risk["risk_manager.py / fno_risk.py\nposition sizing"]
+        Conf["confidence.py\nscaled by the Dimaag Scorecard"]
+        News["news_sentiment.py\naggregation + relevance filter"]
+        Diag["portfolio_diagnostic.py\nread-only holdings snapshot"]
+        DB[("sahab_journal.db\nSQLite — scans, checklist reads,\ntrades, F&O evaluations")]
+    end
+
+    subgraph External["External services"]
+        Kite["Zerodha Kite Connect\norders, quotes, holdings, F&O instruments"]
+        YF["yfinance\ndelayed OHLCV fallback"]
+        NSE["nseindia.com\nfilings, holidays, results calendar"]
+        NewsAPIs["Google News / Marketaux /\nAlpha Vantage"]
+        Claude["Anthropic Claude API\nHaiku 4.5 — headline sentiment ONLY"]
+    end
+
+    SPA <-->|"WebSocket /ws\n?key=... every 3s"| API
+    SPA -->|"REST, X-Api-Key header"| API
+    API --> Engine
+    Engine --> Scanner --> Brain --> Risk
+    Brain --> Conf
+    Engine -->|"paper fill, or\nreal order"| Kite
+    Scanner --> YF
+    Scanner --> NSE
+    Engine --> News
+    News --> NewsAPIs
+    News -.->|"score_headline()\noff by default, budget-capped"| Claude
+    Engine --> DB
+    API --> Diag
+    Diag --> Kite
+    Diag --> YF
+```
+
+**Why this shape:** one backend process owns all state (`state.py`'s
+`AppState`, behind a lock) and pushes it to every connected browser over
+the WebSocket — there's no separate state store the frontend and backend
+could disagree about. The engine loop is the only writer; the REST API and
+the diagnostic/LLM paths are read-mostly extensions bolted onto the side,
+which is why they can be built, tested, and toggled independently without
+touching the core scan → brain → risk → execute chain. External services
+are all optional except Kite for live data/orders and yfinance for
+backtesting — everything else (Marketaux, Alpha Vantage, Claude) degrades
+to "skip this source" on its own, never blocking a decision.
+
+## Low-Level Design
+
+Three pieces added this session don't have detailed documentation
+elsewhere in this README (the trading logic itself is documented narrative-
+style in [How the agent decides](#how-the-agent-decides) above, which *is*
+effectively its LLD) — their internals, below.
+
+### LLM-read news sentiment (`llm_sentiment.py`)
+
+```mermaid
+sequenceDiagram
+    participant Agg as news_sentiment._aggregate()
+    participant LLM as llm_sentiment.score_headline()
+    participant Cache as _cache (in-process dict)
+    participant Budget as _budget (daily counters)
+    participant API as Anthropic API (Haiku 4.5)
+    participant Lex as sentiment_lexicon.score_text()
+
+    Agg->>Agg: de-dup headline, check it actually names the company
+    Agg->>LLM: score_headline(title, summary)
+    LLM->>Cache: seen this exact headline before?
+    alt cached
+        Cache-->>LLM: return cached score
+    else not cached
+        LLM->>Budget: _allowed()? (key set, toggle on, under daily_limit)
+        alt not allowed
+            Budget-->>LLM: False
+            LLM-->>Agg: None
+            Agg->>Lex: score_text(title + summary)
+            Lex-->>Agg: score in [-1, 1]
+        else allowed
+            Budget-->>LLM: True (used += 1)
+            LLM->>API: messages.create(system=..., headline)
+            API-->>LLM: {"score": x} + real input/output token counts
+            LLM->>Budget: add real token counts (for cost tracking)
+            LLM->>Cache: store score, keyed by sha256(title+summary)
+            LLM-->>Agg: score in [-1, 1]
+        end
+    end
+    Agg->>Agg: weight by source trust x recency, accumulate
+```
+
+Any exception anywhere in the API-call branch (network error, bad JSON,
+rate limit) is caught, logged, and treated as "not allowed right now" —
+`score_headline()` returns `None` and the caller falls back to the lexicon
+in the exact same code path as a disabled/unconfigured LLM. There is no
+branch where a failure surfaces as a wrong score instead of a graceful
+fallback.
+
+`stats()` (backing `GET /api/llm-sentiment/status`, polled every 15s by
+`LlmSentimentPanel.jsx`) reads `_budget`'s real accumulated
+`input_tokens`/`output_tokens` and multiplies by the published per-token
+price — not `used_today × an assumed average call size`. `set_enabled()`
+(backing `POST /api/llm-sentiment/enable`) mutates
+`config.NEWS["use_llm_sentiment"]` directly, so the toggle takes effect on
+the very next headline scored, no restart.
+
+### Holdings diagnostic (`portfolio_diagnostic.py`)
+
+```mermaid
+sequenceDiagram
+    participant FE as PortfolioDiagnostic.jsx
+    participant API as GET /api/portfolio/diagnostic
+    participant Kite as kite_broker.get_holdings()
+    participant YF as scanner.download_batch()
+    participant Ind as indicators.py / market_structure.py / swing_patterns.py
+
+    FE->>API: fetch on page load
+    API->>API: 400 if Kite isn't connected
+    API->>Kite: holdings() — real symbols, quantities, avg cost, P&L
+    API->>YF: download_batch([sym.NS for sym in holdings], "1y", "1d")
+    loop each holding with >= 60 daily bars
+        API->>Ind: EMA20/50, RSI(14), ATR(14), 52w high/low
+        API->>Ind: swing_points + key_levels -> nearest support/resistance
+        API->>Ind: scan_daily_patterns() + detect_reversal_day()
+        Ind-->>API: one diagnostic row: trend, rsi, levels, posture[]
+    end
+    API-->>FE: {rows: [...], unreadable: [symbols yfinance couldn't fetch]}
+    FE->>FE: render as a table — no score, no buy/sell column, no target
+```
+
+`_posture()` is the only place this module makes a judgment call, and it's
+a bounded one: it names which real, already-computed signals are present
+(`"Uptrend, RSI overbought"`, `"Within 3% of its 52-week high"`) — it never
+combines them into a single number, because that number would look like a
+recommendation whether or not it was labeled as one.
+
+### Enhancing the chart (`components/Chart.jsx`)
+
+Four independent `useEffect` hooks, each keyed on exactly the props that
+should trigger it — not one big effect that redoes everything on every
+render:
+
+1. **Mount-only** — creates the chart once (`createChart`), the candlestick
+   series, two `LineSeries` (EMA 20/50), a `HistogramSeries` on its own
+   price scale (the volume panel, squeezed into the bottom 18% via
+   `scaleMargins`), and a `ResizeObserver`. Cleans up (`chart.remove()`) on
+   unmount.
+2. **Keyed on `symbol`** — fetches `/api/candles/:symbol`, sets the
+   candlestick data, then recomputes EMA 20/50 *client-side* from those
+   same closes (`emaSeriesJS()`, the identical formula
+   `indicators.ema_series()` uses server-side — not a separately-fetched or
+   guessed value) and sets the volume histogram, colored per bar direction.
+3. **Keyed on `plan`** (support/resistance/VWAP + the checklist's
+   entry/stop/target) — removes and redraws price lines. Worth repeating
+   the framing from "Read this first" above: entry/stop/target are the
+   checklist's actual computed trade plan, never a projected future price
+   — there is no forecasting model backing a price curve, and the chart
+   draws none.
+4. **Keyed on `patterns`/`barTime`** — arrow markers
+   (`createSeriesMarkers`, the v5 API; v4 used `series.setMarkers()`
+   directly) on the most recently detected candlestick pattern's bar.
+
+Lightweight Charts was upgraded 4 → 5 as part of the React migration, which
+changed series creation from `chart.addCandlestickSeries(...)` to
+`chart.addSeries(CandlestickSeries, ...)` (series types are now imported
+values, not method names) — worth knowing if you're diffing this against
+older Lightweight Charts examples online. `kineticScroll`, `handleScroll`,
+and `handleScale` are all explicitly enabled in the chart options; they
+aren't v5 defaults.
+
+### Frontend state flow
+
+```mermaid
+flowchart LR
+    WS["WebSocket /ws"] -->|"JSON snapshot\nevery 3s"| Hook["useAppState()\napi.js"]
+    Poll["10s REST poll\n(belt-and-braces fallback)"] --> Hook
+    Hook -->|"state"| Shell["<Shell> in App.jsx"]
+    Shell --> Header["<Header state=.../>"]
+    Shell --> Router["<Routes>"]
+    Router --> Pages["Overview / Screener / Stock /\nPortfolio / Journal / Trades"]
+    Pages -->|"apiFetch() for\npage-specific data"| REST["REST endpoints\n(methods, portfolio, journal, ...)"]
+```
+
+There is exactly one WebSocket connection and one source of truth
+(`state` in `App.jsx`'s `<Shell>`) — every page receives it as a prop rather
+than opening its own connection or keeping local copies that could drift.
+Page-specific data (news, methods, journal, the diagnostic) is fetched
+independently per page via `apiFetch()`, since that data doesn't change
+every 3 seconds and doesn't belong in the constant WebSocket stream.
 
 ## Setup
 
@@ -493,6 +781,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export MARKETAUX_API_KEY=...        # optional
 export ALPHAVANTAGE_API_KEY=...     # optional — market-wide news discovery only
+export ANTHROPIC_API_KEY=...        # optional — LLM-read news sentiment, see below
 uvicorn app:app --port 8000
 ```
 
@@ -558,6 +847,25 @@ redo it each morning before trading live —
 `python generate_access_token.py` doesn't depend on any tunnel still being
 up, which is why it's the more durable daily habit.
 
+### Getting an Anthropic API key (for LLM-read news sentiment)
+
+Optional — only needed if you want `llm_sentiment.py` reading headlines
+instead of the keyword lexicon. `pip install -r requirements.txt` already
+pulls in the `anthropic` SDK, so no separate install once you have a key.
+
+1. Go to [console.anthropic.com](https://console.anthropic.com) and sign
+   up or log in.
+2. Anthropic's API is prepaid — under **Billing**, add a payment method
+   and purchase credits before any call will succeed. This is a real (if
+   small — see the cost tracking on the Technical Analysis page) ongoing
+   cost, not a one-time setup fee.
+3. Under **API Keys**, create a new key and copy it — it's shown once.
+4. `export ANTHROPIC_API_KEY="sk-ant-..."` and restart the backend.
+   Setting the key alone doesn't turn the feature on: flip the toggle on
+   the Technical Analysis page (or `POST /api/llm-sentiment/enable`) once
+   you're ready — it stays off by default even with a valid key, and you
+   can turn it off again any time without restarting anything.
+
 ### Going live (only once backtests and paper results justify it)
 
 1. Create an app at https://developers.kite.trade and subscribe to the
@@ -593,3 +901,13 @@ up, which is why it's the more durable daily habit.
   per-user auth, rate limiting, or HTTPS termination built in — treat this
   as "safe enough to expose briefly via a tunnel," not "safe to run
   permanently on the open internet" without more hardening.
+- LLM sentiment's actual effect on the Information Coefficient hasn't been
+  measured yet — it's too new. Whether reading headlines this way helps,
+  hurts, or does nothing is an open, honestly-unanswered question until
+  enough logged pairs accumulate with it turned on.
+- Holdings diagnostic assumes NSE (`.NS`); a BSE-only listing among your
+  holdings will show up under `unreadable` rather than a wrong read. It
+  also runs the same indicators regardless of whether a holding is a stock
+  or an ETF (`SILVERBEES`, `MID150BEES`, ...) — "trend" for an ETF means
+  the trend of what it tracks, not a company's fundamentals, and the
+  diagnostic doesn't distinguish the two.
