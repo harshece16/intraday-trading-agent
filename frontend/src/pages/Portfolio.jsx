@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiFetch, apiJson } from "../api";
 import { money, num, pct, tone } from "../format";
 import { ConfidencePill } from "../components/Pill";
@@ -135,6 +136,9 @@ export default function Portfolio({ state: s }) {
           <div className="cardbox" style={{ marginTop: 16 }}>
             <h2 className="h" style={{ fontSize: 16 }}>Kite holdings</h2>
             <KiteHoldings holdings={p.holdings} />
+            <Link className="more" to="/portfolio/diagnostic" style={{ display: "inline-block", marginTop: 10 }}>
+              Run today's technical diagnostic on these holdings →
+            </Link>
           </div>
         </>
       ) : (

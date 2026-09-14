@@ -11,6 +11,7 @@ import candlestick_patterns
 import config
 import evaluation
 import fno_risk  # noqa: F401 — imported so this module errors loudly if that one breaks
+import llm_sentiment
 import market_structure
 import news_sentiment
 import options_pricing  # noqa: F401 — same
@@ -107,8 +108,13 @@ def get_methods():
         },
         "news": {
             "title": "News and catalysts",
-            "note": "Headlines must actually name the company; scored with an India-tuned finance "
-                    "lexicon unless the source supplies its own sentiment, weighted by source trust and recency.",
+            "note": "Headlines must actually name the company. Scored by an LLM reading the actual "
+                    "article text (Claude Haiku) when that's configured and its daily budget allows, "
+                    "an India-tuned finance lexicon otherwise, or the source's own sentiment when it "
+                    "supplies one — weighted by source trust and recency. The LLM path is never assumed "
+                    "to help just because it exists: database.factor_ic() measures whether the resulting "
+                    "score actually predicts anything, the same honesty check applied everywhere else.",
+            "llm_sentiment": llm_sentiment.stats(),
             "sources": [{"name": k, "weight": v} for k, v in news_sentiment.SOURCE_WEIGHT.items()],
         },
         "risk": {

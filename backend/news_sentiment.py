@@ -10,10 +10,12 @@ Sources, in order of trust:
   4. Google News RSS, India edition (free, no key, broad coverage)  weight 1.0
   5. Yahoo Finance headlines (fallback only)                        weight 0.6
 
-Headlines are de-duplicated, scored (lexicon unless the source supplies its
-own sentiment), weighted by source trust x relevance (does it actually name
-the company?) x recency (12h half-life), and scaled by evidence mass so one
-stale headline can't dominate.
+Headlines are de-duplicated, scored — an LLM read of the actual text
+(llm_sentiment.py) when that's configured and its budget allows, the keyword
+lexicon otherwise, a source's own sentiment score if it supplies one —
+weighted by source trust x relevance (does it actually name the company?)
+x recency (12h half-life), and scaled by evidence mass so one stale
+headline can't dominate.
 
 get_sentiment(symbol)       -> per-stock view, cached 15 min
 market_catalysts(universe)  -> which universe stocks are in the news today, cached 10 min
@@ -31,6 +33,7 @@ from urllib.parse import quote
 import requests
 
 import config
+import llm_sentiment
 import nse_feed
 import universe
 from sentiment_lexicon import score_text
@@ -236,16 +239,24 @@ def _aggregate(items, patterns=None):
             continue
         age_h = max(age_h, 0.0)
         text = f"{it['title']}. {it.get('summary', '')}"
-        s = it["score"] if it.get("score") is not None else score_text(text)
         trusted = it["source"] in ("NSE filing", "Marketaux")
         if not (patterns is None or trusted or any(p.search(text) for p in patterns)):
-            continue  # search results that never name the company are noise, not evidence
+            continue  # search results that never name the company are noise, not evidence — don't even score them
+        llm_scored = False
+        if it.get("score") is not None:
+            s = it["score"]
+        else:
+            llm = llm_sentiment.score_headline(it["title"], it.get("summary"))
+            if llm is not None:
+                s, llm_scored = llm, True
+            else:
+                s = score_text(text)
         w = SOURCE_WEIGHT.get(it["source"], 1.0) * 0.5 ** (age_h / HALF_LIFE_HOURS)
         weighted += w * s
         weight_sum += w
         scored.append((w * (abs(s) + 0.1), {
             "title": it["title"], "score": round(s, 2), "age_h": round(age_h, 1), "source": it["source"],
-            "publisher": it.get("publisher"), "url": it.get("url"),
+            "publisher": it.get("publisher"), "url": it.get("url"), "llm_scored": llm_scored,
         }))
     score = max(-1.0, min(1.0, weighted / weight_sum * min(1.0, weight_sum / 2.0))) if weight_sum else 0.0
     scored.sort(key=lambda x: -x[0])

@@ -114,6 +114,14 @@ export default function TechnicalAnalysis() {
         <div className="cardbox" style={{ marginTop: 16 }}>
           <h2 className="h" style={{ fontSize: 16 }}>{m.news.title}</h2>
           <p style={{ margin: "0 0 10px", fontSize: 13 }}>{m.news.note}</p>
+          {m.news.llm_sentiment && (
+            <div className="rb-row" style={{ marginBottom: 10 }}>
+              <div className="rb-chip">
+                <b>LLM sentiment</b>
+                <span>{m.news.llm_sentiment.enabled ? `ON — ${m.news.llm_sentiment.used_today}/${m.news.llm_sentiment.daily_limit} used today` : "OFF — no ANTHROPIC_API_KEY set"}</span>
+              </div>
+            </div>
+          )}
           <div className="table-wrap">
             <table className="datatable">
               <thead><tr><th>Source</th><th>Trust weight</th></tr></thead>

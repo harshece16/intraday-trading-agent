@@ -142,6 +142,13 @@ NEWS = {
     # efficient way to spend that budget.
     "alphavantage_api_key": os.environ.get("ALPHAVANTAGE_API_KEY", ""),
     "alphavantage_daily_limit": 20,
+    # Optional: reads each headline's actual text via Claude Haiku instead of the
+    # keyword lexicon — see llm_sentiment.py's docstring for exactly what this
+    # does and doesn't claim. Off by default even with a key present; flip
+    # "use_llm_sentiment" on once you've set ANTHROPIC_API_KEY.
+    "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY", ""),
+    "use_llm_sentiment": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    "llm_daily_limit": 500,
 }
 
 RISK = {

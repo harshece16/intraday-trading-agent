@@ -23,6 +23,7 @@ import data_provider
 import database
 import methods
 import news_sentiment
+import portfolio_diagnostic
 import universe
 from state import AppState
 from trading_engine import TradingEngine
@@ -139,6 +140,17 @@ def set_fno_enabled(update: FnoUpdate):
     state.log("system", f"F&O (options-buying) {'enabled' if update.enabled else 'disabled'} via the dashboard",
               level="warn" if update.enabled else "info")
     return {"enabled": config.FNO["enabled"]}
+
+
+@app.get("/api/portfolio/diagnostic")
+def portfolio_diagnostic_endpoint():
+    """A technical read of your actual Kite holdings, using the same
+    indicators the scanner runs on the NIFTY 100 — deliberately not a buy/
+    sell call or a return forecast, see portfolio_diagnostic.py's docstring."""
+    if not config.KITE_ACCESS_TOKEN:
+        raise HTTPException(status_code=400, detail="Connect Kite first — this reads your real holdings.")
+    holdings = engine._ensure_kite().get_holdings()
+    return portfolio_diagnostic.run(holdings)
 
 
 @app.get("/api/fno/journal")

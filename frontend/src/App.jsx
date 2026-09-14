@@ -6,6 +6,7 @@ import Screener from "./pages/Screener";
 import Stock from "./pages/Stock";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
 import Portfolio from "./pages/Portfolio";
+import PortfolioDiagnostic from "./pages/PortfolioDiagnostic";
 import Journal from "./pages/Journal";
 import Trades from "./pages/Trades";
 
@@ -23,6 +24,7 @@ function AppRoutes({ state }) {
       <Route path="/stock/:symbol" element={<Page><Stock state={state} /></Page>} />
       <Route path="/technical-analysis" element={<Page><TechnicalAnalysis /></Page>} />
       <Route path="/portfolio" element={<Page><Portfolio state={state} /></Page>} />
+      <Route path="/portfolio/diagnostic" element={<Page><PortfolioDiagnostic /></Page>} />
       <Route path="/journal" element={<Page><Journal /></Page>} />
       <Route path="/trades" element={<Page><Trades state={state} /></Page>} />
     </Routes>
