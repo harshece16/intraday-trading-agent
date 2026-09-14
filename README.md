@@ -379,6 +379,70 @@ posture (`"Uptrend, RSI overbought"`, `"Within 3% of its 52-week low"`,
 `"Possible top reversal today (Murphy ch 4)"`) so you have a second,
 consistent pair of eyes on the chart. The decision stays yours.
 
+### 14. Pre-Market Analysis (`scanner.run_premarket()`)
+
+A dedicated page (`/premarket`) that ranks the NIFTY 100 *before the market
+opens*, using only what's actually known then: last session's daily candle.
+It calls the same `premarket_score()` component the live scanner blends with
+intraday evidence during the day, run on its own with no 5-minute-candle
+dependency — so it works at any time, not just 09:15–15:30 IST.
+
+It deliberately does **not** invent a pre-open gap estimate, an SGX-Nifty-style
+proxy, or a global-markets read — this codebase has no honest, licensed data
+source for any of those, and previous sections of this README go to some
+length about not fabricating numbers. What it does show, all real and
+computed:
+
+- **Last session's market read** — NIFTY's prior-day close/change/trend,
+  India VIX, and advance/decline breadth, scored with the same bias logic
+  `market_context()` uses intraday (`risk-on` / `risk-off` / `neutral`).
+- **Today's event risk** — results due (`nse_feed.results_calendar()`) and
+  ex-dates (`nse_feed.corporate_actions_on()`), the same exclusions the live
+  scanner applies, surfaced before the open instead of discovered mid-session.
+- **A ranked watchlist** — every eligible stock's daily trend, 10-day relative
+  strength vs. NIFTY, distance from 52-week high/low, confirmed Bulkowski
+  patterns, and the exact point-by-point reasons behind its score, with an
+  Avoid tab for what's excluded today and why.
+
+Cached in-process (`app.py`'s `/api/premarket`) with a background refresh
+thread, since a full NIFTY-100 daily download isn't free to run on every
+page load; a manual Refresh button is on the page.
+
+### 15. Real-capital sync (`trading_engine._sync_capital()`)
+
+`config.RISK["total_capital"]` used to be a static number you set once. The
+risk model (Van Tharp's 1% rule, `risk_manager.position_size()`) sizes every
+trade off it — and if that number doesn't match what's actually sitting in
+your Kite account, sizing can look perfectly fine on the dashboard and still
+get rejected by Kite for insufficient margin the moment an order goes live.
+
+`_sync_capital()` closes that gap: once Kite is connected, every tick (max
+once per 5 minutes) it reads the real equity `live_balance` from
+`kite.get_margins()` and writes it straight into `config.RISK["total_capital"]`
+in place — `RiskManager` holds a reference to that same dict, so the very
+next `position_size()` call uses the real figure, no restart needed. Applies
+in paper mode too, on purpose: a paper day should test against what a live
+day could actually size, not a fictional balance. Toggle it off with
+`config.RISK["sync_capital_with_kite"] = False` to pin the number manually
+instead. The Portfolio page's Kite margins card shows the synced amount and
+when it last refreshed, alongside the fuller `utilised` breakdown Kite's
+`margins()` endpoint returns (span, exposure, option premium, M2M, holding
+sales) — not just cash and a used-margin total.
+
+One consequence worth being explicit about: **this makes real account size a
+real constraint on whether any cash-equity trade can fire at all.** At 1%
+risk, ₹500 (or the ₹683 this account actually holds as of this write-up)
+produces a stop-distance-based position size of 0 shares for essentially
+every NIFTY-100 stock's real ATR — the risk-per-trade in rupees is smaller
+than one share's stop distance. This isn't a bug to patch around; it's the
+Van Tharp model doing exactly what it's supposed to do. The honest ways
+around it are: fund the account with more real capital (sizing then reflects
+it automatically, no config edit needed), rely on F&O's premium-based sizing
+instead (cheaper per unit, but confidence-gated — see §9, currently failing
+since the live Information Coefficient is negative), or accept that a small
+account is a pipeline/connectivity test rather than a real trading day until
+it's funded further.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -569,8 +633,9 @@ webapp/
     │   │   └── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
     │   └── pages/
     │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
+    │       ├── PreMarket.jsx      # ★ renders scanner.run_premarket()'s daily-only pre-open ranking
     │       ├── TechnicalAnalysis.jsx
-    │       ├── Portfolio.jsx
+    │       ├── Portfolio.jsx      # incl. the synced-capital Kite margins card — see §15
     │       ├── PortfolioDiagnostic.jsx # ★ renders portfolio_diagnostic.py's read on your holdings
     │       └── Journal.jsx
     └── legacy/index.html          # the original single-file version, kept working for reference
@@ -911,3 +976,12 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
   or an ETF (`SILVERBEES`, `MID150BEES`, ...) — "trend" for an ETF means
   the trend of what it tracks, not a company's fundamentals, and the
   diagnostic doesn't distinguish the two.
+- Real account size is a real constraint, not just a config setting. At 1%
+  risk (Van Tharp), a small account (see §15) produces a 0-share position
+  size for essentially any NIFTY-100 stock — the engine will mechanically
+  place nothing until either the account is funded further or the risk
+  settings are deliberately changed away from that guidance.
+- Pre-market ranking (§14) uses only the last completed session's daily
+  candle — no live pre-open price, no gap estimate. It can disagree with
+  where a stock actually opens; that's expected, not a bug, since this
+  codebase has no honest data source for a real pre-open number.

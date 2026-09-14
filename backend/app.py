@@ -9,6 +9,8 @@ Then open frontend/index.html (or serve it — see README) in a browser.
 
 import asyncio
 import logging
+import threading
+import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -25,6 +27,7 @@ import llm_sentiment
 import methods
 import news_sentiment
 import portfolio_diagnostic
+import scanner
 import universe
 from state import AppState
 from trading_engine import TradingEngine
@@ -105,6 +108,50 @@ def trigger_scan():
         raise HTTPException(status_code=400, detail="Scanner is disabled (config.SCANNER['enabled'])")
     started = engine.request_scan()
     return {"started": started, "message": "Scan started" if started else "A scan is already running"}
+
+
+# Pre-market: scanner.run_premarket() runs on daily candles only (no 5-min
+# data needed), so it works before 09:15 IST. Cached in-process with its own
+# background thread — separate from the intraday Scanner class above, since
+# it's a different, cheaper read (no intraday download) meant to be checked
+# before the market even opens.
+_premarket_state = {"result": None, "error": None, "running": False, "ts": 0.0}
+_premarket_lock = threading.Lock()
+
+
+def _run_premarket_scan():
+    with _premarket_lock:
+        if _premarket_state["running"]:
+            return
+        _premarket_state["running"] = True
+    try:
+        result = scanner.run_premarket(config.SCANNER)
+        _premarket_state["result"] = result
+        _premarket_state["error"] = None
+        _premarket_state["ts"] = time.time()
+    except Exception as exc:
+        logger.exception("Pre-market scan failed")
+        _premarket_state["error"] = str(exc)
+    finally:
+        _premarket_state["running"] = False
+
+
+@app.get("/api/premarket")
+def get_premarket():
+    # Auto-kick a first run if nothing's cached yet, and auto-refresh once the
+    # cached read is more than 30 minutes stale — otherwise just serve what's cached.
+    stale = time.time() - _premarket_state["ts"] > 1800
+    if (_premarket_state["result"] is None or stale) and not _premarket_state["running"]:
+        threading.Thread(target=_run_premarket_scan, name="premarket-scan", daemon=True).start()
+    return {"result": _premarket_state["result"], "error": _premarket_state["error"], "running": _premarket_state["running"]}
+
+
+@app.post("/api/premarket/refresh")
+def refresh_premarket():
+    if _premarket_state["running"]:
+        return {"started": False, "message": "A pre-market scan is already running"}
+    threading.Thread(target=_run_premarket_scan, name="premarket-scan", daemon=True).start()
+    return {"started": True}
 
 
 @app.get("/api/news/{symbol}")
@@ -207,7 +254,12 @@ def get_portfolio():
     with state.lock:
         positions = {sym: pos for sym, pos in state.positions.items() if pos["quantity"] != 0}
         fno_positions = dict(state.fno_positions)
-    out = {"paper_positions": positions, "fno_positions": fno_positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN)}
+        capital_sync = dict(state.capital_sync) if state.capital_sync else None
+    out = {
+        "paper_positions": positions, "fno_positions": fno_positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN),
+        "risk_total_capital": config.RISK["total_capital"], "capital_sync": capital_sync,
+        "sync_capital_with_kite": config.RISK.get("sync_capital_with_kite", False),
+    }
     if config.KITE_ACCESS_TOKEN:
         try:
             kite = engine._ensure_kite()

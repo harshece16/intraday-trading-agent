@@ -28,6 +28,7 @@ best of those become the engine's active watchlist.
 import bisect
 import logging
 import time
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -386,6 +387,39 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg):
     }
 
 
+def premarket_context(daily, session, filter_cfg):
+    """market_context()'s market-wide read, shifted one session earlier so it
+    only uses data that exists before today's candle does: yesterday's NIFTY
+    close (not a live intraday price) and yesterday's advance/decline count.
+    Same scoring as market_context() so a pre-market read and the live
+    intraday read are directly comparable, not two different systems."""
+    nd = [b for b in daily.get(NIFTY, []) if _date(b) < session]
+    closes = [b["close"] for b in nd]
+    score, reasons = 0.0, []
+
+    trend = "sideways"
+    if len(closes) >= 51:
+        e20, e50 = ind.ema(closes, 20), ind.ema(closes, 50)
+        trend = "up" if closes[-1] > e20 > e50 else "down" if closes[-1] < e20 < e50 else "sideways"
+    if trend == "up":
+        score += 1
+        reasons.append("NIFTY closed yesterday in a daily uptrend")
+    elif trend == "down":
+        score -= 1
+        reasons.append("NIFTY closed yesterday in a daily downtrend")
+
+    chg = (closes[-1] / closes[-2] - 1) * 100 if len(closes) >= 2 else None
+    if chg is not None:
+        if chg >= 0.3:
+            score += 1
+            reasons.append(f"NIFTY {chg:+.2f}% in yesterday's session")
+        elif chg <= -0.3:
+            score -= 1
+            reasons.append(f"NIFTY {chg:+.2f}% in yesterday's session")
+
+    return closes, score, reasons, trend, chg
+
+
 def _trend_agrees(daily_trend, side):
     return daily_trend != ("down" if side == "LONG" else "up")
 
@@ -566,3 +600,122 @@ def premarket_picks(daily, universe_rows, session_dates, top_n, cfg, allow_short
                 scored.append((best[0], u["symbol"], best[1]))
         picks[d] = {sym: side for _, sym, side in sorted(scored, reverse=True)[:top_n]}
     return picks
+
+
+def run_premarket(cfg):
+    """Live pre-market ranking for the dashboard: the same premarket_score()
+    component the intraday scanner blends with live-tape evidence, but run on
+    its own using only yesterday's daily close — no 5-min candles needed, so
+    this works before 09:15 IST (or any time the intraday feed is empty).
+    Deliberately does NOT invent a gap/open/SGX-Nifty style pre-open number;
+    everything here is a daily-chart fact as of last night's close, same
+    honesty rule as the rest of the codebase."""
+    started = time.time()
+    uni = universe.load()
+    if not uni:
+        raise RuntimeError("Universe list is empty")
+    today = datetime.now(IST).date().isoformat()
+    tickers = [yf_ticker(u["symbol"]) for u in uni]
+    daily = download_batch(tickers + [NIFTY, VIX], "1y", "1d")
+    nifty_bars = [b for b in daily.get(NIFTY, []) if _date(b) < today]
+    if len(nifty_bars) < 60:
+        raise RuntimeError("NIFTY data unavailable")
+    nifty_dates = [_date(b) for b in nifty_bars]
+    nifty_closes = [b["close"] for b in nifty_bars]
+    session = nifty_dates[-1]  # last completed session (usually yesterday)
+
+    nifty_closes_all, mkt_score, mkt_reasons, nifty_trend, nifty_chg = premarket_context(daily, today, config.MARKET_FILTER)
+    vix_bars = [b for b in daily.get(VIX, []) if _date(b) < today]
+    vix = vix_bars[-1]["close"] if vix_bars else None
+    vix_high = vix is not None and vix >= config.MARKET_FILTER["vix_high"]
+    if vix_high:
+        mkt_score -= 1
+        mkt_reasons.append(f"India VIX {vix:.1f} elevated — expect whipsaws")
+
+    events = nse_feed.results_calendar()
+    ex_actions = nse_feed.corporate_actions_on(today)
+    catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
+
+    sides = ("long", "short") if cfg.get("allow_shorts", True) else ("long",)
+    rows, adv, dec = [], 0, 0
+    for u in uni:
+        t = yf_ticker(u["symbol"])
+        bars = [b for b in daily.get(t, []) if _date(b) < today]
+        if len(bars) < 2:
+            continue
+        prev_chg = (bars[-1]["close"] / bars[-2]["close"] - 1) * 100
+        if prev_chg > 0:
+            adv += 1
+        elif prev_chg < 0:
+            dec += 1
+        prof = daily_profile(daily.get(t, []), nifty_dates, nifty_closes, today)
+        if not prof:
+            continue
+        rows.append({**u, "_prof": prof, "prev_chg_pct": _r(prev_chg)})
+
+    pct_adv = adv / len(rows) * 100 if rows else 50.0
+    if pct_adv >= 60:
+        mkt_score += 1
+        mkt_reasons.append(f"Broad participation yesterday: {adv} advancing / {dec} declining")
+    elif pct_adv <= 40:
+        mkt_score -= 1
+        mkt_reasons.append(f"Weak breadth yesterday: {adv} advancing / {dec} declining")
+    bias = "risk-on" if mkt_score >= 2 else "risk-off" if mkt_score <= -2 else "neutral"
+    if not mkt_reasons:
+        mkt_reasons.append("No strong market-wide signal yet")
+
+    for r in rows:
+        prof, sym = r["_prof"], r["symbol"]
+        excluded = tradability_exclusion(prof, cfg)
+        if not excluded and sym in events:
+            ev = events[sym]
+            excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
+        if not excluded and sym in ex_actions:
+            excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
+        scored = {}
+        for side in sides:
+            pre, pre_items, _ = premarket_score(prof, cfg, side)
+            scored[side] = (pre, pre_items)
+        best = max(scored, key=lambda k: scored[k][0])
+        score, items = scored[best]
+        r.update({
+            "side": best.upper(), "score": _r(score, 1),
+            "long_score": _r(scored["long"][0], 1),
+            "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
+            "excluded": excluded,
+            "reasons": [{"points": _r(float(p), 1), "text": t} for p, t in sorted(items, key=lambda x: -abs(x[0]))[:7]],
+            "close": _r(prof["close"]), "atr_pct": _r(prof["atr_pct"]), "daily_trend": prof["trend"],
+            "rs10": _r(prof["rs10"]) if prof["rs10"] is not None else None,
+            "pct_from_high": _r(prof["pct_from_high"]), "pct_from_low": _r(prof["pct_from_low"]),
+            "turnover_cr": _r(prof["turnover_cr"], 0), "beta": _r(prof["beta"]) if prof["beta"] is not None else None,
+            "catalyst": catalysts.get(sym), "event": events.get(sym),
+            "swing_patterns": prof.get("swing_patterns", []),
+        })
+        del r["_prof"]
+
+    eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
+    excluded_rows = sorted((r for r in rows if r["excluded"]), key=lambda r: -r["score"])
+    ranked = eligible + excluded_rows
+    for i, r in enumerate(ranked, 1):
+        r["rank"] = i
+        r["status"] = "AVOID" if r["excluded"] else "WATCHLIST" if i <= cfg.get("active_count", 6) else "WATCH"
+
+    return {
+        "ts": time.time(),
+        "session_date": session,
+        "as_of_note": f"Ranked on the {session} close — the last completed session. Refreshes once today's "
+                      f"candles exist and the live intraday scanner takes over.",
+        "duration_s": _r(time.time() - started, 1),
+        "scanned": len(rows),
+        "excluded_count": len(excluded_rows),
+        "watchlist": [r["symbol"] for r in eligible[: cfg.get("active_count", 6)]],
+        "market": {
+            "bias": bias, "score": mkt_score, "reasons": mkt_reasons, "session_date": session,
+            "nifty": {"close": _r(nifty_closes_all[-1]) if nifty_closes_all else None, "chg_pct": _r(nifty_chg) if nifty_chg is not None else None, "trend": nifty_trend},
+            "vix": _r(vix) if vix is not None else None, "vix_high": vix_high,
+            "breadth": {"adv": adv, "dec": dec, "pct_adv": _r(pct_adv, 0)},
+        },
+        "events_today": events,
+        "ex_actions_today": ex_actions,
+        "rows": ranked,
+    }

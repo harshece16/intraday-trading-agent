@@ -130,7 +130,29 @@ export default function Portfolio({ state: s }) {
             <div className="rb-row">
               <div className="rb-chip"><b>Cash</b><span>{money((p.margins.equity || {}).available?.cash || 0)}</span></div>
               <div className="rb-chip"><b>Live balance</b><span>{money((p.margins.equity || {}).available?.live_balance ?? (p.margins.equity || {}).available?.cash ?? 0)}</span></div>
-              <div className="rb-chip"><b>Used margin</b><span>{money((p.margins.equity || {}).utilised?.debits || 0)}</span></div>
+              <div className="rb-chip"><b>Intraday payin</b><span>{money((p.margins.equity || {}).available?.intraday_payin || 0)}</span></div>
+              <div className="rb-chip"><b>Collateral</b><span>{money((p.margins.equity || {}).available?.collateral || 0)}</span></div>
+            </div>
+            <div className="detail" style={{ margin: "10px 0 4px" }}>Utilised (what's tied up right now)</div>
+            <div className="rb-row">
+              <div className="rb-chip"><b>Debits</b><span>{money((p.margins.equity || {}).utilised?.debits || 0)}</span></div>
+              <div className="rb-chip"><b>Span</b><span>{money((p.margins.equity || {}).utilised?.span || 0)}</span></div>
+              <div className="rb-chip"><b>Exposure</b><span>{money((p.margins.equity || {}).utilised?.exposure || 0)}</span></div>
+              <div className="rb-chip"><b>Option premium</b><span>{money((p.margins.equity || {}).utilised?.option_premium || 0)}</span></div>
+              <div className="rb-chip"><b>M2M unrealised</b><span className={tone((p.margins.equity || {}).utilised?.m2m_unrealised)}>{money((p.margins.equity || {}).utilised?.m2m_unrealised || 0)}</span></div>
+              <div className="rb-chip"><b>Holding sales</b><span>{money((p.margins.equity || {}).utilised?.holding_sales || 0)}</span></div>
+            </div>
+            <div className="detail" style={{ marginTop: 10 }}>
+              {p.sync_capital_with_kite ? (
+                <>
+                  Risk-model capital is synced to this live balance — <b>{money(p.risk_total_capital)}</b>, last
+                  synced {p.capital_sync ? new Date(p.capital_sync.synced_at * 1000).toLocaleTimeString() : "not yet"}.
+                  Position sizing (Van Tharp 1% rule) always uses the real number here, not a config guess, so a
+                  live order never gets rejected by Kite for insufficient margin against a stale figure.
+                </>
+              ) : (
+                <>Risk-model capital is pinned in config, not synced to this live balance (config.RISK.sync_capital_with_kite is off).</>
+              )}
             </div>
           </div>
           <div className="cardbox" style={{ marginTop: 16 }}>

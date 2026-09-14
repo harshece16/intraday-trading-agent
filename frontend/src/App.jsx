@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useAppState } from "./api";
 import Header from "./components/Header";
 import Overview from "./pages/Overview";
+import PreMarket from "./pages/PreMarket";
 import Screener from "./pages/Screener";
 import Stock from "./pages/Stock";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
@@ -20,6 +21,7 @@ function AppRoutes({ state }) {
   return (
     <Routes>
       <Route path="/" element={<Page><Overview state={state} /></Page>} />
+      <Route path="/premarket" element={<Page><PreMarket /></Page>} />
       <Route path="/screener" element={<Page><Screener state={state} /></Page>} />
       <Route path="/stock/:symbol" element={<Page><Stock state={state} /></Page>} />
       <Route path="/technical-analysis" element={<Page><TechnicalAnalysis /></Page>} />

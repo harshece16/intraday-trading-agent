@@ -50,6 +50,10 @@ class AppState:
         self.realized_pnl_today = 0.0
         self.last_update_ts = None
         self.last_error = None
+        # Set by trading_engine._sync_capital() whenever RISK['total_capital'] is
+        # refreshed from the real Kite account — lets the dashboard show that the
+        # risk model's capital figure is real money, not a stale config guess.
+        self.capital_sync = None  # {"amount": float, "synced_at": epoch, "source": "kite"} | None
 
     def set_watchlist(self, symbols):
         with self.lock:

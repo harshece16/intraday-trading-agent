@@ -85,6 +85,7 @@ class TradingEngine:
         self._scan_thread = None
         self.size_multiplier = 1.0
         self._last_errors = {}
+        self._last_capital_sync = 0.0
 
     def _ensure_kite(self):
         if self.kite_executor is None:
@@ -96,6 +97,32 @@ class TradingEngine:
         """Drop the cached executor so the next order rebuilds it with
         whatever access token config now holds."""
         self.kite_executor = None
+
+    def _sync_capital(self):
+        """Refreshes RISK['total_capital'] from the real Kite equity balance
+        (see config.RISK['sync_capital_with_kite']'s docstring for why).
+        RiskManager holds a reference to config.RISK, not a copy, so mutating
+        the key in place — same pattern as config.FNO['enabled'] — takes
+        effect on the very next position_size() call, no restart needed.
+        Throttled to once every 5 minutes since margins() is a live network call."""
+        if not config.RISK.get("sync_capital_with_kite") or not config.KITE_ACCESS_TOKEN:
+            return
+        now = time.time()
+        if now - self._last_capital_sync < 300:
+            return
+        self._last_capital_sync = now
+        try:
+            margins = self._ensure_kite().get_margins()
+            live_balance = float(margins["equity"]["available"]["live_balance"])
+        except Exception as exc:
+            logger.warning(f"Capital sync with Kite failed: {exc}")
+            return
+        changed = config.RISK["total_capital"] != live_balance
+        config.RISK["total_capital"] = live_balance
+        with self.state.lock:
+            self.state.capital_sync = {"amount": live_balance, "synced_at": now, "source": "kite"}
+        if changed:
+            self.state.log("risk", f"Risk capital synced to real Kite balance: ₹{live_balance:,.0f}")
 
     # ---- scanning -------------------------------------------------------
 
@@ -550,6 +577,7 @@ class TradingEngine:
 
     def tick(self):
         now = datetime.now(IST)
+        self._sync_capital()
         if self._last_day != now.date():
             self.risk.reset_day()
             self.state.realized_pnl_today = 0.0

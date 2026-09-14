@@ -5,7 +5,7 @@ import { clock, money, tone } from "../format";
 import { sessionInfo } from "../helpers";
 
 const PAGES = [
-  ["/", "Overview"], ["/screener", "Screener"], ["/technical-analysis", "Technical Analysis"],
+  ["/", "Overview"], ["/premarket", "Pre-Market"], ["/screener", "Screener"], ["/technical-analysis", "Technical Analysis"],
   ["/portfolio", "Portfolio"], ["/journal", "Journal"], ["/trades", "Trades"],
 ];
 

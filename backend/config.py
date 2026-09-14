@@ -161,7 +161,18 @@ RISK = {
     # Rs 4.8L notional on Rs 1L) and multiplied both losses and costs.
     "max_position_notional_pct": 33.0,
     "max_daily_loss_pct": 2.0,
+    # Fallback only — overwritten in-process by trading_engine._sync_capital()
+    # with the real Kite equity live_balance whenever Kite is connected (see
+    # sync_capital_with_kite below), so position sizing is never computed
+    # against a stale number that doesn't match what's actually funded.
     "total_capital": 100000,
+    # Keep total_capital equal to the real Kite account balance instead of this
+    # static number. On by design: sizing math against a fictional capital figure
+    # can pass every check here and still get rejected by Kite for insufficient
+    # margin on a live order — syncing removes that whole failure class. Applies
+    # in paper mode too, on purpose, so a paper day tests against what a live
+    # day could actually size. Set False to pin total_capital manually instead.
+    "sync_capital_with_kite": True,
     # ATR-based stop/target adapt to each symbol's actual volatility instead
     # of a flat percentage — set False to use stop_loss_pct/take_profit_pct only.
     "use_atr_risk": True,
