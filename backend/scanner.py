@@ -602,6 +602,64 @@ def premarket_picks(daily, universe_rows, session_dates, top_n, cfg, allow_short
     return picks
 
 
+def _premarket_narrative(bias, mkt_reasons, vix, vix_high, top_picks, events, ex_actions):
+    """Stitches the same facts already in the response into a few sentences of
+    trader-style prose — how an experienced trader actually talks through a
+    morning read, not a bullet dump of scores. Every clause here maps to a
+    real, already-computed field (nothing new is inferred or predicted); this
+    is presentation, not a second source of truth. Returns a list of short
+    paragraphs, not one wall of text, since that's how a real pre-market note
+    reads — market read, then the shortlist, then the catch, then the plan."""
+    paras = []
+
+    mood = {"risk-on": "constructive", "risk-off": "defensive", "neutral": "mixed, no strong lean"}[bias]
+    lead = f"Yesterday's tape reads {mood}: " + "; ".join(mkt_reasons[:2]) + "."
+    if vix is not None:
+        lead += f" VIX at {vix:.1f} is {'hot enough to trim size on' if vix_high else 'quiet, so no reason to size down for volatility'}."
+    paras.append(lead)
+
+    longs = [r for r in top_picks if r["side"] == "LONG"]
+    shorts = [r for r in top_picks if r["side"] == "SHORT"]
+
+    def _name_with_reason(r):
+        top_reason = r["reasons"][0]["text"] if r["reasons"] else "screens strongest on setup"
+        return f"{r['symbol']} ({top_reason})"
+
+    if bias == "risk-off" and longs and not shorts:
+        pick_line = "Even on a weak tape the cleanest names are still longs — worth noting, since that's relative strength, not just a lagging short."
+    elif bias == "risk-on" and shorts and not longs:
+        pick_line = "Even on a strong tape a couple of names still screen as shorts — real relative weakness, not just noise."
+    else:
+        pick_line = None
+
+    watch_bits = []
+    if longs:
+        watch_bits.append("On the long side, watching " + ", ".join(_name_with_reason(r) for r in longs[:3]) + ".")
+    if shorts:
+        watch_bits.append("On the short side, watching " + ", ".join(_name_with_reason(r) for r in shorts[:3]) + ".")
+    if watch_bits:
+        if pick_line:
+            watch_bits.append(pick_line)
+        paras.append(" ".join(watch_bits))
+    else:
+        paras.append("Nothing cleanly qualifies yet — no forced trade today if the shortlist stays this thin.")
+
+    caveats = []
+    if events:
+        caveats.append(f"{len(events)} name(s) report results today — off the table regardless of how the setup looks.")
+    if ex_actions:
+        caveats.append(f"{len(ex_actions)} name(s) go ex-date today — any gap there is mechanical, not a signal.")
+    if caveats:
+        paras.append(" ".join(caveats))
+
+    paras.append(
+        "This is prep, not a trigger: it's last night's close, no live tape yet. The plan is to watch these names "
+        "from the open and let the opening range, volume, and Sahab's Dimaag checklist confirm (or kill) the idea "
+        "before anything is sized — exactly what a discretionary trader's watchlist is for, and exactly what it isn't."
+    )
+    return paras
+
+
 def run_premarket(cfg):
     """Live pre-market ranking for the dashboard: the same premarket_score()
     component the intraday scanner blends with live-tape evidence, but run on
@@ -700,6 +758,9 @@ def run_premarket(cfg):
         r["rank"] = i
         r["status"] = "AVOID" if r["excluded"] else "WATCHLIST" if i <= cfg.get("active_count", 6) else "WATCH"
 
+    top_picks = eligible[: cfg.get("active_count", 6)]
+    narrative = _premarket_narrative(bias, mkt_reasons, vix, vix_high, top_picks, events, ex_actions)
+
     return {
         "ts": time.time(),
         "session_date": session,
@@ -708,7 +769,8 @@ def run_premarket(cfg):
         "duration_s": _r(time.time() - started, 1),
         "scanned": len(rows),
         "excluded_count": len(excluded_rows),
-        "watchlist": [r["symbol"] for r in eligible[: cfg.get("active_count", 6)]],
+        "watchlist": [r["symbol"] for r in top_picks],
+        "narrative": narrative,
         "market": {
             "bias": bias, "score": mkt_score, "reasons": mkt_reasons, "session_date": session,
             "nifty": {"close": _r(nifty_closes_all[-1]) if nifty_closes_all else None, "chg_pct": _r(nifty_chg) if nifty_chg is not None else None, "trend": nifty_trend},

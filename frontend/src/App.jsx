@@ -3,6 +3,7 @@ import { useAppState } from "./api";
 import Header from "./components/Header";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
+import DayPlan from "./pages/DayPlan";
 import Screener from "./pages/Screener";
 import Stock from "./pages/Stock";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
@@ -22,6 +23,7 @@ function AppRoutes({ state }) {
     <Routes>
       <Route path="/" element={<Page><Overview state={state} /></Page>} />
       <Route path="/premarket" element={<Page><PreMarket /></Page>} />
+      <Route path="/day-plan" element={<Page><DayPlan /></Page>} />
       <Route path="/screener" element={<Page><Screener state={state} /></Page>} />
       <Route path="/stock/:symbol" element={<Page><Stock state={state} /></Page>} />
       <Route path="/technical-analysis" element={<Page><TechnicalAnalysis /></Page>} />

@@ -5,8 +5,8 @@ import { clock, money, tone } from "../format";
 import { sessionInfo } from "../helpers";
 
 const PAGES = [
-  ["/", "Overview"], ["/premarket", "Pre-Market"], ["/screener", "Screener"], ["/technical-analysis", "Technical Analysis"],
-  ["/portfolio", "Portfolio"], ["/journal", "Journal"], ["/trades", "Trades"],
+  ["/", "Overview"], ["/premarket", "Pre-Market"], ["/day-plan", "Day Plan"], ["/screener", "Screener"],
+  ["/technical-analysis", "Technical Analysis"], ["/portfolio", "Portfolio"], ["/journal", "Journal"], ["/trades", "Trades"],
 ];
 
 async function setMode(paperMode) {

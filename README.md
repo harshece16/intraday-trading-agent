@@ -403,10 +403,39 @@ computed:
   strength vs. NIFTY, distance from 52-week high/low, confirmed Bulkowski
   patterns, and the exact point-by-point reasons behind its score, with an
   Avoid tab for what's excluded today and why.
+- **"The morning take"** — `scanner._premarket_narrative()` turns those same
+  fields into a few sentences of trader-style prose instead of a bullet dump:
+  a market-read line, the long/short shortlist with each pick's single
+  strongest reason, an event-risk caveat, and a closing discipline line. It's
+  presentation, not a second source of truth — every clause maps to a field
+  already in the response, built with plain string formatting (no LLM call),
+  so it can't say anything the data doesn't already say.
 
-Cached in-process (`app.py`'s `/api/premarket`) with a background refresh
-thread, since a full NIFTY-100 daily download isn't free to run on every
-page load; a manual Refresh button is on the page.
+`trading_engine` owns the schedule and the cache (`state.premarket`), not
+`app.py` — it runs the scan once a day on its own (`tick()`'s pre-market
+section), so the shortlist is ready before you'd even open the page, not
+only when someone visits it. `/api/premarket` just reads/triggers through
+the engine; a manual Refresh button is on the page too.
+
+**Linking it to an actual buy — deliberately narrow, on purpose.** The
+pre-market shortlist *primes the day's watchlist*: once, at the start of each
+trading day (`_maybe_seed_watchlist_from_premarket()`), before the live
+intraday scanner has run for the first time, `state.watchlist` is seeded with
+last night's top picks (plus anything pinned or already held) instead of
+sitting empty until the first live scan completes a few minutes into the
+session. That's the entire link. It does **not** place an order, and it
+never will on its own — every entry, for a pre-market pick or any other
+symbol, still has to clear the exact same live gate: `trader_brain_signal()`'s
+checklist (candlestick pattern, above-average volume, VWAP side, opening
+range, reward-to-risk — see "How the agent decides" above) evaluated against
+*today's* intraday candles, which don't exist until the market is actually
+open. This mirrors how a discretionary trader actually works: build tonight's
+watchlist off the close, then let tomorrow's tape — not last night's
+conviction — decide whether anything gets bought. Research into wiring it
+any tighter than that (e.g. auto-buying pre-market's top pick at the open)
+was deliberately rejected: it would mean sizing a real order off zero live
+confirmation, exactly the kind of fabricated-certainty shortcut the rest of
+this README argues against.
 
 ### 15. Real-capital sync (`trading_engine._sync_capital()`)
 
@@ -442,6 +471,43 @@ instead (cheaper per unit, but confidence-gated — see §9, currently failing
 since the live Information Coefficient is negative), or accept that a small
 account is a pipeline/connectivity test rather than a real trading day until
 it's funded further.
+
+### 16. Day Plan (`day_plan.py`) — capital planning without a fabricated return
+
+A user directly asked for a tab showing "what we're going to invest and what
+is expected at end of day, and did we achieve it" against a planned ₹5,000.
+The middle part of that — an expected end-of-day number — is exactly what
+this README has refused everywhere else, for the same reason each time:
+there's no proven edge yet to base a return forecast on (the Dimaag
+Scorecard's live Information Coefficient is negative, expectancy hasn't
+cleared its bar — §9). Stating an expected P&L would be fabricating a number
+this system has no right to state, not a feature.
+
+What's real and buildable instead, and what `/day-plan` actually shows, split
+into two halves that are never allowed to blend into each other:
+
+- **Your plan** — enter a capital figure (defaults to 5,000) and see the risk
+  model's own boundaries at that number: max ₹ risk per trade, max ₹ daily
+  loss, and — for every symbol on today's real ranked shortlist (the live
+  scanner's active picks once it's run, else the pre-market ranking) — the
+  actual `risk_manager.RiskManager` computed stop, target, share quantity,
+  ₹ risk, ₹ reward and RRR at that capital. This is arithmetic on real prices
+  and real ATR, using the exact same `position_size()`/`stop_loss_price()`/
+  `take_profit_price()` calls a live entry would use — not a simulation of
+  outcomes, just what the sizing math produces. At ₹5,000 today, 2 of the 6
+  current picks size to a real 1+ share position; the other 4 round to 0 —
+  shown plainly, not hidden.
+- **What actually happened today** — today's real fills from the journal
+  (`database.trades_between()`), actual realized P&L, and whether the day
+  stayed inside the daily-loss cap *computed off the real capital that
+  actually sized those trades* (not the hypothetical figure above — the two
+  are shown side by side specifically so they're never mistaken for each
+  other, since a live day almost never uses exactly the amount someone is
+  simulating in the planner).
+
+"Did we achieve it" becomes "did the day stay inside its own rules," checked
+against a real number, instead of a profit target checked against an
+imagined one.
 
 ## Dashboard
 
@@ -615,6 +681,7 @@ webapp/
 │   ├── swing_patterns.py        # Bulkowski daily patterns + Murphy reversal days (scanner only)
 │   ├── market_structure.py      # swings, Dow trend, S/R zones, breakouts, Fibonacci, CPR
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
+│   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
 │   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades
 │   ├── backtester.py            # same strategy/risk code over history, with costs; --universe mode
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
@@ -634,6 +701,7 @@ webapp/
     │   └── pages/
     │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
     │       ├── PreMarket.jsx      # ★ renders scanner.run_premarket()'s daily-only pre-open ranking
+    │       ├── DayPlan.jsx        # ★ renders day_plan.py — real risk-boundary sizing, never a return forecast
     │       ├── TechnicalAnalysis.jsx
     │       ├── Portfolio.jsx      # incl. the synced-capital Kite margins card — see §15
     │       ├── PortfolioDiagnostic.jsx # ★ renders portfolio_diagnostic.py's read on your holdings

@@ -30,7 +30,7 @@ import news_sentiment
 import options_pricing
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
-from scanner import Scanner
+from scanner import Scanner, run_premarket
 from state import AppState
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 
@@ -86,6 +86,9 @@ class TradingEngine:
         self.size_multiplier = 1.0
         self._last_errors = {}
         self._last_capital_sync = 0.0
+        self._premarket_thread = None
+        self._last_premarket_run_date = None
+        self._last_premarket_seed_date = None
 
     def _ensure_kite(self):
         if self.kite_executor is None:
@@ -178,6 +181,71 @@ class TradingEngine:
             self.state.log("watchlist", f"Stopped tracking {', '.join(dropped)} — no longer among the top picks")
         if mkt.get("vix_high"):
             self.state.log("risk", f"India VIX {mkt['vix']:.1f} is elevated — new position sizes reduced", level="warn")
+
+    # ---- pre-market ------------------------------------------------------
+    #
+    # scanner.run_premarket() ranks the NIFTY 100 on last session's daily
+    # data alone — usable before 09:15 IST, unlike the live scanner above
+    # which needs today's 5-min candles. Run once a day here (not just
+    # lazily when someone opens the Pre-Market page) so its shortlist is
+    # ready to seed the watchlist the moment the process is up each morning.
+    #
+    # Seeding is deliberately narrow: it only sets WHAT gets tracked from the
+    # open, exactly like a trader building a morning watchlist off last
+    # night's homework. It never buys anything by itself — _try_enter/
+    # trader_brain_signal still require live intraday confirmation (the
+    # checklist: candlestick pattern, volume, VWAP side, opening range) for
+    # every entry, same as a symbol the live scanner finds mid-session. The
+    # only thing pre-market analysis changes is the reaction time — the
+    # engine is already watching a real, computed shortlist instead of only
+    # pinned/held symbols for the gap before the first live scan completes.
+
+    def request_premarket_scan(self) -> bool:
+        if self._premarket_thread and self._premarket_thread.is_alive():
+            return False
+        self._premarket_thread = threading.Thread(target=self._run_premarket_scan, name="premarket-scan", daemon=True)
+        self._premarket_thread.start()
+        return True
+
+    def _run_premarket_scan(self):
+        with self.state.lock:
+            self.state.premarket["running"] = True
+        try:
+            result = run_premarket(config.SCANNER)
+        except Exception as exc:
+            logger.exception("Pre-market scan failed")
+            with self.state.lock:
+                self.state.premarket = {"result": self.state.premarket.get("result"), "error": str(exc), "running": False}
+            return
+        with self.state.lock:
+            self.state.premarket = {"result": result, "error": None, "running": False}
+        self._last_premarket_run_date = datetime.now(IST).date()
+        picks = ", ".join(result["watchlist"]) or "nothing qualifies yet"
+        self.state.log("scan", f"Pre-market read ({result['market']['bias']}): shortlist is {picks}.")
+        self._maybe_seed_watchlist_from_premarket(result)
+
+    def _maybe_seed_watchlist_from_premarket(self, result):
+        """Primes state.watchlist with the pre-market shortlist for the gap
+        between process start and the first live intraday scan — only while
+        that gap is real (no live scan has run yet today) and only once a
+        day, so it never fights the live scanner once that takes over."""
+        today = datetime.now(IST).date()
+        if self._last_premarket_seed_date == today:
+            return
+        live_scan_done_today = self.state.scanner and self.state.scanner.get("session_date") == today.isoformat()
+        if live_scan_done_today:
+            return
+        self._last_premarket_seed_date = today
+        held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
+        new_watch = list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["watchlist"] + held))
+        old_watch = list(self.state.watchlist)
+        if new_watch == old_watch:
+            return
+        self.state.set_watchlist(new_watch)
+        added = [s for s in new_watch if s not in old_watch]
+        if added:
+            self.state.log("watchlist", f"Pre-market shortlist seeded: {', '.join(added)} — tracking from the "
+                                        f"open; entries still wait for live checklist confirmation.")
 
     def _scan_row(self, symbol):
         result = self.state.scanner
@@ -593,6 +661,12 @@ class TradingEngine:
             self._last_holiday_logged = now.date()
             resumes = holidays.next_trading_day(now).strftime("%A, %d %b")
             self.state.log("system", f"Markets are closed today for {holiday}. Trading resumes {resumes}.")
+
+        if self._last_premarket_run_date != now.date() and self.scanner:
+            # Runs every day, holiday included — it's a read on the last
+            # completed session, which is just as valid context on a
+            # holiday (planning ahead to the next trading day) as any other.
+            self.request_premarket_scan()
 
         if self.scanner and self.scanner.due(phase != "closed"):
             self.request_scan()

@@ -54,6 +54,11 @@ class AppState:
         # refreshed from the real Kite account — lets the dashboard show that the
         # risk model's capital figure is real money, not a stale config guess.
         self.capital_sync = None  # {"amount": float, "synced_at": epoch, "source": "kite"} | None
+        # scanner.run_premarket()'s cached result — see trading_engine's
+        # request_premarket_scan()/_run_premarket_scan(). Owned here (not a
+        # module-level dict in app.py) so the engine itself can read it to seed
+        # the day's watchlist before the live intraday scanner has run.
+        self.premarket = {"result": None, "error": None, "running": False}
 
     def set_watchlist(self, symbols):
         with self.lock:

@@ -9,7 +9,6 @@ Then open frontend/index.html (or serve it — see README) in a browser.
 
 import asyncio
 import logging
-import threading
 import time
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -23,11 +22,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import config
 import data_provider
 import database
+import day_plan
 import llm_sentiment
 import methods
 import news_sentiment
 import portfolio_diagnostic
-import scanner
 import universe
 from state import AppState
 from trading_engine import TradingEngine
@@ -111,47 +110,24 @@ def trigger_scan():
 
 
 # Pre-market: scanner.run_premarket() runs on daily candles only (no 5-min
-# data needed), so it works before 09:15 IST. Cached in-process with its own
-# background thread — separate from the intraday Scanner class above, since
-# it's a different, cheaper read (no intraday download) meant to be checked
-# before the market even opens.
-_premarket_state = {"result": None, "error": None, "running": False, "ts": 0.0}
-_premarket_lock = threading.Lock()
-
-
-def _run_premarket_scan():
-    with _premarket_lock:
-        if _premarket_state["running"]:
-            return
-        _premarket_state["running"] = True
-    try:
-        result = scanner.run_premarket(config.SCANNER)
-        _premarket_state["result"] = result
-        _premarket_state["error"] = None
-        _premarket_state["ts"] = time.time()
-    except Exception as exc:
-        logger.exception("Pre-market scan failed")
-        _premarket_state["error"] = str(exc)
-    finally:
-        _premarket_state["running"] = False
-
-
+# data needed), so it works before 09:15 IST. The engine owns the cache and
+# the daily run schedule (trading_engine.tick() kicks one off once a day, and
+# seeds the watchlist from it — see trading_engine's "pre-market" section);
+# these endpoints just read/trigger through it.
 @app.get("/api/premarket")
 def get_premarket():
-    # Auto-kick a first run if nothing's cached yet, and auto-refresh once the
-    # cached read is more than 30 minutes stale — otherwise just serve what's cached.
-    stale = time.time() - _premarket_state["ts"] > 1800
-    if (_premarket_state["result"] is None or stale) and not _premarket_state["running"]:
-        threading.Thread(target=_run_premarket_scan, name="premarket-scan", daemon=True).start()
-    return {"result": _premarket_state["result"], "error": _premarket_state["error"], "running": _premarket_state["running"]}
+    with state.lock:
+        pm = dict(state.premarket)
+    stale = pm["result"] is not None and time.time() - pm["result"]["ts"] > 1800
+    if (pm["result"] is None or stale) and not pm["running"]:
+        engine.request_premarket_scan()
+    return {"result": pm["result"], "error": pm["error"], "running": pm["running"]}
 
 
 @app.post("/api/premarket/refresh")
 def refresh_premarket():
-    if _premarket_state["running"]:
-        return {"started": False, "message": "A pre-market scan is already running"}
-    threading.Thread(target=_run_premarket_scan, name="premarket-scan", daemon=True).start()
-    return {"started": True}
+    started = engine.request_premarket_scan()
+    return {"started": started, "message": "Pre-market scan started" if started else "A pre-market scan is already running"}
 
 
 @app.get("/api/news/{symbol}")
@@ -268,6 +244,24 @@ def get_portfolio():
         except Exception as exc:
             out["error"] = f"Could not reach Kite: {exc}"
     return out
+
+
+@app.get("/api/day-plan")
+def get_day_plan(capital: float = 5000.0):
+    """Not a prediction — see day_plan.py's docstring for why. Splits into a
+    'plan' (the risk model's own boundaries and real position sizes at the
+    capital you pass) and an 'outcome' (today's actual fills, measured
+    against the real capital that actually sized them, not the hypothetical
+    one in 'plan')."""
+    with state.lock:
+        scanner_result, premarket_result, pm_running = state.scanner, state.premarket.get("result"), state.premarket.get("running")
+    if scanner_result is None and premarket_result is None and not pm_running:
+        engine.request_premarket_scan()
+    rows, source = day_plan.pick_rows(scanner_result, premarket_result)
+    plan_data = day_plan.plan(capital, rows)
+    plan_data["source"] = source
+    outcome_data = day_plan.outcome(config.RISK["total_capital"])
+    return {"plan": plan_data, "outcome": outcome_data}
 
 
 @app.get("/api/journal/summary")

@@ -22,6 +22,8 @@ Single-writer (the trading engine's background thread) so no connection
 pooling is needed; SQLite's own locking covers the occasional API-thread read.
 """
 
+from __future__ import annotations
+
 import json
 import math
 import sqlite3
@@ -271,6 +273,23 @@ def new_position_id():
 def recent_trades(limit=200):
     with _conn() as c:
         rows = c.execute("SELECT * FROM trades ORDER BY ts DESC LIMIT ?", (limit,)).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["checklist"] = json.loads(d.pop("checklist_json")) if d.get("checklist_json") else None
+        out.append(d)
+    return out
+
+
+def trades_between(start_ts: float, end_ts: float | None = None):
+    """Real fills in a time window, oldest first — used for "today's actual
+    trades" (day_plan.py) rather than recent_trades()'s all-time newest-first
+    view, which isn't day-scoped."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM trades WHERE ts >= ? AND ts <= ? ORDER BY ts ASC",
+            (start_ts, end_ts if end_ts is not None else time.time()),
+        ).fetchall()
     out = []
     for r in rows:
         d = dict(r)

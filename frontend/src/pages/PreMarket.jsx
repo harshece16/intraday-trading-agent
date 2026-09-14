@@ -115,7 +115,22 @@ export default function PreMarket() {
         {refreshing || data.running ? "Refreshing…" : "Refresh"}
       </button>
 
-      <div className="cardbox">
+      {!!(r.narrative || []).length && (
+        <div className="cardbox" style={{ borderColor: "var(--accent, #7c6df0)" }}>
+          <h2 className="h" style={{ fontSize: 16 }}>The morning take</h2>
+          <p className="muted" style={{ margin: "0 0 10px", fontSize: 12.5 }}>
+            Same facts as the cards below, read the way a trader talks through a pre-market note — not a new
+            source of truth, and not a prediction.
+          </p>
+          {r.narrative.map((para, i) => (
+            <p key={i} style={{ margin: i === r.narrative.length - 1 ? "10px 0 0" : "0 0 10px", fontSize: 13.5, lineHeight: 1.6 }}>
+              {i === r.narrative.length - 1 ? <i>{para}</i> : para}
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="cardbox" style={{ marginTop: 16 }}>
         <h2 className="h" style={{ fontSize: 16 }}>Last session's market read <BiasPill bias={m.bias} /></h2>
         <div className="rb-row" style={{ marginTop: 8 }}>
           <div className="rb-chip"><b>NIFTY close</b><span className={tone(m.nifty.chg_pct)}>{m.nifty.close} ({m.nifty.chg_pct > 0 ? "+" : ""}{m.nifty.chg_pct}%)</span></div>
