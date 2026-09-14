@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import config
 import data_provider
 import database
+import llm_sentiment
 import methods
 import news_sentiment
 import portfolio_diagnostic
@@ -140,6 +141,27 @@ def set_fno_enabled(update: FnoUpdate):
     state.log("system", f"F&O (options-buying) {'enabled' if update.enabled else 'disabled'} via the dashboard",
               level="warn" if update.enabled else "info")
     return {"enabled": config.FNO["enabled"]}
+
+
+class LlmSentimentUpdate(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/llm-sentiment/enable")
+def set_llm_sentiment_enabled(update: LlmSentimentUpdate):
+    if update.enabled and not config.NEWS.get("anthropic_api_key"):
+        raise HTTPException(status_code=400, detail="Set ANTHROPIC_API_KEY first — there's no key to call with.")
+    enabled = llm_sentiment.set_enabled(update.enabled)
+    state.log("system", f"LLM news sentiment {'enabled' if enabled else 'disabled'} via the dashboard")
+    return llm_sentiment.stats()
+
+
+@app.get("/api/llm-sentiment/status")
+def llm_sentiment_status():
+    """Live usage check: real token counts and the cost they actually imply
+    at Haiku 4.5's published rate — poll this any time, not just on the
+    Technical Analysis page load."""
+    return llm_sentiment.stats()
 
 
 @app.get("/api/portfolio/diagnostic")

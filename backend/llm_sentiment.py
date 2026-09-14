@@ -33,6 +33,11 @@ import config
 logger = logging.getLogger("trading_bot")
 
 MODEL = "claude-haiku-4-5-20251001"
+# Verified against anthropic.com/claude/haiku on 2026-09-14 — re-check if it's
+# been a while, Anthropic can change pricing. Applied to the real input/output
+# token counts each API response reports, not an estimate.
+PRICE_PER_M_INPUT_USD = 1.0
+PRICE_PER_M_OUTPUT_USD = 5.0
 SYSTEM_PROMPT = (
     "You score financial news headlines for how they read for a specific listed company's share "
     "price — nothing else. Reply with ONLY a JSON object: {\"score\": <number from -1 to 1>}. "
@@ -44,8 +49,14 @@ SYSTEM_PROMPT = (
 
 _client = None
 _cache = {}  # headline hash -> score; headlines don't change once published, so no TTL needed
-_budget = {"date": None, "used": 0}
+_budget = {"date": None, "used": 0, "input_tokens": 0, "output_tokens": 0}
 _lock = threading.Lock()
+
+
+def _reset_budget_if_new_day():
+    today = datetime.now(timezone.utc).date()
+    if _budget["date"] != today:
+        _budget.update(date=today, used=0, input_tokens=0, output_tokens=0)
 
 
 def _get_client():
@@ -59,10 +70,8 @@ def _get_client():
 def _allowed():
     if not config.NEWS.get("anthropic_api_key") or not config.NEWS.get("use_llm_sentiment"):
         return False
-    today = datetime.now(timezone.utc).date()
     with _lock:
-        if _budget["date"] != today:
-            _budget.update(date=today, used=0)
+        _reset_budget_if_new_day()
         if _budget["used"] >= config.NEWS.get("llm_daily_limit", 500):
             return False
         _budget["used"] += 1
@@ -90,6 +99,10 @@ def score_headline(title, summary=None):
             model=MODEL, max_tokens=30, system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Headline: {title}\nSummary: {summary or '(none)'}"}],
         )
+        with _lock:
+            _reset_budget_if_new_day()
+            _budget["input_tokens"] += resp.usage.input_tokens
+            _budget["output_tokens"] += resp.usage.output_tokens
         text = resp.content[0].text.strip()
         match = re.search(r"-?\d*\.?\d+", text)
         if not match:
@@ -103,8 +116,27 @@ def score_headline(title, summary=None):
 
 
 def stats():
-    """For the Technical Analysis page / debugging — how much of the budget has been used today."""
-    today = datetime.now(timezone.utc).date()
-    used = _budget["used"] if _budget["date"] == today else 0
-    return {"used_today": used, "daily_limit": config.NEWS.get("llm_daily_limit", 500),
-            "cached_headlines": len(_cache), "enabled": bool(config.NEWS.get("use_llm_sentiment"))}
+    """For the dashboard's live usage check — real token counts the API
+    itself reported today, and the cost those actually imply at Haiku 4.5's
+    published rate (not an estimate from call count x an assumed size)."""
+    with _lock:
+        _reset_budget_if_new_day()
+        used, in_tok, out_tok = _budget["used"], _budget["input_tokens"], _budget["output_tokens"]
+    cost = in_tok / 1e6 * PRICE_PER_M_INPUT_USD + out_tok / 1e6 * PRICE_PER_M_OUTPUT_USD
+    return {
+        "enabled": bool(config.NEWS.get("use_llm_sentiment")), "configured": bool(config.NEWS.get("anthropic_api_key")),
+        "used_today": used, "daily_limit": config.NEWS.get("llm_daily_limit", 500),
+        "cached_headlines": len(_cache),
+        "input_tokens_today": in_tok, "output_tokens_today": out_tok,
+        "estimated_cost_usd_today": round(cost, 4),
+        "estimated_cost_usd_at_daily_limit": round(
+            config.NEWS.get("llm_daily_limit", 500) * (in_tok / used * PRICE_PER_M_INPUT_USD
+            + out_tok / used * PRICE_PER_M_OUTPUT_USD) / 1e6, 2) if used else None,
+    }
+
+
+def set_enabled(enabled: bool):
+    """Runtime on/off toggle — separate from whether a key is even configured,
+    same pattern as config.FNO['enabled'] (app.py's POST /api/fno/enable)."""
+    config.NEWS["use_llm_sentiment"] = bool(enabled)
+    return config.NEWS["use_llm_sentiment"]
