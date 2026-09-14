@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useAppState } from "./api";
+import { useAlerts } from "./useAlerts";
 import Header from "./components/Header";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
@@ -37,6 +38,7 @@ function AppRoutes({ state }) {
 
 function Shell() {
   const state = useAppState();
+  useAlerts(state);
   return (
     <>
       <Header state={state} />

@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { API_BASE, API_KEY, apiFetch } from "../api";
 import { clock, money, tone } from "../format";
 import { sessionInfo } from "../helpers";
+import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 const PAGES = [
   ["/", "Overview"], ["/premarket", "Pre-Market"], ["/day-plan", "Day Plan"], ["/screener", "Screener"],
@@ -19,6 +20,20 @@ async function setMode(paperMode) {
 export default function Header({ state }) {
   const navigate = useNavigate();
   const [kite, setKite] = useState(null);
+  const [alertsOn, setAlertsOn] = useState(false);
+
+  useEffect(() => { setAlertsOn(alertsEnabled()); }, []);
+
+  async function toggleAlerts() {
+    if (alertsOn) {
+      disableAlerts();
+      setAlertsOn(false);
+      return;
+    }
+    const ok = await enableAlerts();
+    setAlertsOn(ok);
+    if (!ok) alert("Notifications are blocked for this site. Allow them in your browser's site settings to get trade and price alerts.");
+  }
 
   useEffect(() => {
     let stopped = false;
@@ -63,6 +78,11 @@ export default function Header({ state }) {
           <span>{kiteLabel}</span>
           <button className="btn" onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}>{kiteBtnLabel}</button>
         </div>
+        {alertsSupported() && (
+          <button className={`btn ${alertsOn ? "primary" : ""}`} onClick={toggleAlerts} title="Browser notifications for trade fills, risk warnings, and price moves">
+            {alertsOn ? "🔔 Alerts on" : "🔕 Enable alerts"}
+          </button>
+        )}
         <div className="segmented" role="group" aria-label="Trading mode">
           <button className="paper" aria-pressed={String(!!state?.paper_mode)} onClick={() => setMode(true)}>Paper</button>
           <button className="live" aria-pressed={String(!state?.paper_mode)} onClick={() => { if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false); }}>Live</button>

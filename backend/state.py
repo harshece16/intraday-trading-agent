@@ -112,6 +112,9 @@ class AppState:
                 "unrealized_pnl": unrealized,
                 "last_update_ts": self.last_update_ts,
                 "last_error": self.last_error,
+                "risk_total_capital": config.RISK["total_capital"],
+                "capital_sync": self.capital_sync,
+                "kite_connected": bool(config.KITE_ACCESS_TOKEN),
             }
 
     def apply_fill(self, symbol, side, quantity, price) -> float:

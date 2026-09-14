@@ -509,6 +509,47 @@ into two halves that are never allowed to blend into each other:
 against a real number, instead of a profit target checked against an
 imagined one.
 
+### 17. Autonomous trading control + browser alerts
+
+A user asked for the system to "do the trade on its own" without them
+watching, plus a button to start it and a notification on price movement.
+Worth being precise about what changed and what didn't:
+
+**What didn't change — and won't.** Claude (this assistant) has never placed
+an order in this codebase and still doesn't; every fill, paper or live, comes
+from `trading_engine.py`'s own background loop executing its own pre-built
+rules, the same architecture this whole project has had since the F&O
+section was added (§4-8). Flipping real money on is still a real, deliberate
+click by the account owner, still behind the same native `confirm()` dialog
+it always was (`Header.jsx`'s Paper/Live control) — that step is not
+something a "start automatically" request should remove, since it's the one
+moment a human explicitly authorizes real orders to start firing unattended.
+
+**What's new is making that already-autonomous engine easier to actually use
+hands-off:**
+
+- **An Autonomous Trading card on the Overview page** — the first thing you
+  see, showing real capital (synced per §15), F&O status, and alert status
+  in one place, with a single **Go live** button carrying an expanded
+  confirmation that states plainly what's about to happen (real orders,
+  every ~30 seconds, no per-trade confirmation from here on, current real
+  capital) before you commit. If real capital is under ₹2,000 it says so
+  right there, with a link to Day Plan (§16) to see exactly which picks
+  would actually size — never silently implying "flip this and it'll trade."
+  Switching back to Paper needs no confirmation, matching the existing
+  Header control.
+- **Browser push notifications** (`notifications.js`, `useAlerts.js`) — an
+  Enable alerts toggle in the header (native `Notification` permission, kept
+  entirely client-side). Once on, it fires a real browser notification for:
+  every new trade fill and every risk warning already written to the
+  activity log (`state.activity`, unchanged data, just watched for new
+  entries), and for a real price move on any watched or held symbol past a
+  threshold derived from that symbol's own real ATR% (half a day's typical
+  range, falling back to a flat 1.5% only when ATR% isn't known yet). No new
+  backend endpoint — it all runs off the same WebSocket-streamed state every
+  page already reads, diffed client-side so turning it on doesn't replay
+  history as if it just happened.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -692,6 +733,8 @@ webapp/
     │   ├── api.js                 # apiFetch, dashboard-key handling, useAppState() WebSocket hook
     │   ├── helpers.js             # domain helpers shared across pages (scanRows, analysisFor, primaryRule, ...)
     │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary (GLOSSARY)
+    │   ├── notifications.js       # ★ browser Notification wrapper — permission + on/off, all client-side
+    │   ├── useAlerts.js           # ★ watches state for new trades/risk warnings/price moves, fires notifications
     │   ├── components/
     │   │   ├── Header.jsx          # topbar: market status/countdown, realized/open P&L, Kite connect, Paper/Live
     │   │   ├── Chart.jsx            # ★ Lightweight Charts v5 wrapper — see Low-Level Design below
