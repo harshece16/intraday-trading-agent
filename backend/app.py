@@ -224,6 +224,16 @@ def chaywanaprash_status():
     return chaywanaprash.stats()
 
 
+@app.get("/api/dimag-ki-batti")
+def dimag_ki_batti():
+    """"The lightbulb moment" — of the platform's real, already-tagged
+    swing patterns, which one currently shows the strongest genuine
+    predictive result (database.dimag_ki_batti()), using the same honest,
+    deduplicated Information Coefficient the Scorecard's own predictive-
+    skill check uses. Never invents a winner — see its docstring."""
+    return database.dimag_ki_batti()
+
+
 @app.get("/api/portfolio/diagnostic")
 def portfolio_diagnostic_endpoint():
     """A technical read of your actual Kite holdings, using the same

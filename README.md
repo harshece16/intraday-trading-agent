@@ -1129,6 +1129,192 @@ against a live backend and confirming, directly against the production
 rows it did gain in that window were checked individually and were genuine
 live-engine activity for real symbols.
 
+### 27. The reward:risk target was picking the nearest level, not a real one
+
+Zero trades executed across the first ~90 minutes of a real session (1,618
+checklist evaluations, 46 symbols) — not itself surprising given the
+pattern requirement is genuinely strict (§24), but the numbers said
+something more specific was going on. Across every required checklist
+item, `rrr` (reward:risk ≥ 1.5) failed **99%** of the time, more often
+than `pattern` (92%) or `volume` (92%) — and of the 17 evaluations today
+where only one required item failed (the closest calls to a real trade),
+**13 of 17** were blocked by `rrr` alone. Of the 273 evaluations that got
+far enough to compute a real R:R number, the median was **0.06** and 44%
+were negative — even with a real pattern, a real stop, and trend agreement
+all already lined up.
+
+The cause was in `_checklist()`'s target selection, not the market:
+`target = min(beyond)` (long) / `max(beyond)` (short) always took the
+single *nearest* opposing level out of a dense candidate pool —
+`key_levels()`'s swing-point clusters, 7 Fibonacci sub-ratios, CPR
+top/pivot/bottom, prev-day levels — with no check for whether that
+nearest level was actually far enough away to give real room to run,
+unlike the stop-placement check a few lines above it (which does filter
+for significance, `touches >= 2`). Confirmed live on two real symbols:
+TATACONSUM's nearest support was the CPR top, 0.16 ATR away, used as the
+short target, while a real swing level and CPR bottom sat 1.0-1.1 ATR away
+— both ignored purely because they weren't the closest. Same story on
+SHREECEM (nearest resistance 0.60 ATR away; a qualifying level 2.2 ATR out
+existed and was never considered).
+
+Fixed by walking outward through the candidate levels (sorted by
+distance) for the first one that actually clears `min_rrr` — a new
+`max_target_atr` (3.0) config default caps how far out it's willing to
+look, so the target stays realistic for an intraday move — falling back
+to the old nearest-level behavior only when nothing within that range
+qualifies, same as it always has when there's no level at all. The bar
+itself didn't move: 1.5R is still 1.5R. Verified with a direct unit test
+(a synthetic level layout matching TATACONSUM's real one, confirming the
+walk correctly skips four non-qualifying nearby levels for a real
+qualifying one 2.84 ATR out), then live: in the first 90 seconds after
+deploying it, real R:R values were already visibly higher (several
+clearing 1.5, versus a same-session pre-fix median of 0.06), and by the
+end of the day the blended full-day R:R pass rate had moved from roughly
+7-8% to 11.4%.
+
+### 28. Fault-injection tests for the real external dependencies
+
+This is a live-money system; a network blip, an expired Kite session, or
+a malformed NSE response has to degrade gracefully — skip that one thing,
+log it, keep ticking — not crash the engine's background thread or
+corrupt state. `backend/tests/test_fault_injection.py` deliberately
+breaks each real dependency and asserts the specific graceful behavior
+the surrounding code claims to have, distinct from
+`test_entries_today_rollback.py`'s risk/entry *logic* bugs — these are
+*infrastructure* failure modes: Kite session expiry mid-`_sync_capital()`,
+a generic Kite network failure, `_check_position_reconciliation()`
+surviving Kite's positions() call failing, NSE feed timeouts on
+`fii_dii_flows()`/`large_deals_today()`, `tick()` surviving one bad
+symbol without stopping the other 24, and `get_candles_batch()` under
+partial (Kite down, yfinance up) and total (both down) outages.
+
+Writing the total-outage test first caught a real gap: the per-symbol
+Kite fetch was defended (each future's exception caught individually,
+§25) but the batched yfinance *fallback* call wasn't — it raised straight
+out of `get_candles_batch()` when yfinance was also unreachable, silently
+relying on `_tick_impl()`'s own try/except to mask it rather than the
+function honoring its own documented contract ("a symbol that fails on
+every path is simply absent from the result"). Fixed in
+`data_provider.py` (`_safe_yfinance_batch`) so the function is safe on
+its own, not just safe because of how its one current caller happens to
+use it.
+
+### 29. Chaywanaprash — the platform's own research analyst
+
+Named after chyawanprash, the Ayurvedic general-strengthening tonic —
+same naming spirit as Trader Sahab / Sahab's Dimaag / the Varsity Grand
+Checklist. Where Sahab's Dimaag scores one trade, Chaywanaprash
+(`backend/chaywanaprash.py`) looks at the platform itself: it pulls real,
+structured stats straight out of the journal database — a new
+`database.checklist_blocker_stats()` (per-required-item pass/fail counts,
+near-misses grouped by their lone blocker, the real R:R and volume-ratio
+distributions — the same aggregate analysis that found §27's bug, now
+reusable instead of hand-rolled each time) and `recent_activity_issues()`
+(recent warn/error log lines) — and, when `ANTHROPIC_API_KEY` is
+configured, asks Claude (Sonnet 5, a heavier on-demand call than
+`llm_sentiment.py`'s per-headline Haiku scoring) to turn those real
+numbers into prioritized, evidence-cited platform improvements. The
+system prompt explicitly forbids citing any number it wasn't given and
+forbids recommending a loosened risk/entry bar just to force more trades.
+
+Same discipline as everywhere else in Sahab's Dimaag: never fabricate. No
+API key configured, the daily call budget spent (a separate, small cap
+from `NEWS['llm_daily_limit']` — this is one heavy call, not hundreds of
+small ones), or the LLM call itself fails — it still returns the real
+computed stats, clearly labeled as ungenerated, rather than inventing a
+narrative. And it's deliberately read-only: it never edits `config.py`,
+`trader_brain.py`, or anything else itself — it produces a report a human
+reads and decides on, the same loop this project has followed for every
+other change (§27 included: found live, reported, only implemented once
+asked). Wired up as `POST /api/chaywanaprash/analyze`, `GET
+/api/chaywanaprash/reports` (every report persisted to a new
+`chaywanaprash_reports` table, so history isn't lost), and `GET
+/api/chaywanaprash/status`.
+
+### 30. The Scorecard's Information Coefficient was pseudo-replicated — real IC is positive, not negative
+
+Running Chaywanaprash over the live journal for the first time surfaced
+something bigger than a UI or targeting bug: `database.factor_ic()`
+(§8/§19's "never trust an unproven edge" check, and the exact statistic
+that gates `confidence.py`'s system-evidence multiplier) reported **IC
+-0.124 across 8,091 session pairs** — a large enough sample to look
+solidly, significantly negative, and the reason a MAZDOCK setup that
+scored a perfect 100/100 locally (a real Three Black Crows pattern, every
+required checklist item passing) still got scaled down to 25/100 and
+blocked: the Scorecard was reporting *proven-absent* edge, not just
+*unproven*.
+
+The 8,091 "pairs" weren't real. `scan_rows` gets one row per scan, and a
+symbol is scanned repeatedly through a session — every 5-60 minutes,
+including while the market's closed (`interval_minutes_closed`). Verified
+directly against the data: RELIANCE had 59 rows for a single Friday
+session, every one of them identical (`final_score=58.1, chg_pct=-1.3`) —
+59 repeated market-closed preview scans, not 59 independent observations.
+`factor_ic()` paired every consecutive raw row rather than one reading per
+(symbol, session_date), so it fed a rank correlation 58 near-duplicate
+Friday-Friday pairs and ~22 duplicate Tuesday-Tuesday pairs per symbol
+alongside the one real Friday→Tuesday transition — for ~100 symbols, that
+arithmetic (58+22+1) × 100 ≈ 8,091 matches exactly. The real, independent
+sample size was never more than ~100 (one genuine session-to-session
+transition per symbol, since Monday the 14th was a real NSE holiday —
+Ganesh Chaturthi — checked directly rather than assumed, so Friday→Tuesday
+really is the correct "next session" pairing, not a monitoring gap).
+
+Fixed in `database.py`: `factor_ic()` now collapses repeated intraday
+re-scans down to one reading per (symbol, session_date) — the latest —
+before pairing (`_last_reading_per_symbol_session`). Recomputed on the
+same real data: **IC +0.319 across 100 independent pairs** — a real,
+honestly-measured positive edge, the opposite sign of what the bug
+reported. The Scorecard's "Predictive skill" criterion flipped live from
+`fail` to `pass`, and `_system_multiplier()`'s output for any new signal
+moved from 0.25x ("Scorecard currently FAILS") to 0.5x ("no failures yet,
+but not enough data to confirm a real edge either") — a real, verified
+change to how much any future setup's local score gets trusted, not just
+a cosmetic number. Worth being precise about what this does and doesn't
+unlock: local setup scores are capped at 100, so 100 × 0.5 = 50 is still
+under the `min_confidence_to_trade` bar of 60 — this fix alone doesn't
+make today's MAZDOCK-shaped setup tradeable, it corrects a statistic that
+was wrongly telling the system its own scanner has no edge when the honest
+number says otherwise. The multiplier keeps improving exactly as more real
+evidence accumulates (10+ closed trades resolve expectancy, 10+ backtest
+trials resolve DSR, more real session transitions sharpen the IC) — same
+"never fabricate, wait for real evidence" discipline as everywhere else,
+just no longer measuring the wrong thing while it waits.
+
+Also fixed as part of the same change: `_spearman()` correctly returns
+`None` (rather than a fabricated number) when every value on one side is
+tied — the original code did `round(_spearman(...), 3)` unconditionally,
+which would have crashed on `round(None, 3)` the first time a real
+segment hit that case. `database.py`'s IC helper now surfaces that
+honestly ("no variance in the data yet") instead.
+
+### 31. "Dimag ki batti" — which real pattern currently shows the best result
+
+A request to "invent a new recognition pattern that finds the best
+result" ran straight into this project's one hard rule: never fabricate.
+Inventing an arbitrary new candlestick or swing shape with no real backing
+would be exactly the kind of thing every other section of this README has
+refused to do. Built instead, honestly: `database.dimag_ki_batti()` (`GET
+/api/dimag-ki-batti`) — of the platform's real, already-tagged setup
+patterns (`scan_rows.swing_pattern`, Bulkowski daily patterns and Murphy
+reversal days from `swing_patterns.py`), which one currently shows the
+strongest genuine result, using the exact same corrected, deduplicated IC
+methodology as §30's fix. A scan row can carry more than one real pattern
+at once (e.g. a Double Top and a Head and Shoulders Top on the same read
+— `swing_pattern` is a JSON array, not a bare string), so each detected
+pattern gets credited individually rather than the raw multi-pattern
+string being treated as one compound, never-repeated category.
+
+True to the name: it's a real lightbulb, not a manufactured one. Checked
+against live data right now, every real pattern detected so far (Double
+Top, Double Bottom, Head and Shoulders Top/Bottom) has only 1-3
+independent observations — nowhere near the same `min_pairs=20` bar §30's
+fix cleared for the overall score. `dimag_ki_batti()` reports exactly
+that plainly (`"winner": null`, "too early to say which one actually
+works, not evidence that none do") rather than picking a winner anyway.
+It'll have something real to say once more real trading days accumulate
+— which is the honest, correct state of the answer today.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -1292,6 +1478,7 @@ webapp/
 │   ├── holidays.py              # NSE trading holiday calendar
 │   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
 │   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
+│   ├── chaywanaprash.py         # ★ platform research analyst — real journal stats + Claude Sonnet, read-only — §29, §30
 │   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
 │   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals — §20
 │   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
@@ -1304,9 +1491,9 @@ webapp/
 │   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
-│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades
+│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC — §30, §31
 │   ├── backtester.py            # same strategy/risk code over history, with costs; --universe/--walk-forward modes — §20
-│   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate — §19
+│   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
 └── frontend/                     # React + Vite dashboard (migrated from a single-file vanilla-JS app)

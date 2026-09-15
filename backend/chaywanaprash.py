@@ -92,6 +92,7 @@ def _gather_findings(hours):
     return {
         "checklist_blockers": database.checklist_blocker_stats(hours),
         "journal_summary": database.journal_summary(),
+        "dimag_ki_batti": database.dimag_ki_batti(),
         "recent_warn_error_activity": database.recent_activity_issues(hours),
     }
 

@@ -482,21 +482,35 @@ def _spearman(xs, ys):
     return cov / math.sqrt(vx * vy)
 
 
-def factor_ic(field="final_score", min_pairs=20):
-    """Information Coefficient (ML4Trading ch 1 / Grinold): the rank correlation
-    between a factor's value on one session and the SAME stock's move on the
-    NEXT session it was scanned — i.e. did today's score actually predict
-    tomorrow's return? Needs at least `min_pairs` independent (session, symbol)
-    observations to mean anything (the book's "breadth" of the bet); returns
-    None with a reason below that, rather than a number nobody should trust."""
-    with _conn() as c:
-        rows = c.execute(
-            f"SELECT session_date, symbol, {field} AS f, chg_pct FROM scan_rows "
-            f"WHERE {field} IS NOT NULL AND chg_pct IS NOT NULL ORDER BY symbol, session_date"
-        ).fetchall()
-    by_symbol = {}
+def _last_reading_per_symbol_session(rows):
+    """rows: sqlite3.Row objects with id, session_date, symbol, f, chg_pct,
+    ordered by symbol, session_date, id. Collapses repeated intraday
+    re-scans of the same (symbol, session_date) down to one reading — the
+    latest — per group.
+
+    Real bug this fixes: scan_rows gets one row per scan, and a symbol is
+    scanned repeatedly through a session (every 5-60 min) — all sharing the
+    same session_date and, while the market's closed, an identical frozen
+    score/chg_pct (verified live: RELIANCE had 59 rows for one Friday
+    session, every single one f=58.1, chg_pct=-1.3, from repeated
+    market-closed preview scans). Treating every raw row as an independent
+    (session, symbol) observation — the original factor_ic() did — counts
+    those 59 near-duplicate rows as 59 independent data points feeding a
+    rank correlation, when they're really one. That inflated a real
+    session's worth of evidence (~1 genuine transition per symbol so far)
+    into an apparent 8,091 "pairs" and a falsely narrow confidence interval
+    around the Information Coefficient this gates real trading decisions
+    on (confidence.py's system-evidence multiplier)."""
+    latest = {}
     for r in rows:
-        by_symbol.setdefault(r["symbol"], []).append((r["session_date"], r["f"], r["chg_pct"]))
+        latest[(r["symbol"], r["session_date"])] = (r["f"], r["chg_pct"])
+    by_symbol = {}
+    for (symbol, session_date), (f, chg) in latest.items():
+        by_symbol.setdefault(symbol, []).append((session_date, f, chg))
+    return by_symbol
+
+
+def _ic_from_by_symbol(by_symbol, field, min_pairs):
     xs, ys = [], []
     for series in by_symbol.values():
         series.sort(key=lambda t: t[0])
@@ -505,9 +519,95 @@ def factor_ic(field="final_score", min_pairs=20):
             ys.append(series[i + 1][2])
     if len(xs) < min_pairs:
         return {"field": field, "ic": None, "pairs": len(xs),
-               "note": f"Only {len(xs)} (session, symbol) pairs so far — need at least {min_pairs} "
-                       f"before an Information Coefficient means anything (ML4Trading ch 1: breadth)."}
-    return {"field": field, "ic": round(_spearman(xs, ys), 3), "pairs": len(xs)}
+               "note": f"Only {len(xs)} independent (session, symbol) pairs so far — need at least "
+                       f"{min_pairs} before an Information Coefficient means anything (ML4Trading ch 1: breadth)."}
+    ic = _spearman(xs, ys)
+    if ic is None:
+        # Every value on one side is tied (e.g. a pattern whose score or
+        # chg_pct happened to be identical across all its pairs so far) —
+        # _spearman() correctly refuses a divide-by-zero rather than
+        # returning a fake number; surface that honestly instead of
+        # crashing on round(None, ...).
+        return {"field": field, "ic": None, "pairs": len(xs),
+               "note": "No variance in the data yet (every pair tied on one side) — "
+                       "a rank correlation isn't defined until that changes."}
+    return {"field": field, "ic": round(ic, 3), "pairs": len(xs)}
+
+
+def factor_ic(field="final_score", min_pairs=20):
+    """Information Coefficient (ML4Trading ch 1 / Grinold): the rank correlation
+    between a factor's value on one session and the SAME stock's move on the
+    NEXT session it was scanned — i.e. did today's score actually predict
+    tomorrow's return? Needs at least `min_pairs` independent (session, symbol)
+    observations to mean anything (the book's "breadth" of the bet); returns
+    None with a reason below that, rather than a number nobody should trust.
+    One reading per (symbol, session_date) — see _last_reading_per_symbol_session
+    for why repeated intraday re-scans of the same session must collapse to
+    one point, not count as independent evidence each."""
+    with _conn() as c:
+        rows = c.execute(
+            f"SELECT id, session_date, symbol, {field} AS f, chg_pct FROM scan_rows "
+            f"WHERE {field} IS NOT NULL AND chg_pct IS NOT NULL ORDER BY symbol, session_date, id"
+        ).fetchall()
+    by_symbol = _last_reading_per_symbol_session(rows)
+    return _ic_from_by_symbol(by_symbol, field, min_pairs)
+
+
+def _swing_pattern_names(raw_json):
+    """scan_rows.swing_pattern holds a JSON array of dicts (name/side/stop/
+    level — see database.record_scan()), not a bare string. A row can carry
+    more than one real pattern at once (e.g. a Double Top AND a Head and
+    Shoulders Top on the same read) — yield each name separately so both
+    get credit, rather than treating the whole raw JSON string as one
+    compound category (which would silently fragment "Double Top" alone
+    from "Double Top + Head and Shoulders Top" into two unrelated buckets)."""
+    try:
+        parsed = json.loads(raw_json) if raw_json else []
+    except (ValueError, TypeError):
+        return []
+    return [p["name"] for p in parsed if isinstance(p, dict) and p.get("name")]
+
+
+def dimag_ki_batti(field="final_score", min_pairs=20):
+    """"Dimag ki batti" (the lightbulb moment) — of the platform's real,
+    already-tagged setup patterns (scan_rows.swing_pattern — Bulkowski daily
+    patterns and Murphy reversal days, see swing_patterns.py), which one
+    currently shows the strongest genuine result, using the same honest,
+    deduplicated-to-one-reading-per-(symbol,session_date) IC as factor_ic().
+    Deliberately does NOT invent a new pattern or force a winner: with
+    fewer than min_pairs observations for every real pattern (the honest
+    state this early in live logging), it says that plainly rather than
+    picking one anyway — the whole point is a real lightbulb, not a
+    manufactured one."""
+    with _conn() as c:
+        rows = c.execute(
+            f"SELECT id, session_date, symbol, swing_pattern, {field} AS f, chg_pct FROM scan_rows "
+            f"WHERE {field} IS NOT NULL AND chg_pct IS NOT NULL "
+            f"AND swing_pattern IS NOT NULL AND swing_pattern NOT IN ('', '[]') "
+            f"ORDER BY symbol, session_date, id"
+        ).fetchall()
+
+    # One reading per (symbol, session_date, pattern_name) — same dedup
+    # reasoning as factor_ic(), applied per pattern since a symbol's set of
+    # detected patterns can itself change scan to scan.
+    latest = {}
+    for r in rows:
+        for name in _swing_pattern_names(r["swing_pattern"]):
+            latest[(r["symbol"], r["session_date"], name)] = (r["f"], r["chg_pct"])
+
+    by_pattern_symbol = {}
+    for (symbol, session_date, name), (f, chg) in latest.items():
+        by_pattern_symbol.setdefault(name, {}).setdefault(symbol, []).append((session_date, f, chg))
+
+    by_pattern = {name: _ic_from_by_symbol(by_symbol, field, min_pairs)
+                 for name, by_symbol in by_pattern_symbol.items()}
+    qualifying = {k: v for k, v in by_pattern.items() if v["ic"] is not None}
+    if not qualifying:
+        return {"winner": None, "by_pattern": by_pattern,
+                "note": f"No real pattern has {min_pairs}+ independent (session, symbol) observations "
+                        f"yet — too early to say which one actually works, not evidence that none do."}
+    best = max(qualifying.items(), key=lambda kv: kv[1]["ic"])
+    return {"winner": {"pattern": best[0], **best[1]}, "by_pattern": by_pattern, "note": None}
 
 
 def journal_summary():

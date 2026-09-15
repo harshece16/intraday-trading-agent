@@ -1,5 +1,7 @@
 """
-LLM-read news sentiment — the one LLM integration in this codebase, and
+LLM-read news sentiment — the trading-signal-facing LLM integration in
+this codebase (chaywanaprash.py is the other one, and deliberately
+different: it researches the platform itself, never a trade). This one is
 deliberately narrow: it reads a headline's actual text (catching negation,
 sarcasm, and which company a multi-company article is really about, which
 the keyword lexicon in sentiment_lexicon.py can miss) and returns a
