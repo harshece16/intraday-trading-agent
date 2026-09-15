@@ -34,7 +34,7 @@ function emaSeriesJS(values, period) {
  * shown is the real, computed trade plan a checklist pass would use, never
  * a price prediction.
  */
-export default function Chart({ symbol, plan, patterns, barTime }) {
+export default function Chart({ symbol, plan, patterns, barTime, className = "stk-chart" }) {
   const elRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -160,5 +160,5 @@ export default function Chart({ symbol, plan, patterns, barTime }) {
     );
   }, [patterns, barTime]);
 
-  return <div id="stk-chart" ref={elRef} />;
+  return <div className={className} ref={elRef} />;
 }

@@ -7,6 +7,7 @@ import { RuleTag } from "../components/RuleBook";
 import { SidePill, StatusPill } from "../components/Pill";
 import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
+import Chart from "../components/Chart";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 async function setMode(paperMode) {
@@ -217,6 +218,43 @@ function PickCard({ s, r, held }) {
   );
 }
 
+function MiniChartCard({ s, r, held }) {
+  const navigate = useNavigate();
+  const a = analysisFor(s, r.symbol);
+  const b = a && a.b;
+  const pos = s.positions[r.symbol];
+  const side = r && r.side ? r.side.toLowerCase() : b && b.bias === "short" ? "short" : "long";
+  const cl = b && b.checklist ? b.checklist[side] || b.checklist.long : null;
+  const plan = b ? { support: b.support, resistance: b.resistance, vwap: b.vwap, cl, side } : null;
+
+  let planLine;
+  if (pos && pos.quantity) {
+    planLine = (
+      <>Holding {Math.abs(pos.quantity)} at {num(pos.avg_price)} — <span className={tone(pos.unrealized_pnl)}>{money(pos.unrealized_pnl)}</span></>
+    );
+  } else if (cl && cl.stop != null) {
+    planLine = <>Entry near {num(cl.entry)} · stop {num(cl.stop)} · target {num(cl.target)}</>;
+  } else if (b?.blockers?.length) {
+    planLine = <span className="muted">Waiting on: {b.blockers[0]}</span>;
+  } else {
+    planLine = <span className="muted">Watching for a setup</span>;
+  }
+
+  return (
+    <div className="cardbox mini-chart-card" onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)} style={{ cursor: "pointer" }}>
+      <div className="mini-chart-head">
+        <span className="sym">{r.symbol}</span>
+        <span style={{ display: "flex", gap: 6 }}>
+          {held.has(r.symbol) ? <span className="pill solid">Holding</span> : null}
+          <SidePill side={r.side} />
+        </span>
+      </div>
+      <Chart symbol={r.symbol} plan={plan} patterns={b?.patterns} barTime={b?.bar_time} className="mini-chart" />
+      <div className="mini-chart-plan">{planLine}</div>
+    </div>
+  );
+}
+
 export default function Overview({ state: s }) {
   const [scanning, setScanning] = useState(false);
   const [scanLabel, setScanLabel] = useState("Scan now");
@@ -277,6 +315,19 @@ export default function Overview({ state: s }) {
         <div className="grid3">{picks.map((r) => <PickCard key={r.symbol} s={s} r={r} held={held} />)}</div>
       ) : (
         <p className="empty">The scan hasn't found a stock that passes every filter yet.</p>
+      )}
+
+      {picks.length > 0 && (
+        <div className="section-gap">
+          <h2 className="h">Live charts</h2>
+          <p className="sub">
+            Real candles, EMA 20/50 and today's checklist plan for each pick — the entry, stop and target lines are
+            the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
+          </p>
+          <div className="mini-chart-grid">
+            {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}
+          </div>
+        </div>
       )}
 
       <div className="section-gap grid2">

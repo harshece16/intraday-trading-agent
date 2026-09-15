@@ -1006,6 +1006,131 @@ unless you've scrolled up to read history. No new backend endpoint and no
 polling — it's the same WebSocket-pushed `state.activity` every page
 already reads, just rendered as a console instead of a card list.
 
+### 23. Live charts on the Home page
+
+A user asked why nothing was open yet and wanted to see it, not just read
+about it — the real setups the engine's actually evaluating, with entry/
+stop/target marked, right on Overview instead of only on each stock's own
+page. Overview now has a "Live charts" section: one real, live candlestick
+chart per active pick (candles, EMA 20/50, support/resistance/VWAP, and the
+checklist's actual entry/stop/target price lines when a plan exists — the
+same `Chart.jsx` component the Stock detail page already used, made
+properly reusable — it previously hardcoded a DOM `id`, which silently
+breaks with more than one instance on a page; now takes a `className` prop
+instead). Each tile also shows the real reason nothing's fired yet (e.g.
+"Waiting on: Recognisable candlestick pattern: No bearish pattern after a
+prior trend") — the actual checklist blocker, not a placeholder. Click any
+chart to open that stock's full page. No projected price path here either,
+same rule as the full Chart component: real plan levels only, never a
+forecast.
+
+### 24. Live-log audit — two real bugs, both fixed and regression-tested
+
+A user asked for the live log to be watched for real bugs, specifically
+prompting the scenario "what happens if I hold a position and the stock
+drops out of the top 6." That one turned out fine — traced through the
+code to confirm, not assumed: `held = [s for s, p in
+self.state.positions.items() if p["quantity"] != 0]` is unioned into the
+watchlist on every scan cycle (both `_run_scan()` and the pre-market
+seeder), so a held position keeps getting stop/target/exit checks every
+tick regardless of ranking. Looking for more scenarios like it surfaced
+two real, more serious ones:
+
+- **A blocked entry was silently burning the day's only real shot at that
+  symbol.** `trader_brain_signal()` counts a signal against
+  `max_entries_per_day` (default 1) the moment it fires, and that gets
+  persisted to `state.strategy_state` *before* `_try_enter()` has run any
+  of its own checks — the confidence gate, the sector cap, the daily-loss
+  limit, 0-share position sizing. If any of those blocked the trade (which,
+  with the Scorecard currently failing, was going to happen to nearly every
+  real signal today), the symbol's one allowed entry was already spent on a
+  trade that never happened — it wouldn't try again for the rest of the
+  session even if conditions later turned ideal. `_try_enter()` now returns
+  whether it actually placed an order; `_process_symbol()` rolls back
+  `entries_today` when it didn't.
+- **Position reconciliation (§19) only alerted — it didn't stop a second
+  real entry.** If Kite showed a real open position in a symbol this app
+  wasn't tracking (the restart-reset scenario §19 added detection for),
+  nothing actually stopped `_try_enter()` from opening a *second* real
+  position in that same symbol later the same day, doubling real exposure
+  without the engine ever knowing. `self._untracked_kite_positions` is now
+  a live set (not just a one-time alert flag) that `_try_enter()` checks
+  before every entry, cleared automatically once the mismatch resolves.
+- **Smaller: the sector-concentration cap (§19) silently no-opped** when
+  the live scanner had no fresh row for a symbol (a data-fetch gap, or
+  right at process start before the first scan completes) — exactly when
+  diversification protection matters most. Now falls back to the static
+  NIFTY 100 universe list's industry field, which is always available.
+
+`backend/tests/test_entries_today_rollback.py` proves the first two
+deterministically (forces the exact block sequence with real `_try_enter()`
+code, no market timing required) rather than resting on code review alone.
+
+### 25. Watching 6 stocks was too volatile — widened to 25, and made the candle fetch parallel
+
+Watching the live log during real market hours showed real setups
+routinely stalling on chop with nothing else to fall back on — the top-6
+picks are exactly the ones getting the most attention (and volatility)
+market-wide, so they're disproportionately likely to be mid-chop at any
+given moment. `config.SCANNER["active_count"]` went from 6 to 25 (with
+`"deep_analysis"` raised alongside it, 15 → 25, so every tracked pick still
+gets the full Sahab's Dimaag + news read before selection, not just the
+old top 15 — see the code comment in `backend/config.py` for the reasoning
+and the real tradeoff: lower-conviction picks now enter the watchlist too).
+
+That immediately exposed a real scaling problem the 6-stock watchlist had
+been masking: `trading_engine.tick()`'s open-market loop fetched each
+symbol's candles one blocking HTTP call at a time —
+`data_provider.get_intraday_candles()` per symbol, in sequence. Fine at 6
+symbols; a real bottleneck at 25, serializing ~25 network round-trips into
+every 30-second tick.
+
+`data_provider.get_candles_batch(symbols, ...)` now fetches the whole
+watchlist concurrently instead: on Kite, a `ThreadPoolExecutor` (3
+workers — Kite's historical-data endpoint is rate-limited to roughly
+3 req/sec) fetches all symbols at once, submissions paced to stay under
+that limit (a first version without pacing was verified live and did hit
+"Too many requests" on 2-3 symbols per tick, each falling back to
+per-symbol yfinance; adding a ~1/3s stagger between submissions eliminated
+that — confirmed against the real live log, not assumed); any symbol whose
+Kite fetch still fails falls back to yfinance same as before, batched into
+one multi-ticker call for the whole failed group instead of one-by-one. On
+yfinance-only setups, it's a single batched `yf.download()` call for all 25
+tickers, the same batching trick `scanner.py`'s `download_batch()` already
+used for scans. `_process_symbol()` now takes the pre-fetched candles as an
+optional argument and falls back to its own single-symbol fetch when one's
+missing (a batch failure, or a symbol the batch skipped) — the per-symbol
+try/except isolation in `tick()`'s loop is unchanged, so one bad fetch still
+can't take down the others.
+
+### 26. Test suite was writing into the live production database
+
+Still watching the live log for genuine issues turned up one more, this
+time in the test suite rather than the trading logic: `database.DB_PATH`
+is a single fixed path (`backend/data/sahab_journal.db`) with no test-mode
+override, and `AppState.log()` calls `database.record_activity()`
+unconditionally. `backend/tests/test_entries_today_rollback.py` exercises
+real `_try_enter()`/`_blocked()` code with fake symbols (`TESTCO`,
+`TESTCO3`) — every one of those calls logs through the real, unmocked
+`state.log()`, so every `pytest` run was inserting fake rows straight into
+the same activity table the live Live Log UI (§22) reads from. Caught by
+diffing the production DB's row count and contents around a live pytest
+run, not by inspection alone: 14 polluted rows turned up across one
+session's worth of test runs.
+
+`backend/tests/conftest.py` now has an autouse `isolated_db` fixture that
+points `database.DB_PATH` at a throwaway per-test file and resets the
+thread-local connection cache (`database._local.conn`) so `_conn()`
+actually reconnects to it — otherwise the first test to open a connection
+in a process would keep every later test pinned to that same (real) file
+regardless of a later `DB_PATH` change. Verified by re-running the suite
+against a live backend and confirming, directly against the production
+`sahab_journal.db`, that it gained zero `TESTCO*` rows afterward — the
+rows it did gain in that window were checked individually and were genuine
+live-engine activity for real symbols.
+
+## Dashboard
+
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
 HTML file) replacing a fixed three-pane layout, then migrated to **React +
 Vite** with real client-side routing (the old version still works standalone

@@ -32,6 +32,7 @@ from kiteconnect.exceptions import TokenException
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
 from scanner import Scanner, run_premarket
+import universe
 from state import AppState
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 
@@ -89,6 +90,7 @@ class TradingEngine:
         self._last_capital_sync = 0.0
         self._last_token_alert = 0.0
         self._reconciliation_alerted = set()
+        self._untracked_kite_positions = set()
         self._last_synced_paper_mode = None
         self._premarket_thread = None
         self._last_premarket_run_date = None
@@ -175,10 +177,13 @@ class TradingEngine:
         logic would have no idea it exists). Deliberately does NOT try to
         auto-heal by guessing an entry price, stop, or target this process
         never saw — that could be actively worse than doing nothing, sizing
-        risk off a fabricated number. It only makes the mismatch impossible
-        to miss: a clear, high-visibility alert naming exactly which symbols
-        disagree, once per session per symbol, so you can check Kite
-        directly and decide what to do."""
+        risk off a fabricated number. Two things instead: a clear,
+        high-visibility alert naming exactly which symbols disagree (once
+        per symbol, not repeated every cycle), and — found while auditing
+        this for other bugs — self._untracked_kite_positions is kept live
+        (added/removed each check, not just alerted once) and _try_enter()
+        checks it before any new entry, so the engine can't silently open a
+        SECOND real position in a symbol Kite already shows one open in."""
         try:
             kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions() if p["quantity"] != 0}
         except Exception as exc:
@@ -187,6 +192,13 @@ class TradingEngine:
         with self.state.lock:
             tracked = {sym for sym, pos in self.state.positions.items() if pos["quantity"] != 0}
         untracked = set(kite_positions) - tracked
+
+        resolved = self._untracked_kite_positions - untracked
+        self._untracked_kite_positions = untracked
+        for sym in resolved:
+            self.state.log("risk", f"{sym}'s previously-untracked Kite position is no longer open — "
+                                   f"new entries into {sym} are allowed again.", symbol=sym)
+
         for sym in untracked:
             if sym in self._reconciliation_alerted:
                 continue
@@ -194,7 +206,8 @@ class TradingEngine:
             qty = kite_positions[sym]["quantity"]
             self.state.log("error", f"Kite shows an open position in {sym} ({qty:+d}) that this app isn't "
                                     f"tracking — likely from before a restart. Risk sizing, stop/target checks, "
-                                    f"and square-off won't act on it. Check Kite directly.", symbol=sym, level="error")
+                                    f"and square-off won't act on it, and new entries into {sym} are blocked "
+                                    f"until this resolves. Check Kite directly.", symbol=sym, level="error")
 
     # ---- scanning -------------------------------------------------------
 
@@ -316,6 +329,20 @@ class TradingEngine:
             self.state.log("watchlist", f"Pre-market shortlist seeded: {', '.join(added)} — tracking from the "
                                         f"open; entries still wait for live checklist confirmation.")
 
+    def _industry_for(self, symbol, row):
+        """The sector-concentration cap silently no-ops if it only looks at
+        today's live scan row — which is None for a symbol the scanner
+        hasn't ranked yet this cycle (a data-fetch gap, or right at process
+        start before the first scan completes), giving it zero
+        diversification protection exactly when data is spottiest. Falls
+        back to the static NIFTY 100 universe list (same industry field,
+        always available) so the cap still applies."""
+        if row and row.get("industry"):
+            return row["industry"]
+        if not hasattr(self, "_industry_map"):
+            self._industry_map = {u["symbol"]: u["industry"] for u in universe.load()}
+        return self._industry_map.get(symbol)
+
     def _scan_row(self, symbol):
         result = self.state.scanner
         if not result:
@@ -401,6 +428,7 @@ class TradingEngine:
 
     def _blocked(self, symbol, setup, why):
         self.state.log("blocked", f"{setup} signal skipped — {why}", symbol=symbol, level="warn")
+        return False
 
     def _close(self, symbol, ltp, reason, note=None):
         pos = self.state.positions[symbol]
@@ -412,9 +440,16 @@ class TradingEngine:
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
 
     def _try_enter(self, symbol, side, ltp, candles, analysis):
-        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15)."""
+        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15).
+        Returns True if a real order was placed, False if blocked for any reason —
+        _process_symbol() uses this to roll back the entries_today count trader_brain
+        already spent on this signal when nothing was actually entered."""
         if self.state.positions[symbol]["quantity"] != 0:
-            return
+            return False
+        if symbol in self._untracked_kite_positions:
+            return self._blocked(symbol, f"{analysis.get('setup', 'Entry')} ({side.lower()})",
+                                 "Kite shows an untracked open position in this symbol (see the reconciliation "
+                                 "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
         setup = f"{analysis.get('setup', 'Entry')} ({side.lower()})"
         row = self._scan_row(symbol)
         mkt = self.state.market or {}
@@ -438,14 +473,15 @@ class TradingEngine:
         # undermining the 2% daily-loss cap's implicit assumption that positions are
         # roughly independent. Cap same-industry concurrent positions too.
         max_per_sector = config.RISK.get("max_positions_per_sector")
-        if row and row.get("industry") and max_per_sector:
+        industry = self._industry_for(symbol, row)
+        if industry and max_per_sector:
             same_sector = sum(
                 1 for sym, pos in self.state.positions.items()
-                if pos["quantity"] != 0 and (r2 := self._scan_row(sym)) and r2.get("industry") == row["industry"]
+                if pos["quantity"] != 0 and self._industry_for(sym, self._scan_row(sym)) == industry
             )
             if same_sector >= max_per_sector:
                 return self._blocked(symbol, setup, f"already at the max of {max_per_sector} open position(s) in "
-                                                     f"{row['industry']} — avoids concentrating risk in one sector")
+                                                     f"{industry} — avoids concentrating risk in one sector")
 
         # Same confidence.py gate F&O already used (config.FNO["min_confidence_to_trade"])
         # now applies to cash equity too: a clean-looking checklist pass means nothing
@@ -491,6 +527,7 @@ class TradingEngine:
             pos["initial_risk"] = abs(ltp - stop_price) if stop_price else self.risk._stop_distance(ltp, atr_val)
             pos["position_id"] = position_id
         self.risk.open_positions_count += 1
+        return True
 
     # ---- F&O (options-buying only — see fno_risk.py) ---------------------
 
@@ -695,8 +732,13 @@ class TradingEngine:
                     symbol=symbol,
                 )
 
-    def _process_symbol(self, symbol):
-        candles = data_provider.get_intraday_candles(symbol, interval=config.CANDLE_INTERVAL, period="5d")
+    def _process_symbol(self, symbol, candles=None):
+        # candles is normally pre-fetched in bulk by _tick_impl() (see
+        # data_provider.get_candles_batch); falling back to a single-symbol
+        # fetch here keeps this method callable on its own (tests, and any
+        # symbol the batch fetch happened to skip or fail on).
+        if candles is None:
+            candles = data_provider.get_intraday_candles(symbol, interval=config.CANDLE_INTERVAL, period="5d")
         if not candles:
             return
         with self.state.lock:
@@ -736,7 +778,20 @@ class TradingEngine:
             why = "; ".join(r["text"] for r in a.get("reasons", [])[:2])
             self._close(symbol, ltp, "brain_cover", why or None)
         elif qty == 0 and signal in ("BUY", "SHORT"):
-            self._try_enter(symbol, "LONG" if signal == "BUY" else "SHORT", ltp, candles, a)
+            entered = self._try_enter(symbol, "LONG" if signal == "BUY" else "SHORT", ltp, candles, a)
+            if not entered:
+                # trader_brain_signal() already counted this signal against
+                # max_entries_per_day and persisted that to strategy_state
+                # (line ~717, before _try_enter's own checks — confidence
+                # gate, sector cap, daily-loss limit, 0-share sizing — ever
+                # ran). Without this rollback, a block silently burns the
+                # day's only real shot at this symbol even though no trade
+                # ever happened; with the Scorecard currently failing, that
+                # was going to hit almost every real signal today.
+                with self.state.lock:
+                    st = self.state.strategy_state.get(symbol)
+                    if st and st.get("entries_today", 0) > 0:
+                        st["entries_today"] -= 1
 
     # ---- loop -----------------------------------------------------------
 
@@ -795,9 +850,21 @@ class TradingEngine:
             for underlying in list(self.state.fno_positions.keys()):
                 self._close_fno(underlying, "fno_auto_square_off")
         elif phase == "open":
-            for symbol in list(self.state.watchlist):
+            watchlist = list(self.state.watchlist)
+            # Candles for all watched symbols are fetched concurrently up
+            # front (data_provider.get_candles_batch) instead of one
+            # blocking HTTP round-trip per symbol in this loop — with
+            # active_count now at 25 (was 6), the old sequential fetch
+            # would serialize ~25 network calls into every 30s tick.
+            try:
+                candles_map = data_provider.get_candles_batch(
+                    watchlist, interval=config.CANDLE_INTERVAL, period="5d")
+            except Exception:
+                logger.exception("Batch candle fetch failed — each symbol will fetch individually this cycle")
+                candles_map = {}
+            for symbol in watchlist:
                 try:
-                    self._process_symbol(symbol)
+                    self._process_symbol(symbol, candles=candles_map.get(symbol))
                     self._last_errors.pop(symbol, None)
                 except Exception as exc:
                     logger.exception(f"Error processing {symbol}: {exc}")

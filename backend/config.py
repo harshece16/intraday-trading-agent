@@ -111,10 +111,24 @@ SCANNER = {
     "enabled": True,
     "interval_minutes_open": 5,
     "interval_minutes_closed": 60,   # still scans when closed, so the dashboard shows a plan
-    "active_count": 6,               # stocks the engine actively evaluates for entries
+    # Raised from 6 to 25 after a live session showed 6 real setups can all
+    # stall on genuine intraday chop at once (verified with real candle data,
+    # not assumed — see README) with nothing else to fall back on. More
+    # independent picks = more chances one of them shows a real confirmed
+    # pattern on a given tick — the checklist rigor per stock doesn't change,
+    # just how many get evaluated. Real costs, worth knowing: ~4x the
+    # intraday candle fetches per 30s tick (25 vs 6), and picks ranked
+    # beyond the old top-6 are, by definition, lower-conviction than the
+    # ones that used to be the whole list.
+    "active_count": 25,
     "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
-    "deep_analysis": 15,             # top candidates that get a full Sahab's Dimaag + news read
+    # Raised alongside active_count — this is what selects which candidates
+    # get the full Sahab's Dimaag + news read (final_score) BEFORE the top
+    # active_count are chosen; leaving this at 15 while active_count is 25
+    # would mean picks ranked 16-25 get selected on their raw pre-brain
+    # score, a real quality gap between what's tracked and what's ranked.
+    "deep_analysis": 25,
     "min_score": 20,
     "pinned": [],                    # always tracked, e.g. ["RELIANCE"]
     # Tradability floors (intraday checklist: liquid, moves enough to beat costs)

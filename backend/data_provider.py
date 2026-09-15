@@ -10,7 +10,9 @@ NSE symbols need a ".NS" suffix for Yahoo Finance (e.g. "RELIANCE.NS");
 Kite uses the bare tradingsymbol with an "NSE:" exchange prefix instead.
 """
 
+import concurrent.futures
 import logging
+import time
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -24,6 +26,11 @@ _KITE_INTERVAL_MAP = {
     "1m": "minute", "2m": "minute", "5m": "5minute",
     "15m": "15minute", "30m": "30minute", "60m": "60minute", "1d": "day",
 }
+
+# Kite Connect's historical-data endpoint is rate-limited to roughly
+# 3 req/sec; more concurrent workers just trades faster individual calls
+# for more 429s that a symbol would then fall back to yfinance for anyway.
+_KITE_HISTORICAL_MAX_WORKERS = 3
 
 _kite_client = None
 _instrument_token_cache = {}  # tradingsymbol -> instrument_token, fetched once per process
@@ -131,6 +138,76 @@ def get_intraday_candles(symbol: str, interval: str = "5m", period: str = "5d"):
         except Exception as exc:
             logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
     return _get_intraday_candles_yfinance(symbol, interval, period)
+
+
+def _get_intraday_candles_yfinance_batch(symbols: list, interval: str, period: str) -> dict:
+    """One yfinance request for many tickers instead of N separate ones —
+    same batching trick scanner.py's download_batch() uses, adapted to key
+    by our bare NSE symbol and return get_intraday_candles()'s candle shape."""
+    import yfinance as yf
+
+    tickers = [_yf_symbol(s) for s in symbols]
+    df = yf.download(tickers=tickers, interval=interval, period=period, group_by="ticker",
+                      progress=False, threads=True, auto_adjust=False)
+    out = {}
+    if df is None or df.empty:
+        return out
+    if df.index.tz is not None:
+        df.index = df.index.tz_convert("Asia/Kolkata")
+    multi = isinstance(df.columns, pd.MultiIndex)
+    level0 = set(df.columns.get_level_values(0)) if multi else set()
+    for symbol, ticker in zip(symbols, tickers):
+        if multi and ticker not in level0:
+            continue
+        sub = (df[ticker] if multi else df).dropna(subset=["Close"])
+        if sub.empty:
+            continue
+        out[symbol] = [
+            {
+                "time": ts.isoformat(), "open": float(o), "high": float(h), "low": float(l),
+                "close": float(c), "volume": int(v) if not pd.isna(v) else 0,
+            }
+            for ts, o, h, l, c, v in zip(sub.index, sub["Open"], sub["High"], sub["Low"], sub["Close"], sub["Volume"])
+        ]
+    return out
+
+
+def get_candles_batch(symbols: list, interval: str = "5m", period: str = "5d") -> dict:
+    """Fetch candles for many symbols concurrently instead of one blocking
+    HTTP round-trip at a time (used by the live tick loop, now watching up
+    to config.SCANNER['active_count'] symbols instead of the original 6).
+    Returns {symbol: candles}; a symbol whose fetch fails on every path is
+    simply absent from the result so the caller can fall back per-symbol.
+    """
+    symbols = list(dict.fromkeys(symbols))  # de-dupe, keep order
+    if not symbols:
+        return {}
+
+    if not kite_data_active():
+        return _get_intraday_candles_yfinance_batch(symbols, interval, period)
+
+    out = {}
+    fallback = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=_KITE_HISTORICAL_MAX_WORKERS) as pool:
+        futures = {}
+        for i, s in enumerate(symbols):
+            # Stagger submissions to roughly match Kite's ~3 req/sec cap —
+            # 3 idle workers otherwise fire near-simultaneously the moment
+            # they're created, bursting well past the limit before any of
+            # them has finished a request to naturally pace the next one.
+            if i >= _KITE_HISTORICAL_MAX_WORKERS:
+                time.sleep(1.0 / _KITE_HISTORICAL_MAX_WORKERS)
+            futures[pool.submit(_get_intraday_candles_kite, s, interval, period)] = s
+        for fut in concurrent.futures.as_completed(futures):
+            symbol = futures[fut]
+            try:
+                out[symbol] = fut.result()
+            except Exception as exc:
+                logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
+                fallback.append(symbol)
+    if fallback:
+        out.update(_get_intraday_candles_yfinance_batch(fallback, interval, period))
+    return out
 
 
 def get_ltp(symbol: str) -> float:
