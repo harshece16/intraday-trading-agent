@@ -55,6 +55,7 @@ DEFAULTS = {
     "max_pattern_atr": 3.0,
     "cost_pct": 0.12,
     "rrr_without_level": 2.0,
+    "max_target_atr": 3.0,           # how far out to look for a level that actually clears min_rrr
     "adx_trend": 25,
     "adx_range": 20,
     "htf_factor": 3,
@@ -190,15 +191,38 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
          f"{news_word}" + ("" if cat_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
 
     if risk > 0:
-        beyond = [lv["price"] for lv in levels
-                  if (lv["price"] > price + 0.1 * atr_v if s > 0 else lv["price"] < price - 0.1 * atr_v)]
-        if beyond:
-            target = min(beyond) if s > 0 else max(beyond)
-            source = f"next {'resistance' if s > 0 else 'support'}"
+        cost = price * p["cost_pct"] / 100
+        level_word2 = "resistance" if s > 0 else "support"
+        beyond = sorted(
+            (lv["price"] for lv in levels
+             if (lv["price"] > price + 0.1 * atr_v if s > 0 else lv["price"] < price - 0.1 * atr_v)),
+            key=lambda lv_price: abs(lv_price - price),
+        )
+        # "Next level" means the nearest one that actually gives room to run,
+        # not just whichever is structurally closest — key_levels()/fib/CPR
+        # produce many closely-spaced candidates (swing zones, 7 fib ratios,
+        # CPR sub-levels), so the single nearest one is very often under
+        # 0.5 ATR away and auto-fails R:R regardless of how good the setup
+        # otherwise is (empirically: median R:R was ~0, taking the nearest
+        # level, across a real session's worth of evaluations). Walk
+        # outward — capped at max_target_atr so the target stays realistic
+        # for an intraday move — for the first level that clears min_rrr;
+        # only fall back to the formulaic no-level target if none do.
+        qualifying = next(
+            (lv_price for lv_price in beyond
+             if abs(lv_price - price) <= p["max_target_atr"] * atr_v
+             and (abs(lv_price - price) - cost) / (risk + cost) >= p["min_rrr"]),
+            None,
+        )
+        if qualifying is not None:
+            target = qualifying
+            source = f"next {level_word2} that clears {p['min_rrr']:g}R"
+        elif beyond:
+            target = beyond[0]
+            source = f"next {level_word2}"
         else:
             target = price + s * p["rrr_without_level"] * risk
             source = f"{p['rrr_without_level']:g}R, no level beyond"
-        cost = price * p["cost_pct"] / 100
         rrr = (abs(target - price) - cost) / (risk + cost)
         item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
              f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")

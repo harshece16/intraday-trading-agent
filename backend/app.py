@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import chaywanaprash
 import config
 import data_provider
 import database
@@ -200,6 +201,27 @@ def llm_sentiment_status():
     at Haiku 4.5's published rate — poll this any time, not just on the
     Technical Analysis page load."""
     return llm_sentiment.stats()
+
+
+@app.post("/api/chaywanaprash/analyze")
+def chaywanaprash_analyze(hours: Optional[float] = None):
+    """Runs one research pass over the platform's own real journal data
+    (checklist blocker stats, recent errors, trade stats) and, if
+    ANTHROPIC_API_KEY is configured and today's budget allows, asks Claude
+    to turn that into prioritized, evidence-cited improvement
+    recommendations — see chaywanaprash.py. Read-only: it never edits the
+    platform itself. Persisted so a history of reports builds up."""
+    return chaywanaprash.analyze(hours=hours)
+
+
+@app.get("/api/chaywanaprash/reports")
+def chaywanaprash_reports(limit: int = 20):
+    return database.recent_chaywanaprash_reports(limit=limit)
+
+
+@app.get("/api/chaywanaprash/status")
+def chaywanaprash_status():
+    return chaywanaprash.stats()
 
 
 @app.get("/api/portfolio/diagnostic")

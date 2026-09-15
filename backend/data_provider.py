@@ -183,8 +183,23 @@ def get_candles_batch(symbols: list, interval: str = "5m", period: str = "5d") -
     if not symbols:
         return {}
 
+    def _safe_yfinance_batch(syms):
+        # The per-symbol Kite fetch above is defended (each future's
+        # exception is caught individually); this batched yfinance call
+        # wasn't — a fault-injection test caught it raising straight out of
+        # get_candles_batch() when yfinance itself is unreachable, breaking
+        # this function's own contract ("a symbol that fails on every path
+        # is simply absent"), even though _tick_impl()'s own try/except
+        # happened to mask it in practice. One bad batch call should drop
+        # those symbols from the result, not the whole tick's candle fetch.
+        try:
+            return _get_intraday_candles_yfinance_batch(syms, interval, period)
+        except Exception as exc:
+            logger.warning(f"Batched yfinance fetch failed for {len(syms)} symbol(s) ({exc})")
+            return {}
+
     if not kite_data_active():
-        return _get_intraday_candles_yfinance_batch(symbols, interval, period)
+        return _safe_yfinance_batch(symbols)
 
     out = {}
     fallback = []
@@ -206,7 +221,7 @@ def get_candles_batch(symbols: list, interval: str = "5m", period: str = "5d") -
                 logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
                 fallback.append(symbol)
     if fallback:
-        out.update(_get_intraday_candles_yfinance_batch(fallback, interval, period))
+        out.update(_safe_yfinance_batch(fallback))
     return out
 
 

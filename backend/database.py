@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sqlite3
 import threading
 import time
@@ -89,6 +90,11 @@ CREATE TABLE IF NOT EXISTS fno_trades (
     entry_ts REAL, entry_premium REAL, entry_iv_pct REAL, entry_delta REAL, entry_theta REAL, entry_vega REAL,
     confidence_score INTEGER, confidence_label TEXT,
     exit_ts REAL, exit_premium REAL, exit_reason TEXT, realized REAL, r_multiple REAL
+);
+CREATE TABLE IF NOT EXISTS chaywanaprash_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL, lookback_hours REAL, llm_used INTEGER,
+    narrative TEXT, findings_json TEXT, input_tokens INTEGER, output_tokens INTEGER
 );
 """
 
@@ -268,6 +274,30 @@ def new_position_id():
     return str(uuid.uuid4())[:12]
 
 
+def record_chaywanaprash_report(lookback_hours, llm_used, narrative, findings, input_tokens=0, output_tokens=0):
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO chaywanaprash_reports "
+            "(ts, lookback_hours, llm_used, narrative, findings_json, input_tokens, output_tokens) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (time.time(), lookback_hours, int(llm_used), narrative, _j(findings), input_tokens, output_tokens),
+        )
+
+
+def recent_chaywanaprash_reports(limit=20):
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM chaywanaprash_reports ORDER BY ts DESC LIMIT ?", (limit,)
+        ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["findings"] = json.loads(d.pop("findings_json")) if d.get("findings_json") else None
+        d["llm_used"] = bool(d["llm_used"])
+        out.append(d)
+    return out
+
+
 # ---- reads / knowledge base -------------------------------------------------
 
 def recent_trades(limit=200):
@@ -316,6 +346,86 @@ def trade_stats():
         "expectancy_r": round(sum(rs) / len(rs), 3), "avg_win_r": round(avg_w, 2),
         "avg_loss_r": round(avg_l, 2), "kelly_pct": round(kelly * 100, 1) if kelly is not None else None,
     }
+
+
+def checklist_blocker_stats(hours=24):
+    """What's actually gating entries right now, across every live checklist
+    read in the window — not just the ones that became trades (0 trades
+    means checklist_item_breakdown() above has nothing to say; this table
+    has one). For each required item (pattern, sr, volume, dow, rrr): how
+    often it's the thing that fails. Near-misses: evaluations where exactly
+    one required item failed — the closest calls to a real trade, and which
+    single gate is blocking each. R:R distribution: the real numbers behind
+    the rrr item's pass rate, since "99% fail" alone doesn't say whether
+    that's close (median 1.3) or nowhere near (median 0.1)."""
+    since = time.time() - hours * 3600
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT symbol, ts, checklist_json FROM checklist_evals WHERE ts > ?", (since,)
+        ).fetchall()
+    fail_counts, pass_counts = {}, {}
+    near_misses = {}
+    rrr_vals, vol_vals = [], []
+    total_sides = 0
+    for r in rows:
+        cl = json.loads(r["checklist_json"])
+        for side in ("long", "short"):
+            s = cl.get(side)
+            if not s:
+                continue
+            total_sides += 1
+            items = s["items"]
+            req = [i for i in items if i["required"]]
+            failing = [i["key"] for i in req if not i["ok"]]
+            for k in failing:
+                fail_counts[k] = fail_counts.get(k, 0) + 1
+            for i in req:
+                if i["ok"]:
+                    pass_counts[i["key"]] = pass_counts.get(i["key"], 0) + 1
+            if len(failing) == 1:
+                near_misses[failing[0]] = near_misses.get(failing[0], 0) + 1
+            if s.get("rrr") is not None:
+                rrr_vals.append(s["rrr"])
+            vol_item = next((i for i in items if i["key"] == "volume"), None)
+            if vol_item:
+                m = re.search(r"([\d.]+)×", vol_item["detail"])
+                if m:
+                    vol_vals.append(float(m.group(1)))
+
+    def _summary(vals):
+        if not vals:
+            return None
+        vals = sorted(vals)
+        n = len(vals)
+        return {
+            "n": n, "min": round(vals[0], 2), "max": round(vals[-1], 2),
+            "median": round(vals[n // 2], 2), "mean": round(sum(vals) / n, 2),
+            "pct_at_or_above_1_5": round(sum(1 for v in vals if v >= 1.5) / n * 100, 1),
+        }
+
+    return {
+        "window_hours": hours,
+        "total_evaluations": total_sides,
+        "required_item_fail_counts": fail_counts,
+        "required_item_pass_counts": pass_counts,
+        "near_misses_by_lone_blocker": near_misses,
+        "rrr_distribution": _summary(rrr_vals),
+        "volume_ratio_distribution": _summary(vol_vals),
+    }
+
+
+def recent_activity_issues(hours=24, limit=50):
+    """Warn/error-level activity rows in the window — the same table the
+    Live Log UI reads, filtered to what's actually worth a human or
+    Chaywanaprash's attention."""
+    since = time.time() - hours * 3600
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT ts, kind, symbol, message, level FROM activity "
+            "WHERE ts > ? AND level IN ('warn', 'error') ORDER BY ts DESC LIMIT ?",
+            (since, limit),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def checklist_item_breakdown():

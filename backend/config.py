@@ -170,6 +170,18 @@ NEWS = {
     "llm_daily_limit": 500,
 }
 
+# Chaywanaprash (chyawanprash — the Ayurvedic general tonic; same naming
+# spirit as Trader Sahab / Sahab's Dimaag): the platform's own research
+# analyst, not a trading signal — see chaywanaprash.py's docstring. A
+# separate, small daily cap from NEWS['llm_daily_limit'] since this is one
+# heavier on-demand call, not hundreds of small per-headline ones. Shares
+# NEWS['anthropic_api_key'] rather than duplicating the key.
+CHAYWANAPRASH = {
+    "enabled": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    "daily_limit": 12,
+    "lookback_hours": 24,
+}
+
 RISK = {
     "max_risk_per_trade_pct": 1.0,
     "stop_loss_pct": 0.8,       # fallback when ATR isn't available yet
