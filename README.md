@@ -1453,6 +1453,63 @@ repeating "still nothing." This is exactly how BEL's entry and exit, and
 the entry-window and market-close transitions, were caught live rather
 than after the fact.
 
+### 35. Responsibly tuning entry parameters — a grid search ranked by DSR, not return
+
+With confidence capped at 0.6x (§32) and only one live trade ever, hand-
+tweaking `RISK["min_confidence_to_trade"]` and watching a week of paper
+trades would mean judging each guess on a handful of trades — exactly the
+small-sample overfitting risk this codebase's whole evaluation framework
+(Deflated Sharpe Ratio, Information Coefficient) exists to catch. Built
+`tune_entry_params.py` instead: a grid search over
+`RISK["min_confidence_to_trade"]` (40/50/60/70) ×
+`STRATEGY_PARAMS["sahab_dimaag"]["min_rrr"]` (1.2/1.5/1.8), calling
+`backtester.run_backtest()` directly — not the CLI — over 55 days of real
+NIFTY 100 data, ranked by **Deflated Sharpe Ratio**, not raw return, since
+DSR (Bailey & López de Prado 2014, already implemented in `evaluation.py`)
+is specifically built to correct for exactly what grid-searching many
+configs and picking the best one does.
+
+Building it surfaced a real gap first: `backtester.run_backtest()` never
+called `confidence.score_trade()` at all (tracked as its own issue before
+this), so varying `min_confidence_to_trade` would have had zero effect on
+results. Fixed by wiring in the same gate `trading_engine._try_enter()`
+applies live, using the **real current journal Scorecard**
+(`database.journal_summary()`), fixed for the whole grid — the same
+system-evidence state live paper trading operates under right now, not a
+hypothetical fully-proven one.
+
+12 configs, 55 days, 100-stock universe, top 5/day, real costs:
+
+| min_conf | min_rrr | trades | win% | expectancy(R) | DSR |
+|---|---|---|---|---|---|
+| 60 | 1.5 | 10 | 30% | -0.472 | **6.2%** |
+| 60 | 1.2 | 21 | 33% | -0.407 | 2.0% |
+| 40 | 1.8 | 11 | 9% | -1.621 | 0.3% |
+| 40/50 | 1.2/1.5 | 23-53 | 15-26% | -0.78 to -1.23 | 0.0% |
+| 60 | 1.8 | 2 | 50% | +0.555 | n/a (too few trades) |
+| 70 | any | 0 | — | — | n/a (never traded) |
+
+**None of the 12 configs clear DSR ≥ 95%** — the same bar `evaluation.scorecard()`
+already holds a live backtest's DSR to. The least-bad,
+`min_confidence_to_trade=60, min_rrr=1.5`, only reaches 6.2%: reported
+plainly as the least-bad of a batch that didn't clear the bar, not framed
+as a win. That combination happens to already be today's config default —
+so nothing was changed numerically; `config.py`'s comments at both keys
+now document that the grid search *validated* rather than *improved*
+them, for a clear audit trail instead of an unexplained coincidence. The
+agreed next step is a week of live paper trading on this one fixed config
+as an out-of-sample check — not another round of tuning.
+
+A real, permanent side effect worth recording here too: every config
+tried logs a real trial via `evaluation.log_trial()`
+(`backend/data/backtest_trials.json`) — this grid alone added 12 (13 with
+one smoke-test run), permanently raising the bar for every DSR this
+codebase computes from now on, including the live journal's own Scorecard
+once real trades accumulate. That's DSR's whole point (know the true
+number of things tried), not a bug — but it means re-running the same
+grid later costs real, permanent trial budget rather than being free to
+repeat.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -1630,7 +1687,8 @@ webapp/
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
 │   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33
-│   ├── backtester.py            # same strategy/risk code over history, with costs; --universe/--walk-forward modes — §20
+│   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
+│   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
 │   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv

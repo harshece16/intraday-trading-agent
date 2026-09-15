@@ -86,7 +86,11 @@ STRATEGY_PARAMS = {
         # candlestick pattern, stop at S&R, above-average volume, Dow trend, reward-to-risk.
         # Indicators only scale the size. "confluence" uses the older score-based rules.
         "entry_mode": "checklist",
-        "min_rrr": 1.5,               # Varsity: at least 1.5 for an active trader
+        # Varsity: at least 1.5 for an active trader. Also the value
+        # tune_entry_params.py's grid search validated (see README) — 6.2%
+        # DSR, best of 12 configs tried but still well under the 95% bar,
+        # so kept because nothing tried beat it, not because it's proven.
+        "min_rrr": 1.5,
         "sr_tolerance_atr": 0.5,      # how close the stop must be to support/resistance
         "volume_lookback": 10,        # Varsity compares volume with its 10-period average
         "indicator_miss_size": 0.6,   # size when MACD/RSI don't confirm (Varsity's 300 vs 500 shares)
@@ -204,6 +208,11 @@ RISK = {
     # Dimaag Scorecard's system-wide evidence multiplier can cap confidence to
     # 0.25x when expectancy/DSR/IC haven't proven a real edge, which at this
     # threshold blocks entries outright until the Scorecard actually passes.
+    # Validated (not "improved") via tune_entry_params.py's grid search (see
+    # README): 60, paired with min_rrr=1.5 below, was the least-bad of 12
+    # configs tried on a 55-day/100-stock backtest — still DSR 6.2%, well
+    # under the 95% bar this codebase requires, so this is the current
+    # default because nothing tried beat it, not because it's proven.
     "min_confidence_to_trade": 60,
     # Fallback only — overwritten in-process by trading_engine._sync_capital()
     # with the real Kite equity live_balance whenever Kite is connected (see
