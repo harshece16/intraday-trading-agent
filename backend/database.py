@@ -96,6 +96,11 @@ CREATE TABLE IF NOT EXISTS chaywanaprash_reports (
     ts REAL NOT NULL, lookback_hours REAL, llm_used INTEGER,
     narrative TEXT, findings_json TEXT, input_tokens INTEGER, output_tokens INTEGER
 );
+CREATE TABLE IF NOT EXISTS market_breadth_daily (
+    session_date TEXT PRIMARY KEY, ts REAL NOT NULL,
+    advances INTEGER, declines INTEGER, unchanged INTEGER, total INTEGER,
+    trin REAL
+);
 """
 
 
@@ -272,6 +277,59 @@ def record_activity(kind, message, symbol=None, level="info", ts=None):
 
 def new_position_id():
     return str(uuid.uuid4())[:12]
+
+
+def record_market_breadth(session_date, breadth):
+    """One row per real trading day (INSERT OR REPLACE, so re-recording the
+    same day just refreshes it — the day's read can only get more complete
+    as the session progresses, not less). This history is what
+    mcclellan_oscillator() needs; TRIN itself is computed fresh from a
+    single live reading (nse_feed.market_breadth()) and doesn't need it."""
+    with _conn() as c:
+        c.execute(
+            "INSERT OR REPLACE INTO market_breadth_daily "
+            "(session_date, ts, advances, declines, unchanged, total, trin) VALUES (?,?,?,?,?,?,?)",
+            (session_date, time.time(), breadth.get("advances"), breadth.get("declines"),
+             breadth.get("unchanged"), breadth.get("total"), breadth.get("trin")),
+        )
+
+
+def _ema_series(values, period):
+    if len(values) < period:
+        return []
+    k = 2 / (period + 1)
+    ema = sum(values[:period]) / period  # seed with a simple average, standard convention
+    out = [ema]
+    for v in values[period:]:
+        ema = v * k + ema * (1 - k)
+        out.append(ema)
+    return out
+
+
+def mcclellan_oscillator(min_days=39):
+    """McClellan Oscillator (Murphy, Technical Analysis of the Financial
+    Markets ch 10): EMA19(net advances) - EMA39(net advances), where net
+    advances = advances - declines each real trading day. A genuine
+    day-over-day breadth momentum read, not derivable from one live
+    snapshot — needs min_days of real history first, same "not enough
+    data yet" discipline as factor_ic()/deflated_sharpe_ratio() elsewhere
+    in this journal, not a number nobody should trust with 5 days behind
+    it."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT session_date, advances, declines FROM market_breadth_daily "
+            "WHERE advances IS NOT NULL AND declines IS NOT NULL ORDER BY session_date"
+        ).fetchall()
+    if len(rows) < min_days:
+        return {"oscillator": None, "days": len(rows),
+               "note": f"Only {len(rows)} real trading day(s) of breadth history so far — need at least "
+                       f"{min_days} before the McClellan Oscillator's 39-day EMA means anything."}
+    net = [r["advances"] - r["declines"] for r in rows]
+    ema19 = _ema_series(net, 19)
+    ema39 = _ema_series(net, 39)
+    oscillator = ema19[-1] - ema39[-1]
+    return {"oscillator": round(oscillator, 1), "days": len(rows),
+           "as_of": rows[-1]["session_date"]}
 
 
 def record_chaywanaprash_report(lookback_hours, llm_used, narrative, findings, input_tokens=0, output_tokens=0):

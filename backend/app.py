@@ -32,6 +32,7 @@ import fno_instruments
 import llm_sentiment
 import methods
 import news_sentiment
+import nse_feed
 import portfolio_diagnostic
 import universe
 from state import AppState
@@ -232,6 +233,16 @@ def dimag_ki_batti():
     deduplicated Information Coefficient the Scorecard's own predictive-
     skill check uses. Never invents a winner — see its docstring."""
     return database.dimag_ki_batti()
+
+
+@app.get("/api/market-breadth")
+def market_breadth():
+    """Real, whole-exchange breadth (Murphy ch 10) — a live TRIN reading
+    (nse_feed.market_breadth(), ~3,700 NSE stocks) plus the McClellan
+    Oscillator once enough real trading days have accumulated
+    (database.mcclellan_oscillator() — see its docstring for why that
+    can't be computed from one day's snapshot)."""
+    return {"live": nse_feed.market_breadth(), "mcclellan": database.mcclellan_oscillator()}
 
 
 @app.get("/api/portfolio/diagnostic")

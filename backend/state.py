@@ -7,11 +7,14 @@ reads it. Not persisted across restarts.
 import threading
 import time
 import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import config
 import database
 
 ACTIVITY_LIMIT = 300
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def _new_position():
@@ -65,6 +68,24 @@ class AppState:
         # module-level dict in app.py) so the engine itself can read it to seed
         # the day's watchlist before the live intraday scanner has run.
         self.premarket = {"result": None, "error": None, "running": False}
+        self._rehydrate_today()
+
+    def _rehydrate_today(self):
+        """A restart during market hours used to silently drop today's real
+        trades from the dashboard — self.trades/realized_pnl_today are
+        in-memory-only fields, reset to empty on every __init__, even
+        though database.record_trade() already logged them permanently.
+        Found live: restarting to deploy a fix made an already-closed real
+        trade (BEL, -30) vanish from the Trade Journal page, looking like
+        it had never happened. Reload today's real fills from the journal
+        so a restart doesn't erase the record of what actually happened."""
+        start_of_day = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        try:
+            todays_trades = database.trades_between(start_of_day)
+        except Exception:
+            return
+        self.trades = list(reversed(todays_trades))  # newest first, matching record_trade()'s insert(0, ...)
+        self.realized_pnl_today = sum(t["realized"] for t in self.trades if t.get("realized"))
 
     def set_watchlist(self, symbols):
         with self.lock:

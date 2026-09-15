@@ -78,10 +78,19 @@ class TradingEngine:
     def __init__(self, state: AppState):
         self.state = state
         self.risk = RiskManager(config.RISK)
+        # state.__init__ already reloaded today's real fills from the
+        # journal (state._rehydrate_today(), see its docstring for the bug
+        # this closes) — seed the daily-loss counter from that instead of
+        # the RiskManager default 0.0, so a restart mid-session can't erase
+        # today's real losses from the max_daily_loss_pct safety check.
+        # Same reasoning for _last_day below: leaving it None made the very
+        # first tick after any restart think a new day had started, which
+        # zeroed this same counter right back out a moment later.
+        self.risk.daily_realized_pnl = state.realized_pnl_today
         self.strategy_fn = STRATEGY_FUNCTIONS[config.STRATEGY]
         self.strategy_params = config.STRATEGY_PARAMS[config.STRATEGY]
         self.kite_executor = None
-        self._last_day = None
+        self._last_day = datetime.now(IST).date()
         self._last_holiday_logged = None
         self.scanner = Scanner(config.SCANNER) if config.SCANNER.get("enabled") else None
         self._scan_thread = None
@@ -353,25 +362,35 @@ class TradingEngine:
 
     def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
                 position_id=None, initial_risk=None):
-        charges = costs.leg_cost(side, price, qty, config.COSTS)
+        # backtester.py has always applied costs.apply_slippage() to every
+        # fill; this function — every live and paper trade's one real path
+        # — never did, only leg_cost() (brokerage/STT/exchange charges).
+        # That broke the "same code, same costs" property the backtester is
+        # praised for elsewhere: live/paper P&L (including BEL's first real
+        # trade) was silently held to a laxer cost standard than backtested
+        # performance is. price stays the raw signal/stop/target price for
+        # logging the plan; fill_price is what P&L and the journal actually
+        # use, same as backtester.py already does for both entries and exits.
+        fill_price = costs.apply_slippage(side, price, config.COSTS)
+        charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
         if self.state.paper_mode:
-            realized = execute_paper_order(self.state, symbol, side, qty, price, reason=reason, note=note,
+            realized = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
                                            charges=charges, checklist_snapshot=checklist_snapshot,
                                            position_id=position_id, initial_risk=initial_risk)
         else:
             executor = self._ensure_kite()
             executor.place_order(symbol, side, qty)
-            realized = self.state.apply_fill(symbol, side, qty, price)
+            realized = self.state.apply_fill(symbol, side, qty, fill_price)
             r_multiple = (realized / (initial_risk * qty)) if initial_risk and qty else None
-            self.state.record_trade(symbol, side, qty, price, mode="live", reason=reason, note=note,
+            self.state.record_trade(symbol, side, qty, fill_price, mode="live", reason=reason, note=note,
                                     realized=realized, charges=charges, position_id=position_id,
                                     initial_risk=initial_risk, r_multiple=r_multiple,
                                     checklist_snapshot=checklist_snapshot)
         if realized:
             self.risk.record_realized_pnl(realized)
         pnl = f" · P&L ₹{realized:,.0f}" if realized else ""
-        logger.info(f"{reason}: {side} {qty} {symbol} @ {price:.2f}{pnl}")
-        self.state.log("trade", f"{side} {qty} @ {price:.2f} ({reason}){pnl}" + (f" — {note}" if note else ""),
+        logger.info(f"{reason}: {side} {qty} {symbol} @ {fill_price:.2f}{pnl}")
+        self.state.log("trade", f"{side} {qty} @ {fill_price:.2f} ({reason}){pnl}" + (f" — {note}" if note else ""),
                        symbol=symbol, level="trade")
         return realized
 

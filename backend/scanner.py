@@ -35,6 +35,7 @@ import pandas as pd
 
 import bulkowski
 import config
+import database
 import indicators as ind
 import news_sentiment
 import nse_feed
@@ -347,7 +348,7 @@ def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg
     return pts.score, pts.items, rs_today
 
 
-def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None):
+def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None, real_breadth=None):
     nd = [b for b in daily.get(NIFTY, []) if _date(b) < session]
     closes = [b["close"] for b in nd]
     today = [c for c in nifty_5m if c["time"][:10] == session]
@@ -412,6 +413,20 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None):
     if budget_note:
         reasons.append(budget_note)  # informational only — never scored, see seasonality.py
 
+    if real_breadth and real_breadth.get("trin") is not None:
+        # TRIN (Arms Index, Murphy ch 10): volume-weighted breadth across the
+        # WHOLE exchange (~3,700 stocks), not just this scanner's NIFTY 100
+        # universe. Classical reference bands (>1.2 oversold/bearish tape,
+        # <0.8 overbought/bullish tape) are Murphy's own rules of thumb, not
+        # backtested on this system yet — informational only, never scored,
+        # same discipline as budget_note above, pending a real
+        # database.factor_ic() check once enough days of history exist.
+        trin = real_breadth["trin"]
+        if trin >= 1.2:
+            reasons.append(f"TRIN {trin:.2f} — volume favors declining stocks (informational, not scored)")
+        elif trin <= 0.8:
+            reasons.append(f"TRIN {trin:.2f} — volume favors advancing stocks (informational, not scored)")
+
     bias = "risk-on" if score >= 2 else "risk-off" if score <= -2 else "neutral"
     if not reasons:
         reasons.append("No strong market-wide signal")
@@ -421,6 +436,7 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None):
         "vix": _r(vix), "vix_high": vix_high,
         "breadth": {"adv": adv, "dec": dec, "pct_adv": _r(pct_adv, 0)},
         "fii_dii": fii_dii,
+        "real_market_breadth": real_breadth,
     }
 
 
@@ -526,6 +542,12 @@ class Scanner:
         catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
         fii_dii = nse_feed.fii_dii_flows() if cfg.get("use_news", True) else None
         large_deals = nse_feed.large_deals_today() if cfg.get("use_news", True) else {}
+        real_breadth = nse_feed.market_breadth() if cfg.get("use_news", True) else None
+        if real_breadth:
+            try:
+                database.record_market_breadth(session, real_breadth)
+            except Exception:
+                logger.exception("Failed to persist today's market breadth")
 
         rows = []
         for u in uni:
@@ -538,7 +560,7 @@ class Scanner:
         for r in rows:
             r["chg_pct"] = r["_m"]["chg_pct"]
 
-        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER, fii_dii=fii_dii)
+        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER, fii_dii=fii_dii, real_breadth=real_breadth)
 
         by_sector = {}
         for r in rows:

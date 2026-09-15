@@ -121,17 +121,18 @@ reasoning is never hidden in a score.
 | Murphy, *Technical Analysis of the Financial Markets* | Reversal days / selling climaxes (daily scanner) and On Balance Volume divergence (intraday checklist, ch 4 & 7). OCR'd this session — see below |
 | News (NSE filings + Google News + Marketaux + Alpha Vantage) | The catalyst check — degrades or vetoes a trade the news contradicts |
 | Tharp, *Trade Your Way to Financial Freedom* | Percent Risk / Percent Volatility position sizing, R-multiples, expectancy, Kelly fraction |
-| NISM Series VIII | Options Greeks and long-option payoff definitions (now used by F&O below); F&O contract specs and the Market Wide Position Limit ban otherwise still unused |
+| NISM Series VIII | Options Greeks and long-option payoff definitions (now used by F&O below); F&O contract specs. The Market Wide Position Limit ban was researched (§33) but its NSE endpoint couldn't be verified live after several real attempts — same honest "not built" call as ASM/GSM (§20) rather than guessing at it |
 | Bailey & López de Prado (2014); Grinold (cited in Jansen, *Machine Learning for Trading*) | Deflated Sharpe Ratio and Information Coefficient — the two statistics the Dimaag Scorecard is built on |
 
 Murphy's book is a scanned PDF with no text layer. `tesseract` + `poppler`
-were installed and used to OCR all 574 pages this session. Two concrete,
+were installed and used to OCR all 574 pages this session. Three concrete,
 verifiable rules from it are wired into the engine (reversal days, OBV
-divergence); Elliott Wave, Point & Figure, time cycles, intermarket analysis
-and market-breadth indicators were read but deliberately not built in — each
-for a specific reason (too subjective to encode reliably, redundant with
-what's implemented, needs data this app doesn't fetch, or the wrong asset
-class) documented on the dashboard's Technical Analysis page.
+divergence, and — added later, §33 — real whole-exchange market breadth:
+the advance-decline line and TRIN). Elliott Wave, Point & Figure, time
+cycles, and intermarket analysis were read but deliberately not built in —
+each for a specific reason (too subjective to encode reliably, redundant
+with what's implemented, or the wrong asset class) documented on the
+dashboard's Technical Analysis page.
 
 ### 4. The Varsity Checklist — *when* to trade (`trader_brain.py`)
 
@@ -1356,6 +1357,102 @@ needs every checklist item to genuinely pass (§27's still-binding pattern/
 volume/R:R gates) at the same time as a perfect local score, which is
 appropriately rare, not guaranteed.
 
+### 33. First real trade, and three more real bugs it exposed
+
+The confidence deadlock fix (§32) produced the platform's first-ever
+closed trade: **BEL short**, entered on a real Hanging Man pattern at
+confidence exactly 60/100 (the new ceiling), stopped out for -₹30. Small,
+but real — signal, checklist, confidence gate, entry, stop, journal, all
+running end to end for the first time. Watching it closely (per the
+recurring live-log watch, §34) surfaced three more real gaps, plus one
+legitimate new feature built from research done in response to a direct
+ask.
+
+**Slippage was applied in every backtest, never live or paper.**
+`costs.apply_slippage()` (BUY fills a little higher, SELL a little lower)
+existed and was correctly used by `backtester.py` for every fill, but
+`trading_engine._execute()` — the one function every live and paper trade
+actually goes through — never called it, only `costs.leg_cost()`
+(brokerage/STT/exchange charges, which *were* real). That broke the
+backtester's own "same code, same costs" property: live/paper P&L,
+including BEL's first real trade, was held to a laxer cost standard than
+backtested performance is — one of the most common, well-documented
+reasons a strategy looks better on paper than it performs with real
+capital. Fixed by wiring `apply_slippage()` into `_execute()` for both
+paper and live fills, same direction convention the backtester already
+used.
+
+**A restart during market hours silently erased today's trade history
+from the dashboard — and the daily-loss safety counter's memory of it.**
+`AppState.trades` and `realized_pnl_today` are in-memory fields, reset to
+empty on every process start; `database.record_trade()` already logs
+everything permanently, but nothing read it back. Restarting to deploy
+the slippage fix made BEL's already-closed trade vanish from the Trade
+Journal page — looking like it had never happened. Worse, found while
+tracing the same bug fully: `RiskManager.daily_realized_pnl` (the counter
+`max_daily_loss_pct` checks against) has the identical problem, and
+`TradingEngine._last_day` starting as `None` meant the very first tick
+after *any* restart saw "a new day started" and zeroed it right back out
+even after a fix. A restart didn't just cosmetically hide a trade — it
+erased the real-money daily-loss safety check's memory of what had
+already been lost that day. Fixed with `AppState._rehydrate_today()`
+(reloads today's real fills from `database.trades_between()` on
+construction) and seeding `TradingEngine.__init__`'s `_last_day` /
+`risk.daily_realized_pnl` from that rehydrated state instead of `None`/0.
+Verified live: both trade legs and the correct -₹30 `realized_pnl_today`
+reappeared immediately after a restart, no tick needed to wait for.
+
+**Real, whole-exchange market breadth (Murphy ch 10) — advance-decline
+line and TRIN.** Asked directly whether the "read but not built" Murphy
+techniques (§3) could now be built, market-breadth indicators had been
+deferred specifically because they need every NSE constituent, not just
+this scanner's NIFTY 100 universe — a genuine data gap, not a judgment
+call like Elliott Wave's subjectivity. Found real, live, whole-exchange
+data anyway: `nse_feed.market_breadth()` calls NSE's own
+`api/live-analysis-advance` / `api/live-analysis-decline` (verified live:
+3,687 real NSE stocks, not an approximation from the 100-stock scan
+universe), giving real advances/declines plus each stock's traded volume
+— enough for both the advance-decline line and **TRIN** (Arms Index:
+(advances/declines) ÷ (up-volume/down-volume)) from one live reading, no
+history needed. The **McClellan Oscillator** (EMA19 − EMA39 of daily net
+advances) genuinely can't be computed from a single snapshot — it needs
+real day-over-day history, so `database.mcclellan_oscillator()` persists
+one row per real trading day (`market_breadth_daily`) and honestly reports
+"not enough data" below 39 real days, same discipline as
+`factor_ic()`/`deflated_sharpe_ratio()` elsewhere in this journal, rather
+than computing a number from 5 days of history nobody should trust.
+Wired into `scanner.py`'s `market_context()` as TRIN crossing Murphy's own
+classical reference bands (≥1.2 / ≤0.8) — informational only, never
+scored, same "don't assume it helps on arrival" discipline as FII/DII
+(§20), pending a real `factor_ic()` check once enough days exist. Exposed
+at `GET /api/market-breadth`.
+
+The NISM Series VIII Market Wide Position Limit ban (§3's table) was
+researched properly for this, in case it turned out to share an endpoint
+family with the breadth data — it doesn't. Tried NSE's own F&O-ban-period
+page's obvious API pattern and several real variations; every one
+consistently 500'd rather than 404'd (a route that exists but errors,
+not one that doesn't), most likely needing session state this simple
+`requests`-based client doesn't replicate. Same honest call as ASM/GSM
+(§20): documented as researched-but-unverified rather than shipped on a
+guess.
+
+### 34. A recurring automated live-log watch
+
+Asked to keep watching rather than checking back manually each time —
+a `CronCreate` job (session-only, not written to disk, auto-expires after
+7 days) fires every ~15 minutes during real NSE market hours (9:15-15:30
+IST, weekdays), running the same checklist a manual check would: confirm
+the backend's up, pull `/api/state` and `/api/activity`, report whether a
+position opened, any new error, whether the checklist blockers still look
+like the same genuine chop, and how close any real setup got to the
+confidence ceiling. It only sends a message when there's something worth
+reporting — a new position, a new error, a genuinely new blocker shape, or
+a real near-miss — and stays silent through quiet cycles rather than
+repeating "still nothing." This is exactly how BEL's entry and exit, and
+the entry-window and market-close transitions, were caught live rather
+than after the fact.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -1521,7 +1618,7 @@ webapp/
 │   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
 │   ├── chaywanaprash.py         # ★ platform research analyst — real journal stats + Claude Sonnet, read-only — §29, §30
 │   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
-│   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals — §20
+│   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals + market breadth/TRIN — §20, §33
 │   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
 │   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
 │   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, OBV, resampling
@@ -1532,7 +1629,7 @@ webapp/
 │   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
-│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC — §30, §31
+│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33
 │   ├── backtester.py            # same strategy/risk code over history, with costs; --universe/--walk-forward modes — §20
 │   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py

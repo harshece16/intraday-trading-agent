@@ -183,6 +183,46 @@ def fii_dii_flows():
         return None
 
 
+def market_breadth():
+    """Real, whole-exchange market breadth — Murphy, Technical Analysis of
+    the Financial Markets ch 10 (advance-decline line, Arms Index/TRIN) —
+    from NSE's own live-analysis feed (api/live-analysis-advance +
+    api/live-analysis-decline, verified live: 3,687 stocks total on NSE,
+    not just this scanner's NIFTY 100 universe, which is why this couldn't
+    be self-computed from scan_rows the way scanner.py's own narrower
+    "breadth" reading is). Each side's response also carries each stock's
+    totalTradedVolume, which is what TRIN needs beyond a plain
+    advance/decline count.
+
+    TRIN (Arms Index) = (advances/declines) / (up_volume/down_volume).
+    Below 1.0: volume favors advancing stocks (bullish tape). Above 1.0:
+    volume favors declining stocks even if price breadth looks neutral —
+    Murphy's example of volume confirming or contradicting price breadth.
+    Returned here as a raw, real number; scanner.py doesn't score it yet
+    (see README) — same "don't assume it helps on arrival" discipline as
+    fii_dii_flows(), pending a real database.factor_ic() check once enough
+    days of history exist to test it."""
+    adv = _fetch("/api/live-analysis-advance", "/market-data/live-market-indices", 300)
+    dec = _fetch("/api/live-analysis-decline", "/market-data/live-market-indices", 300)
+    if not adv or not dec:
+        return None
+    try:
+        a_count = adv["advance"]["count"]
+        d_count = dec["decline"]["count"]
+        advances, declines = a_count["Advances"], d_count["Declines"]
+        up_volume = sum(r.get("totalTradedVolume") or 0 for r in adv["advance"]["data"])
+        down_volume = sum(r.get("totalTradedVolume") or 0 for r in dec["decline"]["data"])
+        trin = (advances / declines) / (up_volume / down_volume) if declines and down_volume else None
+        return {
+            "timestamp": adv.get("timestamp"), "advances": advances, "declines": declines,
+            "unchanged": a_count.get("Unchange"), "total": a_count.get("Total"),
+            "up_volume": round(up_volume, 1), "down_volume": round(down_volume, 1),
+            "trin": round(trin, 3) if trin is not None else None,
+        }
+    except (KeyError, ValueError, TypeError, ZeroDivisionError):
+        return None
+
+
 def _next_trading_day(d):
     n = d + timedelta(days=1)
     while n.weekday() >= 5:
