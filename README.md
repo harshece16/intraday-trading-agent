@@ -993,7 +993,18 @@ explicit periodic check of NIFTY 100 against NSE's actual F&O-eligible
 list (this section's own verification, repeated automatically) rather than
 a one-time snapshot that can silently go stale as either list changes.
 
-## Dashboard
+### 22. Live log — a terminal, not just a card feed
+
+Overview's "What Trader Sahab is doing" feed already showed the last 6
+activity entries, but only there, and only the most recent few. A
+terminal-style drawer (`components/LiveLog.jsx`) is now available from
+every page via a header toggle: the full activity stream (scans, setups
+forming, entries blocked and why, fills, risk alerts), monospace,
+color-coded by kind (the same `.kind.trade`/`.kind.risk`/`.kind.error`
+classes the card feed already used), auto-scrolling to the newest line
+unless you've scrolled up to read history. No new backend endpoint and no
+polling — it's the same WebSocket-pushed `state.activity` every page
+already reads, just rendered as a console instead of a card list.
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
 HTML file) replacing a fixed three-pane layout, then migrated to **React +
@@ -1186,7 +1197,8 @@ webapp/
     │   │   ├── Chart.jsx            # ★ Lightweight Charts v5 wrapper — see Low-Level Design below
     │   │   ├── Tip.jsx              # the hover/focus glossary tooltip
     │   │   ├── RuleBook.jsx · Pill.jsx · SymLink.jsx · Feed.jsx
-    │   │   └── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
+    │   │   ├── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
+    │   │   └── LiveLog.jsx          # ★ terminal-style live activity drawer, available from any page — §22
     │   └── pages/
     │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
     │       ├── PreMarket.jsx      # ★ renders scanner.run_premarket()'s daily-only pre-open ranking

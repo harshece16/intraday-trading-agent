@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useAppState } from "./api";
 import { useAlerts } from "./useAlerts";
 import Header from "./components/Header";
+import LiveLog from "./components/LiveLog";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
 import DayPlan from "./pages/DayPlan";
@@ -39,10 +41,12 @@ function AppRoutes({ state }) {
 function Shell() {
   const state = useAppState();
   useAlerts(state);
+  const [liveLogOpen, setLiveLogOpen] = useState(false);
   return (
     <>
-      <Header state={state} />
+      <Header state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
       <AppRoutes state={state} />
+      <LiveLog state={state} open={liveLogOpen} onClose={() => setLiveLogOpen(false)} />
     </>
   );
 }

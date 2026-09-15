@@ -17,7 +17,7 @@ async function setMode(paperMode) {
   });
 }
 
-export default function Header({ state }) {
+export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
   const navigate = useNavigate();
   const [kite, setKite] = useState(null);
   const [alertsOn, setAlertsOn] = useState(false);
@@ -83,6 +83,9 @@ export default function Header({ state }) {
             {alertsOn ? "🔔 Alerts on" : "🔕 Enable alerts"}
           </button>
         )}
+        <button className={`btn ${liveLogOpen ? "primary" : ""}`} onClick={onToggleLiveLog} title="Live terminal — every scan, setup, trade and alert, streamed as it happens">
+          {liveLogOpen ? "▾ Live log" : "▸ Live log"}
+        </button>
         <div className="segmented" role="group" aria-label="Trading mode">
           <button className="paper" aria-pressed={String(!!state?.paper_mode)} onClick={() => setMode(true)}>Paper</button>
           <button className="live" aria-pressed={String(!state?.paper_mode)} onClick={() => { if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false); }}>Live</button>
