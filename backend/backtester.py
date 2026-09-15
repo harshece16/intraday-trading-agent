@@ -31,8 +31,10 @@ import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import confidence
 import config
 import data_provider
+import database
 import evaluation
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 from risk_manager import RiskManager
@@ -96,10 +98,24 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
 
 
 def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, days, costs_cfg=None,
-                 preloaded=None, allowed_by_day=None):
+                 preloaded=None, allowed_by_day=None, scorecard=None):
     """preloaded: {symbol: candles} to skip per-symbol downloads.
-    allowed_by_day: {"YYYY-MM-DD": [symbols]} — new entries only in that day's picks."""
+    allowed_by_day: {"YYYY-MM-DD": [symbols]} — new entries only in that day's picks.
+    scorecard: the Dimaag Scorecard (database.journal_summary()["scorecard"]
+    shape) used to gate entries via confidence.score_trade() at
+    risk_cfg["min_confidence_to_trade"] — the exact same gate
+    trading_engine._try_enter() applies live. Defaults to the REAL current
+    journal scorecard, so a backtest reflects what live trading would
+    really do with today's system-evidence state, not a hypothetical one;
+    pass an explicit list (including []) to test a different scenario.
+    Previously this function didn't apply the confidence gate at all, so
+    varying min_confidence_to_trade had zero effect on backtest results —
+    a real gap, not a deliberate simplification (see README/tracking
+    issue)."""
     costs_cfg = costs_cfg if costs_cfg is not None else config.COSTS
+    if scorecard is None:
+        scorecard = database.journal_summary().get("scorecard", [])
+    min_conf = risk_cfg.get("min_confidence_to_trade")
     risk = RiskManager(risk_cfg)
     strategy_fn = STRATEGY_FUNCTIONS[strategy_name]
     market_open_t = _parse_hhmm(config.MARKET_OPEN)
@@ -201,6 +217,10 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
                     continue
                 if not risk.can_open_new_position():
                     continue
+                if min_conf is not None:
+                    conf = confidence.score_trade(st, "LONG" if side == "BUY" else "SHORT", scorecard)
+                    if conf["score"] < min_conf:
+                        continue
                 atr_val = compute_atr(window, risk_cfg.get("atr_period", 14)) if risk_cfg.get("use_atr_risk") else None
                 plan = None
                 if st.get("entry_mode") == "checklist":
