@@ -1614,11 +1614,9 @@ predictive power. This measurement isn't a strategy and logs no DSR trial.
 transition (Sep 11 → Sep 15, 100 stocks) on a day the whole universe fell
 ~2% — one cross-section, not evidence of skill. The pseudo-replication fix
 in §30 was right; calling the result "a real positive edge" wasn't. The
-Scorecard still grades it "pass" because `min_pairs` counts stocks, not
+Scorecard graded it "pass" because `min_pairs` counted stocks, not
 independent days — and one day's stocks all move with the same market.
-Requiring several distinct session transitions would fix that without
-changing live trading today (IC would drop to "not enough data", leaving
-the confidence multiplier at 0.6x).
+Fixed in §38.
 
 What this doesn't cover: the live scanner's `final_score` also uses news,
 results-day flags, intraday relative volume and the Dimaag read, none of
@@ -1634,6 +1632,40 @@ daily ranking shows an edge that tuning or longer holds could extract. The
 honest paths are new signal research held to the same bar — daily IC across
 many sessions first, then a benchmark-relative backtest with a held-out
 period — or keeping the agent paper-only.
+
+### 38. The Scorecard's IC check now needs separate days, not just stocks
+
+§37 found the Scorecard's "Predictive skill" row passing on one day's data:
+100 stocks from a single session transition, on a day the whole market
+fell. `database.factor_ic()` pooled every (stock, next session) pair into
+one correlation and only asked for 20 pairs, so one day's cross-section —
+every stock moving with the same market — counted as 100 independent
+observations.
+
+It now computes IC the standard way for a ranking signal: one rank
+correlation per session transition (each needing at least 20 stocks),
+averaged across sessions, with a t-stat. The row reports nothing until
+there are **20 separate session transitions**, and passes only if the mean
+daily IC is positive **and** its t-stat is at least 2 — the same "positive
+isn't enough, it has to clear a significance bar" rule the DSR row already
+applies (≥ 0.95). Once 20 sessions exist, a mean IC that's zero, negative,
+or positive but inconsistent grades "fail", matching the DSR row's
+convention too.
+
+**Live effect today: none.** The journal has one usable session
+transition, so the row moves from "pass" to "not enough data". With
+expectancy and DSR also "not enough data", the confidence multiplier stays
+at 0.6x (§32).
+
+**The consequence worth knowing:** scans write this data every trading day
+whether or not anything trades, so the row resolves by itself in about 20
+trading days — no deadlock like §32's. If the live ranking behaves like the
+434-session replay in §37 (daily IC 0.000), the row will flip to "fail",
+the multiplier will drop to 0.25x, and the confidence gate will effectively
+stop paper entries. That's the gate doing what it was built for, not a new
+bug. `dimag_ki_batti()` still pools pairs per pattern; it reports "not
+enough data" today for other reasons but shares the old weakness. The
+Journal page now shows mean daily IC, session count and t-stat.
 
 ## Dashboard
 
@@ -1811,7 +1843,7 @@ webapp/
 │   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
-│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33
+│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33, §38
 │   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
 │   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
 │   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36

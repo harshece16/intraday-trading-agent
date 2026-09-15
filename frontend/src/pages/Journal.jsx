@@ -183,7 +183,7 @@ function JournalBody({ j, fj, blocked, blockerStats }) {
       {ic && (
         <div className="cardbox" style={{ marginTop: 16 }}>
           <h2 className="h" style={{ fontSize: 16 }}>Does the scan score predict the next move?</h2>
-          <p style={{ margin: "0 0 4px" }}>{ic.ic != null ? `Information Coefficient ${signed(ic.ic, 3)} across ${ic.pairs} session pairs` : "Not enough data yet"}</p>
+          <p style={{ margin: "0 0 4px" }}>{ic.ic != null ? `Mean daily Information Coefficient ${signed(ic.ic, 3)} across ${ic.sessions} separate sessions (t-stat ${ic.t_stat != null ? signed(ic.t_stat, 2) : "n/a"})` : `Not enough data yet — ${ic.sessions ?? 0} of ${ic.min_sessions ?? 20} sessions needed`}</p>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
             {ic.note || ""}{ic.ic == null ? "" : " (ML4Trading ch 1: rank correlation between today's score and the next session's move — 0 is no predictive power, ±1 is perfect)."}
           </p>

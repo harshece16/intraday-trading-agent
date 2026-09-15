@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import database
+import evaluation
 
 
 def _insert_scan_row(scan_id, session_date, symbol, final_score, chg_pct, swing_pattern=None):
@@ -122,3 +123,53 @@ def test_dimag_ki_batti_picks_the_highest_ic_among_qualifying_patterns():
 
     assert result["winner"]["pattern"] == "PatternA"
     assert result["winner"]["ic"] == 1.0
+
+
+# ---- factor_ic per session (README §38) --------------------------------------
+
+def _seed_sessions(n_days, n_stocks, chg_fn, prefix):
+    """n_days consecutive sessions. Stock j scores j every day; its chg_pct on
+    day d comes from chg_fn(transition_index=d-1, j), so transition k's IC is
+    fully determined by chg_fn(k, .)."""
+    sid = 10_000
+    for d in range(n_days):
+        day = f"2027-01-{d + 1:02d}"
+        for j in range(n_stocks):
+            chg = chg_fn(d - 1, j) if d > 0 else 0.0
+            _insert_scan_row(sid, day, f"{prefix}{j}", final_score=float(j), chg_pct=chg)
+            sid += 1
+
+
+def _ic_row(ic):
+    return evaluation.scorecard({"closed_trades": 0}, {"dsr": None, "note": ""}, ic)[2]
+
+
+def test_one_session_of_many_stocks_is_not_enough():
+    # The exact failure §37 found: a perfect-looking IC from one day's cross-section.
+    _seed_sessions(2, 100, lambda k, j: float(j), "ONEDAY")
+    ic = database.factor_ic()
+    assert ic["ic"] is None and ic["sessions"] == 1 and ic["pairs"] == 100
+    assert _ic_row(ic)["status"] == "not_enough_data"
+
+
+def test_consistent_positive_ranking_passes():
+    # Correct ranking every session; odd sessions swap the bottom two stocks (IC just under 1).
+    _seed_sessions(26, 25, lambda k, j: float(1 - j) if (k % 2 and j < 2) else float(j), "GOOD")
+    ic = database.factor_ic()
+    assert ic["sessions"] == 25 and ic["ic"] > 0.9 and ic["t_stat"] > 2
+    assert _ic_row(ic)["status"] == "pass"
+
+
+def test_positive_but_inconsistent_ranking_fails():
+    # Sessions alternate perfect / perfectly inverted: mean slightly positive, t-stat tiny.
+    _seed_sessions(26, 25, lambda k, j: float(j) if k % 2 == 0 else float(-j), "FLIP")
+    ic = database.factor_ic()
+    assert ic["ic"] > 0 and ic["t_stat"] < 2
+    row = _ic_row(ic)
+    assert row["status"] == "fail" and "not consistent enough" in row["detail"]
+
+
+def test_sessions_with_too_few_stocks_are_ignored():
+    _seed_sessions(26, 5, lambda k, j: float(j), "THIN")
+    ic = database.factor_ic()
+    assert ic["sessions"] == 0 and ic["ic"] is None
