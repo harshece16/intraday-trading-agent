@@ -1315,6 +1315,47 @@ works, not evidence that none do") rather than picking a winner anyway.
 It'll have something real to say once more real trading days accumulate
 — which is the honest, correct state of the answer today.
 
+### 32. The confidence gate could mathematically never pass — a real cold-start deadlock
+
+Asked to keep watching the live log for a functional bug behind zero
+trades, running Chaywanaprash again surfaced something bigger than
+another checklist-blocker statistic: a genuine deadlock in
+`confidence.py`, verified with arithmetic against the live Scorecard, not
+just theorized. `score_trade()` computes `local_score (capped at 100) ×
+system_multiplier`. With the Scorecard showing two criteria stuck on
+"not enough data" (expectancy needs 10+ closed trades; DSR needs 10+
+backtest trials) and none failing, `_system_multiplier()` landed in its
+"no failures yet, not proven either" tier — **0.5x**. `100 × 0.5 = 50`,
+and `min_confidence_to_trade` is **60** for both cash equity and F&O.
+50 can never clear 60 — not on a bad setup, not on a mathematically
+perfect one. Confirmed live against a real 100/100 local setup (MAZDOCK,
+§29's Three Black Crows signal) capped at 25-50/100 all session by exactly
+this. And because no trade could ever execute, `closed_trades` could never
+reach the 10 needed to resolve expectancy — the system could never
+accumulate the evidence that would let it stop being capped, a permanent
+cold start with no way out. Almost certainly an unintended side effect of
+extending this gate from F&O-only to cash equity earlier this session
+(§19) — before that, cash equity fired on checklist-pass alone, which is
+what would have let real trade history build up in the first place.
+
+This one wasn't a pure bug fix — raising a multiplier tier is a real
+risk-policy choice, not just a miscalculation, so it went back for a
+decision rather than being changed unilaterally: raise the 0.5x tier, or
+lower the 60-point bar itself, or add a separate bootstrap-only threshold.
+Went with the smallest-blast-radius option — raising the "no failures,
+not proven" tier from 0.5x to **0.6x** in `confidence._system_multiplier()`.
+New ceiling: `100 × 0.6 = 60`, exactly matching the existing bar — only a
+near-perfect local setup can fire during this bootstrap phase, everything
+weaker is still correctly blocked, and the all-pass (1.0x) and any-fail
+(0.25x) tiers, plus the permanent 60-point bar a mature, proven system is
+held to, are untouched. Verified live: the achievable ceiling is now
+exactly 60, confirmed directly against the running Scorecard. No trade
+fired in the first few minutes after deploying it — expected and correct,
+since this only removes an impossible mathematical ceiling; a trade still
+needs every checklist item to genuinely pass (§27's still-binding pattern/
+volume/R:R gates) at the same time as a perfect local score, which is
+appropriately rare, not guaranteed.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single

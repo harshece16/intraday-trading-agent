@@ -47,7 +47,23 @@ def test_system_multiplier_any_fail_caps_low():
 
 
 def test_system_multiplier_pending_is_between():
-    assert confidence._system_multiplier(PENDING)["multiplier"] == 0.5
+    assert confidence._system_multiplier(PENDING)["multiplier"] == 0.6
+
+
+def test_pending_multiplier_lets_a_near_perfect_local_setup_clear_the_bar():
+    """Regression for a real deadlock found watching live logs: local score
+    caps at 100 (_local_setup_score), and with the Scorecard's expectancy
+    and DSR both stuck on "not enough data" until 10+ closed trades exist,
+    a trade could never execute in the first place to produce those trades
+    — 100 x the old 0.5x tier = 50, which can never clear the 60-point
+    min_confidence_to_trade bar. Verified live against a real 100/100 local
+    setup (MAZDOCK) blocked all session by exactly this. 0.6x raises the
+    ceiling to exactly 60 so at least a near-perfect setup can bootstrap
+    real trade history; everything below that is still correctly blocked."""
+    result = confidence.score_trade(PERFECT_ANALYSIS, "LONG", PENDING)
+    assert result["local_setup"]["score"] == 100
+    assert result["score"] == 60
+    assert result["score"] >= 60  # config.RISK/FNO's min_confidence_to_trade default
 
 
 def test_system_multiplier_empty_scorecard_is_unproven():

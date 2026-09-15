@@ -68,7 +68,17 @@ def _system_multiplier(scorecard: list) -> dict:
         failing = [row["criterion"] for row in scorecard if row["status"] == "fail"]
         return {"multiplier": 0.25, "reason": f"Scorecard currently FAILS on: {', '.join(failing)} — a strong "
                                               f"local setup can't outweigh proven-absent system edge."}
-    return {"multiplier": 0.5, "reason": "Scorecard has no failures yet, but not enough data to confirm a real "
+    # 0.5 here, combined with _local_setup_score()'s 100-point cap and the
+    # 60-point min_confidence_to_trade bar, made this branch a permanent
+    # deadlock: 100 x 0.5 = 50 can never clear 60, so no trade could ever
+    # execute, so expectancy could never leave "not enough data" (needs 10
+    # closed trades), so this branch could never be left either — verified
+    # live against a real 100/100 local setup (MAZDOCK) that stayed capped
+    # at 25-50/100 all session. 0.6 raises the ceiling to exactly 60 — only
+    # a near-perfect local setup can fire during this bootstrap phase, but
+    # at least one now can. The all-pass (1.0x) and any-fail (0.25x)
+    # branches, and the 60-point bar itself, are unchanged.
+    return {"multiplier": 0.6, "reason": "Scorecard has no failures yet, but not enough data to confirm a real "
                                          "edge either — confidence is capped until it does."}
 
 
