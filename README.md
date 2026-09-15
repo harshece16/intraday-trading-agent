@@ -1510,6 +1510,72 @@ number of things tried), not a bug — but it means re-running the same
 grid later costs real, permanent trial budget rather than being free to
 repeat.
 
+### 36. Why the checklist loses — friction, timing, and a horizon mismatch
+
+§35 showed no threshold setting fixes the strategy. This section asks why,
+using trade-level data rather than aggregate returns. Backtests now record
+each trade's `entry_time`, `stop`, `target` and `risk_per_share`, so the
+analysis uses real entry bars instead of guessing them.
+
+**Problem 1: costs eat most of a trade before it starts.** On 5-minute bars
+the stop sits at the candlestick pattern's own high or low — a median of
+just **0.19%** from entry — while a round trip (brokerage, STT, slippage)
+costs **0.106%** of the trade's value. That's **0.56R of friction per
+trade**; a stopped-out trade loses ~1.9R, not 1R. Typical bar range tells
+the same story: round-trip cost is ~74% of one 5-minute ATR, ~26% of a
+30-minute ATR, ~17% of a 60-minute ATR. Nison's candlestick patterns were
+built on daily charts; on 5-minute bars their ranges are noise-sized.
+
+**Problem 2: there's no edge even before costs.** Gross (pre-cost)
+expectancy on 5-minute bars is -0.42R. Removing friction would shrink the
+loss, not remove it.
+
+**Test: four configs, same 55 days, confidence gate off** (it throttles
+volume; entry logic is what's being judged). `diagnose_entry_edge.py`
+splits every result into a selection period and the last 20 sessions held
+out — a result only counts if it holds on days it wasn't chosen on. Top-5
+scanner picks per day, real costs.
+
+| Config | Trades | Win | Gross R | Net R | Cost R | Stop % | Held-out net R | DSR |
+|---|---|---|---|---|---|---|---|---|
+| Checklist @ 5m (live logic) | 37 | 19% | -0.42 | **-1.09** | 0.56 | 0.19% | -1.32 | 0.0% |
+| Checklist @ 30m | 25 | 28% | -0.15 | -0.50 | 0.16 | 0.68% | -0.30 | 0.5% |
+| No-timing baseline @ 5m | 162 | 33% | -0.12 | -0.37 | 0.24 | 0.44% | -0.41 | 0.0% |
+| No-timing baseline @ 30m | 169 | 33% | -0.10 | **-0.24** | 0.14 | 0.75% | -0.40 | 0.0% |
+
+The no-timing baseline enters the scanner's pick at 09:45 on its picked
+side with a 1.5 ATR stop and 3 ATR target — no pattern, no confluence.
+
+What this shows:
+
+- **The candlestick timing subtracts value.** On the same picks, simply
+  entering at a fixed time lost 0.37R per trade; the checklist lost 1.09R.
+  Most of that gap is friction from pattern-sized stops.
+- **30-minute bars cut friction by ~70%** (0.56R → 0.16R) and halve the
+  checklist's loss. The checklist's held-out gross turned slightly
+  positive (+0.09R) but on 11 trades, with the selection period worse —
+  inconsistent, not an edge (DSR 17%).
+- **Nothing is profitable, before or after costs, in both periods.** Best
+  net result is the 30-minute baseline at -0.24R, and its held-out period
+  is worse than its selection period. Every DSR is far below 95%.
+- **A horizon mismatch explains why good stock ranking doesn't pay
+  intraday.** The scanner's positive Information Coefficient (+0.29 to
+  +0.32, §30) is measured against *next-session* returns. The agent exits
+  the *same* day, often within a few bars, on a tight stop. Whatever
+  signal the ranking carries looks like a multi-day effect, and intraday
+  stop/target exits never get to collect it.
+
+**What that means for tuning:** threshold tuning can't fix a strategy with
+no gross edge, and 5-minute candlestick stops add a large friction loss on
+top. The structural options, in order of risk: move entry logic off
+5-minute bars (halves losses, still negative); or align the holding period
+with the horizon the ranking actually predicts — holding into the next
+session — which means delivery/swing trades rather than same-day MIS, a
+real change to what this agent is. `config.py` is unchanged; this run
+logged 4 DSR trials (plus 2 earlier diagnostic runs). Samples are small
+for the checklist rows (11–37 trades); the baseline rows (160+) are more
+reliable.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -1689,6 +1755,7 @@ webapp/
 │   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33
 │   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
 │   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
+│   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36
 │   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
