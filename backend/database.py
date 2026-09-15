@@ -644,23 +644,60 @@ def _ic_from_by_symbol(by_symbol, field, min_pairs):
     return {"field": field, "ic": round(ic, 3), "pairs": len(xs)}
 
 
-def factor_ic(field="final_score", min_pairs=20):
-    """Information Coefficient (ML4Trading ch 1 / Grinold): the rank correlation
-    between a factor's value on one session and the SAME stock's move on the
-    NEXT session it was scanned — i.e. did today's score actually predict
-    tomorrow's return? Needs at least `min_pairs` independent (session, symbol)
-    observations to mean anything (the book's "breadth" of the bet); returns
-    None with a reason below that, rather than a number nobody should trust.
-    One reading per (symbol, session_date) — see _last_reading_per_symbol_session
-    for why repeated intraday re-scans of the same session must collapse to
-    one point, not count as independent evidence each."""
+def factor_ic(field="final_score", min_sessions=20, min_stocks_per_session=20):
+    """Information Coefficient (ML4Trading ch 1 / Grinold): did a stock's
+    score on one session rank how it moved on the NEXT session it was
+    scanned? Computed the standard way for a ranking signal — one
+    cross-sectional rank correlation PER session transition, averaged
+    across sessions, with a t-stat.
+
+    Why per session, not pooled (README §38): this used to pool every
+    (stock, next-session) pair into one correlation and ask for only 20
+    pairs. That graded "pass" on a single day — 100 stocks, Sep 11 -> Sep 15,
+    a day the whole market fell — because one day's stocks all move with the
+    same market; they're nowhere near 100 independent observations. Across
+    434 replayed sessions the scanner's daily IC is 0.000 (§37). Breadth, in
+    Grinold's sense, is independent bets over time.
+
+    Reports nothing until `min_sessions` separate transitions exist, each
+    with at least `min_stocks_per_session` stocks. One reading per
+    (symbol, session_date) — see _last_reading_per_symbol_session."""
     with _conn() as c:
         rows = c.execute(
             f"SELECT id, session_date, symbol, {field} AS f, chg_pct FROM scan_rows "
             f"WHERE {field} IS NOT NULL AND chg_pct IS NOT NULL ORDER BY symbol, session_date, id"
         ).fetchall()
     by_symbol = _last_reading_per_symbol_session(rows)
-    return _ic_from_by_symbol(by_symbol, field, min_pairs)
+    by_transition = {}
+    for series in by_symbol.values():
+        series.sort(key=lambda t: t[0])
+        for (d0, score, _), (d1, _, next_chg) in zip(series, series[1:]):
+            xs, ys = by_transition.setdefault((d0, d1), ([], []))
+            xs.append(score)
+            ys.append(next_chg)
+
+    daily = []
+    for key in sorted(by_transition):
+        xs, ys = by_transition[key]
+        if len(xs) >= min_stocks_per_session:
+            ic = _spearman(xs, ys)
+            if ic is not None:
+                daily.append(ic)
+
+    base = {"field": field, "pairs": sum(len(xs) for xs, _ in by_transition.values()),
+            "sessions": len(daily), "min_sessions": min_sessions}
+    if len(daily) < min_sessions:
+        return {**base, "ic": None, "t_stat": None,
+               "note": f"Only {len(daily)} separate session transition(s) with {min_stocks_per_session}+ stocks so "
+                       f"far — need at least {min_sessions}. One day's stocks all move with the same market, so a "
+                       f"single day's cross-section isn't evidence of ranking skill (README §37-38)."}
+    mean = sum(daily) / len(daily)
+    sd = math.sqrt(sum((x - mean) ** 2 for x in daily) / (len(daily) - 1))
+    if sd == 0:
+        return {**base, "ic": None, "t_stat": None,
+               "note": "Identical IC on every session — no day-to-day variance to judge significance against."}
+    return {**base, "ic": round(mean, 3), "t_stat": round(mean / sd * math.sqrt(len(daily)), 2),
+           "pct_sessions_positive": round(sum(x > 0 for x in daily) / len(daily) * 100)}
 
 
 def _swing_pattern_names(raw_json):

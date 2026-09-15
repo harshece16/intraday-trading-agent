@@ -93,6 +93,9 @@ def trial_count() -> int:
         return 0
 
 
+IC_MIN_T_STAT = 2.0
+
+
 def scorecard(trade_stats, dsr, ic):
     """A report card across the distinct things a trading system's quality
     actually rests on. This is deliberately NOT a single 'IQ' number — no
@@ -139,13 +142,19 @@ def scorecard(trade_stats, dsr, ic):
         rows.append({"criterion": "Predictive skill (Information Coefficient)",
                      "status": "not_enough_data", "detail": ic.get("note", "")})
     else:
-        ok = ic["ic"] > 0
+        # A positive mean isn't enough on its own — same principle as the DSR
+        # row's 0.95 bar. t >= 2 is the conventional ~5% significance level.
+        t = ic.get("t_stat")
+        ok = ic["ic"] > 0 and t is not None and t >= IC_MIN_T_STAT
+        why = ("ranks stocks better than chance, consistently enough across sessions to be more than noise" if ok
+               else "no better than chance" if ic["ic"] <= 0
+               else f"positive on average but not consistent enough across sessions (t-stat under {IC_MIN_T_STAT:g})")
+        t_text = f"{t:+.2f}" if t is not None else "n/a"
         rows.append({
             "criterion": "Predictive skill (Information Coefficient)", "status": "pass" if ok else "fail",
-            "detail": f"IC {ic['ic']:+.3f} across {ic['pairs']} session pairs (Grinold's fundamental law "
-                      f"of active management, cited in Jansen, Machine Learning for Trading, ch 1) — "
-                      f"{'ranks stocks better than chance' if ok else 'no better than chance yet'} "
-                      f"(0 = none, ±1 = perfect).",
+            "detail": f"Mean daily IC {ic['ic']:+.3f} across {ic.get('sessions')} separate sessions, t-stat {t_text} "
+                      f"(Grinold's fundamental law of active management, cited in Jansen, Machine Learning for "
+                      f"Trading, ch 1) — {why} (0 = none, ±1 = perfect).",
         })
 
     return rows
