@@ -1264,9 +1264,11 @@ really is the correct "next session" pairing, not a monitoring gap).
 Fixed in `database.py`: `factor_ic()` now collapses repeated intraday
 re-scans down to one reading per (symbol, session_date) — the latest —
 before pairing (`_last_reading_per_symbol_session`). Recomputed on the
-same real data: **IC +0.319 across 100 independent pairs** — a real,
-honestly-measured positive edge, the opposite sign of what the bug
-reported. The Scorecard's "Predictive skill" criterion flipped live from
+same real data: **IC +0.319 across 100 independent pairs** — positive, the
+opposite sign of what the bug reported. (Correction, §37: those 100 pairs
+were one session transition on a day the whole market fell, so this was
+never evidence of a real edge; measured across 434 sessions, the ranking's
+daily IC is 0.000.) The Scorecard's "Predictive skill" criterion flipped live from
 `fail` to `pass`, and `_system_multiplier()`'s output for any new signal
 moved from 0.25x ("Scorecard currently FAILS") to 0.5x ("no failures yet,
 but not enough data to confirm a real edge either") — a real, verified
@@ -1558,23 +1560,80 @@ What this shows:
 - **Nothing is profitable, before or after costs, in both periods.** Best
   net result is the 30-minute baseline at -0.24R, and its held-out period
   is worse than its selection period. Every DSR is far below 95%.
-- **A horizon mismatch explains why good stock ranking doesn't pay
-  intraday.** The scanner's positive Information Coefficient (+0.29 to
-  +0.32, §30) is measured against *next-session* returns. The agent exits
-  the *same* day, often within a few bars, on a tight stop. Whatever
-  signal the ranking carries looks like a multi-day effect, and intraday
-  stop/target exits never get to collect it.
+- **Hypothesis at the time — since rejected (§37):** the scanner's positive
+  Information Coefficient (+0.29 to +0.32, §30) is measured against
+  *next-session* returns, so a multi-day effect might be going uncollected
+  by same-day exits. §37 tested this on 2 years of daily bars: longer holds
+  don't help, and that IC turned out to be a single day's cross-section.
 
 **What that means for tuning:** threshold tuning can't fix a strategy with
 no gross edge, and 5-minute candlestick stops add a large friction loss on
 top. The structural options, in order of risk: move entry logic off
 5-minute bars (halves losses, still negative); or align the holding period
-with the horizon the ranking actually predicts — holding into the next
-session — which means delivery/swing trades rather than same-day MIS, a
-real change to what this agent is. `config.py` is unchanged; this run
+with the horizon the ranking was thought to predict — holding into the
+next session, i.e. delivery/swing trades rather than same-day MIS. (That
+second option was tested in §37 and doesn't help.) `config.py` is unchanged; this run
 logged 4 DSR trials (plus 2 earlier diagnostic runs). Samples are small
 for the checklist rows (11–37 trades); the baseline rows (160+) are more
 reliable.
+
+### 37. Holding longer doesn't help — the ranking itself has no measurable edge
+
+§36 guessed that the scanner's ranking predicts next-session moves the
+agent's same-day exits never collect. `swing_backtester.py` tests that on
+**2 years of daily bars** (434 sessions, Dec 2024 – Sep 2026): enter the
+scanner's long picks (top 5 a day, pre-open data only) at the open, hold 1,
+2, 3 or 5 sessions, exit at the close. Same-day exits pay intraday costs;
+overnight holds pay delivery costs (`costs.DELIVERY_COSTS`: STT 0.1% on
+both legs, 0.015% stamp duty, a flat ₹15.93 depository charge per sell —
+verify against Zerodha's current tariff). The exact same rules also run on
+**every** universe stock as a benchmark, because a long-only strategy can
+look fine just because stocks rose. R here is a risk unit (2× daily ATR at
+entry), not a stop.
+
+| Hold | Pick trades | Picks net R | Benchmark net R | Picks minus benchmark (all / selection / held-out) |
+|---|---|---|---|---|
+| 1 session | 2,085 | -0.057 | -0.049 | -0.008 / -0.007 / -0.010 |
+| 2 sessions | 1,309 | -0.132 | -0.110 | -0.022 / -0.014 / -0.034 |
+| 3 sessions | 995 | -0.156 | -0.133 | -0.023 / -0.026 / -0.018 |
+| 5 sessions | 656 | -0.201 | -0.178 | -0.023 / -0.004 / -0.051 |
+
+**The picks do worse than buying every stock, at every hold length, in both
+periods** — before costs as well as after. DSR is 0% throughout. Longer
+holds only add delivery costs.
+
+Then the ranking itself was measured directly, separate from any entry or
+exit rule: each session, the rank correlation (IC) between the pre-market
+long score and that session's return, across ~96 eligible stocks, for all
+434 sessions. **Mean daily IC 0.000 (t-stat 0.00)** against open→close
+returns; −0.002 (t −0.25) against close→close; positive on exactly 50% of
+days; ~0 in both the first 60% and last 40% of days. No measurable
+predictive power. This measurement isn't a strategy and logs no DSR trial.
+
+**Correcting §30.** Its IC of +0.29–0.32 came from a *single* session
+transition (Sep 11 → Sep 15, 100 stocks) on a day the whole universe fell
+~2% — one cross-section, not evidence of skill. The pseudo-replication fix
+in §30 was right; calling the result "a real positive edge" wasn't. The
+Scorecard still grades it "pass" because `min_pairs` counts stocks, not
+independent days — and one day's stocks all move with the same market.
+Requiring several distinct session transitions would fix that without
+changing live trading today (IC would drop to "not enough data", leaving
+the confidence multiplier at 0.6x).
+
+What this doesn't cover: the live scanner's `final_score` also uses news,
+results-day flags, intraday relative volume and the Dimaag read, none of
+which can be replayed on historical daily bars — untested, not disproven.
+Caveats: long-only (cash shorts can't be held overnight); the universe is
+today's NIFTY 100 applied to history, which flatters long results
+(picks-minus-benchmark partly cancels that); at ₹1 lakh capital the
+depository charge alone is ~0.16% of a ₹10,000 slot. 4 DSR trials logged.
+Reproduce with `python swing_backtester.py`.
+
+**Where that leaves tuning:** neither the intraday entry timing (§36) nor the
+daily ranking shows an edge that tuning or longer holds could extract. The
+honest paths are new signal research held to the same bar — daily IC across
+many sessions first, then a benchmark-relative backtest with a held-out
+period — or keeping the agent paper-only.
 
 ## Dashboard
 
@@ -1756,6 +1815,7 @@ webapp/
 │   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
 │   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
 │   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36
+│   ├── swing_backtester.py      # ★ multi-day long-only holds on daily bars vs an every-stock benchmark, plus daily ranking IC — §37
 │   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
