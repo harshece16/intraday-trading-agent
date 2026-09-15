@@ -1857,6 +1857,17 @@ Page-specific data (news, methods, journal, the diagnostic) is fetched
 independently per page via `apiFetch()`, since that data doesn't change
 every 3 seconds and doesn't belong in the constant WebSocket stream.
 
+## Development workflow
+
+Every change — a fix, a feature, a README update — goes through a branch
+and a PR, not a direct commit to `main`. See **[WORKFLOW.md](WORKFLOW.md)**
+for the full picture: branch naming, commit conventions, how solo code
+review actually works without a second person, CI (`.github/workflows/tests.yml`
+runs the full pytest suite on every PR), and an honest note on why branch
+protection isn't platform-enforced here (private repo, free tier — a real,
+checked-not-assumed limitation, not an oversight). Open work is tracked on
+[Project #1](https://github.com/users/harshece16/projects/1).
+
 ## Setup
 
 ```bash
