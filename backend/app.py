@@ -392,6 +392,23 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/journal/blocked-signals")
+def journal_blocked_signals(hours: float = 24, limit: int = 100):
+    """Every checklist-passing signal that still didn't trade, with the
+    confidence-gate breakdown (local setup score, system multiplier, the
+    exact reason) parsed back out when that's why it was blocked —
+    previously only visible by reading sahab_journal.db directly."""
+    return database.recent_blocked_signals(hours=hours, limit=limit)
+
+
+@app.get("/api/journal/blocker-stats")
+def journal_blocker_stats(hours: float = 24):
+    """Aggregate view of what's actually gating entries across every live
+    checklist read in the window (not just the ones that got far enough to
+    hit the confidence gate) — see database.checklist_blocker_stats()."""
+    return database.checklist_blocker_stats(hours=hours)
+
+
 @app.post("/api/mode")
 def set_mode(update: ModeUpdate):
     with state.lock:

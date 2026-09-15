@@ -472,6 +472,58 @@ def checklist_blocker_stats(hours=24):
     }
 
 
+_BLOCKED_MSG_RE = re.compile(r"^(?P<setup>.+?) signal skipped — (?P<why>.+)$", re.DOTALL)
+# Mirrors the exact f-strings trading_engine._try_enter() / confidence.score_trade()
+# build the message from — greedy .* is deliberate: system_multiplier_reason can itself
+# contain parentheses (a Scorecard criterion name like "Predictive skill (Information
+# Coefficient)"), and greedy backtracking still finds the real trailing "))" at the end
+# of the string regardless. bar uses [\d.]+, not \d+: min_confidence_to_trade is an int
+# today but nothing in config.py guarantees that stays true (e.g. a tuning pass landing
+# a fractional threshold) — parsed as float either way. DOTALL for the same reason
+# _BLOCKED_MSG_RE has it: mult_reason shouldn't break the match if it ever spans lines.
+_CONF_BLOCK_RE = re.compile(
+    r"^confidence (?P<score>\d+)/100 below the (?P<bar>[\d.]+) bar \("
+    r"Local setup scored (?P<local>\d+)/100, scaled by a (?P<mult>[\d.]+)x system-evidence factor \("
+    r"(?P<mult_reason>.*)\)\)$",
+    re.DOTALL,
+)
+
+
+def recent_blocked_signals(hours=24, limit=100):
+    """Every signal that reached trading_engine._try_enter() and got logged
+    as 'blocked' in the window — checklist-passing setups that still didn't
+    trade. Parses the confidence-gate breakdown (local setup score, system
+    multiplier, exact reason) back out of the activity message when that's
+    why, so the dashboard can show it structured instead of as a log line.
+    Falls back to the raw message for every other block reason (position
+    sizing to 0, max open positions, sector cap, risk-off bias, etc.) —
+    this never fails to return a row just because the message didn't match
+    the confidence-gate shape."""
+    since = time.time() - hours * 3600
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT ts, symbol, message FROM activity WHERE kind = 'blocked' AND ts > ? "
+            "ORDER BY ts DESC LIMIT ?", (since, limit),
+        ).fetchall()
+    out = []
+    for r in rows:
+        m = _BLOCKED_MSG_RE.match(r["message"])
+        setup, why = (m.group("setup"), m.group("why")) if m else (None, r["message"])
+        entry = {"ts": r["ts"], "symbol": r["symbol"], "setup": setup, "reason": why, "reason_type": "other"}
+        cm = _CONF_BLOCK_RE.match(why)
+        if cm:
+            entry.update({
+                "reason_type": "confidence_gate",
+                "final_score": int(cm.group("score")),
+                "min_confidence_bar": float(cm.group("bar")),
+                "local_setup_score": int(cm.group("local")),
+                "system_multiplier": float(cm.group("mult")),
+                "system_multiplier_reason": cm.group("mult_reason"),
+            })
+        out.append(entry)
+    return out
+
+
 def recent_activity_issues(hours=24, limit=50):
     """Warn/error-level activity rows in the window — the same table the
     Live Log UI reads, filtered to what's actually worth a human or
