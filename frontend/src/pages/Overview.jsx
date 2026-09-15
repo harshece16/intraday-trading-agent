@@ -4,7 +4,7 @@ import { apiFetch, apiJson } from "../api";
 import { clock, dateLabel, money, num, pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
-import { SidePill } from "../components/Pill";
+import { SidePill, StatusPill } from "../components/Pill";
 import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
@@ -16,14 +16,69 @@ async function setMode(paperMode) {
   });
 }
 
+const ONBOARD_KEY = "sahab_onboarding_dismissed";
+
+function OnboardingBanner({ s }) {
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch (e) { return false; }
+  });
+
+  useEffect(() => {
+    if (s?.kite_connected) {
+      try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) { /* ignore */ }
+      setDismissed(true);
+    }
+  }, [s?.kite_connected]);
+
+  if (dismissed || s?.kite_connected) return null;
+
+  function dismiss() {
+    try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) { /* ignore */ }
+    setDismissed(true);
+  }
+
+  return (
+    <div className="cardbox" style={{ marginBottom: 20, borderColor: "var(--wait)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h2 className="h" style={{ fontSize: 16 }}>First time here? Three things before you start</h2>
+          <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.9 }}>
+            <li><b>Connect Kite</b> — click "Connect Kite" in the header, top right. Real prices, holdings and orders all need this; nothing trades without it.</li>
+            <li><b>Confirm you're in Paper mode</b> — check the Paper/Live toggle in the header (top right). Paper is the safe default and simulates everything; Live places real orders.</li>
+            <li><b>Read the Dimaag Scorecard on the Journal page</b> before ever considering Live — it shows, honestly, whether this system has actually proven a real edge yet.</li>
+          </ol>
+        </div>
+        <button className="btn" onClick={dismiss}>Dismiss</button>
+      </div>
+    </div>
+  );
+}
+
+function scorecardSummary(rows) {
+  if (!rows || !rows.length) return "Dimaag Scorecard: not loaded — check the Journal page before deciding.";
+  const fails = rows.filter((r) => r.status === "fail").map((r) => r.criterion);
+  const passes = rows.filter((r) => r.status === "pass").length;
+  const pending = rows.length - fails.length - passes;
+  if (fails.length) {
+    return `Dimaag Scorecard: FAILS on ${fails.join(" and ")} — this system has NOT shown a proven edge yet.`;
+  }
+  if (passes === rows.length) return "Dimaag Scorecard: all criteria currently pass.";
+  return `Dimaag Scorecard: ${passes}/${rows.length} pass, ${pending} not enough data yet — no proven edge confirmed yet.`;
+}
+
 function AutonomyCard({ s }) {
   const [fno, setFno] = useState(null);
+  const [scorecard, setScorecard] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let stopped = false;
-    apiJson("/api/fno/status").then((d) => !stopped && setFno(d)).catch(() => {});
-    const id = setInterval(() => apiJson("/api/fno/status").then((d) => !stopped && setFno(d)).catch(() => {}), 20000);
+    function load() {
+      apiJson("/api/fno/status").then((d) => !stopped && setFno(d)).catch(() => {});
+      apiJson("/api/journal/summary").then((d) => !stopped && setScorecard(d.scorecard)).catch(() => {});
+    }
+    load();
+    const id = setInterval(load, 20000);
     return () => { stopped = true; clearInterval(id); };
   }, []);
 
@@ -34,6 +89,7 @@ function AutonomyCard({ s }) {
 
   async function goLive() {
     const msg =
+      `${scorecardSummary(scorecard)}\n\n` +
       `This turns on real order placement — Trader Sahab will buy and sell on Zerodha automatically from now on, ` +
       `every ~30 seconds, on its own rules, with no per-trade confirmation from you or anyone else. It runs whether ` +
       `or not you're watching.\n\n` +
@@ -81,7 +137,19 @@ function AutonomyCard({ s }) {
         )}
         <div className="rb-chip"><b>F&amp;O (options)</b><span>{fno ? (fno.enabled ? "ON" : "OFF") : "…"}</span></div>
         <div className="rb-chip"><b>Alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
+        {scorecard && (
+          <div className="rb-chip">
+            <b>Proven edge (Dimaag Scorecard)</b>
+            <span><StatusPill status={scorecard.some((r) => r.status === "fail") ? "fail" : scorecard.every((r) => r.status === "pass") ? "pass" : "pending"} /></span>
+          </div>
+        )}
       </div>
+      {scorecard && scorecard.some((r) => r.status === "fail") && (
+        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+          {scorecardSummary(scorecard)}{" "}
+          <Link className="more" to="/journal">See the full Scorecard →</Link>
+        </p>
+      )}
       {usingPaperFigure && (
         <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
           Paper mode is sizing against a fixed ₹{capital.toLocaleString("en-IN")} test figure
@@ -179,6 +247,7 @@ export default function Overview({ state: s }) {
 
   return (
     <>
+      <OnboardingBanner s={s} />
       <AutonomyCard s={s} />
       <section className="hero">
         <h1>{copy.lead}</h1>

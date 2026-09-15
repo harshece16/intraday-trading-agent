@@ -38,6 +38,8 @@ import config
 import indicators as ind
 import news_sentiment
 import nse_feed
+import seasonality
+import sectoral_indices
 import swing_patterns
 import universe
 from trader_brain import trader_brain_signal
@@ -164,14 +166,21 @@ def tradability_exclusion(p, cfg):
     return None
 
 
-def premarket_score(p, cfg, side="long"):
+def premarket_score(p, cfg, side="long", date_iso=None):
     """Daily-data-only ranking for one side (usable before the open and in backtests).
-    Returns (score, [(points, reason)], excluded_reason_or_None)."""
+    Returns (score, [(points, reason)], excluded_reason_or_None). date_iso, when given,
+    is the session being scored (YYYY-MM-DD) — feeds seasonality.march_effect() so the
+    same real, cited calendar evidence applies identically live and in backtests."""
     excluded = tradability_exclusion(p, cfg)
     if excluded:
         return 0.0, [], excluded
     s = 1 if side == "long" else -1
     pts = _Points()
+
+    if date_iso:
+        eff = seasonality.march_effect(int(date_iso[5:7]), side)
+        if eff:
+            pts.add(*eff)
 
     if p["trend"] == ("up" if s > 0 else "down"):
         pts.add(20, "Daily uptrend (close > EMA20 > EMA50)" if s > 0 else "Daily downtrend (close < EMA20 < EMA50)")
@@ -265,7 +274,7 @@ def intraday_metrics(candles, prof):
     }
 
 
-def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long"):
+def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long", sector_trend=None):
     s = 1 if side == "long" else -1
     pts = _Points()
 
@@ -319,6 +328,15 @@ def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg
         elif sector_rank >= n_sectors - 3:
             pts.add(8 if s < 0 else -5, f"{industry} is a bottom-3 sector today")
 
+    # Same-day sector_rank above reads this universe's own subset; this reads
+    # the real published NSE sectoral index's own slower daily trend — a
+    # structural confluence check, not a duplicate of the live one above.
+    if sector_trend and sector_trend["trend"] in ("up", "down"):
+        agrees = (sector_trend["trend"] == "up") == (s > 0)
+        pts.add(6 if agrees else -6,
+                f"{industry}'s real index ({sector_trend['ticker']}) is in a daily {sector_trend['trend']}trend"
+                + (" — agrees with this trade" if agrees else " — this trade fights its own sector's real trend"))
+
     if catalyst:
         c = catalyst["score"]
         tone = "Positive" if c > 0 else "Negative"
@@ -329,7 +347,7 @@ def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg
     return pts.score, pts.items, rs_today
 
 
-def market_context(daily, nifty_5m, rows, session, filter_cfg):
+def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None):
     nd = [b for b in daily.get(NIFTY, []) if _date(b) < session]
     closes = [b["close"] for b in nd]
     today = [c for c in nifty_5m if c["time"][:10] == session]
@@ -376,6 +394,24 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg):
         score -= 1
         reasons.append(f"India VIX {vix:.1f} elevated — expect whipsaws")
 
+    if fii_dii and fii_dii.get("fii_net_cr") is not None:
+        fii_net = fii_dii["fii_net_cr"]
+        # Real, documented relationship (SJCC Management Research Review study
+        # on FII flows vs NIFTY returns, strongest when the market is falling)
+        # — but the exact meaningful threshold isn't crisply established in
+        # that literature, so ₹1,000 cr is a round, honestly-unvalidated cut,
+        # not a precisely backtested one. Small weight accordingly.
+        if fii_net <= -1000:
+            score -= 1
+            reasons.append(f"FII net sold ₹{abs(fii_net):,.0f} cr on {fii_dii['date']} — real flow-based headwind")
+        elif fii_net >= 1000:
+            score += 1
+            reasons.append(f"FII net bought ₹{fii_net:,.0f} cr on {fii_dii['date']} — real flow-based tailwind")
+
+    budget_note = seasonality.budget_day_note(session)
+    if budget_note:
+        reasons.append(budget_note)  # informational only — never scored, see seasonality.py
+
     bias = "risk-on" if score >= 2 else "risk-off" if score <= -2 else "neutral"
     if not reasons:
         reasons.append("No strong market-wide signal")
@@ -384,10 +420,11 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg):
         "nifty": {"ltp": _r(ltp), "chg_pct": _r(chg), "trend": trend, "above_open": above_open},
         "vix": _r(vix), "vix_high": vix_high,
         "breadth": {"adv": adv, "dec": dec, "pct_adv": _r(pct_adv, 0)},
+        "fii_dii": fii_dii,
     }
 
 
-def premarket_context(daily, session, filter_cfg):
+def premarket_context(daily, session, filter_cfg, fii_dii=None):
     """market_context()'s market-wide read, shifted one session earlier so it
     only uses data that exists before today's candle does: yesterday's NIFTY
     close (not a live intraday price) and yesterday's advance/decline count.
@@ -416,6 +453,19 @@ def premarket_context(daily, session, filter_cfg):
         elif chg <= -0.3:
             score -= 1
             reasons.append(f"NIFTY {chg:+.2f}% in yesterday's session")
+
+    if fii_dii and fii_dii.get("fii_net_cr") is not None:
+        fii_net = fii_dii["fii_net_cr"]
+        if fii_net <= -1000:
+            score -= 1
+            reasons.append(f"FII net sold ₹{abs(fii_net):,.0f} cr on {fii_dii['date']} — real flow-based headwind")
+        elif fii_net >= 1000:
+            score += 1
+            reasons.append(f"FII net bought ₹{fii_net:,.0f} cr on {fii_dii['date']} — real flow-based tailwind")
+
+    budget_note = seasonality.budget_day_note(session)
+    if budget_note:
+        reasons.append(budget_note)  # informational only — never scored, see seasonality.py
 
     return closes, score, reasons, trend, chg
 
@@ -462,7 +512,7 @@ class Scanner:
         if not uni:
             raise RuntimeError("Universe list is empty")
         tickers = [yf_ticker(u["symbol"]) for u in uni]
-        daily = download_batch(tickers + [NIFTY, VIX], "1y", "1d")
+        daily = download_batch(tickers + [NIFTY, VIX] + sectoral_indices.TICKERS, "1y", "1d")
         intraday = download_batch(tickers + [NIFTY], "5d", "5m")
         nifty_5m = intraday.get(NIFTY)
         if not nifty_5m or NIFTY not in daily:
@@ -474,6 +524,8 @@ class Scanner:
         events = nse_feed.results_calendar()
         ex_actions = nse_feed.corporate_actions_on(session)
         catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
+        fii_dii = nse_feed.fii_dii_flows() if cfg.get("use_news", True) else None
+        large_deals = nse_feed.large_deals_today() if cfg.get("use_news", True) else {}
 
         rows = []
         for u in uni:
@@ -486,7 +538,7 @@ class Scanner:
         for r in rows:
             r["chg_pct"] = r["_m"]["chg_pct"]
 
-        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER)
+        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER, fii_dii=fii_dii)
 
         by_sector = {}
         for r in rows:
@@ -496,6 +548,10 @@ class Scanner:
             key=lambda s: -s["chg_pct"],
         )
         sector_rank = {s["industry"]: i for i, s in enumerate(sectors)}
+        sector_trends = {
+            industry: sectoral_indices.sector_trend(daily, industry, nifty_dates, nifty_closes, session)
+            for industry in by_sector
+        }
 
         for r in rows:
             prof, m, sym = r["_prof"], r["_m"], r["symbol"]
@@ -508,10 +564,10 @@ class Scanner:
             scored = {}
             rs_today = None
             for side in sides:
-                pre, pre_items, _ = premarket_score(prof, cfg, side)
+                pre, pre_items, _ = premarket_score(prof, cfg, side, date_iso=session)
                 intra, intra_items, rs_today = intraday_score(
                     m, prof, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym),
-                    cfg, side)
+                    cfg, side, sector_trend=sector_trends.get(r["industry"]))
                 scored[side] = (pre + intra, sorted(pre_items + intra_items, key=lambda x: -abs(x[0])))
             best = max(scored, key=lambda k: scored[k][0])
             score, items = scored[best]
@@ -528,6 +584,7 @@ class Scanner:
                 "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]), "beta": _r(prof["beta"]),
                 "catalyst": catalysts.get(sym), "event": events.get(sym), "brain": None,
                 "swing_patterns": prof.get("swing_patterns", []),
+                "large_deals": large_deals.get(sym),
             })
 
         eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
@@ -593,7 +650,7 @@ def premarket_picks(daily, universe_rows, session_dates, top_n, cfg, allow_short
             for side in sides:
                 if not _trend_agrees(prof["trend"], side):
                     continue
-                score, _, _ = premarket_score(prof, cfg, side.lower())
+                score, _, _ = premarket_score(prof, cfg, side.lower(), date_iso=d)
                 if best is None or score > best[0]:
                     best = (score, side)
             if best:
@@ -682,7 +739,9 @@ def run_premarket(cfg):
     nifty_closes = [b["close"] for b in nifty_bars]
     session = nifty_dates[-1]  # last completed session (usually yesterday)
 
-    nifty_closes_all, mkt_score, mkt_reasons, nifty_trend, nifty_chg = premarket_context(daily, today, config.MARKET_FILTER)
+    fii_dii = nse_feed.fii_dii_flows() if cfg.get("use_news", True) else None
+    nifty_closes_all, mkt_score, mkt_reasons, nifty_trend, nifty_chg = premarket_context(
+        daily, today, config.MARKET_FILTER, fii_dii=fii_dii)
     vix_bars = [b for b in daily.get(VIX, []) if _date(b) < today]
     vix = vix_bars[-1]["close"] if vix_bars else None
     vix_high = vix is not None and vix >= config.MARKET_FILTER["vix_high"]
@@ -693,6 +752,7 @@ def run_premarket(cfg):
     events = nse_feed.results_calendar()
     ex_actions = nse_feed.corporate_actions_on(today)
     catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
+    large_deals = nse_feed.large_deals_today() if cfg.get("use_news", True) else {}
 
     sides = ("long", "short") if cfg.get("allow_shorts", True) else ("long",)
     rows, adv, dec = [], 0, 0
@@ -732,7 +792,7 @@ def run_premarket(cfg):
             excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
         scored = {}
         for side in sides:
-            pre, pre_items, _ = premarket_score(prof, cfg, side)
+            pre, pre_items, _ = premarket_score(prof, cfg, side, date_iso=today)
             scored[side] = (pre, pre_items)
         best = max(scored, key=lambda k: scored[k][0])
         score, items = scored[best]
@@ -748,6 +808,7 @@ def run_premarket(cfg):
             "turnover_cr": _r(prof["turnover_cr"], 0), "beta": _r(prof["beta"]) if prof["beta"] is not None else None,
             "catalyst": catalysts.get(sym), "event": events.get(sym),
             "swing_patterns": prof.get("swing_patterns", []),
+            "large_deals": large_deals.get(sym),
         })
         del r["_prof"]
 
@@ -776,6 +837,7 @@ def run_premarket(cfg):
             "nifty": {"close": _r(nifty_closes_all[-1]) if nifty_closes_all else None, "chg_pct": _r(nifty_chg) if nifty_chg is not None else None, "trend": nifty_trend},
             "vix": _r(vix) if vix is not None else None, "vix_high": vix_high,
             "breadth": {"adv": adv, "dec": dec, "pct_adv": _r(pct_adv, 0)},
+            "fii_dii": fii_dii,
         },
         "events_today": events,
         "ex_actions_today": ex_actions,

@@ -130,6 +130,59 @@ def corporate_actions_on(date_iso):
     return out
 
 
+def large_deals_today():
+    """{SYMBOL: {"bulk": [...], "block": [...]}} for today's real NSE bulk
+    (>0.5% of shares) and block (single large trade) deal disclosures —
+    named market participants, published end-of-day, real and free
+    (api/snapshot-capital-market-largedeal, verified live). Deliberately
+    informational only, never scored: real academic evidence (an IIM
+    Calcutta working paper on price discovery from bulk trades; a
+    Managerial Finance/Emerald study on Indian bulk deals) found the
+    apparent "predictive" pattern in these disclosures is substantially
+    explained by pre-announcement information leakage and front-running,
+    not a clean edge a system reading the after-the-fact disclosure can
+    capture. Shown as context — informed large flow happened here today —
+    not a signal to act on."""
+    data = _fetch("/api/snapshot-capital-market-largedeal",
+                  "/report-detail/display-bulk-and-block-deals", 3600) or {}
+    out = {}
+    for kind, key in (("bulk", "BULK_DEALS_DATA"), ("block", "BLOCK_DEALS_DATA")):
+        for d in data.get(key) or []:
+            sym = (d.get("symbol") or "").upper()
+            if not sym or not d.get("buySell"):
+                continue
+            out.setdefault(sym, {"bulk": [], "block": []})[kind].append({
+                "side": d["buySell"], "qty": d.get("qty"), "price": d.get("watp"),
+                "client": d.get("clientName"),
+            })
+    return out
+
+
+def fii_dii_flows():
+    """Most recent real daily FII/DII net flow (₹ crore), from NSE's own
+    daily report (api/fiidiiTradeReact, verified live). A real, documented
+    relationship with NIFTY returns exists (an SJCC Management Research
+    Review study on FII flows and NSE returns found it strongest when the
+    market is falling) but the exact meaningful threshold isn't crisply
+    established in that literature — used as a modest, honestly-thresholded
+    market-context input (see scanner.py's market_context()), same
+    discipline as every other signal here: logged through the same scoring
+    database.factor_ic() checks, never assumed to help on arrival."""
+    data = _fetch("/api/fiidiiTradeReact", "/reports/fii-dii", 3600) or []
+    fii = next((r for r in data if r.get("category") == "FII/FPI"), None)
+    dii = next((r for r in data if r.get("category") == "DII"), None)
+    if not fii:
+        return None
+    try:
+        return {
+            "date": fii.get("date"),
+            "fii_net_cr": float(fii["netValue"]),
+            "dii_net_cr": float(dii["netValue"]) if dii else None,
+        }
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
 def _next_trading_day(d):
     n = d + timedelta(days=1)
     while n.weekday() >= 5:

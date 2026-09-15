@@ -306,6 +306,89 @@ def _count_reasons(trades):
     return counts
 
 
+def walk_forward(symbols, strategy_name, strategy_params, risk_cfg, interval, days, costs_cfg, n_folds,
+                 preloaded, allowed_by_day=None):
+    """Splits the available window into n_folds consecutive, non-overlapping
+    periods and runs the exact same fixed strategy/config independently on
+    each. Be precise about what this is and isn't: it is NOT full walk-
+    forward optimization — no parameter search happens on any fold, because
+    this system doesn't search parameters at all (config.STRATEGY_PARAMS is
+    fixed, not fit). What it checks instead, honestly: is a result (so far,
+    net-negative every time this has been run) consistent across different
+    stretches of time, or concentrated in one lucky/unlucky fold? Jansen,
+    Machine Learning for Trading (already cited here for the Deflated Sharpe
+    Ratio and Information Coefficient), treats exactly this kind of
+    out-of-sample stability check as basic due diligence before trusting any
+    single aggregate backtest number — a strategy whose edge only shows up
+    in one fold out of four is a strategy that got lucky once, not a proven
+    edge."""
+    all_dates = sorted({c["time"][:10] for candles in preloaded.values() for c in candles})
+    if len(all_dates) < n_folds * 5:
+        raise ValueError(f"Only {len(all_dates)} distinct sessions available — need at least "
+                         f"{n_folds * 5} for {n_folds} folds (5 sessions/fold minimum).")
+    fold_size = len(all_dates) // n_folds
+    fold_date_lists = [
+        all_dates[i * fold_size: (i + 1) * fold_size if i < n_folds - 1 else len(all_dates)]
+        for i in range(n_folds)
+    ]
+
+    results = []
+    for i, fold_dates in enumerate(fold_date_lists, 1):
+        fold_set = set(fold_dates)
+        fold_preloaded = {
+            s: [c for c in candles if c["time"][:10] in fold_set]
+            for s, candles in preloaded.items()
+        }
+        fold_preloaded = {s: cs for s, cs in fold_preloaded.items() if len(cs) >= 60}
+        fold_allowed = {d: syms for d, syms in allowed_by_day.items() if d in fold_set} if allowed_by_day else None
+        trades, equity_curve = run_backtest(sorted(fold_preloaded), strategy_name, strategy_params, risk_cfg,
+                                            interval, days, costs_cfg, preloaded=fold_preloaded,
+                                            allowed_by_day=fold_allowed)
+        rs = [t["r"] for t in trades if t.get("r") is not None]
+        wins = [x for x in rs if x > 0]
+        results.append({
+            "fold": i, "start": fold_dates[0], "end": fold_dates[-1], "sessions": len(fold_dates),
+            "trades": len(trades), "closed": len(rs),
+            "expectancy_r": round(sum(rs) / len(rs), 3) if rs else None,
+            "win_rate_pct": round(len(wins) / len(rs) * 100, 1) if rs else None,
+            "net_pnl": round(sum(t["pnl"] for t in trades), 2),
+            "final_equity": round(equity_curve[-1], 2),
+        })
+    return results
+
+
+def print_walk_forward_report(results, starting_capital):
+    print(f"\n{'='*70}\nWALK-FORWARD VALIDATION — {len(results)} consecutive folds, no per-fold "
+          f"parameter search\n{'='*70}")
+    for r in results:
+        exp = f"{r['expectancy_r']:+.3f}R" if r["expectancy_r"] is not None else "n/a"
+        wr = f"{r['win_rate_pct']:.1f}%" if r["win_rate_pct"] is not None else "n/a"
+        print(f"Fold {r['fold']}: {r['start']} to {r['end']} ({r['sessions']} sessions) — "
+              f"{r['trades']} trades, expectancy {exp}, win rate {wr}, net P&L {r['net_pnl']:+.2f}")
+    expectancies = [r["expectancy_r"] for r in results if r["expectancy_r"] is not None]
+    print(f"{'-'*70}")
+    if len(expectancies) >= 2:
+        positive_folds = sum(1 for e in expectancies if e > 0)
+        print(f"Positive-expectancy folds: {positive_folds}/{len(expectancies)}")
+        spread = max(expectancies) - min(expectancies)
+        print(f"Expectancy spread across folds: {spread:.3f}R (min {min(expectancies):+.3f}R, "
+              f"max {max(expectancies):+.3f}R)")
+        if positive_folds not in (0, len(expectancies)):
+            print("Result is INCONSISTENT across time — some folds show a positive edge, others don't. "
+                  "That's evidence against trusting the aggregate backtest number as a stable edge, not for it.")
+        elif positive_folds == 0:
+            print("Every fold is net-negative — consistent, but consistently unprofitable. Not an edge.")
+        else:
+            print("Every fold is net-positive — consistent, and worth further scrutiny (still check DSR/IC "
+                  "on the Journal page before trusting this).")
+    else:
+        print("Not enough folds produced closed trades to compare consistency.")
+    print(f"{'='*70}")
+    print("Reminder: this checks TIME-stability of a fixed, already-chosen configuration — it is not full")
+    print("walk-forward optimization (no parameter search happens on any fold), and it's still the same")
+    print("small, recent, delayed-data yfinance sample every backtest here draws from.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--symbols", default=",".join(config.WATCHLIST), help="Comma-separated NSE symbols")
@@ -319,6 +402,11 @@ def main():
                         help="Scan the NIFTY 100 each day and trade only the scanner's top picks")
     parser.add_argument("--scan-top", type=int, default=5, help="Picks per day in --universe mode")
     parser.add_argument("--long-only", action="store_true", help="Disable short selling (sahab_dimaag)")
+    parser.add_argument("--walk-forward", type=int, default=0, metavar="N",
+                        help="Split the window into N consecutive folds and run the same fixed config on "
+                             "each independently, to check whether the result is stable across time rather "
+                             "than concentrated in one lucky/unlucky period — see walk_forward()'s docstring "
+                             "for exactly what this does and doesn't check (no parameter search happens).")
     args = parser.parse_args()
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
@@ -351,14 +439,31 @@ def main():
               "filters need live/intraday context and aren't replayed.)")
         label = f"NIFTY 100 scanner, top {args.scan_top}/day"
 
+    if args.walk_forward and preloaded is None:
+        print(f"Pre-fetching {len(symbols)} symbols for walk-forward validation...")
+        preloaded = {}
+        for sym in symbols:
+            candles = data_provider.get_intraday_candles(sym, interval=args.interval, period=f"{args.days}d")
+            if len(candles) >= 60:
+                preloaded[sym] = candles
+        symbols = sorted(preloaded)
+
     print(f"Backtesting {args.strategy} on {label} ({args.interval} bars, {args.days} days)"
-          f"{' [costs disabled]' if args.no_costs else ' [with realistic costs]'}...")
-    trades, equity_curve = run_backtest(symbols, args.strategy, strategy_params, risk_cfg,
-                                         args.interval, args.days, costs_cfg,
-                                         preloaded=preloaded, allowed_by_day=picks)
+          f"{' [costs disabled]' if args.no_costs else ' [with realistic costs]'}"
+          f"{f' [walk-forward, {args.walk_forward} folds]' if args.walk_forward else ''}...")
+
     trial_label = f"{args.strategy} {label} {args.interval} {args.days}d" + (" long-only" if args.long_only else "")
-    n_trials = evaluation.log_trial(trial_label)
-    report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs, n_trials=n_trials)
+    if args.walk_forward and args.walk_forward > 1:
+        results = walk_forward(symbols, args.strategy, strategy_params, risk_cfg, args.interval, args.days,
+                               costs_cfg, args.walk_forward, preloaded, allowed_by_day=picks)
+        evaluation.log_trial(trial_label + f" walk-forward-{args.walk_forward}")
+        print_walk_forward_report(results, args.capital)
+    else:
+        trades, equity_curve = run_backtest(symbols, args.strategy, strategy_params, risk_cfg,
+                                             args.interval, args.days, costs_cfg,
+                                             preloaded=preloaded, allowed_by_day=picks)
+        n_trials = evaluation.log_trial(trial_label)
+        report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs, n_trials=n_trials)
 
 
 if __name__ == "__main__":

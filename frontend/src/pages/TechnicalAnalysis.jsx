@@ -37,6 +37,7 @@ export default function TechnicalAnalysis() {
     section?.rules && (
       <div className="cardbox" style={{ marginTop: 16 }}>
         <h2 className="h" style={{ fontSize: 16 }}>{section.title}</h2>
+        {section.note && <p style={{ margin: "0 0 10px", fontSize: 13 }}>{section.note}</p>}
         <RuleChips rules={section.rules} />
       </div>
     );
@@ -126,6 +127,22 @@ export default function TechnicalAnalysis() {
       )}
 
       {ruleSection(m.risk)}
+
+      {m.seasonality && (
+        <div className="cardbox" style={{ marginTop: 16 }}>
+          <h2 className="h" style={{ fontSize: 16 }}>{m.seasonality.title}</h2>
+          <p style={{ margin: "0 0 10px", fontSize: 13 }}>{m.seasonality.note}</p>
+          <RuleChips rules={m.seasonality.rules} />
+        </div>
+      )}
+
+      {m.market_intelligence && (
+        <div className="cardbox" style={{ marginTop: 16 }}>
+          <h2 className="h" style={{ fontSize: 16 }}>{m.market_intelligence.title}</h2>
+          <p style={{ margin: "0 0 10px", fontSize: 13 }}>{m.market_intelligence.note}</p>
+          <RuleChips rules={m.market_intelligence.rules} />
+        </div>
+      )}
 
       {m.fno && (
         <div className="cardbox" style={{ marginTop: 16 }}>

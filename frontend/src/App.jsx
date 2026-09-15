@@ -23,7 +23,7 @@ function AppRoutes({ state }) {
   return (
     <Routes>
       <Route path="/" element={<Page><Overview state={state} /></Page>} />
-      <Route path="/premarket" element={<Page><PreMarket /></Page>} />
+      <Route path="/premarket" element={<Page><PreMarket state={state} /></Page>} />
       <Route path="/day-plan" element={<Page><DayPlan /></Page>} />
       <Route path="/screener" element={<Page><Screener state={state} /></Page>} />
       <Route path="/stock/:symbol" element={<Page><Stock state={state} /></Page>} />

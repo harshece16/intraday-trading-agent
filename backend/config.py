@@ -34,7 +34,11 @@ if SESSION_FILE.exists():
 _KEY_FILE = Path(__file__).parent / ".dashboard_key.json"
 
 
+DASHBOARD_API_KEY_IS_NEW = False  # set True below only when a key is freshly generated this run
+
+
 def _load_or_create_dashboard_key() -> str:
+    global DASHBOARD_API_KEY_IS_NEW
     if _KEY_FILE.exists():
         try:
             return json.loads(_KEY_FILE.read_text())["key"]
@@ -42,6 +46,7 @@ def _load_or_create_dashboard_key() -> str:
             pass
     key = secrets.token_urlsafe(32)
     _KEY_FILE.write_text(json.dumps({"key": key}))
+    DASHBOARD_API_KEY_IS_NEW = True
     return key
 
 
@@ -156,11 +161,24 @@ RISK = {
     "stop_loss_pct": 0.8,       # fallback when ATR isn't available yet
     "take_profit_pct": 1.6,
     "max_open_positions": 3,
+    # Caps concurrent positions in the same industry (scanner row "industry"),
+    # independent of max_open_positions — without this, 3 open positions could
+    # easily all be the same sector on a strong-trend day (the scanner ranks by
+    # sector momentum, so correlated picks are the *expected* output), which
+    # undermines max_daily_loss_pct's implicit assumption of some independence
+    # between positions. None disables the check.
+    "max_positions_per_sector": 1,
     # Cap each position's value at this % of capital. Without it, 1% risk
     # with a tight 5-min ATR stop sized trades at ~5x the account (median
     # Rs 4.8L notional on Rs 1L) and multiplied both losses and costs.
     "max_position_notional_pct": 33.0,
     "max_daily_loss_pct": 2.0,
+    # Same confidence.py gate F&O uses (config.FNO["min_confidence_to_trade"]),
+    # now applied to cash equity too: a checklist pass alone isn't enough — the
+    # Dimaag Scorecard's system-wide evidence multiplier can cap confidence to
+    # 0.25x when expectancy/DSR/IC haven't proven a real edge, which at this
+    # threshold blocks entries outright until the Scorecard actually passes.
+    "min_confidence_to_trade": 60,
     # Fallback only — overwritten in-process by trading_engine._sync_capital()
     # with the real Kite equity live_balance whenever Kite is connected (see
     # sync_capital_with_kite below), so position sizing is never computed
@@ -260,6 +278,18 @@ KITE_SESSION_GENERATED_AT = _session.get("generated_at")
 # after login. Override with BACKEND_BASE_URL if not running on localhost:8000.
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "http://127.0.0.1:8000")
 KITE_REDIRECT_URL = f"{BACKEND_BASE_URL}/kite/callback"
+
+# CORS — was wide open ("*"), flagged by a multi-expert review since this API carries
+# real trading control behind an X-Api-Key/?key= param, and a wildcard plus a key that
+# can travel in a URL is a worse combination than either alone. Defaults to the actual
+# dev origins this app uses (Vite's localhost:5500 and both IPv4/hostname spellings);
+# override with a comma-separated CORS_ALLOWED_ORIGINS env var if you serve the frontend
+# from somewhere else. This does NOT affect the Kite OAuth redirect (a server-side
+# redirect, not a browser CORS request) or the ngrok tunnel used only for that redirect.
+CORS_ALLOWED_ORIGINS = (
+    os.environ["CORS_ALLOWED_ORIGINS"].split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else
+    ["http://localhost:5500", "http://127.0.0.1:5500"]
+)
 
 
 def save_kite_session(access_token: str) -> None:

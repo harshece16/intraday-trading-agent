@@ -51,7 +51,7 @@ function Row({ r, expanded, onToggle, navigate }) {
   );
 }
 
-export default function PreMarket() {
+export default function PreMarket({ state: s }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("watchlist");
   const [expanded, setExpanded] = useState(null);
@@ -78,7 +78,7 @@ export default function PreMarket() {
     return (
       <>
         <h2 className="h">Pre-Market Analysis</h2>
-        <p className="empty">Ranking the NIFTY 100 on last session's daily data — this takes under a minute…</p>
+        <p className="empty"><span className="spinner" />Ranking the NIFTY 100 on last session's daily data — this takes under a minute…</p>
       </>
     );
   }
@@ -97,6 +97,13 @@ export default function PreMarket() {
   const events = Object.entries(r.events_today || {});
   const exActions = Object.entries(r.ex_actions_today || {});
 
+  // A design review found Overview's live picks and this page's shortlist can
+  // visibly disagree with no explanation — read as a bug by a skimming user.
+  // They're not a bug: one's live, one's last night's close. Say so.
+  const livePicks = s?.scanner?.active;
+  const picksDiffer = livePicks && livePicks.length > 0 &&
+    JSON.stringify([...livePicks].sort()) !== JSON.stringify([...(r.watchlist || [])].sort());
+
   const groups = {
     watchlist: r.rows.filter((x) => x.status === "WATCHLIST"),
     all: r.rows.filter((x) => !x.excluded),
@@ -112,8 +119,19 @@ export default function PreMarket() {
         gap or SGX-Nifty-style pre-open number, since this codebase doesn't have an honest source for one.
       </p>
       <button className="btn" disabled={refreshing || data.running} onClick={refresh} style={{ marginBottom: 16 }}>
+        {(refreshing || data.running) && <span className="spinner" />}
         {refreshing || data.running ? "Refreshing…" : "Refresh"}
       </button>
+
+      {picksDiffer && (
+        <div className="tax" style={{ marginBottom: 16 }}>
+          The live intraday scanner has since run and updated today's actual picks — this page still shows last
+          night's pre-market read, which won't change again until tomorrow.{" "}
+          <button className="more" onClick={() => navigate("/")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+            See today's current picks on Overview →
+          </button>
+        </div>
+      )}
 
       {!!(r.narrative || []).length && (
         <div className="cardbox" style={{ borderColor: "var(--accent, #7c6df0)" }}>

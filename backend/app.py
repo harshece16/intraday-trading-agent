@@ -8,14 +8,18 @@ Then open frontend/index.html (or serve it — see README) in a browser.
 """
 
 import asyncio
+import csv
+import io
 import logging
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -23,6 +27,7 @@ import config
 import data_provider
 import database
 import day_plan
+import fno_instruments
 import llm_sentiment
 import methods
 import news_sentiment
@@ -33,6 +38,7 @@ from trading_engine import TradingEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("trading_bot")
+IST_TZ = ZoneInfo("Asia/Kolkata")
 
 initial_watchlist = list(config.SCANNER.get("pinned", [])) if config.SCANNER.get("enabled") else config.WATCHLIST
 state = AppState(watchlist=initial_watchlist, paper_mode=config.PAPER_MODE_DEFAULT)
@@ -51,7 +57,7 @@ app = FastAPI(title="Trader Sahab", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten this if you deploy anywhere beyond localhost
+    allow_origins=config.CORS_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -79,7 +85,16 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(ApiKeyMiddleware)
-logger.warning(f"Dashboard API key (enter this into the dashboard once): {config.DASHBOARD_API_KEY}")
+if config.DASHBOARD_API_KEY_IS_NEW:
+    logger.warning(f"Dashboard API key generated — enter this into the dashboard once: {config.DASHBOARD_API_KEY}")
+else:
+    # Printed in full only on the one run that generates it; every later restart shows a
+    # masked reference instead, since this key gates real trading control and repeatedly
+    # writing it in full into stdout/journald/log-aggregator output on every restart was a
+    # real, avoidable exposure the multi-expert review flagged. Full value stays retrievable
+    # from backend/.dashboard_key.json (already gitignored) if it's ever needed again.
+    k = config.DASHBOARD_API_KEY
+    logger.warning(f"Dashboard API key: {k[:6]}...{k[-4:]} (unchanged — see backend/.dashboard_key.json for the full value)")
 
 
 @app.get("/api/state")
@@ -222,6 +237,33 @@ def fno_status():
     }
 
 
+@app.get("/api/fno/pcr")
+def fno_pcr():
+    """Real Put/Call open-interest ratio for the configured index
+    underlyings, near-the-money strikes only — informational context, not
+    a score. See fno_instruments.index_pcr()'s docstring for the honest
+    evidence caveat (a real, widely-used practitioner heuristic, not
+    something with rigorous backtested evidence behind it)."""
+    if not config.KITE_ACCESS_TOKEN:
+        return {"error": "Kite not connected"}
+    kite = engine._ensure_kite()
+    out = {}
+    for underlying in config.FNO.get("index_underlyings", []):
+        try:
+            expiry = fno_instruments.nearest_expiry(
+                underlying, config.FNO["min_days_to_expiry"], config.FNO["max_days_to_expiry"],
+                prefer_weekly=config.FNO["prefer_weekly_for_index"])
+            if not expiry:
+                continue
+            spot = kite.get_index_spot(underlying)
+            pcr = fno_instruments.index_pcr(underlying, spot, expiry, kite.get_quotes)
+            if pcr:
+                out[underlying] = pcr
+        except Exception as exc:
+            out[underlying] = {"error": str(exc)}
+    return out
+
+
 @app.get("/api/portfolio")
 def get_portfolio():
     """Real Kite holdings + margins when Kite is connected (free Kite Connect
@@ -280,6 +322,27 @@ def journal_trades(limit: int = 200):
     """Trade history that survives a restart — unlike state.trades, which
     resets to empty every time the process restarts."""
     return database.recent_trades(limit)
+
+
+@app.get("/api/journal/trades.csv")
+def journal_trades_csv():
+    """Every logged trade (paper and live both — the mode column says which)
+    as a real CSV, for the user's own tax-filing use. Added after a product
+    review flagged there was no way to get trade history out of the app at
+    all short of reading the SQLite file directly."""
+    trades = database.recent_trades(limit=1_000_000)
+    buf = io.StringIO()
+    cols = ["ts", "symbol", "side", "quantity", "price", "mode", "reason", "note", "realized", "charges", "r_multiple"]
+    writer = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
+    writer.writeheader()
+    for t in reversed(trades):  # oldest first, natural for a ledger
+        row = dict(t)
+        if row.get("ts"):
+            row["ts"] = datetime.fromtimestamp(row["ts"], IST_TZ).strftime("%Y-%m-%d %H:%M:%S")
+        writer.writerow(row)
+    filename = f"trader_sahab_trades_{datetime.now(IST_TZ).date().isoformat()}.csv"
+    return Response(content=buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 class ModeUpdate(BaseModel):

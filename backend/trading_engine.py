@@ -28,6 +28,7 @@ import fno_risk
 import holidays
 import news_sentiment
 import options_pricing
+from kiteconnect.exceptions import TokenException
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
 from scanner import Scanner, run_premarket
@@ -86,6 +87,8 @@ class TradingEngine:
         self.size_multiplier = 1.0
         self._last_errors = {}
         self._last_capital_sync = 0.0
+        self._last_token_alert = 0.0
+        self._reconciliation_alerted = set()
         self._last_synced_paper_mode = None
         self._premarket_thread = None
         self._last_premarket_run_date = None
@@ -128,6 +131,17 @@ class TradingEngine:
         try:
             margins = self._ensure_kite().get_margins()
             live_balance = float(margins["equity"]["available"]["live_balance"])
+        except TokenException:
+            # Kite sessions expire daily — this is the expected way that shows up,
+            # usually mid-session the morning after. A generic per-symbol error
+            # would bury this; it needs its own clear, high-visibility alert since
+            # it silently degrades to delayed yfinance data and blocks live orders
+            # until reconnected. Throttled to once per 15 min so it doesn't spam.
+            if time.time() - self._last_token_alert > 900:
+                self._last_token_alert = time.time()
+                self.state.log("error", "Kite session has expired — click Reconnect in the header. Until then, "
+                                        "prices fall back to delayed data and live orders will fail.", level="error")
+            return
         except Exception as exc:
             logger.warning(f"Capital sync with Kite failed: {exc}")
             return
@@ -149,6 +163,38 @@ class TradingEngine:
                 self.state.log("risk", f"Paper capital set to ₹{effective:,.0f} (real Kite balance is ₹{live_balance:,.0f})")
             else:
                 self.state.log("risk", f"Risk capital synced to real Kite balance: ₹{effective:,.0f}")
+
+        if not self.state.paper_mode:
+            self._check_position_reconciliation()
+
+    def _check_position_reconciliation(self):
+        """A review flagged that live positions reset on restart and are
+        never checked against what Kite actually shows — a real correctness
+        risk if the process restarts mid-session with a real position open
+        (this engine's own risk sizing, stop/target checks, and square-off
+        logic would have no idea it exists). Deliberately does NOT try to
+        auto-heal by guessing an entry price, stop, or target this process
+        never saw — that could be actively worse than doing nothing, sizing
+        risk off a fabricated number. It only makes the mismatch impossible
+        to miss: a clear, high-visibility alert naming exactly which symbols
+        disagree, once per session per symbol, so you can check Kite
+        directly and decide what to do."""
+        try:
+            kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions() if p["quantity"] != 0}
+        except Exception as exc:
+            logger.warning(f"Position reconciliation check failed: {exc}")
+            return
+        with self.state.lock:
+            tracked = {sym for sym, pos in self.state.positions.items() if pos["quantity"] != 0}
+        untracked = set(kite_positions) - tracked
+        for sym in untracked:
+            if sym in self._reconciliation_alerted:
+                continue
+            self._reconciliation_alerted.add(sym)
+            qty = kite_positions[sym]["quantity"]
+            self.state.log("error", f"Kite shows an open position in {sym} ({qty:+d}) that this app isn't "
+                                    f"tracking — likely from before a restart. Risk sizing, stop/target checks, "
+                                    f"and square-off won't act on it. Check Kite directly.", symbol=sym, level="error")
 
     # ---- scanning -------------------------------------------------------
 
@@ -386,6 +432,33 @@ class TradingEngine:
         if self.risk.open_positions_count >= config.RISK["max_open_positions"]:
             return self._blocked(symbol, setup, f"already at the max of {config.RISK['max_open_positions']} open positions")
 
+        # A multi-expert review flagged that max_open_positions alone doesn't stop 3
+        # concurrent positions from being the same sector — which the scanner's own
+        # sector-momentum ranking makes the *likely* outcome on a strong-trend day,
+        # undermining the 2% daily-loss cap's implicit assumption that positions are
+        # roughly independent. Cap same-industry concurrent positions too.
+        max_per_sector = config.RISK.get("max_positions_per_sector")
+        if row and row.get("industry") and max_per_sector:
+            same_sector = sum(
+                1 for sym, pos in self.state.positions.items()
+                if pos["quantity"] != 0 and (r2 := self._scan_row(sym)) and r2.get("industry") == row["industry"]
+            )
+            if same_sector >= max_per_sector:
+                return self._blocked(symbol, setup, f"already at the max of {max_per_sector} open position(s) in "
+                                                     f"{row['industry']} — avoids concentrating risk in one sector")
+
+        # Same confidence.py gate F&O already used (config.FNO["min_confidence_to_trade"])
+        # now applies to cash equity too: a clean-looking checklist pass means nothing
+        # statistically until the Dimaag Scorecard has shown a real, proven edge. Before
+        # this, cash equity fired on checklist-pass alone while F&O correctly didn't —
+        # the same evidence, gating one instrument and not the other.
+        scorecard = database.journal_summary().get("scorecard", [])
+        conf = confidence.score_trade(analysis, side, scorecard)
+        min_conf = config.RISK.get("min_confidence_to_trade", 60)
+        if conf["score"] < min_conf:
+            reason = f"confidence {conf['score']}/100 below the {min_conf} bar ({conf['explanation']})"
+            return self._blocked(symbol, setup, reason)
+
         atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) if config.RISK.get("use_atr_risk") else None
         plan = None
         if analysis.get("entry_mode") == "checklist":
@@ -400,12 +473,13 @@ class TradingEngine:
 
         if plan:
             note = (f"Varsity checklist passed: stop {plan['stop']:.2f}, target {plan['target']:.2f}, "
-                    f"reward-to-risk {plan['rrr']:.2f}, {size_factor:.0%} size")
+                    f"reward-to-risk {plan['rrr']:.2f}, {size_factor:.0%} size, confidence {conf['score']}/100 ({conf['label']})")
         else:
             key = "reasons" if side == "LONG" else "bear_reasons"
             why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
-            note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}" \
-                if "bull_score" in analysis else None
+            note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}, " \
+                   f"confidence {conf['score']}/100 ({conf['label']})" if "bull_score" in analysis else \
+                   f"confidence {conf['score']}/100 ({conf['label']})"
         position_id = database.new_position_id()
         self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
                       checklist_snapshot=analysis.get("checklist"), position_id=position_id)
@@ -667,6 +741,26 @@ class TradingEngine:
     # ---- loop -----------------------------------------------------------
 
     def tick(self):
+        """Thin wrapper — see _tick_impl() for the real body. Every part of a
+        tick used to run unguarded except the per-symbol loop and _process_fno();
+        one uncaught exception anywhere else (a Kite timeout during square-off,
+        a bad margins() response during capital sync) would propagate out of
+        run_forever()'s while loop and kill the engine's background thread
+        permanently — no more scans, no more square-offs, silently, for the
+        rest of the process's life. That directly contradicts the Autonomous
+        Trading card's "runs unattended" promise, so the whole tick body is
+        now caught here: one bad cycle is skipped, logged, and retried next
+        cycle 30s later, instead of ending the engine."""
+        try:
+            self._tick_impl()
+        except Exception as exc:
+            logger.exception("tick() failed — skipping this cycle, will retry next one")
+            try:
+                self.state.log("error", f"Internal error this cycle (recovered): {exc}", level="error")
+            except Exception:
+                pass
+
+    def _tick_impl(self):
         now = datetime.now(IST)
         self._sync_capital()
         if self._last_day != now.date():
@@ -727,5 +821,11 @@ class TradingEngine:
                                  f"with {config.STRATEGY_DISPLAY_NAMES.get(config.STRATEGY, config.STRATEGY)} "
                                  f"calling the shots.")
         while self.state.running:
-            await asyncio.get_event_loop().run_in_executor(None, self.tick)
+            try:
+                await asyncio.get_event_loop().run_in_executor(None, self.tick)
+            except Exception:
+                # tick() already catches its own body — this is defense in
+                # depth against the executor call itself misbehaving, so the
+                # while loop truly cannot die from an ordinary exception.
+                logger.exception("run_in_executor(tick) failed unexpectedly")
             await asyncio.sleep(config.POLL_INTERVAL_SECONDS)

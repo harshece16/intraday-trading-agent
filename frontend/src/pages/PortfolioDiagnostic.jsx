@@ -45,7 +45,7 @@ export default function PortfolioDiagnostic() {
         This reads directly from your Kite account and your own judgement, not a licensed advisor's — treat it as a
         second pair of eyes on the chart, not a recommendation.
       </div>
-      {loading && <p className="empty">Downloading a year of daily data for each holding… this can take a moment.</p>}
+      {loading && <p className="empty"><span className="spinner" />Downloading a year of daily data for each holding… this can take a moment.</p>}
       {error && <div className="tax">Couldn't load the diagnostic: {error}. <button className="btn" onClick={load} style={{ marginLeft: 8 }}>Retry</button></div>}
       {data && (
         <>

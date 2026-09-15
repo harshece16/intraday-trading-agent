@@ -119,6 +119,11 @@ def get_methods():
         },
         "risk": {
             "title": "Position sizing and evaluation",
+            "note": f"The confidence.py gate (system-evidence multiplier from the Dimaag Scorecard) applies to "
+                    f"cash equity too, not just F&O — a checklist pass alone can't fire an order below "
+                    f"{config.RISK.get('min_confidence_to_trade', 60)}/100 confidence, same bar as F&O. Added "
+                    f"after a review found cash equity was firing on checklist-pass alone while F&O correctly "
+                    f"gated on proven system-wide edge — the same evidence, inconsistently applied.",
             "rules": [
                 {"name": "Percent Risk Model — risk % of capital / stop distance",
                  "source": "Van Tharp, Trade Your Way to Financial Freedom, ch 9 (Model 3)"},
@@ -130,6 +135,54 @@ def get_methods():
                  "source": "Bailey & López de Prado (2014), cited in Jansen, Machine Learning for Trading, ch 1"},
                 {"name": "Information Coefficient — does a score rank stocks by what they do next?",
                  "source": "Grinold's fundamental law of active management, cited in Jansen, Machine Learning for Trading, ch 1"},
+            ],
+        },
+        "seasonality": {
+            "title": "Seasonality — real, cited calendar effects only",
+            "note": "Most commonly-repeated 'seasonal' claims for Indian markets were checked against real "
+                    "published research before anything went in, and most didn't hold up: Muhurat trading "
+                    "'always green' (once a year — only ~10-20 data points ever, every source is broker "
+                    "marketing, not a study), festival gold-demand implying a tradable stock-price move on "
+                    "names like Titan (physical demand seasonality is real, WGC-documented; the stock-price "
+                    "spillover claim isn't — only pre-festival news hype was found, no backtested study), the "
+                    "Halloween Indicator / 'Sell in May' (genuinely strong evidence globally, but multiple "
+                    "sources confirm India was an exception where it did not hold), and day-of-week effects "
+                    "(real in older NSE studies, decayed to nothing by 2010-2019 data). None of those are "
+                    "encoded. Two effects did clear the bar and are wired into the scanner with a small, "
+                    "honest weight — a single study is real evidence, not proof.",
+            "rules": [
+                {"name": "March effect — a real, significant negative NIFTY 500/BSE 500 return in March",
+                 "source": "Elangovan, Irudayasamy & Parayitam (2022), Asia-Pacific Financial Markets, "
+                           "2011-2021, GARCH model, p<.01"},
+                {"name": "Union Budget day (Feb 1) — informational note only, not scored: direction is close "
+                         "to a coin flip historically, but expect elevated volatility around the announcement",
+                 "source": "Samco/Arihant Budget-day studies"},
+            ],
+        },
+        "market_intelligence": {
+            "title": "Real Indian market data — sectoral indices, flows, deals, positioning",
+            "note": "Researched and ranked for real evidence before building: NSE surveillance (ASM/GSM) "
+                    "exclusion was researched too but dropped — no reliable, verifiable public endpoint could "
+                    "be found despite real effort, and this codebase won't ship a guessed URL that could "
+                    "silently break. Everything below is live, verified data, each with its own honesty "
+                    "caveat about how strong the evidence actually is.",
+            "rules": [
+                {"name": "Real NSE sectoral indices (Nifty Bank, IT, Auto, Pharma, FMCG, Metal, Energy, Realty) "
+                         "as a confluence check alongside the scanner's own same-universe sector rank",
+                 "source": "Live index data via yfinance; verified tickers only — see sectoral_indices.py"},
+                {"name": "Daily FII/DII net flow (₹ cr) as a modest market-context input — real relationship, "
+                         "honestly-unvalidated ₹1,000cr threshold",
+                 "source": "NSE api/fiidiiTradeReact; SJCC Management Research Review study on FII flows vs NIFTY returns"},
+                {"name": "Bulk/block deal disclosures — informational only, never scored",
+                 "source": "NSE api/snapshot-capital-market-largedeal; IIM Calcutta working paper + Managerial "
+                           "Finance study both found the apparent edge is mostly information leakage/front-running"},
+                {"name": "Options Put/Call OI ratio (PCR) for NIFTY/BANKNIFTY — informational only, never scored",
+                 "source": "Real Kite OI data; Zerodha Z-Connect on interpreting PCR (a practitioner heuristic, "
+                           "not rigorously backtested evidence)"},
+                {"name": "Walk-forward validation (backtester.py --walk-forward N) — checks result stability "
+                         "across time, not full optimization (no parameter search happens)",
+                 "source": "Standard due-diligence practice per Jansen, Machine Learning for Trading (already "
+                           "cited here for DSR/IC)"},
             ],
         },
         "fno": {
@@ -145,7 +198,10 @@ def get_methods():
                     f"Ring-fenced to ₹{config.FNO['capital']:,.0f} of capital, max "
                     f"{config.FNO['max_premium_risk_pct']:.0f}% of that per trade (the entire premium risked), "
                     f"gated by a per-trade confidence score that's capped low whenever the Dimaag Scorecard "
-                    f"hasn't proven a real system-wide edge yet — see the Journal page.",
+                    f"hasn't proven a real system-wide edge yet — see the Journal page. Worth sitting with "
+                    f"before assuming F&O is a path to wealth: SEBI's own published study found 93% of "
+                    f"individual F&O traders lost money FY22-FY24 (aggregate losses over ₹1.8 lakh crore), and "
+                    f"a later update showed losses widening further in FY25.",
             "rules": [
                 {"name": "Delta — premium change per unit move in the underlying", "source": "NISM Series VIII"},
                 {"name": "Gamma — change in delta per unit move (delta's own speed)", "source": "NISM Series VIII"},

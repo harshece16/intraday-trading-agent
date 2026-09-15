@@ -270,7 +270,20 @@ from real logged data:
 
 Each row says "not enough data yet" rather than guessing below its sample
 threshold. This same Scorecard is what gates F&O's confidence multiplier —
-see above.
+see above — **and, since a multi-expert review flagged the gap, cash
+equity's too.** Until this fix, `confidence.py`'s system-evidence multiplier
+(caps confidence to 0.25× whenever the Scorecard has any failing row) only
+gated F&O entries — cash equity fired on the Varsity checklist passing
+alone, with no equivalent check, despite the README's own backtests showing
+every tested config net-negative. Same evidence, one instrument gated and
+not the other. `trading_engine._try_enter()` now runs the identical
+`confidence.score_trade()` check cash equity uses for F&O
+(`config.RISK["min_confidence_to_trade"]`, default 60) before sizing a
+position. Real consequence, checked against the live Scorecard while
+writing this: IC currently fails, so even a locally perfect checklist pass
+(100/100) scores 25/100 overall — below the bar — meaning cash-equity
+entries are now blocked in both paper and live mode until the Scorecard
+actually shows a real edge, not just a clean-looking setup.
 
 ### 10. Position sizing and stops, News sources, Taxation panel
 
@@ -562,6 +575,424 @@ hands-off:**
   page already reads, diffed client-side so turning it on doesn't replay
   history as if it just happened.
 
+### 18. Seasonality (`seasonality.py`) — and what got rejected
+
+A user asked for an "emotional quotient" — a seasonality signal, citing
+festivals moving gold as the motivating example. Before encoding anything,
+every commonly-repeated Indian-market seasonal claim was checked against
+real published research, the same bar every other signal in this codebase
+has to clear. Most didn't survive contact with real data:
+
+- **Muhurat trading "always green"** — happens once a year, so there are
+  only ~10-20 data points *ever*; every source found was broker marketing
+  content, not a study. The actual industry-reported record (broker blogs,
+  not peer-reviewed): positive in roughly 8 of the last 10 years, average
+  session gain ~0.4-0.5%. Real enough to note as a curiosity — nowhere near
+  a statistically meaningful sample to score. Not encoded.
+- **Festival gold-demand → jewellery-stock price** (the motivating example,
+  e.g. Titan around Akshaya Tritiya/Dhanteras) — physical gold-demand
+  seasonality is real and well-documented: World Gold Council and industry
+  data consistently show 10-30% demand jumps around these dates. But every
+  source connecting that to a tradable *stock price* move was pre-festival
+  news hype ("Titan rises ahead of Akshaya Tritiya" style coverage), not a
+  backtested study with real entry/exit stats or a control period. The
+  demand seasonality is real; the tradable price-spillover claim isn't
+  proven. Not encoded.
+- **Halloween Indicator / "Sell in May and Go Away"** — genuinely strong
+  evidence *globally* (Bouman & Jacobsen, *American Economic Review*, 2002,
+  37 countries, 1970-1998) and unusually durable for a calendar anomaly:
+  Jacobs & Müller (2020) and Zhang & Jacobsen (2021) both found the effect
+  persists in most markets even after publication, when most anomalies
+  decay (McLean & Pontiff, 2016, found calendar/return anomalies lose over
+  a third of their effect on average once published — Jacobs & Müller's
+  own finding is that this decay is itself mostly a US phenomenon, not
+  global). Despite all that real durability, multiple sources confirm
+  **India was one of the original sample's exceptions where the effect did
+  not hold**. Doesn't apply here regardless of how well it travels
+  elsewhere. Not encoded.
+- **Day-of-week effects** — real in older studies (positive Monday/Wednesday
+  effects on NSE-Nifty/Sensex, concentrated in small-caps), but a
+  2010-2019 study found no significant day-of-week effect in that more
+  recent window — decayed to nothing, matching the broader "anomaly decay"
+  pattern above. Not encoded.
+- **Results-season sector co-movement** (e.g. Nifty IT moving ±3-5% on a
+  TCS/Infosys results day, pulling other IT names with it) — real and
+  repeatedly documented in market reporting, but this is an *event* effect
+  (direction depends entirely on beat/miss), not a *calendar* one, so it
+  doesn't belong in this module. `nse_feed.results_calendar()` already
+  excludes a stock from new trades on its own results day (§ Event risk);
+  the sector-spillover angle is a real, addable refinement for later, not
+  folklore — just out of scope for a seasonality-only pass.
+
+Two effects did clear the bar — real, cited, statistically stated — and are
+wired into `scanner.premarket_score()` (so both live scoring and the
+backtester see the same rule, via a new `date_iso` parameter threaded
+through every call site):
+
+- **March effect**: a real, statistically significant *negative* NIFTY
+  500/BSE 500 return in March (Elangovan, Irudayasamy & Parayitam, 2022,
+  *Asia-Pacific Financial Markets*, 2011-2021, GARCH model, p<.01) — a
+  small, honest ±4-point tilt (helps shorts, works against longs), sized
+  well below a confirmed Bulkowski pattern (15-20 pts), since a single
+  academic study is real evidence, not proof. Like every other signal here,
+  it doesn't get to assume it helps — `database.factor_ic()` will measure
+  whether it actually does once enough March sessions accumulate.
+- **Union Budget day** (Feb 1, fixed since the 2017 reform): direction is
+  close to a coin flip historically (Samco/Arihant studies), so this is
+  **informational only** — a plain note in the market read
+  (`market_context()`/`premarket_context()`), never a score or size
+  adjustment, since the volatility pattern that *is* more consistent
+  (pre-announcement uncertainty, then an IV crush) isn't measured here
+  precisely enough to size a real multiplier.
+
+**Fundamentals were researched too and deliberately left out.** The
+motivating question also asked about using company fundamentals (revenue,
+P/E) the way famous traders do. Real research on four widely-cited
+methodologies, all swing/positional (weeks to months), none intraday:
+
+- **Jesse Livermore** (*Reminiscences of a Stock Operator*, Lefèvre 1923) —
+  pure tape-reading/price-action, no fundamentals at all. Closest of the
+  four to genuine short-term logic, but his documented wins were
+  multi-day/week swings, not same-day trades.
+- **Nicolas Darvas** (*How I Made $2,000,000 in the Stock Market*) — "box
+  theory," price consolidation + breakout. Called himself a
+  "techno-fundamentalist" (a basic earnings-growth filter, then technical
+  timing) — self-described swing/position trader, weeks to months.
+- **William O'Neil / CANSLIM** (*How to Make Money in Stocks*) — explicitly
+  combines fundamentals (the "E" = earnings growth) with technical breakout
+  entries. Swing/positional by design.
+- **Mark Minervini / SEPA** — same lineage: fundamental screening
+  (earnings/sales acceleration) plus technical breakout timing.
+  Swing/positional.
+
+All four use fundamentals for stock **selection**, never for intraday
+**timing** — and Zerodha Varsity states this split explicitly in its own
+"Fundamental vs Technical Analysis" chapter: technicals for identifying
+short-term trades and timing entry/exit, fundamentals framed for long-term
+investing. That's the documented consensus, not an assumption made for this
+project. Given that, and the user's own call when asked, fundamentals stay
+out of this intraday system entirely rather than being bolted on against
+what the evidence actually supports.
+
+`yfinance`'s `.info` (already a dependency) was confirmed live to return
+usable real fundamentals for NSE tickers if this is ever revisited —
+checked directly against `TITAN.NS`: `trailingPE=76.9, forwardPE=56.3,
+marketCap=4.44T, totalRevenue=924B, revenueGrowth=0.293,
+earningsGrowth=0.628, sector=Consumer Cyclical, industry=Luxury Goods,
+profitMargins=0.062, trailingEps=65.12` — real, verified, but field
+coverage is inconsistent (`returnOnEquity` came back null for this
+ticker), so any future use would need to handle missing fields gracefully,
+same as this codebase already does for ATR/RSI. Nothing currently reads it.
+
+**One more real number surfaced by this research, worth having in view**:
+SEBI's own published study found 93% of individual F&O traders lost money
+FY22-FY24 (aggregate losses over ₹1.8 lakh crore), with a later update
+showing losses widening further in FY25 — now cited directly in the app's
+F&O section (Technical Analysis page) as a counterweight to any "how the
+greats got rich" narrative.
+
+**On using an LLM for this**: also researched and worth stating plainly —
+there's a clean, real boundary. Claude reading a real, freshly-fetched
+document (an actual news article, a fetched filing) and extracting what's
+*in that text* is the same legitimate, narrow pattern `llm_sentiment.py`
+already uses. Asking Claude to recall a company's revenue or "which stocks
+to buy" from its own training data is not — unverifiable, possibly stale or
+fabricated, structurally identical to the return-prediction requests this
+project has declined everywhere else. No such feature was built.
+
+### 19. Multi-expert review fixes
+
+Four independent reviews (trading/risk, design/UX, software architecture,
+product) were run against the live app and current code. Beyond the
+cash-equity confidence gate (§9), three more concrete fixes came out of it:
+
+- **The background loop could die silently, forever.** `trading_engine.py`'s
+  `tick()` body (the day-reset, capital sync, square-off block) and
+  `run_forever()`'s executor call had no top-level exception handling, unlike
+  the per-symbol loop right next to them. One uncaught exception anywhere in
+  that path — a Kite timeout during square-off, a malformed margins()
+  response — would propagate out of the `while` loop and permanently kill
+  the engine's background thread: no more scans, no more square-offs, ever,
+  for the rest of the process's life, with nothing but a stack trace in a
+  log nobody's watching. That directly contradicted the Autonomous Trading
+  card's "runs unattended" promise (§17). `tick()` is now a thin wrapper
+  around `_tick_impl()`, catching and logging any exception so one bad cycle
+  is skipped and retried 30 seconds later instead of ending the engine;
+  `run_forever()`'s executor call has the same defense-in-depth wrapper.
+- **The Go Live confirmation didn't state the one fact that matters most.**
+  It listed capital and F&O status, but never the Dimaag Scorecard's actual
+  pass/fail state — a user could click through without ever seeing "this
+  system has never shown a proven edge in any backtest" in that flow, even
+  though the data already existed. The Overview page's Autonomy card now
+  fetches the real Scorecard, shows a pass/fail chip on the card itself, and
+  injects a plain-language summary (e.g. "Dimaag Scorecard: FAILS on
+  Predictive skill (Information Coefficient) — this system has NOT shown a
+  proven edge yet") directly into the confirm() dialog text.
+- **Portfolio page was telling a wrong capital story.** Its margins card
+  still said "Risk-model capital is synced to this live balance — ₹1,00,000"
+  after paper mode's fixed test capital (§15) shipped — ₹1,00,000 was the
+  paper figure, not the real balance, and the Overview page already had the
+  correct paper/live-aware wording that Portfolio.jsx never got. Fixed to
+  match.
+
+A second pass through the same four reviews closed out the rest of what
+they flagged:
+
+- **Sector-concentration cap.** `max_open_positions` alone didn't stop 3
+  concurrent positions from being the same sector — the scanner's own
+  sector-momentum ranking makes correlated picks the *likely* outcome on a
+  trend day, undermining the daily-loss cap's implicit independence
+  assumption. `config.RISK["max_positions_per_sector"]` (default 1) now
+  blocks a new entry if the same industry is already represented among open
+  positions.
+- **Kite token-expiry alert.** Sessions expire daily, and this has already
+  bitten the user mid-session once (documented in an earlier section). Kite
+  auth failures during `_sync_capital()`'s regular heartbeat now raise a
+  clear, throttled, high-visibility alert ("Kite session has expired —
+  click Reconnect...") instead of getting silently absorbed into a generic
+  warning log — and since it's logged at `level="error"`, it fires a
+  browser push notification too (§17), not just a dashboard message.
+- **Position reconciliation on restart.** A real gap: live positions reset
+  on process restart and were never checked against what Kite actually
+  shows. `_check_position_reconciliation()` now compares Kite's real "day"
+  positions against `state.positions` on every capital-sync cycle in live
+  mode, and raises a clear alert naming any symbol Kite shows open that
+  this app isn't tracking. Deliberately does NOT try to auto-heal by
+  guessing an entry price or stop this process never saw — that could be
+  actively worse than doing nothing. It only makes the mismatch impossible
+  to miss.
+- **Trade-history CSV export** (`GET /api/journal/trades.csv`, a button on
+  the Trades page) — every trade ever logged, paper and live both (the mode
+  column says which), for the user's own tax-filing records. There was
+  previously no way to get trade history out of the app short of reading
+  the SQLite file directly.
+- **A real, if minimal, test suite.** `backend/tests/` (pytest) now covers
+  the exact risk-critical logic that had zero coverage: position sizing,
+  stop/target pricing, the daily-loss circuit breaker, and — specifically —
+  a regression test that would catch the cash-equity confidence-gate bypass
+  bug from §9 if it were ever reintroduced (`test_perfect_setup_still_blocked_when_scorecard_fails`).
+  15 tests, all passing; not exhaustive, but no longer zero.
+- **Security hardening, honestly scoped.** CORS was `["*"]`; now defaults to
+  the actual dev origins this app uses (`localhost:5500`/`127.0.0.1:5500`),
+  overridable via `CORS_ALLOWED_ORIGINS`. The dashboard API key printed in
+  full on *every* restart's startup log — now only on the run that first
+  generates it; every later restart shows a masked reference
+  (`4Xh0ey...NWgc`) instead, with the full value still retrievable from
+  `.dashboard_key.json`. What's **not** fixed, honestly: the key still has
+  to travel as a `?key=` URL param for the WebSocket and Kite-login popup,
+  since browsers can't attach a custom header to either — a real limitation
+  of this auth pattern, not something this pass papered over.
+- **Onboarding banner.** A dismissible first-run checklist on Overview
+  (connect Kite → confirm Paper mode → read the Scorecard before ever
+  considering Live), shown only until Kite connects once, then gone for
+  good — there was previously no in-app "what do I do first" path at all,
+  just a 1000+ line README.
+- **Pre-Market/Overview cross-reference.** A design review found the two
+  pages' stock lists (last night's pre-market read vs. today's live scan)
+  can visibly disagree with no explanation, reading as a bug. Pre-Market
+  now shows a plain note and a link over to Overview once the live scanner
+  has superseded it.
+- **Loading spinners** on Pre-Market's refresh and Portfolio Diagnostic's
+  data download, replacing static "this can take a moment" text that read
+  as frozen on a slow connection.
+
+**Findings noted, deliberately not acted on** — for completeness, since a
+review is only honest if it also records what it didn't change:
+
+- **`confidence.py`'s system-multiplier buckets (0.25/0.5/1.0) are a coarse
+  three-step function with no data-driven basis for those exact
+  thresholds** — defensible in spirit (never let a clean local setup
+  outweigh proven-absent system edge), arbitrary in magnitude. Left as-is;
+  would need its own real study to justify a different set of numbers, not
+  a guess swapped for another guess.
+- **Slippage (`config.COSTS["slippage_pct"]`, 0.03%) is a stated estimate,
+  not measured** — flagged in its own code comment as exactly that. Left
+  as-is; real intraday slippage depends on the specific symbol, order size,
+  and volatility at the moment of the fill, and this codebase doesn't yet
+  have real fill-vs-signal data to measure it from.
+- **`database.factor_ic()`'s `min_pairs=20` threshold** is a reasonable
+  floor for declaring some signal, but a small sample for declaring the
+  Information Coefficient definitively "proven positive." Left as-is —
+  raising it is a real option worth considering once enough sessions
+  accumulate to see whether 20 was too permissive in practice.
+- **`config.RISK` is a shared mutable dict acting as a global**, read and
+  written from multiple call sites (`_sync_capital`, the F&O enable
+  endpoint, the `sync_capital_with_kite` toggle) with no encapsulation.
+  Currently correct because nothing reads it mid-mutation, but fragile —
+  nothing stops a future feature from reading a half-updated value. Left
+  as a known fragility, not refactored, since the fix (wrapping it in a
+  real config object) touches every module that reads `config.RISK`
+  directly and wasn't worth the blast radius for this pass.
+- **`app.py` is becoming a god-file** (400+ lines, every endpoint +
+  middleware + lifespan in one module). Not urgent at current size, but
+  the F&O/day-plan/pre-market/PCR endpoints already show it's growing; a
+  `routers/` split would age better. Left as-is.
+- **Operational readiness is still nil** — this backend runs via a manual
+  `nohup uvicorn ... &` (visible throughout this README's own session
+  history), with no process supervisor, no crash-restart, and logs to a
+  single growing file rather than a rotated one. The tick()-level
+  exception handling above (this section) means the engine itself can't
+  die from an ordinary exception anymore, but the *process* still can —
+  from an OOM, a `kill`, a machine restart — with nothing to bring it back
+  automatically. Left as a real gap, not solved.
+- **Design: uneven visual density across pages** — Day Plan and Portfolio
+  pack 6-8 equal-weight stat chips per card; the actually decision-relevant
+  numbers (real ₹ risk, "tradable picks right now") don't outrank
+  max-open-positions or F&O-off in size or position. Left as-is — a real
+  visual-hierarchy pass, not a quick fix.
+- **Design: the nav bar has no overflow affordance on mobile** — 8 items at
+  ~400px width relies on bare `overflow-x: auto` with no fade or arrow
+  hint that more tabs exist off-screen. Left as-is, minor.
+
+### 20. Real Indian-market data — sectoral indices, flows, deals, positioning
+
+A user asked how to make Trader Sahab more knowledgeable specifically for
+Indian markets. Researched six candidate directions against real evidence
+(same bar as §18's seasonality work), ranked, then built the five that
+verified out — and explicitly did NOT build the one that didn't:
+
+- **NSE surveillance (ASM/GSM) exclusion — researched, not built.** Real
+  data exists under a real, named file — NSE's daily
+  `REG_IND<DDMMYY>.csv` surveillance file, published at
+  nseindia.com/all-reports, which standardizes scrip-specific cautionary
+  messages across exchanges (ScripCode, Symbol, trading Status, Series). A
+  third-party mirror (a "VIGIL Surveillance Tracker" built on this same
+  file) was also found. But despite real effort — testing direct archive
+  URL patterns against both `nsearchives.nseindia.com` and
+  `archives.nseindia.com`, searching known open-source NSE API wrapper
+  libraries (`stock-nse-india`, `NseIndiaApi`) for an ASM/GSM method, and
+  attempting to fetch NSE's live surveillance page directly — no reliable,
+  directly-callable public JSON endpoint could be confirmed working. This
+  codebase won't ship a guessed URL that could silently break or point
+  nowhere; skipped honestly rather than faked.
+
+What did verify, all tested live against real data while building:
+
+- **Real NSE sectoral indices** (`sectoral_indices.py`) — `NIFTY_FIN_SERVICE.NS`
+  (Financial Services), `^CNXAUTO` (Auto), `^CNXPHARMA` (Healthcare,
+  approximated), `^CNXFMCG`, `^CNXMETAL`, `^CNXENERGY` (both Power and Oil
+  Gas & Consumable Fuels — Nifty Energy genuinely spans both in NSE's own
+  index construction), `^CNXIT`, `^CNXREALTY` — each verified live via
+  yfinance with ~80-120+ real daily bars. Two candidates that resolved as
+  tickers but returned only 1 row of real history (`NIFTY_OIL_AND_GAS.NS`,
+  `NIFTY_CONSR_DURBL.NS`) were left out rather than used with insufficient
+  data — Consumer Durables and the separate Oil & Gas framing simply
+  aren't covered by this module as a result. Feeds `intraday_score()` as a
+  confluence check alongside the scanner's own same-universe sector rank —
+  genuinely complementary (one same-day, one structural), not a duplicate.
+  "Healthcare" maps to Nifty Pharma as a stated approximation, not an exact
+  match — this universe's Healthcare category also includes
+  hospital/diagnostics names Nifty Pharma doesn't track.
+- **Daily FII/DII net flow** (`nse_feed.fii_dii_flows()`, real NSE
+  `api/fiidiiTradeReact`) — a modest, honestly-thresholded (±₹1,000cr)
+  market-context input in `market_context()`/`premarket_context()`, same
+  small-weight treatment as the March effect: a real academic relationship
+  exists (SJCC Management Research Review — DII flows act as a
+  stabilizer, offsetting FII selling, with the FII relationship strongest
+  when the market is falling), the exact threshold doesn't, so it's sized
+  accordingly and logged through the same scoring `database.factor_ic()`
+  can validate or invalidate later. Verified live while building: FII net
+  sold ₹930.9 cr, DII net bought ₹1,968.17 cr on the most recent session —
+  real, current figures, not sample data.
+- **Bulk/block deal disclosures** (`nse_feed.large_deals_today()`, real NSE
+  `api/snapshot-capital-market-largedeal`) — shown per-symbol as pure
+  context, never scored. Real academic studies (an IIM Calcutta working
+  paper on price discovery from bulk trades; a Managerial Finance/Emerald
+  study on Indian bulk deals) found the apparent "predictive" pattern in
+  these disclosures is substantially explained by information leakage and
+  front-running, not a clean edge a system reading the after-the-fact
+  disclosure can capture — stated honestly rather than sold as a signal.
+  Verified live: 218 bulk deals, 39 block deals, 97 short-sell disclosures
+  on the most recent session — real data, zero overlap with NIFTY 100 that
+  day (bulk/block disclosures concentrate in smaller, less liquid names,
+  not mega-caps — confirmed by checking the raw data directly rather than
+  assuming an empty result meant a bug).
+- **Options Put/Call OI ratio** (`fno_instruments.index_pcr()`, real Kite
+  OI data, near-the-money strikes only) for NIFTY/BANKNIFTY, surfaced on
+  the Portfolio page (`GET /api/fno/pcr`). A real, widely-used practitioner
+  heuristic (Zerodha's own Z-Connect blog covers Open Interest/MaxPain/PCR
+  directly, the same citation pattern as this codebase's existing
+  NISM/Varsity sources) — PCR > 1 read bearish, < 1 bullish, with
+  contrarian-extreme readings below 0.6 or above 1.2 sometimes flagged as
+  reversal zones — but consistently described as a practitioner heuristic,
+  not something with rigorous backtested evidence behind it, so this never
+  feeds `confidence.py`'s score either. Verified live against real Kite
+  quote data before the day's session token expired (e.g. a real
+  near-expiry NIFTY contract: CE last price 4.05 / OI 3,030,365, PE last
+  price 506.4 / OI 116,285).
+- **Walk-forward validation** (`backtester.py --walk-forward N`) — splits
+  the backtest window into N consecutive folds and runs the same fixed
+  config on each independently, to check whether a result is stable across
+  time or concentrated in one lucky/unlucky period. Precise about what it
+  isn't: not full walk-forward optimization, since this system doesn't
+  search parameters at all — there's nothing to fit in-sample. Run live
+  during development (`sahab_dimaag`, RELIANCE/TCS/INFY/HDFCBANK, 3 folds):
+  fold 1 (Jul 22-Aug 6) 2 trades, expectancy -1.590R, 0% win rate; fold 2
+  (Aug 7-24) 0 trades; fold 3 (Aug 25-Sep 11) 4 trades, expectancy -0.263R,
+  25% win rate — every fold with any trades net-negative, "consistent, but
+  consistently unprofitable" — exactly the kind of result this check exists
+  to catch (or, here, confirm honestly).
+
+### 21. The universe question — verified, not assumed
+
+Also asked: should the tradable universe be NIFTY 100, or something else?
+Researched real NSE/SEBI eligibility criteria and impact-cost methodology,
+then verified the specific claim rather than trusting the research's
+inference — live against real Kite instrument data: **216 F&O-eligible
+underlyings exist; 97 of NIFTY 100's 100 constituents have listed options,
+3 don't** (ENRIN, TATACAP, TMCV — likely recent listings not yet added to
+F&O). Already handled safely by existing code with no change needed: a
+non-eligible underlying simply fails to find a contract in
+`fno_instruments.find_contract()` and gets blocked via the normal
+`_blocked()` path, not a crash.
+
+The real numbers behind that 216 figure — SEBI's August 2024-revised
+derivatives eligibility criteria, drawn from the top 500 stocks by market
+cap/turnover: Median Quarter Sigma Order Size ≥ ₹75 lakh, Market-Wide
+Position Limit ≤ ₹1,500 crore, Average Daily Delivery Value ≥ ₹35 crore.
+NSE's own NIFTY 50 inclusion methodology separately requires "the stock
+should generally be available for trading in the NSE F&O segment" as a
+stated criterion — and NIFTY 100 = NIFTY 50 + NIFTY Next 50, drawn from
+that same large-cap pool, which is why the overlap is as high as 97/100
+rather than a coincidence.
+
+On liquidity/impact-cost specifically: NIFTY 50's own real inclusion
+methodology requires average impact cost ≤ 0.50% for 90% of observations
+on a ₹10 crore basket — a real, NSE-stated liquidity bar, with Zerodha
+Varsity carrying a dedicated chapter on impact cost as exactly this kind
+of real, taught hazard. Separately-sourced guidance puts typical large-cap
+daily moves at 0.2-1% — already *narrower* than this system's own
+`min_atr_pct: 1.2` floor in `config.py`'s `SCANNER` dict, meaning the
+scanner's existing tradability filters are already screening harder than
+"large-cap" alone implies, largely independent of whether the starting
+pool is 50 or 100 names.
+
+On opportunity count: reasoning from this codebase's own pipeline shape
+(100 candidates → tradability filter → top 15 deep-analysis → top 6
+active, with the §19 sector-diversification cap now limiting concurrent
+positions to 1 per industry) — a pool of just 50 names would meaningfully
+shrink both raw opportunity count on a quiet day *and* sector diversity,
+since fewer represented sectors means the diversification cap has less
+room to actually diversify across. NIFTY 100's extra 50 names aren't
+noise; they're what makes that constraint meaningful rather than starving
+it.
+
+Verdict: **stay with NIFTY 100.** Narrowing to NIFTY 50 would starve both
+opportunity count and the sector-diversification cap of room to actually
+diversify across; broadening to NIFTY 500/Midcap would trade execution
+quality for more setups, which hurts a small account disproportionately —
+NSE's own index methodology ties broader indices to looser
+impact-cost/liquidity thresholds (exact per-tier numeric thresholds for
+NIFTY 500/Midcap 150 weren't independently confirmed — a fetch of NSE's
+methodology PDF timed out — so that direction is real but not as precisely
+quantified as the NIFTY 50 numbers above). The scanner's existing
+tradability floors (`min_price`, `min_turnover_cr`, `min_atr_pct`) already
+do most of the real liquidity-filtering work regardless of the starting
+universe size. The one concrete, cheap follow-up worth doing later: an
+explicit periodic check of NIFTY 100 against NSE's actual F&O-eligible
+list (this section's own verification, repeated automatically) rather than
+a one-time snapshot that can silently go stale as either list changes.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -726,17 +1157,20 @@ webapp/
 │   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
 │   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
 │   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
-│   ├── nse_feed.py              # ★ NSE announcements + results calendar
+│   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals — §20
 │   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
 │   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
 │   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, OBV, resampling
 │   ├── candlestick_patterns.py  # context-aware pattern recognition (24 patterns)
 │   ├── swing_patterns.py        # Bulkowski daily patterns + Murphy reversal days (scanner only)
 │   ├── market_structure.py      # swings, Dow trend, S/R zones, breakouts, Fibonacci, CPR
+│   ├── seasonality.py           # ★ real, cited calendar effects only — March effect, Budget day — §18
+│   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
 │   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades
-│   ├── backtester.py            # same strategy/risk code over history, with costs; --universe mode
+│   ├── backtester.py            # same strategy/risk code over history, with costs; --universe/--walk-forward modes — §20
+│   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate — §19
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
 └── frontend/                     # React + Vite dashboard (migrated from a single-file vanilla-JS app)
@@ -1083,8 +1517,10 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
   only the pricing/Greeks/sizing math has been unit-tested with synthetic data.
 - Live analysis uses the still-forming candle, unlike backtests.
 - Live positions and the current watchlist still reset on restart (only
-  history is persisted, in `sahab_journal.db`), and aren't reconciled with
-  `kite.positions()`.
+  history is persisted, in `sahab_journal.db`). §19 added detection — a
+  clear alert if Kite shows a real open position this app isn't tracking —
+  but not auto-healing; the app still won't know that position's real entry
+  price, stop, or target, and won't act on it until you do.
 - Single-user. An API key now gates every route, but there's still no
   per-user auth, rate limiting, or HTTPS termination built in — treat this
   as "safe enough to expose briefly via a tunnel," not "safe to run

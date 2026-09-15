@@ -16,6 +16,10 @@ import config
 
 logger = logging.getLogger("trading_bot")
 
+# Kite's own quote symbols for index spot prices — not a tradingsymbol,
+# the exchange's literal quote key for the index itself.
+INDEX_QUOTE_SYMBOLS = {"NIFTY": "NSE:NIFTY 50", "BANKNIFTY": "NSE:NIFTY BANK"}
+
 
 class KiteExecutor:
     def __init__(self, api_key: str, access_token: str):
@@ -42,7 +46,12 @@ class KiteExecutor:
         return order_id
 
     def get_positions(self):
-        return self.kite.positions()["net"]
+        """Today's intraday (MIS) positions specifically — Kite's "day" book,
+        not "net" (which also includes carried-forward CNC holdings, already
+        shown separately via get_holdings()). Used to reconcile against
+        state.positions after a restart, since this engine only ever trades
+        intraday and squares off by 15:15."""
+        return self.kite.positions()["day"]
 
     def place_fno_order(self, tradingsymbol: str, side: str, lots: int, lot_size: int):
         """BUY-only (see fno_risk.py) NFO order — MIS product, same
@@ -66,6 +75,17 @@ class KiteExecutor:
     def get_fno_ltp(self, tradingsymbol: str) -> float:
         quote = self.kite.ltp(f"NFO:{tradingsymbol}")
         return quote[f"NFO:{tradingsymbol}"]["last_price"]
+
+    def get_quotes(self, tradingsymbols: list) -> dict:
+        """Bulk real quote (price + open interest) for a list of NFO
+        tradingsymbols — used for index_pcr()'s real OI reads."""
+        return self.kite.quote([f"NFO:{t}" for t in tradingsymbols])
+
+    def get_index_spot(self, underlying: str) -> float:
+        sym = INDEX_QUOTE_SYMBOLS.get(underlying)
+        if not sym:
+            raise ValueError(f"No known index quote symbol for {underlying}")
+        return self.kite.quote([sym])[sym]["last_price"]
 
     def get_holdings(self):
         """Long-term equity holdings (T+1 settled, not today's intraday MIS

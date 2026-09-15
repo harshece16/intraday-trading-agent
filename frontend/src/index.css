@@ -298,3 +298,12 @@
   .dot.open { animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--long-bg); } 50% { box-shadow: 0 0 0 6px var(--long-bg); } }
   #stk-chart { animation: pageIn 0.25s ease-out; }
+
+  /* Loading spinner — a few loading states were plain static text, which on a
+     slow connection reads as frozen rather than working. */
+  .spinner {
+    display: inline-block; width: 13px; height: 13px; margin-right: 8px;
+    border: 2px solid var(--ink-3); border-top-color: var(--ink);
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }

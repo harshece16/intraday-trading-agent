@@ -93,7 +93,39 @@ function FnoSection({ fno, onToggle }) {
           ))
         )}
       </div>
+      {fno.kite_connected && <PcrSection />}
     </>
+  );
+}
+
+function PcrSection() {
+  const [pcr, setPcr] = useState(null);
+  useEffect(() => {
+    let stopped = false;
+    function load() { apiJson("/api/fno/pcr").then((d) => !stopped && setPcr(d)).catch(() => {}); }
+    load();
+    const id = setInterval(load, 30000);
+    return () => { stopped = true; clearInterval(id); };
+  }, []);
+  if (!pcr || pcr.error) return null;
+  const entries = Object.entries(pcr).filter(([, v]) => v && !v.error);
+  if (!entries.length) return null;
+  return (
+    <div className="cardbox" style={{ marginTop: 16 }}>
+      <h2 className="h" style={{ fontSize: 16 }}>Options positioning (Put/Call OI ratio)</h2>
+      <p className="muted" style={{ margin: "0 0 10px", fontSize: 12.5 }}>
+        Real open-interest data, near-the-money strikes only — a widely-used practitioner heuristic, not rigorously
+        backtested evidence. Context, not a signal: never feeds the confidence score.
+      </p>
+      <div className="rb-row">
+        {entries.map(([underlying, d]) => (
+          <div className="rb-chip" key={underlying}>
+            <b>{underlying}</b>
+            <span>PCR {d.pcr} — {d.reading}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -143,15 +175,21 @@ export default function Portfolio({ state: s }) {
               <div className="rb-chip"><b>Holding sales</b><span>{money((p.margins.equity || {}).utilised?.holding_sales || 0)}</span></div>
             </div>
             <div className="detail" style={{ marginTop: 10 }}>
-              {p.sync_capital_with_kite ? (
+              {!p.sync_capital_with_kite ? (
+                <>Risk-model capital is pinned in config, not synced to this live balance (config.RISK.sync_capital_with_kite is off).</>
+              ) : s?.paper_mode ? (
+                <>
+                  <b>Paper mode</b> is sizing against a fixed ₹{num(p.risk_total_capital, 0)} test figure
+                  (config.RISK.paper_capital), <i>not</i> this live balance — set up so simulated trades actually get
+                  sized realistically. Going live snaps sizing back to this real balance immediately.
+                </>
+              ) : (
                 <>
                   Risk-model capital is synced to this live balance — <b>{money(p.risk_total_capital)}</b>, last
                   synced {p.capital_sync ? new Date(p.capital_sync.synced_at * 1000).toLocaleTimeString() : "not yet"}.
                   Position sizing (Van Tharp 1% rule) always uses the real number here, not a config guess, so a
                   live order never gets rejected by Kite for insufficient margin against a stale figure.
                 </>
-              ) : (
-                <>Risk-model capital is pinned in config, not synced to this live balance (config.RISK.sync_capital_with_kite is off).</>
               )}
             </div>
           </div>

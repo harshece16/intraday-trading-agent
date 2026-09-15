@@ -92,3 +92,49 @@ def find_contract(underlying: str, spot: float, expiry: date, is_call: bool, tar
         "strike": best["strike"], "lot_size": best["lot_size"], "expiry": expiry,
         "is_call": is_call, "underlying": underlying,
     }
+
+
+def index_pcr(underlying: str, spot: float, expiry: date, quotes_fn, n_strikes: int = 10):
+    """Real Put/Call open-interest ratio for one index underlying's nearest
+    expiry, near-the-money strikes only (a bounded, meaningful slice — not
+    every listed strike, to keep this to one quote() call). `quotes_fn`
+    (tradingsymbols) -> real Kite quote dict, same shape as
+    KiteExecutor.get_quotes(), passed in rather than imported so this stays
+    testable without a live connection.
+
+    PCR is a real, widely-used practitioner heuristic (Zerodha's own
+    Z-Connect blog covers Open Interest/PCR directly) — PCR > 1 read
+    bearish (more put positioning), < 1 bullish, with <0.6/>1.2 sometimes
+    flagged as contrarian-extreme reversal zones — but this is consistently
+    described as a heuristic, not something with rigorous backtested
+    evidence behind it. Returned purely as context: never fed into
+    confidence.py's score, shown as "here's the real positioning," not "so
+    do X.\""""
+    rows = [
+        r for r in _nfo_instruments()
+        if r["name"] == underlying and r["instrument_type"] in ("CE", "PE")
+        and (r["expiry"] if isinstance(r["expiry"], date) else
+             datetime.strptime(str(r["expiry"])[:10], "%Y-%m-%d").date()) == expiry
+    ]
+    if not rows:
+        return None
+    nearest_strikes = set(sorted({r["strike"] for r in rows}, key=lambda k: abs(k - spot))[:n_strikes])
+    near_rows = [r for r in rows if r["strike"] in nearest_strikes]
+    if not near_rows:
+        return None
+    try:
+        quotes = quotes_fn([r["tradingsymbol"] for r in near_rows])
+    except Exception:
+        logger.warning("index_pcr: quote fetch failed")
+        return None
+    call_oi = sum(quotes.get(f"NFO:{r['tradingsymbol']}", {}).get("oi", 0) or 0
+                  for r in near_rows if r["instrument_type"] == "CE")
+    put_oi = sum(quotes.get(f"NFO:{r['tradingsymbol']}", {}).get("oi", 0) or 0
+                 for r in near_rows if r["instrument_type"] == "PE")
+    if not call_oi:
+        return None
+    pcr = round(put_oi / call_oi, 2)
+    reading = ("bearish (elevated put positioning)" if pcr > 1.2 else
+               "bullish (elevated call positioning)" if pcr < 0.6 else "neutral")
+    return {"underlying": underlying, "expiry": expiry.isoformat(), "pcr": pcr,
+            "put_oi": put_oi, "call_oi": call_oi, "reading": reading, "strikes_used": len(near_rows)}
