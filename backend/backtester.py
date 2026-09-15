@@ -45,7 +45,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 class _Position:
-    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost", "stop", "target", "risk_ps")
+    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost", "stop", "target", "risk_ps", "entry_time")
 
     def __init__(self):
         self.quantity = 0
@@ -55,6 +55,7 @@ class _Position:
         self.stop = None
         self.target = None
         self.risk_ps = None
+        self.entry_time = None
 
 
 def _to_ist(iso_time: str) -> datetime:
@@ -62,7 +63,8 @@ def _to_ist(iso_time: str) -> datetime:
     return ts.astimezone(IST) if ts.tzinfo else ts.replace(tzinfo=IST)
 
 
-def _open_position(pos, side, raw_price, qty, atr_val, costs_cfg, risk, stop=None, target=None):
+def _open_position(pos, side, raw_price, qty, atr_val, costs_cfg, risk, stop=None, target=None, entry_time=None):
+    pos.entry_time = entry_time
     fill_price = apply_slippage(side, raw_price, costs_cfg)
     pos.quantity = qty if side == "BUY" else -qty
     pos.avg_price = fill_price
@@ -90,9 +92,14 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
         "qty": qty, "entry_price": pos.avg_price, "exit_price": fill_price,
         "gross_pnl": gross_pnl, "cost": total_cost, "pnl": net_pnl, "reason": reason,
         "r": net_pnl / (pos.risk_ps * qty) if pos.risk_ps else None,
+        # Recorded so post-hoc diagnostics (max favorable excursion, how
+        # long a trade lived, whether price later reached target) can use
+        # the real entry bar instead of inferring it from a matching close.
+        "entry_time": pos.entry_time.isoformat() if pos.entry_time else None,
+        "stop": pos.stop, "target": pos.target, "risk_per_share": pos.risk_ps,
     })
     pos.quantity, pos.avg_price, pos.entry_atr, pos.entry_cost = 0, 0.0, None, 0.0
-    pos.stop = pos.target = pos.risk_ps = None
+    pos.stop = pos.target = pos.risk_ps = pos.entry_time = None
     risk.open_positions_count = max(0, risk.open_positions_count - 1)
     return net_pnl
 
@@ -211,7 +218,15 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
             elif pos.quantity < 0 and (signal in ("BUY", "COVER") or st.get("exit_short")):
                 equity += _close_position(pos, bar["close"], risk, trades, symbol, ts, "signal", costs_cfg)
                 equity_curve.append(equity)
-            elif pos.quantity == 0 and signal in ("BUY", "SHORT"):
+            elif pos.quantity == 0 and signal in ("BUY", "SHORT", "ENTER"):
+                if signal == "ENTER":
+                    # "Enter on whichever side the scanner picked this symbol
+                    # for today" — lets a baseline strategy test the
+                    # scanner's ranking on its own, with no entry timing.
+                    picked = allowed.get(symbol) if isinstance(allowed, dict) else None
+                    if picked not in ("LONG", "SHORT"):
+                        continue
+                    signal = "BUY" if picked == "LONG" else "SHORT"
                 side = "BUY" if signal == "BUY" else "SELL"
                 if isinstance(allowed, dict) and allowed.get(symbol) != ("LONG" if side == "BUY" else "SHORT"):
                     continue
@@ -232,7 +247,8 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
                 if qty <= 0:
                     continue
                 _open_position(pos, side, bar["close"], qty, atr_val, costs_cfg, risk,
-                               stop=plan["stop"] if plan else None, target=plan["target"] if plan else None)
+                               stop=plan["stop"] if plan else None, target=plan["target"] if plan else None,
+                               entry_time=ts)
                 risk.open_positions_count += 1
 
     # Mark-to-market any positions still open at the end of the sample.

@@ -22,6 +22,14 @@ from state import AppState
 IST = ZoneInfo("Asia/Kolkata")
 
 
+def _today_ts(fraction):
+    # Guaranteed to be today (IST) and already past, whenever the suite runs —
+    # a fixed `now - 3600` silently became yesterday in the hour after midnight.
+    now = time.time()
+    start = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    return start + (now - start) * fraction
+
+
 def _insert_trade(trade_id, ts, symbol, side, price, realized=None):
     database.record_trade({
         "id": trade_id, "position_id": "pos1", "ts": ts, "symbol": symbol, "side": side,
@@ -31,9 +39,8 @@ def _insert_trade(trade_id, ts, symbol, side, price, realized=None):
 
 
 def test_todays_trades_are_loaded_on_construction():
-    now = time.time()
-    _insert_trade("t1", now - 3600, "BEL", "SELL", 389.65)
-    _insert_trade("t2", now - 3500, "BEL", "BUY", 390.25, realized=-30.0)
+    _insert_trade("t1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("t2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=-30.0)
 
     state = AppState(watchlist=[], paper_mode=True)
 
@@ -43,9 +50,8 @@ def test_todays_trades_are_loaded_on_construction():
 
 
 def test_trades_are_newest_first():
-    now = time.time()
-    _insert_trade("older", now - 3600, "BEL", "SELL", 389.65)
-    _insert_trade("newer", now - 100, "BEL", "BUY", 390.25, realized=-30.0)
+    _insert_trade("older", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("newer", _today_ts(0.8), "BEL", "BUY", 390.25, realized=-30.0)
 
     state = AppState(watchlist=[], paper_mode=True)
 
@@ -80,9 +86,8 @@ def test_engine_seeds_daily_loss_counter_from_rehydrated_trades():
     started" and zeroed both state.realized_pnl_today and
     risk.daily_realized_pnl right back out — silently erasing today's real
     losses from the max_daily_loss_pct safety check on every restart."""
-    now = time.time()
-    _insert_trade("loss1", now - 3600, "BEL", "SELL", 389.65)
-    _insert_trade("loss2", now - 3500, "BEL", "BUY", 390.25, realized=-30.0)
+    _insert_trade("loss1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("loss2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=-30.0)
 
     state = AppState(watchlist=[], paper_mode=True)
     engine = trading_engine.TradingEngine(state)
@@ -92,9 +97,8 @@ def test_engine_seeds_daily_loss_counter_from_rehydrated_trades():
 
 
 def test_first_tick_after_restart_does_not_re_zero_the_loss_counter(monkeypatch):
-    now = time.time()
-    _insert_trade("loss1", now - 3600, "BEL", "SELL", 389.65)
-    _insert_trade("loss2", now - 3500, "BEL", "BUY", 390.25, realized=-30.0)
+    _insert_trade("loss1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("loss2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=-30.0)
 
     state = AppState(watchlist=[], paper_mode=True)
     engine = trading_engine.TradingEngine(state)
