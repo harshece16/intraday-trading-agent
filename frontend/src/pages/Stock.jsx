@@ -96,6 +96,7 @@ function ChecklistView({ r, b }) {
       <p className="lede">
         {cl.passed ? `Every required point passes for a ${cl.side}.` : `${failing} required point${failing > 1 ? "s" : ""} fail${failing > 1 ? "" : "s"}, so there's no ${cl.side} trade.`}
         {cl.stop != null ? ` If taken: entry ${num(cl.entry)}, stop ${num(cl.stop)}, target ${num(cl.target)}, reward-to-risk ${num(cl.rrr)}.` : ""}
+        {b.bar_time ? ` Based on the ${b.bar_time.slice(11, 16)} candle, the most recent one that has finished.` : ""}
         {" "}Every rule is checked in the open, and the exact source is next to it.
       </p>
       <ul className="checklist">

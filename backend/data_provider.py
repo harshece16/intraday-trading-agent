@@ -14,12 +14,21 @@ import concurrent.futures
 import logging
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
 import config
 
 logger = logging.getLogger("trading_bot")
+
+IST = ZoneInfo("Asia/Kolkata")
+
+# Bar length for the intraday intervals that map one-to-one onto Kite's.
+_INTERVAL_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "60m": 3600}
+
+# yfinance's NSE intraday feed runs ~15 min behind, so its newest row can still be filling after the bar ends.
+_DELAYED_FEED_SETTLE = timedelta(minutes=30)
 
 # yfinance-style interval strings -> Kite's own interval names.
 _KITE_INTERVAL_MAP = {
@@ -123,6 +132,7 @@ def _get_intraday_candles_yfinance(symbol: str, interval: str, period: str):
             "low": float(row["Low"]),
             "close": float(row["Close"]),
             "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
+            "delayed": True,
         })
     return candles
 
@@ -130,7 +140,9 @@ def _get_intraday_candles_yfinance(symbol: str, interval: str, period: str):
 def get_intraday_candles(symbol: str, interval: str = "5m", period: str = "5d"):
     """
     Returns a list of dicts: [{"time": iso str, "close": float, "open": float,
-    "high": float, "low": float, "volume": int}, ...] oldest first.
+    "high": float, "low": float, "volume": int}, ...] oldest first. "time" is
+    the bar's start. Candles from the delayed yfinance feed also carry
+    "delayed": True (see closed_bars()).
     """
     if kite_data_active():
         try:
@@ -138,6 +150,28 @@ def get_intraday_candles(symbol: str, interval: str = "5m", period: str = "5d"):
         except Exception as exc:
             logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
     return _get_intraday_candles_yfinance(symbol, interval, period)
+
+
+def closed_bars(candles, interval: str = "5m", now=None, delayed=None):
+    """Drop the newest bar unless it has finished; `now` should be taken before the fetch."""
+    seconds = _INTERVAL_SECONDS.get(interval)
+    if not candles or seconds is None:
+        return candles
+    last = candles[-1]
+    start = datetime.fromisoformat(last["time"])
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=IST)
+    now = now or datetime.now(IST)
+    if delayed is None:
+        delayed = bool(last.get("delayed"))
+    if delayed:
+        # How far behind the delayed feed runs isn't known exactly, so trust its newest row only after the session.
+        close_t = datetime.strptime(config.MARKET_CLOSE, "%H:%M").time()
+        session_close = datetime.combine(start.astimezone(IST).date(), close_t, tzinfo=IST)
+        finished = now >= session_close + _DELAYED_FEED_SETTLE
+    else:
+        finished = now >= start + timedelta(seconds=seconds)
+    return candles if finished else candles[:-1]
 
 
 def _get_intraday_candles_yfinance_batch(symbols: list, interval: str, period: str) -> dict:
@@ -165,7 +199,7 @@ def _get_intraday_candles_yfinance_batch(symbols: list, interval: str, period: s
         out[symbol] = [
             {
                 "time": ts.isoformat(), "open": float(o), "high": float(h), "low": float(l),
-                "close": float(c), "volume": int(v) if not pd.isna(v) else 0,
+                "close": float(c), "volume": int(v) if not pd.isna(v) else 0, "delayed": True,
             }
             for ts, o, h, l, c, v in zip(sub.index, sub["Open"], sub["High"], sub["Low"], sub["Close"], sub["Volume"])
         ]

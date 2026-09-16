@@ -33,6 +33,7 @@ from kiteconnect.exceptions import TokenException
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
 from scanner import Scanner, run_premarket
+import trader_brain
 import universe
 from state import AppState
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
@@ -521,6 +522,11 @@ class TradingEngine:
             plan = (analysis.get("checklist") or {}).get(side.lower())
             if not plan or plan.get("stop") is None:
                 plan = None
+        live = None
+        if plan:
+            live = trader_brain.recheck_plan(plan, side.lower(), ltp, self.strategy_params)
+            if not live["ok"]:
+                return self._blocked(symbol, setup, live["reason"])
         stop_price = plan["stop"] if plan else None
         size_factor = plan["size_factor"] if plan else 1.0
         qty = int(self.risk.position_size(ltp, atr=atr_val, stop_price=stop_price) * self.size_multiplier * size_factor)
@@ -528,8 +534,10 @@ class TradingEngine:
             return self._blocked(symbol, setup, "position size rounds to 0 shares")
 
         if plan:
-            note = (f"Varsity checklist passed: stop {plan['stop']:.2f}, target {plan['target']:.2f}, "
-                    f"reward-to-risk {plan['rrr']:.2f}, {size_factor:.0%} size, confidence {conf['score']}/100 ({conf['label']})")
+            bar = (analysis.get("bar_time") or "")[11:16]
+            note = (f"Varsity checklist passed on the {bar} candle: stop {plan['stop']:.2f}, target {plan['target']:.2f}, "
+                    f"reward-to-risk {live['rrr']:.2f} at the entry price, {size_factor:.0%} size, "
+                    f"confidence {conf['score']}/100 ({conf['label']})")
         else:
             key = "reasons" if side == "LONG" else "bear_reasons"
             why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
@@ -752,22 +760,28 @@ class TradingEngine:
                     symbol=symbol,
                 )
 
-    def _process_symbol(self, symbol, candles=None):
+    def _process_symbol(self, symbol, candles=None, now=None):
         # candles is normally pre-fetched in bulk by _tick_impl() (see
         # data_provider.get_candles_batch); falling back to a single-symbol
         # fetch here keeps this method callable on its own (tests, and any
-        # symbol the batch fetch happened to skip or fail on).
+        # symbol the batch fetch happened to skip or fail on). `now` should be
+        # taken before the fetch (see data_provider.closed_bars).
         if candles is None:
+            now = now or datetime.now(IST)
             candles = data_provider.get_intraday_candles(symbol, interval=config.CANDLE_INTERVAL, period="5d")
         if not candles:
             return
         with self.state.lock:
             self.state.candles[symbol] = candles[-200:]
+        # Stops and fills use the live price; the checklist and sizing read finished bars, like the backtester.
         ltp = candles[-1]["close"]
+        bars = data_provider.closed_bars(candles, config.CANDLE_INTERVAL, now=now)
 
         if self._check_stop_take(symbol, ltp):
             with self.state.lock:
                 self.state.indicators[symbol] = {**(self.state.strategy_state.get(symbol) or {}), "ltp": ltp}
+            return
+        if not bars:
             return
 
         params = dict(self.strategy_params)
@@ -776,7 +790,7 @@ class TradingEngine:
         if getattr(self.strategy_fn, "uses_fundamentals", False) and params.get("use_fundamentals", True):
             params["fundamentals"] = fundamentals.get_fundamentals(symbol)
         prev = self.state.strategy_state.get(symbol)
-        signal, analysis = self.strategy_fn(candles, prev_state=prev, **params)
+        signal, analysis = self.strategy_fn(bars, prev_state=prev, **params)
         with self.state.lock:
             self.state.strategy_state[symbol] = analysis
             self.state.indicators[symbol] = {**(analysis or {}), "ltp": ltp}
@@ -800,7 +814,7 @@ class TradingEngine:
             why = "; ".join(r["text"] for r in a.get("reasons", [])[:2])
             self._close(symbol, ltp, "brain_cover", why or None)
         elif qty == 0 and signal in ("BUY", "SHORT"):
-            entered = self._try_enter(symbol, "LONG" if signal == "BUY" else "SHORT", ltp, candles, a)
+            entered = self._try_enter(symbol, "LONG" if signal == "BUY" else "SHORT", ltp, bars, a)
             if not entered:
                 # trader_brain_signal() already counted this signal against
                 # max_entries_per_day and persisted that to strategy_state
@@ -886,7 +900,7 @@ class TradingEngine:
                 candles_map = {}
             for symbol in watchlist:
                 try:
-                    self._process_symbol(symbol, candles=candles_map.get(symbol))
+                    self._process_symbol(symbol, candles=candles_map.get(symbol), now=now)
                     self._last_errors.pop(symbol, None)
                 except Exception as exc:
                     logger.exception(f"Error processing {symbol}: {exc}")
