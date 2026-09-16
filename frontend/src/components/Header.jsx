@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { API_BASE, API_KEY, apiFetch } from "../api";
-import { clock, money, tone } from "../format";
+import { clock, money, num, tone } from "../format";
 import { sessionInfo } from "../helpers";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
@@ -59,6 +59,10 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
 
   const open = state?.market_status === "open";
   const si = state ? sessionInfo(state) : null;
+  const invested = state
+    ? Object.values(state.positions || {}).reduce((sum, p) => sum + (p.quantity ? Math.abs(p.quantity) * p.avg_price : 0), 0) +
+      Object.values(state.fno_positions || {}).reduce((sum, p) => sum + (p.lots || 0) * (p.lot_size || 0) * (p.entry_premium || 0), 0)
+    : 0;
   const kiteLabel = !kite ? "Checking Kite…" : kite.connected && kite.using_live_data ? "Kite live prices" : kite.connected ? "Kite connected" : kite.app_configured ? "Kite not connected" : "Delayed prices";
   const kiteBtnLabel = kite?.connected ? "Reconnect" : "Connect Kite";
 
@@ -71,6 +75,7 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
           <span>{open ? "Market open" : "Market closed"}{state?.last_update_ts ? `, updated ${clock(state.last_update_ts)}` : ""}</span>
           <span className="countdown">{si ? `· ${si.label}` : ""}</span>
         </button>
+        <div className="stat"><small>Invested</small><strong>₹{num(invested, 0)}</strong></div>
         <div className="stat"><small>Realized today</small><strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong></div>
         <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
         <span className="divider"></span>
