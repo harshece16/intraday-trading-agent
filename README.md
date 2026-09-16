@@ -1821,6 +1821,92 @@ disagree with a bearish call. `backtester.py` never passes `fundamentals=`,
 so historical runs are unaffected — no look-ahead risk, same reasoning
 already applied to news in §40's audit.
 
+### 42. The live checklist now reads only finished candles
+
+Both data feeds return the candle that's still forming as their newest
+row, and the live engine passed it straight to the checklist every 30
+seconds. The checklist's volume and pattern rules were written for finished
+candles, and the backtester only ever sees finished ones, so live trading
+wasn't running what §35-37 tested (issue #18).
+
+**What the journal showed (15-16 Sep, 26,112 checklist reads).** The volume
+check mostly measured how far into the candle the engine happened to look:
+
+| Minute into the 5-minute candle | Median volume ratio | Share passing (≥ 1.0×) |
+|---|---|---|
+| 0 | 0.1× | 5.7% |
+| 1 | 0.2× | 4.2% |
+| 2 | 0.4× | 12.4% |
+| 3 | 0.5× | 19.9% |
+| 4 | 0.7× | 32.0% |
+
+Patterns were affected too. All five paper entries fired 2-4 minutes into a
+candle. Re-fetching the finished candles and running the same
+`detect_patterns()` showed that three of the five patterns were gone once the
+candle closed:
+
+- BEL's Hanging Man became a Doji.
+- ENRIN's Bearish Marubozu became no pattern.
+- TMPV's Hanging Man became no pattern.
+
+All three hit their stop.
+
+**The fix:**
+
+- **Engine.** `data_provider.closed_bars()` drops the newest candle until it
+  has finished. The engine feeds only finished candles to
+  `trader_brain_signal()` and to position sizing. Stops, targets and fills
+  still use the live price from the newest candle, so exits react as fast as
+  before.
+- **Delayed feed.** yfinance runs about 15 minutes behind, so its candles are
+  now tagged `delayed`. Their newest row isn't trusted at all while the
+  session is open.
+- **Clock.** The tick passes its own start time, taken before the fetch, so a
+  candle that ends mid-fetch isn't counted as finished.
+- **Entry re-check.** The order now fills a little after the candle closed,
+  so `_try_enter()` re-checks the plan at the live price with
+  `trader_brain.recheck_plan()`. The price must still be on the right side
+  of the stop, short of the target, and leave a reward-to-risk of at least
+  1.5 after costs. That uses the same formula as the checklist, now shared
+  as `_net_rrr()`. The refactor was checked to produce byte-identical
+  checklist output on 518 real evaluations.
+- **Entry note.** The note now records which candle the decision came from,
+  and the reward-to-risk at the actual entry price.
+- **Scanner.** Its deep read uses finished candles too. So does its
+  same-time-of-day relative volume, which used to compare a half-filled
+  candle with full ones and could turn a normal morning into a −8 "little
+  interest" penalty.
+- **Stock page.** The checklist now says which candle it's based on.
+
+**Replay on real data.** This used the fixed engine's view, with Kite
+candles fetched after the session, for the five real entries:
+
+| Stock | Real result | Fixed engine at the entry moment | Once that candle finished |
+|---|---|---|---|
+| BEL | −1.09R | No entry (volume fails on 12:15) | No entry (no pattern on 12:20) |
+| ENRIN | −1.21R | No entry | No entry (no pattern on 09:35) |
+| BPCL | −1.27R | No entry | No entry (Bearish Engulfing, but reward-to-risk fails on 10:00) |
+| TMPV | −2.21R | No entry | No entry (no pattern on 11:20) |
+| TCS | +3.71R | No entry | **Enters** at about 11:30 with the same plan (stop 2223.20, target 2208.57, R:R 1.63). The re-check passes at 2220.30, and the target is reached on the 13:00 candle. |
+
+That's four losing trades skipped and the one winner kept, but it's five
+trades, which says nothing about edge. The replay also can't include news,
+the scanner-side gate or the confidence gate. What it does show is that the
+live engine now trades on the same candles the backtester tests.
+
+**Behavior changes worth knowing:**
+
+- **The checklist changes at most once per candle**, not every 30 seconds.
+- **Entries go in a few seconds after a candle closes.** The 09:30-14:30
+  entry window now applies to candle start times, as it already did in
+  backtests. The first entry can happen at about 09:35, when the 09:30
+  candle finishes, and the last at about 14:30.
+- **Expect fewer volume passes early in each candle.** That's the point:
+  those passes were the artifact.
+- **Backtests are unchanged.** The backtester still fills at the signal
+  candle's close (issue #13), while live fills a few seconds later at the
+  live price.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -2360,7 +2446,8 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
 - News, gaps, relative volume and results-day filters can't be backtested
   (no historical data for them). F&O hasn't been backtested at all yet —
   only the pricing/Greeks/sizing math has been unit-tested with synthetic data.
-- Live analysis uses the still-forming candle, unlike backtests.
+- Live entries fill at the live price a few seconds after the signal candle
+  closes; the backtester fills at that candle's close (§42, issue #13).
 - Live positions and the current watchlist still reset on restart (only
   history is persisted, in `sahab_journal.db`). §19 added detection — a
   clear alert if Kite shows a real open position this app isn't tracking —

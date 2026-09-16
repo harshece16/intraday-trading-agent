@@ -133,6 +133,30 @@ CHECKLIST_SOURCES = {
 }
 
 
+def _net_rrr(price, stop, target, cost_pct):
+    """Reward-to-risk after round-trip costs, as the checklist measures it."""
+    cost = price * cost_pct / 100
+    return (abs(target - price) - cost) / (abs(price - stop) + cost)
+
+
+def recheck_plan(plan, side, price, params=None):
+    """Re-apply a finished-bar plan's stop, target and min R:R at the live fill price; `side` is "long"/"short"."""
+    p = {**DEFAULTS, **(params or {})}
+    s = 1 if side == "long" else -1
+    stop, target = plan["stop"], plan["target"]
+    if (price - stop) * s <= 0:
+        return {"ok": False, "rrr": None,
+                "reason": f"price {price:.2f} has already passed the plan's stop {stop:.2f}"}
+    if (target - price) * s <= 0:
+        return {"ok": False, "rrr": None,
+                "reason": f"price {price:.2f} has already reached the plan's target {target:.2f}"}
+    rrr = _net_rrr(price, stop, target, p["cost_pct"])
+    if rrr < p["min_rrr"]:
+        return {"ok": False, "rrr": rrr,
+                "reason": f"reward-to-risk at the live price {price:.2f} is {rrr:.2f}, below {p['min_rrr']:g}"}
+    return {"ok": True, "rrr": rrr, "reason": None}
+
+
 def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
                always_in, news_score, fundamentals_score, p):
     """Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18) for one side,
@@ -204,7 +228,6 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
          f"{fund_word}" + ("" if fund_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
 
     if risk > 0:
-        cost = price * p["cost_pct"] / 100
         level_word2 = "resistance" if s > 0 else "support"
         beyond = sorted(
             (lv["price"] for lv in levels
@@ -224,7 +247,7 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         qualifying = next(
             (lv_price for lv_price in beyond
              if abs(lv_price - price) <= p["max_target_atr"] * atr_v
-             and (abs(lv_price - price) - cost) / (risk + cost) >= p["min_rrr"]),
+             and _net_rrr(price, stop, lv_price, p["cost_pct"]) >= p["min_rrr"]),
             None,
         )
         if qualifying is not None:
@@ -236,7 +259,7 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         else:
             target = price + s * p["rrr_without_level"] * risk
             source = f"{p['rrr_without_level']:g}R, no level beyond"
-        rrr = (abs(target - price) - cost) / (risk + cost)
+        rrr = _net_rrr(price, stop, target, p["cost_pct"])
         item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
              f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")
     else:

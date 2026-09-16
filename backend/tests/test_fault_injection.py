@@ -105,14 +105,17 @@ def test_tick_survives_batch_fetch_exception_and_falls_back_per_symbol(monkeypat
         raise RuntimeError("network down")
     monkeypatch.setattr(data_provider, "get_candles_batch", boom_batch)
 
-    seen = []
-    def fake_process_symbol(self, symbol, candles=None):
+    seen, clocks = [], []
+    def fake_process_symbol(self, symbol, candles=None, now=None):
         seen.append((symbol, candles))
+        clocks.append(now)
     monkeypatch.setattr(trading_engine.TradingEngine, "_process_symbol", fake_process_symbol)
 
     engine._tick_impl()  # must not raise
 
     assert seen == [("AAA", None), ("BBB", None)]
+    # Every symbol gets the tick's start time, taken before any fetch.
+    assert all(c is not None for c in clocks) and len(set(clocks)) == 1
 
 
 def test_tick_isolates_one_bad_symbol_from_the_rest(monkeypatch):
@@ -124,7 +127,7 @@ def test_tick_isolates_one_bad_symbol_from_the_rest(monkeypatch):
     monkeypatch.setattr(data_provider, "get_candles_batch", lambda *a, **k: {})
 
     processed = []
-    def fake_process_symbol(self, symbol, candles=None):
+    def fake_process_symbol(self, symbol, candles=None, now=None):
         if symbol == "BAD":
             raise RuntimeError("boom")
         processed.append(symbol)

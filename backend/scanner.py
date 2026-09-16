@@ -35,6 +35,7 @@ import pandas as pd
 
 import bulkowski
 import config
+import data_provider
 import database
 import fundamentals
 import indicators as ind
@@ -258,9 +259,11 @@ def intraday_metrics(candles, prof):
         if d != session:
             prior.setdefault(d, []).append(c)
     n = len(today)
-    cum_today = sum(c["volume"] for c in today)
-    # Relative volume at the same time of day: first n bars of each prior session.
-    prior_cums = [sum(c["volume"] for c in bars[:n]) for bars in prior.values() if len(bars) >= n]
+    # Relative volume at the same time of day, on finished bars only: this delayed feed's newest row may still be filling.
+    today_done = [c for c in data_provider.closed_bars(candles, "5m", delayed=True) if c["time"][:10] == session]
+    cum_today = sum(c["volume"] for c in today_done)
+    prior_cums = [sum(c["volume"] for c in bars[:len(today_done)])
+                  for bars in prior.values() if len(bars) >= len(today_done)]
     avg_prior = sum(prior_cums) / len(prior_cums) if prior_cums else 0
     ltp = today[-1]["close"]
     opening = today[:3]
@@ -625,7 +628,8 @@ class Scanner:
                     fund = fundamentals.get_fundamentals(r["symbol"])
                 except Exception as exc:
                     logger.warning(f"Fundamentals failed for {r['symbol']}: {exc}")
-            _, brain = trader_brain_signal(r["_candles"], prev_state=None, news=news, fundamentals=fund, **brain_params)
+            finished = data_provider.closed_bars(r["_candles"], "5m", delayed=True)
+            _, brain = trader_brain_signal(finished, prev_state=None, news=news, fundamentals=fund, **brain_params)
             if brain and "bull_score" in brain:
                 r["brain"] = brain
                 edge = brain["bull_score"] - brain["bear_score"]
