@@ -101,6 +101,11 @@ STRATEGY_PARAMS = {
         "use_news": True,
         "news_weight": 2.0,
         "news_veto": -0.5,          # sentiment at/below this blocks new longs
+        "use_fundamentals": True,
+        # Real ROE/margin/PEG/debt-equity (fundamentals.py) as a tilt, never a
+        # veto — smaller than news_weight since this is a brand-new, not yet
+        # IC/DSR-validated signal (see README's "validate before trusting" process).
+        "fundamentals_weight": 1.5,
     },
     # tuned shorter for 5-min intraday bars. trend_period filters out
     # counter-trend entries; volume_filter requires above-average volume.
@@ -141,6 +146,7 @@ SCANNER = {
     "min_atr_pct": 1.2,
     "max_gap_pct": 3.0,
     "use_news": True,
+    "use_fundamentals": True,
 }
 
 MARKET_FILTER = {

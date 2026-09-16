@@ -16,7 +16,11 @@ Nison candlesticks, Wyckoff volume principles) runs before taking a trade:
      level, because a pattern in the middle of nowhere means little.
   6. Confirmation: volume participation on the trigger bar.
   7. Catalyst: news sentiment as a tilt, and a veto on strongly negative news.
-  8. Discipline: no entries in the opening 15 min or late in the session,
+  8. Fundamentals: real ROE/margin/PEG/debt-equity (fundamentals.py) as a
+     tilt only — a weak balance sheet doesn't veto an otherwise-good
+     intraday technical trade, it just trims size, same treatment as
+     indicators/catalyst.
+  9. Discipline: no entries in the opening 15 min or late in the session,
      require several *independent* categories to agree, never chase an
      overextended move.
 
@@ -62,6 +66,8 @@ DEFAULTS = {
     "use_news": True,
     "news_weight": 2.0,
     "news_veto": -0.5,
+    "use_fundamentals": True,
+    "fundamentals_weight": 1.5,
 }
 
 
@@ -120,13 +126,15 @@ CHECKLIST_SOURCES = {
               "Murphy, Technical Analysis of the Financial Markets, ch 7",
     "dow": "Varsity Technical Analysis ch 17-18 (Dow Theory), and Brooks, Trading Price Action Trends (always-in direction)",
     "indicators": "Varsity Technical Analysis, ch 13-16 (moving averages, RSI, MACD)",
-    "catalyst": "NSE filings + news sentiment (news_sentiment.py) — the fundamental side of the checklist",
+    "catalyst": "NSE filings + news sentiment (news_sentiment.py) — the news side of the checklist",
     "rrr": "Varsity Technical Analysis ch 18.5 (Reward-to-Risk), targets from Bulkowski's measured pattern moves when available",
+    "fundamentals": "Real ROE/margin/PEG/debt-equity via Yahoo Finance (fundamentals.py) — Peter Lynch / Graham-style "
+                    "screening thresholds, also covered in Zerodha Varsity's Fundamental Analysis module",
 }
 
 
 def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
-               always_in, news_score, p):
+               always_in, news_score, fundamentals_score, p):
     """Zerodha Varsity's Grand Checklist (Technical Analysis module, ch 11-18) for one side,
     plus two connections Varsity doesn't make explicit: Al Brooks' "always-in" direction
     alongside Dow Theory, and today's news catalyst alongside the chart. Required: pattern,
@@ -190,6 +198,11 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
     item("catalyst", "News catalyst doesn't contradict the trade", cat_ok,
          f"{news_word}" + ("" if cat_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
 
+    fund_ok = fundamentals_score is None or fundamentals_score * s >= -1.0
+    fund_word = "no fundamentals data" if fundamentals_score is None else f"fundamentals score {fundamentals_score:+.1f}"
+    item("fundamentals", "Company fundamentals don't contradict the trade", fund_ok,
+         f"{fund_word}" + ("" if fund_ok else f"; trade at {p['indicator_miss_size']:.0%} size"), required=False)
+
     if risk > 0:
         cost = price * p["cost_pct"] / 100
         level_word2 = "resistance" if s > 0 else "support"
@@ -235,11 +248,11 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         "passed": all(i["ok"] for i in items if i["required"]),
         "pattern": pattern["name"] if pattern else None,
         "entry": _r(price), "stop": _r(stop), "target": _r(target), "rrr": _r(rrr),
-        "size_factor": p["indicator_miss_size"] if not (ind_ok and cat_ok) else 1.0,
+        "size_factor": p["indicator_miss_size"] if not (ind_ok and cat_ok and fund_ok) else 1.0,
     }
 
 
-def trader_brain_signal(candles, prev_state=None, news=None, **params):
+def trader_brain_signal(candles, prev_state=None, news=None, fundamentals=None, **params):
     p = {**DEFAULTS, **params}
     prev_state = prev_state or {}
     window = candles[-p["lookback"]:]
@@ -419,7 +432,20 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         long_veto = news_score <= p["news_veto"]
         short_veto = news_score >= -p["news_veto"]
 
-    # 8. Decision with discipline rules — longs and shorts are exact mirrors
+    # 8. Fundamentals — a tilt only, never a veto (a weak balance sheet
+    # doesn't invalidate a good intraday technical trade, unlike news).
+    fundamentals_score = None
+    if fundamentals and p["use_fundamentals"]:
+        fundamentals_score = fundamentals.get("score")
+        if fundamentals_score is not None:
+            if fundamentals_score >= 1.0:
+                bull.add("fundamentals", fundamentals_score * p["fundamentals_weight"] / 4,
+                         f"Strong fundamentals (score {fundamentals_score:+.1f})")
+            elif fundamentals_score <= -1.0:
+                bear.add("fundamentals", -fundamentals_score * p["fundamentals_weight"] / 4,
+                         f"Weak fundamentals (score {fundamentals_score:+.1f})")
+
+    # 9. Decision with discipline rules — longs and shorts are exact mirrors
     hhmm = last["time"][11:16]
     blocked_window = next(((a, b) for a, b in p["no_entry_windows"] if a <= hhmm < b), None)
     in_entry_window = p["no_entry_before"] <= hhmm < p["last_entry_time"] and blocked_window is None
@@ -440,9 +466,9 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
 
     always_in = brooks.always_in_direction(window)
     cl_long = _checklist("long", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
-                        always_in, news_score, p)
+                        always_in, news_score, fundamentals_score, p)
     cl_short = _checklist("short", window, patterns, levels, atr_v, vol10, htf_trend, structure, macd_v, rsi_v,
-                          always_in, news_score, p) \
+                          always_in, news_score, fundamentals_score, p) \
         if p["allow_shorts"] else None
     if p["entry_mode"] == "checklist":
         # Varsity exits are the pattern stop, the S&R target and the square-off, not score swings.
@@ -543,6 +569,8 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
         "resistance": _r(resistance["price"]) if resistance else None,
         "news_score": news_score,
         "news_headlines": (news or {}).get("headlines", [])[:3],
+        "fundamentals_score": fundamentals_score,
+        "fundamentals_label": (fundamentals or {}).get("label"),
         "bar_time": last["time"],
         "entry_day": day,
         "entries_today": entries_today,
@@ -554,3 +582,4 @@ def trader_brain_signal(candles, prev_state=None, news=None, **params):
 
 
 trader_brain_signal.uses_news = True
+trader_brain_signal.uses_fundamentals = True

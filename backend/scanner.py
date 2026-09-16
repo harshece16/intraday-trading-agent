@@ -36,6 +36,7 @@ import pandas as pd
 import bulkowski
 import config
 import database
+import fundamentals
 import indicators as ind
 import news_sentiment
 import nse_feed
@@ -618,7 +619,13 @@ class Scanner:
                     news = news_sentiment.get_sentiment(r["symbol"], r["name"])
                 except Exception as exc:
                     logger.warning(f"News failed for {r['symbol']}: {exc}")
-            _, brain = trader_brain_signal(r["_candles"], prev_state=None, news=news, **brain_params)
+            fund = None
+            if cfg.get("use_fundamentals", True):
+                try:
+                    fund = fundamentals.get_fundamentals(r["symbol"])
+                except Exception as exc:
+                    logger.warning(f"Fundamentals failed for {r['symbol']}: {exc}")
+            _, brain = trader_brain_signal(r["_candles"], prev_state=None, news=news, fundamentals=fund, **brain_params)
             if brain and "bull_score" in brain:
                 r["brain"] = brain
                 edge = brain["bull_score"] - brain["bear_score"]
