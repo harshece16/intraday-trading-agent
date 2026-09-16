@@ -1667,6 +1667,101 @@ bug. `dimag_ki_batti()` still pools pairs per pattern; it reports "not
 enough data" today for other reasons but shares the old weakness. The
 Journal page now shows mean daily IC, session count and t-stat.
 
+### 39. Is "max trades and max profit" the right strategy? No — and here's why
+
+Asked directly. The honest answer, grounded in what §35-38 already measured,
+not a new opinion:
+
+**Max trades and max profit pull against each other, not together.** §36
+measured this directly: at full frequency (179 trades, 55 days) the
+strategy lost 8.4% of capital. Round-trip costs on 5-minute bars run
+~0.56R per trade — a stopped-out trade loses ~1.9R, not 1R. SEBI's own
+study (already on the Journal page): 71% of individual intraday cash
+traders net-lost in FY23, rising to 80% above 500 trades/year, and
+loss-makers spent 57% of their losses on costs alone. More trades is the
+thing that has historically destroyed retail intraday accounts, not the
+thing that grows an account.
+
+**"Rank + forecast the value + trade on it" is what this system already
+is,** just not framed that way. `final_score` is a ranking-based forecast
+of which stocks will move; the checklist is a timing forecast of when.
+§37 measured the ranking's actual skill across 434 sessions: mean daily IC
+**0.000** — no better than chance. A point forecast of a stock's future
+*value* is a strictly harder problem than the rank forecast that already
+failed. Professional systematic funds run desks and PhDs to reach a daily
+IC of 0.02-0.05 (Grinold's own benchmark, cited throughout this journal);
+"5 or 6 recommendations a day, forecast their value" from public NSE data
+on one retail account is not a smaller version of that problem, it's the
+same problem without the resources that make 0.02 achievable.
+
+**Realistic arithmetic, so "max profit" has a number attached to it.** A
+genuinely good systematic edge — 0.1R net per trade, better than anything
+measured in this journal so far — at 1% risk per trade and ~5 trades/week
+is roughly 0.5% of capital per week before a bad week. On the ₹1,00,000
+paper capital, that's approximately ₹500/week. Intraday on this account
+size is structurally a small-numbers game; the achievable goal is positive
+expectancy after costs, not a return target.
+
+**What actually is real here, and worth keeping:** the evaluation
+discipline — DSR, per-session IC with a t-stat bar, held-out splits,
+benchmark-relative comparison (§35-38) — is what caught every version of
+"looks good in a backtest" tried so far before it went live. That
+machinery is the asset. A new ranking/forecast idea is legitimate to
+pursue, but only if it's held to the same bar the existing ones were:
+positive daily IC with t ≥ 2 across many sessions *first*, as a pure
+measurement with no trading rule attached, before any backtest with
+entries and exits is even built. See tracking issue for the honest next
+steps if this direction is pursued (short-horizon momentum, post-results
+drift, FII-flow-based tilts — each testable in about a day with
+`swing_backtester.py`'s `daily_ranking_ic()`).
+
+### 40. Look-ahead bias audit — checked against the real code, not assumed
+
+A specific audit checklist (five categories: time-alignment/shift errors,
+execution-price timing, repainting/centered indicators, fundamental-data
+publication lag, global normalization leaks) was checked directly against
+`backtester.py` and `swing_backtester.py` rather than taken on faith.
+
+**Clean — verified by direct search, no matches found:**
+- **Repainting indicators.** No `center=True` rolling windows, no
+  `.shift(-N)` (backward shifts), no forward-looking interpolation or
+  peak/trough detectors anywhere in `indicators.py`, `candlestick_patterns.py`
+  or `market_structure.py`.
+- **Global normalization leak.** No `MinMaxScaler`, no dataset-wide
+  `.min()`/`.max()`/z-score applied before a backtest loop runs. Every
+  indicator (`atr`, `ema`, `rsi`, `adx`, ...) computes over a trailing
+  window ending at the current bar, recomputed fresh each bar.
+- **Time-alignment.** `backtester.py`'s signal is always computed from
+  `window = candles[:i+1]` — up to and including the current bar, never
+  beyond. `swing_backtester.py`'s entry-day ATR is computed from
+  `daily[sym][max(0, i-30):i]` — bars *before* the entry day only
+  (regression-tested: `test_risk_unit_never_uses_the_entry_days_own_bar`,
+  §37). `scanner.premarket_picks()` scores every day using only data from
+  before that session's open.
+
+**Not applicable — deliberately excluded, not mis-timed:** fundamental
+data (results dates, corporate actions) is read live for the *scanner*
+but is explicitly **not** replayed in backtests at all — `backtester.py`'s
+own universe-mode output says so: "gap, relative volume, news and
+results-day filters need live/intraday context and aren't replayed."
+There's no publication-lag bug because that data never enters a backtest
+to be mistimed.
+
+**One real, verified nuance — not a bug, but worth being explicit about.**
+`backtester.py` fills both entries and signal-based exits at
+`bar["close"]` — the same bar the signal was just computed from, not the
+next bar's open. This isn't the classical "used tomorrow's close today"
+error: this system's live engine polls and acts within the same tick
+cycle a 5-minute bar closes in, so same-bar-close is a reasonable model
+of live latency, cushioned by `costs.apply_slippage()` rather than by
+shifting to next-bar-open (a daily-bar convention that doesn't match how
+this specific live engine runs). `swing_backtester.py` doesn't have this
+question at all — entries there are already at the next session's open,
+after only pre-open data. Worth a regression test making this convention
+explicit rather than implicit; tracked as an issue rather than changed
+silently here, since shifting it would change every R-multiple in
+§35-37's results and deserves its own verification pass.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
