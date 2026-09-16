@@ -249,7 +249,7 @@ function MiniChartCard({ s, r, held }) {
           <SidePill side={r.side} />
         </span>
       </div>
-      <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} className="mini-chart" />
+      <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} className="mini-chart" />
       <div className="mini-chart-plan">{planLine}</div>
     </div>
   );
