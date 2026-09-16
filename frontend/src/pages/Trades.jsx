@@ -3,8 +3,23 @@ import { clock, money, num, tone } from "../format";
 import { REASON_TEXT, tradeAction } from "../helpers";
 import SymLink from "../components/SymLink";
 
+// Trades arrive newest-first (state.py inserts each new trade at index 0), but a
+// running net only makes sense accumulated oldest-to-newest, so walk the array in
+// reverse. t.realized is already net of that leg's charges (verified against the
+// day's tax.net_pnl total), so a plain running sum matches the aggregate exactly.
+function runningNetById(trades) {
+  let sum = 0;
+  const byId = {};
+  for (let i = trades.length - 1; i >= 0; i--) {
+    sum += trades[i].realized || 0;
+    byId[trades[i].id] = sum;
+  }
+  return byId;
+}
+
 export default function Trades({ state: s }) {
   const tax = s.tax || { turnover: 0, net_pnl: 0, charges: 0, closed_trades: 0 };
+  const runningNet = runningNetById(s.trades);
 
   return (
     <>
@@ -24,7 +39,7 @@ export default function Trades({ state: s }) {
       </div>
       <div className="table-wrap" style={{ marginTop: 16 }}>
         <table className="datatable">
-          <thead><tr><th>Time</th><th>Stock</th><th>Action</th><th>Shares</th><th>Price</th><th>Why</th><th>Mode</th></tr></thead>
+          <thead><tr><th>Time</th><th>Stock</th><th>Action</th><th>Shares</th><th>Price</th><th>Invested</th><th>P&amp;L</th><th>Net</th><th>Why</th><th>Mode</th></tr></thead>
           <tbody>
             {s.trades.length ? s.trades.map((t) => {
               const action = tradeAction(t);
@@ -35,11 +50,14 @@ export default function Trades({ state: s }) {
                   <td>{clock(t.ts)}</td><td><SymLink sym={t.symbol} /></td>
                   <td className={opening ? (t.side === "BUY" ? "up" : "down") : ""}>{action}</td>
                   <td>{t.quantity}</td><td>{num(t.price)}</td>
+                  <td>₹{num(t.quantity * t.price, 0)}</td>
+                  <td className={opening ? "" : tone(t.realized)}>{opening ? "—" : money(t.realized)}</td>
+                  <td className={tone(runningNet[t.id])}>{money(runningNet[t.id])}</td>
                   <td>{[reason, t.note].filter(Boolean).join(": ") || "—"}</td>
                   <td>{t.mode === "live" ? <span className="pill short">Live</span> : <span className="pill neutral">Paper</span>}</td>
                 </tr>
               );
-            }) : <tr><td colSpan={7} className="muted">No orders yet today.</td></tr>}
+            }) : <tr><td colSpan={10} className="muted">No orders yet today.</td></tr>}
           </tbody>
         </table>
       </div>
