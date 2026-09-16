@@ -26,15 +26,21 @@ function emaSeriesJS(values, period) {
 }
 
 /**
- * The stock chart: candles, EMA 20/50, a volume panel, the checklist's
- * entry/stop/target as labeled price lines, and markers for the latest
- * candlestick pattern. Deliberately does NOT draw a projected future price
- * path — this app has no calibrated forecasting model (the Dimaag
- * Scorecard's Information Coefficient is currently negative), so what's
- * shown is the real, computed trade plan a checklist pass would use, never
- * a price prediction.
+ * The stock chart: candles, EMA 20/50, a volume panel, and labeled price
+ * lines — either the checklist's hypothetical entry/stop/target for a
+ * setup not yet taken, OR, when `position` is a real open position in
+ * this stock, the actual bought price, current price and the real
+ * stop/target that will actually close it — never both at once, since
+ * once a position is open the checklist keeps re-evaluating a fresh
+ * hypothetical entry every tick that has nothing to do with the trade
+ * that's already live. Also markers for the latest candlestick pattern.
+ * Deliberately does NOT draw a projected future price path — this app has
+ * no calibrated forecasting model (the Dimaag Scorecard's Information
+ * Coefficient needs 20+ separate sessions before it means anything, see
+ * README §38), so what's shown is always a real, computed number, never a
+ * price prediction.
  */
-export default function Chart({ symbol, plan, patterns, barTime, className = "stk-chart" }) {
+export default function Chart({ symbol, plan, position, patterns, barTime, className = "stk-chart" }) {
   const elRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -59,7 +65,7 @@ export default function Chart({ symbol, plan, patterns, barTime, className = "st
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
     const up = cssVar("--long"), down = cssVar("--short");
-    const series = chart.addSeries(CandlestickSeries, { upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down });
+    const series = chart.addSeries(CandlestickSeries, { upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down, lastValueVisible: false });
     series.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
     const ema20 = chart.addSeries(LineSeries, { color: cssVar("--focus"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const ema50 = chart.addSeries(LineSeries, { color: cssVar("--book"), lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
@@ -116,20 +122,33 @@ export default function Chart({ symbol, plan, patterns, barTime, className = "st
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
-  // Entry/stop/target/support/resistance/VWAP price lines.
+  // Real position lines (bought/now/stop/target) when one's open here,
+  // otherwise the checklist's hypothetical entry/stop/target/support/
+  // resistance/VWAP for a setup not yet taken.
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
     priceLinesRef.current.forEach((l) => series.removePriceLine(l));
     priceLinesRef.current = [];
-    if (!plan) return;
     const add = (price, color, title, dashed = true) => {
-      if (price) {
+      if (price != null) {
         priceLinesRef.current.push(
           series.createPriceLine({ price, color, lineWidth: dashed ? 1 : 2, lineStyle: dashed ? LineStyle.Dashed : LineStyle.Solid, axisLabelVisible: true, title })
         );
       }
     };
+
+    const held = position && position.quantity;
+    if (held) {
+      const side = position.quantity > 0 ? "long" : "short";
+      add(position.avg_price, cssVar("--wait"), `Bought (${side})`, false);
+      add(position.ltp, cssVar("--book"), "Now", false);
+      add(position.stop_price, cssVar("--short"), "Stop", false);
+      add(position.target_price, cssVar("--long"), "Target", false);
+      return;
+    }
+
+    if (!plan) return;
     add(plan.support, cssVar("--long"), "Support");
     add(plan.resistance, cssVar("--short"), "Resistance");
     add(plan.vwap, cssVar("--focus"), "VWAP");
@@ -138,7 +157,7 @@ export default function Chart({ symbol, plan, patterns, barTime, className = "st
       add(plan.cl.stop, cssVar("--short"), `Stop (${plan.cl.rrr != null ? "RRR " + num(plan.cl.rrr, 1) : "risk"})`, false);
       add(plan.cl.target, cssVar("--long"), "Target", false);
     }
-  }, [plan]);
+  }, [plan, position]);
 
   // Latest candlestick pattern marker(s).
   useEffect(() => {
