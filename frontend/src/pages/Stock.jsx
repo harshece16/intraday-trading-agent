@@ -275,7 +275,7 @@ export default function Stock({ state: s }) {
       </div>
       <div id="stk-plan"><PlanBox s={s} r={r} b={b} pos={pos} /></div>
       <RuleBook r={r} b={b} />
-      <Chart symbol={symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} />
+      <Chart symbol={symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} />
       <div className="chart-legend">
         <span><i style={{ background: "var(--focus)" }}></i><Tip k="ema20">EMA 20</Tip></span>
         <span><i style={{ background: "var(--book)" }}></i><Tip k="ema50">EMA 50</Tip></span>
