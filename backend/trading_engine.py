@@ -25,6 +25,7 @@ import data_provider
 import database
 import fno_instruments
 import fno_risk
+import fundamentals
 import holidays
 import news_sentiment
 import options_pricing
@@ -772,6 +773,8 @@ class TradingEngine:
         params = dict(self.strategy_params)
         if getattr(self.strategy_fn, "uses_news", False) and params.get("use_news", True):
             params["news"] = news_sentiment.get_sentiment(symbol)
+        if getattr(self.strategy_fn, "uses_fundamentals", False) and params.get("use_fundamentals", True):
+            params["fundamentals"] = fundamentals.get_fundamentals(symbol)
         prev = self.state.strategy_state.get(symbol)
         signal, analysis = self.strategy_fn(candles, prev_state=prev, **params)
         with self.state.lock:

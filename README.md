@@ -1762,6 +1762,65 @@ explicit rather than implicit; tracked as an issue rather than changed
 silently here, since shifting it would change every R-multiple in
 §35-37's results and deserves its own verification pass.
 
+### 41. Real fundamentals scoring — a genuine gap found by comparing against an open-source multi-agent framework
+
+Prompted by a look at Tauric Research's `TradingAgents` (a real,
+`#1`-trending GitHub repo — its README was fetched directly, not guessed
+from a screenshot): an LLM-multi-agent framework with a dedicated
+Fundamentals Analyst, a Bull/Bear researcher debate, a Risk team, and a
+Portfolio Manager, explicitly built for *research*, not live trading — its
+own README says so ("designed for research purposes... not intended as
+financial, investment, or trading advice") and it only ever sends orders to
+a simulated exchange.
+
+Most of its pipeline already has a deterministic, backtested equivalent
+here — the Varsity checklist *is* the researcher debate, the confidence
+gate *is* the Portfolio Manager's approve/reject, the Dimaag Scorecard *is*
+the decision-log/reflection memory, arguably stronger because every one of
+those is auditable and DSR/IC-tested (§35-38) rather than an LLM's
+non-deterministic read. Deliberately **not** copied: the LLM debate itself —
+adding non-deterministic, per-trade-unverifiable reasoning to the live
+execution path would undo exactly the discipline §35-38 built.
+
+One gap was real, though: `trader_brain.py`'s "catalyst" checklist item was
+always labeled "the fundamental side of the checklist"
+(`CHECKLIST_SOURCES["catalyst"]`) but only ever carried news sentiment —
+there was no actual company-quality data (ROE, margins, valuation,
+leverage) anywhere in the app.
+
+**`fundamentals.py`** (new) closes that gap with real data: `returnOnEquity`,
+`operatingMargins`, `debtToEquity`, `trailingPegRatio` fetched live via
+`yfinance.Ticker("<SYMBOL>.NS")` — the same dependency and `.NS` convention
+`news_sentiment.py` already uses. Field scales were verified against live
+TCS.NS data before writing any scoring logic (`returnOnEquity`/
+`operatingMargins` are plain 0-1 ratios; `debtToEquity` is Yahoo's own
+percent-scaled convention, confirmed sane — 10.211 → 10.2% — against TCS's
+real near-zero-debt balance sheet). Scored against the conventional Peter
+Lynch / Graham-style screening thresholds (also covered qualitatively in
+Zerodha Varsity's own Fundamental Analysis module); a stock missing a given
+field on Yahoo just skips that one criterion rather than guessing, and
+all-missing returns `score=None` ("not enough data"), the same convention
+used everywhere else in this app. Cached 24h — these ratios move on
+quarterly results, not intraday.
+
+Wired into `trader_brain.py` as a new, ninth checklist item ("Company
+fundamentals don't contradict the trade") — a **tilt only, never a veto**:
+a weak balance sheet trims size the same way a MACD/RSI miss or contrary
+news does, but doesn't block an otherwise-good intraday technical trade the
+way a strongly-negative news veto does. Weighted deliberately smaller than
+`news_weight` (`fundamentals_weight: 1.5` vs `news_weight: 2.0`) because,
+like every new signal, it hasn't itself been IC/DSR-validated yet — tracked
+under the same rule issue #12 already requires for any new ranking signal.
+Reaches both the scanner's ranking (`eligible[:deep_analysis]`, same
+restriction news already has, to avoid hammering Yahoo across the full
+NIFTY 100 every scan) and the live per-tick engine
+(`trader_brain_signal.uses_fundamentals`, mirroring `uses_news`) —
+verified live: WIPRO's real score came back `+4.0` ("Strong"), correctly
+sizing down an otherwise-qualifying short since strong fundamentals
+disagree with a bearish call. `backtester.py` never passes `fundamentals=`,
+so historical runs are unaffected — no look-ahead risk, same reasoning
+already applied to news in §40's audit.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -1924,6 +1983,7 @@ webapp/
 │   ├── methods.py               # ★ assembles the Technical Analysis page from real code constants
 │   ├── holidays.py              # NSE trading holiday calendar
 │   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
+│   ├── fundamentals.py          # ★ real ROE/margin/PEG/debt-equity via Yahoo Finance — §41
 │   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
 │   ├── chaywanaprash.py         # ★ platform research analyst — real journal stats + Claude Sonnet, read-only — §29, §30
 │   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
