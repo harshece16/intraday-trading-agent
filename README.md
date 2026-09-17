@@ -1907,6 +1907,67 @@ live engine now trades on the same candles the backtester tests.
   candle's close (issue #13), while live fills a few seconds later at the
   live price.
 
+### 43. The engine no longer stalls, or mixes up stocks, when Kite is down
+
+On 17 Sep, Kite's session expired overnight and the engine stalled twice
+(issue #23).
+
+- **First stall:** no cycle finished from 04:33 to 09:53, so the first 38
+  minutes of the session went unwatched.
+- **Second stall:** from 11:18 to 13:37, cycles finished only every 15–55
+  minutes, while an open position's stop was waiting to be checked.
+
+**Two real causes were found:**
+
+- **yfinance's `download()` isn't safe to run from two threads at once.**
+  - *How it works:* it keeps its results in a module-global dict, resets
+    that dict at the start of every call, and then waits, with no time
+    limit, until the dict holds as many tickers as the call asked for.
+  - *Why that broke here:* with Kite down, the engine's candle fallback
+    ran every cycle, overlapping the scanner's much larger downloads. A
+    call could then wait on a dict another call keeps emptying, or return
+    another call's tickers.
+  - *Test result:* an engine-sized download (25 tickers) overlapping a
+    scan-sized one (60) came back with **none of its own tickers and 25
+    of the scan's**. The scan-sized one got 8 foreign tickers. That means
+    the checklist could have been reading the wrong stock's candles.
+- **The engine kept retrying a dead Kite session.** Every cycle sent all 25
+  watched stocks to Kite, paced for its rate limit, and got the same
+  "Incorrect `api_key` or `access_token`" for each.
+
+**The fix:**
+
+- **One download at a time.** Every yfinance download now goes through
+  `data_provider.yf_download()`, which allows only one download in the
+  whole process. That covers the engine's fallback, the per-stock
+  fallback and `get_ltp()`, and the scanner's `download_batch()`. The
+  lock times out after 120 s, so one stuck download can't block
+  everything.
+- **No more retries of a rejected token.** Once Kite rejects the token, on
+  a candle fetch, a price fetch, or the engine's capital check,
+  `kite_data_active()` returns false until the token changes, and data
+  goes straight to yfinance. Reconnecting Kite brings it back at once.
+  `/api/kite/status` now reports `using_live_data: false` in that state,
+  so the header drops "Kite live prices". It still says "Kite connected"
+  rather than "expired"; that part is issue #24.
+- **A watchdog.** A background thread checks every 15 s. If a cycle has
+  run for more than 2 minutes, it logs every thread's Python stack to the
+  backend log and raises a dashboard alert, once per stuck cycle.
+
+**Verified with the real expired token and live yfinance:**
+
+- The same overlapping downloads through the new path each got exactly
+  their own tickers. The engine-sized one simply waited for the other to
+  finish (8.4 s).
+- The engine's candle fetch for 25 stocks took 12.8 s on the cycle where
+  Kite rejected the token, and 2.9 s on the next, with candles for all 25
+  both times.
+
+**Not proven:** which call held the overnight cycle, when the engine
+doesn't download candles at all. The watchdog exists so the next stall
+names its own cause. It detects and reports a stuck cycle; it doesn't
+restart one.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -2451,6 +2512,8 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
   only the pricing/Greeks/sizing math has been unit-tested with synthetic data.
 - Live entries fill at the live price a few seconds after the signal candle
   closes; the backtester fills at that candle's close (§42, issue #13).
+- A stuck engine cycle is detected and reported (thread stacks in the log,
+  an alert on the dashboard), but not restarted automatically (§43).
 - Live positions and the current watchlist still reset on restart (only
   history is persisted, in `sahab_journal.db`). §19 added detection — a
   clear alert if Kite shows a real open position this app isn't tracking —

@@ -12,15 +12,25 @@ Kite uses the bare tradingsymbol with an "NSE:" exchange prefix instead.
 
 import concurrent.futures
 import logging
+import threading
 import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+from kiteconnect.exceptions import TokenException
 
 import config
 
 logger = logging.getLogger("trading_bot")
+
+# yfinance.download() keeps results in module-global state that every call resets and then waits on,
+# so overlapping calls from different threads get each other's tickers or wait for entries that never come.
+_YF_DOWNLOAD_LOCK = threading.Lock()
+_YF_LOCK_TIMEOUT_SECONDS = 120
+
+# The access token Kite last rejected; data calls skip Kite until config holds a different one.
+_kite_rejected_token = None
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -46,7 +56,29 @@ _instrument_token_cache = {}  # tradingsymbol -> instrument_token, fetched once 
 
 
 def kite_data_active() -> bool:
-    return bool(config.USE_KITE_DATA and config.KITE_API_KEY and config.KITE_ACCESS_TOKEN)
+    return bool(config.USE_KITE_DATA and config.KITE_API_KEY and config.KITE_ACCESS_TOKEN
+                and config.KITE_ACCESS_TOKEN != _kite_rejected_token)
+
+
+def mark_kite_token_rejected():
+    global _kite_rejected_token
+    _kite_rejected_token = config.KITE_ACCESS_TOKEN
+
+
+def _note_kite_failure(exc):
+    if isinstance(exc, TokenException):
+        mark_kite_token_rejected()
+
+
+def yf_download(**kwargs):
+    """yfinance.download(), one call at a time across the process (see _YF_DOWNLOAD_LOCK)."""
+    import yfinance as yf
+    if not _YF_DOWNLOAD_LOCK.acquire(timeout=_YF_LOCK_TIMEOUT_SECONDS):
+        raise TimeoutError(f"another yfinance download has been running for over {_YF_LOCK_TIMEOUT_SECONDS}s")
+    try:
+        return yf.download(**kwargs)
+    finally:
+        _YF_DOWNLOAD_LOCK.release()
 
 
 def _get_kite():
@@ -105,10 +137,8 @@ def _yf_symbol(symbol: str) -> str:
 
 
 def _get_intraday_candles_yfinance(symbol: str, interval: str, period: str):
-    import yfinance as yf
-
     ticker = _yf_symbol(symbol)
-    df = yf.download(
+    df = yf_download(
         tickers=ticker, interval=interval, period=period,
         progress=False, auto_adjust=False,
     )
@@ -148,6 +178,7 @@ def get_intraday_candles(symbol: str, interval: str = "5m", period: str = "5d"):
         try:
             return _get_intraday_candles_kite(symbol, interval, period)
         except Exception as exc:
+            _note_kite_failure(exc)
             logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
     return _get_intraday_candles_yfinance(symbol, interval, period)
 
@@ -178,11 +209,9 @@ def _get_intraday_candles_yfinance_batch(symbols: list, interval: str, period: s
     """One yfinance request for many tickers instead of N separate ones —
     same batching trick scanner.py's download_batch() uses, adapted to key
     by our bare NSE symbol and return get_intraday_candles()'s candle shape."""
-    import yfinance as yf
-
     tickers = [_yf_symbol(s) for s in symbols]
-    df = yf.download(tickers=tickers, interval=interval, period=period, group_by="ticker",
-                      progress=False, threads=True, auto_adjust=False)
+    df = yf_download(tickers=tickers, interval=interval, period=period, group_by="ticker",
+                     progress=False, threads=True, auto_adjust=False)
     out = {}
     if df is None or df.empty:
         return out
@@ -252,6 +281,7 @@ def get_candles_batch(symbols: list, interval: str = "5m", period: str = "5d") -
             try:
                 out[symbol] = fut.result()
             except Exception as exc:
+                _note_kite_failure(exc)
                 logger.warning(f"Kite historical data failed for {symbol} ({exc}); falling back to yfinance")
                 fallback.append(symbol)
     if fallback:
@@ -267,6 +297,7 @@ def get_ltp(symbol: str) -> float:
             key = f"NSE:{symbol}"
             return float(kite.ltp([key])[key]["last_price"])
         except Exception as exc:
+            _note_kite_failure(exc)
             logger.warning(f"Kite LTP failed for {symbol} ({exc}); falling back to yfinance")
 
     candles = _get_intraday_candles_yfinance(symbol, interval="1m", period="1d")

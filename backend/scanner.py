@@ -67,9 +67,8 @@ def _date(bar):
 
 def download_batch(tickers, period, interval):
     """One yfinance request for many tickers -> {ticker: [candle, ...]} with IST timestamps."""
-    import yfinance as yf
-    df = yf.download(tickers, period=period, interval=interval, group_by="ticker",
-                     progress=False, threads=True, auto_adjust=False)
+    df = data_provider.yf_download(tickers=tickers, period=period, interval=interval, group_by="ticker",
+                                   progress=False, threads=True, auto_adjust=False)
     out = {}
     if df is None or df.empty:
         return out

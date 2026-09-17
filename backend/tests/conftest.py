@@ -19,11 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 
+import data_provider
 import database
 
 
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
+    monkeypatch.setattr(data_provider, "_kite_rejected_token", None)
     monkeypatch.setattr(database, "DB_PATH", tmp_path / "test_journal.db")
     database._local.conn = None
     yield
