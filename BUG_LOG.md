@@ -17,6 +17,7 @@ and fix commit instead.
 
 | Issue | Found | Bug | Impact |
 |---|---|---|---|
+| [#35](https://github.com/harshece16/intraday-trading-agent/issues/35) | 2026-09-18 | F&O P&L ignores charges entirely — `_record_fno_trade()` hardcodes `charges: 0.0` and never calls `costs.leg_cost()`, unlike the equity path. Found while fixing #21. | Options "net" P&L equals gross, in the header, the journal, the 2% daily loss limit and the F&O confidence IC. Worse than for equity: options brokerage is a flat ₹20/leg, so it doesn't scale down with a small position. |
 | [#22](https://github.com/harshece16/intraday-trading-agent/issues/22) | 2026-09-17 | A backend restart forgets today's per-stock entry count. | After a mid-session restart, a stock already traded today can be traded again, breaking the one-entry-per-day rule. Blocks deploying fixes mid-session. |
 | [#24](https://github.com/harshece16/intraday-trading-agent/issues/24) | 2026-09-17 | The dashboard says "Kite live prices" after the Kite session has expired. The status only checks that a token exists. | You see live data while the engine is actually on the yfinance fallback. |
 | [#25](https://github.com/harshece16/intraday-trading-agent/issues/25) | 2026-09-17 | Stops can be narrower than round-trip costs. The 33% notional cap, not the 1% rule, sets position size. | Charges averaged 0.84R per live trade. TMPV lost 4.33R net in 38 s. |
