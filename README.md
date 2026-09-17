@@ -2324,7 +2324,10 @@ review actually works without a second person, CI (`.github/workflows/tests.yml`
 runs the full pytest suite on every PR), and an honest note on why branch
 protection isn't platform-enforced here (private repo, free tier — a real,
 checked-not-assumed limitation, not an oversight). Open work is tracked on
-[Project #1](https://github.com/users/harshece16/projects/1).
+[Project #1](https://github.com/users/harshece16/projects/1). Every confirmed
+bug gets a GitHub issue labeled `bug` and a row in
+**[BUG_LOG.md](BUG_LOG.md)**, which lists open bugs and everything fixed so
+far with its PR.
 
 ## Setup
 
