@@ -22,6 +22,7 @@ and fix commit instead.
 | [#22](https://github.com/harshece16/intraday-trading-agent/issues/22) | 2026-09-17 | A backend restart forgets today's per-stock entry count. | After a mid-session restart, a stock already traded today can be traded again, breaking the one-entry-per-day rule. Blocks deploying fixes mid-session. |
 | [#24](https://github.com/harshece16/intraday-trading-agent/issues/24) | 2026-09-17 | The dashboard says "Kite live prices" after the Kite session has expired. The status only checks that a token exists. | You see live data while the engine is actually on the yfinance fallback. |
 | [#25](https://github.com/harshece16/intraday-trading-agent/issues/25) | 2026-09-17 | Stops can be narrower than round-trip costs. The 33% notional cap, not the 1% rule, sets position size. | Charges averaged 0.84R per live trade. TMPV lost 4.33R net in 38 s. |
+| [#28](https://github.com/harshece16/intraday-trading-agent/issues/28) | 2026-09-17 | The 60% size factor is applied after rounding to whole shares, so high-priced stocks get far less than 60%, or nothing. | DIVISLAB got 1 of 3 shares (33%). Stocks above ~₹16,500 can't take a reduced-size trade at all. |
 | [#26](https://github.com/harshece16/intraday-trading-agent/issues/26) | 2026-09-17 | README §2 still says top 15 deep reads and a top-6 watchlist; config says 25 and 25. | Docs only. |
 
 ## Fixed
