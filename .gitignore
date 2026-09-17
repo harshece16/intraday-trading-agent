@@ -3,6 +3,8 @@ backend/__pycache__/
 backend/.kite_session.json
 backend/.dashboard_key.json
 backend/data/*.db
+# sqlite WAL/SHM sidecars and pre-migration backups (sahab_journal.db.pre-issue21-...)
+backend/data/*.db.*
 backend/data/backtest_trials.json
 *.pyc
 .DS_Store

@@ -413,7 +413,11 @@ def journal_trades_csv():
     all short of reading the SQLite file directly."""
     trades = database.recent_trades(limit=1_000_000)
     buf = io.StringIO()
-    cols = ["ts", "symbol", "side", "quantity", "price", "mode", "reason", "note", "realized", "charges", "r_multiple"]
+    # "realized" is net of the round trip's charges and "realized_gross" is the
+    # same figure before them; a CA needs both, since charges are a deductible
+    # expense rather than a reduction of turnover (issue #21).
+    cols = ["ts", "symbol", "side", "quantity", "price", "mode", "reason", "note",
+            "realized_gross", "charges", "realized", "r_multiple"]
     writer = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
     writer.writeheader()
     for t in reversed(trades):  # oldest first, natural for a ledger

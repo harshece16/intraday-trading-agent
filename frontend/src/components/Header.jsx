@@ -76,7 +76,10 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
           <span className="countdown">{si ? `· ${si.label}` : ""}</span>
         </button>
         <div className="stat"><small>Invested</small><strong>₹{num(invested, 0)}</strong></div>
-        <div className="stat"><small>Realized today</small><strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong></div>
+        <div className="stat" title="After brokerage, STT, exchange fees, GST and stamp duty">
+          <small>Realized today</small>
+          <strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong>
+        </div>
         <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
         <span className="divider"></span>
         <div className="kite">

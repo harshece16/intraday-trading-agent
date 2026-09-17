@@ -69,7 +69,8 @@ CREATE INDEX IF NOT EXISTS idx_checklist_symbol_ts ON checklist_evals(symbol, ts
 CREATE TABLE IF NOT EXISTS trades (
     id TEXT PRIMARY KEY, position_id TEXT, ts REAL NOT NULL, symbol TEXT NOT NULL,
     side TEXT, quantity INTEGER, price REAL, mode TEXT, reason TEXT, note TEXT,
-    realized REAL, charges REAL, initial_risk REAL, r_multiple REAL, checklist_json TEXT
+    realized REAL, charges REAL, initial_risk REAL, r_multiple REAL, checklist_json TEXT,
+    realized_gross REAL
 );
 CREATE INDEX IF NOT EXISTS idx_trades_position ON trades(position_id);
 CREATE TABLE IF NOT EXISTS signals (
@@ -116,6 +117,56 @@ CREATE INDEX IF NOT EXISTS idx_research_briefs_symbol_ts ON research_briefs(symb
 """
 
 
+def _migrate(conn):
+    """Add columns the schema gained after a journal was already in use.
+    `CREATE TABLE IF NOT EXISTS` leaves an existing table alone, so a new
+    column has to be ALTERed in. Idempotent: each block returns early once
+    its column exists."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(trades)")}
+    if "realized_gross" not in cols:
+        conn.execute("ALTER TABLE trades ADD COLUMN realized_gross REAL")
+        _restate_realized_net_of_charges(conn)
+
+
+def _restate_realized_net_of_charges(conn):
+    """Issue #21: every `realized` written before this restated the P&L
+    *before* brokerage, STT, exchange fees, GST and stamp duty — those were
+    filed in `charges` and never subtracted. Keep the original figure in
+    realized_gross, and rewrite realized (and the R-multiple derived from it)
+    net of the whole round trip's charges, so the Scorecard's live expectancy
+    is finally comparable with the backtester's, which has always been net.
+
+    A position's legs are paired by position_id. Its total charges are split
+    across whichever legs carry a realized figure, in proportion to the
+    quantity each one closed."""
+    rows = conn.execute("SELECT id, position_id, quantity, realized, COALESCE(charges, 0) AS charges, "
+                        "initial_risk FROM trades").fetchall()
+    by_position = {}
+    for r in rows:
+        by_position.setdefault(r["position_id"], []).append(r)
+
+    updates = []
+    for legs in by_position.values():
+        total_charges = sum(leg["charges"] for leg in legs)
+        closing = [leg for leg in legs if leg["realized"]]
+        closed_qty = sum(abs(leg["quantity"] or 0) for leg in closing)
+        for leg in legs:
+            gross = leg["realized"]
+            if gross is None:
+                continue
+            if leg in closing and closed_qty:
+                share = total_charges * abs(leg["quantity"] or 0) / closed_qty
+            elif leg in closing:            # a closing leg of unknown size
+                share = total_charges / len(closing)
+            else:                           # an opening leg: realized is 0.0
+                share = 0.0
+            net = gross - share
+            r_multiple = (net / (leg["initial_risk"] * leg["quantity"])) \
+                if leg["initial_risk"] and leg["quantity"] else None
+            updates.append((gross, net, r_multiple, leg["id"]))
+    conn.executemany("UPDATE trades SET realized_gross=?, realized=?, r_multiple=? WHERE id=?", updates)
+
+
 def _conn():
     """One connection per thread (the engine's background thread does almost
     all the writing; API-handler threads read)."""
@@ -125,6 +176,7 @@ def _conn():
         conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.row_factory = sqlite3.Row
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.commit()
         _local.conn = conn
     return conn
@@ -267,11 +319,12 @@ def record_trade(trade, checklist_snapshot=None):
     with _conn() as c:
         c.execute(
             "INSERT INTO trades (id, position_id, ts, symbol, side, quantity, price, mode, reason, note, "
-            "realized, charges, initial_risk, r_multiple, checklist_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "realized, charges, initial_risk, r_multiple, checklist_json, realized_gross) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (trade["id"], trade.get("position_id"), trade["ts"], trade["symbol"], trade["side"],
              trade["quantity"], trade["price"], trade["mode"], trade.get("reason"), trade.get("note"),
              trade.get("realized"), trade.get("charges"), trade.get("initial_risk"), trade.get("r_multiple"),
-             _j(checklist_snapshot)),
+             _j(checklist_snapshot), trade.get("realized_gross")),
         )
 
 

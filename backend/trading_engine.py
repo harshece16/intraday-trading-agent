@@ -385,21 +385,24 @@ class TradingEngine:
         fill_price = costs.apply_slippage(side, price, config.COSTS)
         charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
         if self.state.paper_mode:
-            realized = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
-                                           charges=charges, checklist_snapshot=checklist_snapshot,
-                                           position_id=position_id, initial_risk=initial_risk)
+            fill = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
+                                       charges=charges, checklist_snapshot=checklist_snapshot,
+                                       position_id=position_id, initial_risk=initial_risk)
         else:
             executor = self._ensure_kite()
             executor.place_order(symbol, side, qty)
-            realized = self.state.apply_fill(symbol, side, qty, fill_price)
-            r_multiple = (realized / (initial_risk * qty)) if initial_risk and qty else None
+            fill = self.state.apply_fill(symbol, side, qty, fill_price, charges=charges)
+            r_multiple = (fill["net"] / (initial_risk * qty)) if initial_risk and qty else None
             self.state.record_trade(symbol, side, qty, fill_price, mode="live", reason=reason, note=note,
-                                    realized=realized, charges=charges, position_id=position_id,
-                                    initial_risk=initial_risk, r_multiple=r_multiple,
+                                    realized=fill["net"], realized_gross=fill["gross"], charges=charges,
+                                    position_id=position_id, initial_risk=initial_risk, r_multiple=r_multiple,
                                     checklist_snapshot=checklist_snapshot)
+        # net of both legs' charges, so the daily loss limit and the log agree
+        # with what the account actually did (issue #21).
+        realized = fill["net"]
         if realized:
             self.risk.record_realized_pnl(realized)
-        pnl = f" · P&L ₹{realized:,.0f}" if realized else ""
+        pnl = f" · P&L ₹{realized:,.0f} after ₹{fill['charges_deducted']:,.0f} charges" if realized else ""
         logger.info(f"{reason}: {side} {qty} {symbol} @ {fill_price:.2f}{pnl}")
         self.state.log("trade", f"{side} {qty} @ {fill_price:.2f} ({reason}){pnl}" + (f" — {note}" if note else ""),
                        symbol=symbol, level="trade")
@@ -584,8 +587,11 @@ class TradingEngine:
         trade = {
             "id": database.new_position_id(), "position_id": position_id, "ts": time.time(),
             "symbol": symbol, "side": side, "quantity": quantity, "price": price, "mode": mode,
-            "reason": reason, "note": note, "realized": realized, "charges": 0.0,
-            "initial_risk": initial_risk, "r_multiple": r_multiple,
+            # F&O charges aren't modelled yet (₹20/leg brokerage + STT on the
+            # premium), so gross == net here — unlike the equity path, which
+            # deducts real charges since issue #21.
+            "reason": reason, "note": note, "realized": realized, "realized_gross": realized,
+            "charges": 0.0, "initial_risk": initial_risk, "r_multiple": r_multiple,
         }
         database.record_trade(trade, checklist_snapshot=checklist_snapshot)
         with self.state.lock:

@@ -2036,6 +2036,67 @@ second opinion the engine listens to, and a brief written after the close
 has no technical evidence to work with — which is exactly when it should
 stand aside, and did.
 
+### 45. P&L is finally net of brokerage and taxes
+
+Every P&L figure this app has ever shown was **gross** (issue #21).
+`apply_fill()` computed (fill − average price) × quantity. Slippage was
+inside the fill price, but brokerage, STT, exchange transaction fees, GST
+and stamp duty were filed next to the trade in a `charges` column and
+never subtracted anywhere.
+
+**What was wrong, and where it showed:**
+
+- The header's "Realized today", the Trades page, and the Trades page's
+  P&L/Net columns — which §39/PR #15 added with a comment claiming they
+  were net of charges. They weren't. The "check" behind that claim
+  compared the column against a total built from the same gross field.
+- The **2% daily loss limit**, so charges could carry a day past the
+  limit without the engine noticing.
+- The Scorecard's R-multiples, expectancy and Kelly. The backtester has
+  always subtracted costs, so live R and backtested R were never
+  comparable — exactly the gap §33 fixed for slippage and missed here.
+
+**What the real journal says**, over the 8 closed round trips logged so far:
+
+| | Gross | Net |
+| --- | --- | --- |
+| Total P&L | −₹5.26 | **−₹168.71** |
+| Expectancy | −0.25R | **−0.99R** |
+| Average win | 3.33R | 2.75R |
+| Average loss | −1.44R | −2.24R |
+
+Charges cost **0.74R per trade**. The strategy was roughly break-even
+before costs and loses about 1R a trade after them — which is the whole
+point of measuring it properly. Win rate is unchanged at 25%: no trade in
+this sample flipped from a win to a loss, they just all got worse.
+
+**The fix:**
+
+- The opening leg's charges now ride on the position and are released
+  when it closes, so a closing fill reports P&L net of **both** legs.
+  A partial exit releases only its share, never the whole position's.
+- `realized` is net everywhere it's read; `realized_gross` sits beside it
+  so nothing is hidden. The `charges` column still holds each order's own
+  charges, so summing it still gives the day's total.
+- **The existing journal was restated, not left half-and-half.** On first
+  open, the app pairs each position's legs by `position_id`, keeps the old
+  figure in `realized_gross`, and rewrites `realized` and `r_multiple`
+  net. Verified on the real file: gross total unchanged at −₹5.26, and
+  gross − net came to ₹163.45, matching the charges column to the paisa,
+  so nothing was double-counted or dropped. It runs once and is safe to
+  reopen.
+- Tax reporting keeps the distinction a CA needs: **turnover stays gross**
+  (charges are a deductible expense, not a reduction of turnover) while
+  net P&L is after them. The CSV export now carries `realized_gross`,
+  `charges` and `realized` as separate columns.
+
+The Trades page now shows a Charges column per order and, under each net
+P&L, the gross figure it came from.
+
+**Still gross:** F&O. Options charges (₹20/leg brokerage plus STT on the
+premium) aren't modelled at all — `charges` is recorded as 0 there, so
+F&O P&L is unchanged by this and remains optimistic.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
