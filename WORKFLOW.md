@@ -39,6 +39,19 @@ costs.apply_slippage() was already used by backtester.py for every fill
 but never wired into trading_engine._execute()...
 ```
 
+## Bugs
+
+Every bug gets a GitHub issue as soon as it's confirmed, whether or not
+it's fixed right away:
+
+- **Label:** `bug`, or `documentation` for a wrong doc.
+- **Contents:** what's wrong, the evidence (real data, logs or code, not a
+  hunch), the impact, and a fix direction.
+
+It also gets a row in [`BUG_LOG.md`](BUG_LOG.md). When the fix merges, move
+the row to "Fixed" with the PR. Note when the backend was restarted, since
+that's when the fix is actually live.
+
 ## Pull requests
 
 Every change — a bug fix found watching the live log, a new feature, a
