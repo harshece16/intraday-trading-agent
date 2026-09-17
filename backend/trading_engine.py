@@ -13,8 +13,10 @@ The trading engine — a background loop that, every POLL_INTERVAL_SECONDS:
 import asyncio
 import logging
 import math
+import sys
 import threading
 import time
+import traceback
 from datetime import datetime, time as dtime
 from zoneinfo import ZoneInfo
 
@@ -40,6 +42,10 @@ from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 
 logger = logging.getLogger("trading_bot")
 IST = ZoneInfo("Asia/Kolkata")
+
+# A normal tick takes seconds; one past this has stalled and needs its stacks logged.
+TICK_STALL_SECONDS = 120
+TICK_WATCHDOG_INTERVAL_SECONDS = 15
 
 
 def _parse_hhmm(s: str) -> dtime:
@@ -106,6 +112,8 @@ class TradingEngine:
         self._premarket_thread = None
         self._last_premarket_run_date = None
         self._last_premarket_seed_date = None
+        self._tick_started_at = None
+        self._stall_reported_for = None
 
     def _ensure_kite(self):
         if self.kite_executor is None:
@@ -145,6 +153,7 @@ class TradingEngine:
             margins = self._ensure_kite().get_margins()
             live_balance = float(margins["equity"]["available"]["live_balance"])
         except TokenException:
+            data_provider.mark_kite_token_rejected()
             # Kite sessions expire daily — this is the expected way that shows up,
             # usually mid-session the morning after. A generic per-symbol error
             # would bury this; it needs its own clear, high-visibility alert since
@@ -842,6 +851,7 @@ class TradingEngine:
         Trading card's "runs unattended" promise, so the whole tick body is
         now caught here: one bad cycle is skipped, logged, and retried next
         cycle 30s later, instead of ending the engine."""
+        self._tick_started_at = time.time()
         try:
             self._tick_impl()
         except Exception as exc:
@@ -850,6 +860,35 @@ class TradingEngine:
                 self.state.log("error", f"Internal error this cycle (recovered): {exc}", level="error")
             except Exception:
                 pass
+        finally:
+            self._tick_started_at = None
+
+    def _check_tick_stall(self, now=None):
+        """Log every thread's stack, once per stuck tick, when a tick has overrun TICK_STALL_SECONDS."""
+        started = self._tick_started_at
+        if started is None or self._stall_reported_for == started:
+            return
+        running = (now or time.time()) - started
+        if running < TICK_STALL_SECONDS:
+            return
+        self._stall_reported_for = started
+        frames = sys._current_frames()
+        stacks = "".join(
+            f"--- thread {th.name} ---\n" + "".join(traceback.format_stack(frames[th.ident]))
+            for th in threading.enumerate() if th.ident in frames
+        )
+        logger.error(f"Engine tick has been running for {running:.0f}s; thread stacks:\n{stacks}")
+        self.state.log("error", f"The engine has been stuck on one cycle for {running / 60:.0f} min, so stops "
+                                f"and entries aren't being checked. Thread stacks are in the backend log.",
+                       level="error")
+
+    def _watch_ticks(self):
+        while self.state.running:
+            time.sleep(TICK_WATCHDOG_INTERVAL_SECONDS)
+            try:
+                self._check_tick_stall()
+            except Exception:
+                logger.exception("Tick watchdog check failed")
 
     def _tick_impl(self):
         now = datetime.now(IST)
@@ -920,6 +959,7 @@ class TradingEngine:
 
     async def run_forever(self):
         self.state.running = True
+        threading.Thread(target=self._watch_ticks, name="tick-watchdog", daemon=True).start()
         self.state.log("system", f"Trader Sahab started in {'paper' if self.state.paper_mode else 'live'} mode "
                                  f"with {config.STRATEGY_DISPLAY_NAMES.get(config.STRATEGY, config.STRATEGY)} "
                                  f"calling the shots.")
