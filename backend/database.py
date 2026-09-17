@@ -17,6 +17,8 @@ Tables:
                     entry, and the realized R-multiple once an exit closes the loop
   signals           the raw signal log
   activity          the plain-English activity log
+  research_briefs   one row per Research Desk brief (research_desk.py): the grounded
+                    snapshot, every agent's validated output, the rating, tokens, cost
 
 Single-writer (the trading engine's background thread) so no connection
 pooling is needed; SQLite's own locking covers the occasional API-thread read.
@@ -31,8 +33,11 @@ import sqlite3
 import threading
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
+import config
 import evaluation
 
 DB_PATH = Path(__file__).parent / "data" / "sahab_journal.db"
@@ -101,6 +106,13 @@ CREATE TABLE IF NOT EXISTS market_breadth_daily (
     advances INTEGER, declines INTEGER, unchanged INTEGER, total INTEGER,
     trin REAL
 );
+CREATE TABLE IF NOT EXISTS research_briefs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL, symbol TEXT NOT NULL,
+    snapshot_json TEXT, reports_json TEXT, rating INTEGER,
+    model_ids TEXT, tokens INTEGER, cost_usd REAL
+);
+CREATE INDEX IF NOT EXISTS idx_research_briefs_symbol_ts ON research_briefs(symbol, ts);
 """
 
 
@@ -340,6 +352,32 @@ def record_chaywanaprash_report(lookback_hours, llm_used, narrative, findings, i
             "VALUES (?,?,?,?,?,?,?)",
             (time.time(), lookback_hours, int(llm_used), narrative, _j(findings), input_tokens, output_tokens),
         )
+
+
+def record_research_brief(ts, symbol, snapshot, reports, rating, model_ids, tokens, cost_usd):
+    with _conn() as c:
+        cur = c.execute(
+            "INSERT INTO research_briefs "
+            "(ts, symbol, snapshot_json, reports_json, rating, model_ids, tokens, cost_usd) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (ts, symbol, _j(snapshot), _j(reports), rating, ",".join(model_ids), tokens, cost_usd),
+        )
+        return cur.lastrowid
+
+
+def recent_research_briefs(symbol, limit=5):
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM research_briefs WHERE symbol = ? ORDER BY ts DESC LIMIT ?", (symbol, limit)
+        ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["snapshot"] = json.loads(d.pop("snapshot_json")) if d.get("snapshot_json") else None
+        d["reports"] = json.loads(d.pop("reports_json")) if d.get("reports_json") else None
+        d["model_ids"] = [m for m in (d.get("model_ids") or "").split(",") if m]
+        out.append(d)
+    return out
 
 
 def recent_chaywanaprash_reports(limit=20):
@@ -676,14 +714,7 @@ def factor_ic(field="final_score", min_sessions=20, min_stocks_per_session=20):
             xs.append(score)
             ys.append(next_chg)
 
-    daily = []
-    for key in sorted(by_transition):
-        xs, ys = by_transition[key]
-        if len(xs) >= min_stocks_per_session:
-            ic = _spearman(xs, ys)
-            if ic is not None:
-                daily.append(ic)
-
+    daily = _daily_ics(by_transition, min_stocks_per_session)
     base = {"field": field, "pairs": sum(len(xs) for xs, _ in by_transition.values()),
             "sessions": len(daily), "min_sessions": min_sessions}
     if len(daily) < min_sessions:
@@ -691,13 +722,98 @@ def factor_ic(field="final_score", min_sessions=20, min_stocks_per_session=20):
                "note": f"Only {len(daily)} separate session transition(s) with {min_stocks_per_session}+ stocks so "
                        f"far — need at least {min_sessions}. One day's stocks all move with the same market, so a "
                        f"single day's cross-section isn't evidence of ranking skill (README §37-38)."}
+    stats = _mean_ic_with_t(daily)
+    if stats is None:
+        return {**base, "ic": None, "t_stat": None,
+               "note": "Identical IC on every session — no day-to-day variance to judge significance against."}
+    return {**base, **stats}
+
+
+def _daily_ics(groups, min_stocks_per_session):
+    """One Spearman rank IC per cross-section ({session_key: (xs, ys)}) that
+    has enough stocks, in session order — the per-session method of §38."""
+    daily = []
+    for key in sorted(groups):
+        xs, ys = groups[key]
+        if len(xs) >= min_stocks_per_session:
+            ic = _spearman(xs, ys)
+            if ic is not None:
+                daily.append(ic)
+    return daily
+
+
+def _mean_ic_with_t(daily):
+    """Mean daily IC, its t-stat and the share of positive sessions — or None
+    when every session's IC is identical (no variance to test against)."""
     mean = sum(daily) / len(daily)
     sd = math.sqrt(sum((x - mean) ** 2 for x in daily) / (len(daily) - 1))
     if sd == 0:
-        return {**base, "ic": None, "t_stat": None,
-               "note": "Identical IC on every session — no day-to-day variance to judge significance against."}
-    return {**base, "ic": round(mean, 3), "t_stat": round(mean / sd * math.sqrt(len(daily)), 2),
-           "pct_sessions_positive": round(sum(x > 0 for x in daily) / len(daily) * 100)}
+        return None
+    return {"ic": round(mean, 3), "t_stat": round(mean / sd * math.sqrt(len(daily)), 2),
+            "pct_sessions_positive": round(sum(x > 0 for x in daily) / len(daily) * 100)}
+
+
+def research_rating_ic(min_sessions=20, min_stocks_per_session=20):
+    """Does the Research Desk's rating (-2..+2) rank how stocks actually
+    moved in the session it was predicting? Same method as factor_ic():
+    one rank correlation per session, averaged, with a t-stat, and nothing
+    reported until there are `min_sessions` sessions with
+    `min_stocks_per_session`+ rated stocks each.
+
+    The predicted session is the first scanned session that starts after the
+    brief was written: a brief from before the open (config.MARKET_OPEN)
+    predicts that day, anything later predicts the next session. Its return is
+    that session's chg_pct from scan_rows (latest reading, as in factor_ic).
+    Only the latest brief per (symbol, predicted session) counts."""
+    with _conn() as c:
+        briefs = c.execute(
+            "SELECT ts, symbol, rating FROM research_briefs WHERE rating IS NOT NULL ORDER BY ts, id"
+        ).fetchall()
+        rows = c.execute(
+            "SELECT symbol, session_date, chg_pct FROM scan_rows "
+            "WHERE chg_pct IS NOT NULL ORDER BY symbol, session_date, id"
+        ).fetchall()
+    session_return = {}
+    for r in rows:
+        session_return[(r["symbol"], r["session_date"])] = r["chg_pct"]
+    sessions_by_symbol = {}
+    for symbol, session_date in session_return:
+        sessions_by_symbol.setdefault(symbol, []).append(session_date)
+
+    ist = ZoneInfo("Asia/Kolkata")
+    latest = {}
+    for b in briefs:
+        written = datetime.fromtimestamp(b["ts"], ist)
+        day = written.date().isoformat()
+        before_open = written.strftime("%H:%M") < config.MARKET_OPEN
+        target = next((d for d in sorted(sessions_by_symbol.get(b["symbol"], []))
+                       if (d >= day if before_open else d > day)), None)
+        if target is not None:
+            latest[(b["symbol"], target)] = b["rating"]
+
+    by_session = {}
+    for (symbol, session_date), rating in latest.items():
+        xs, ys = by_session.setdefault(session_date, ([], []))
+        xs.append(rating)
+        ys.append(session_return[(symbol, session_date)])
+
+    daily = _daily_ics(by_session, min_stocks_per_session)
+    base = {"field": "research_rating", "rated_pairs": len(latest), "sessions": len(daily),
+            "min_sessions": min_sessions, "min_stocks_per_session": min_stocks_per_session,
+            "min_t_stat": evaluation.IC_MIN_T_STAT}
+    if len(daily) < min_sessions:
+        return {**base, "ic": None, "t_stat": None, "passes": False,
+                "note": f"Not enough data: {len(daily)} of {min_sessions} sessions have "
+                        f"{min_stocks_per_session}+ rated stocks with a known next-session return. "
+                        f"The rating gets no weight anywhere until this clears t >= {evaluation.IC_MIN_T_STAT:g}."}
+    stats = _mean_ic_with_t(daily)
+    if stats is None:
+        return {**base, "ic": None, "t_stat": None, "passes": False,
+                "note": "Identical IC on every session — no day-to-day variance to judge significance against."}
+    passes = stats["ic"] > 0 and stats["t_stat"] >= evaluation.IC_MIN_T_STAT
+    return {**base, **stats, "passes": passes,
+            "note": "Positive and consistent enough to consider as an input (after a benchmark backtest)."
+            if passes else "No consistent predictive skill yet — the rating stays research-only."}
 
 
 def _swing_pattern_names(raw_json):

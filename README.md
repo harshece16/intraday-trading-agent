@@ -1968,6 +1968,74 @@ doesn't download candles at all. The watchdog exists so the next stall
 names its own cause. It detects and reports a stuck cycle; it doesn't
 restart one.
 
+### 44. The Research Desk — a firm's research process, with no hand on the order button
+
+The screenshots in TauricResearch/TradingAgents show a trading firm's
+staff: analysts, two researchers who argue, a manager who rules, a
+trader, a risk team, and a portfolio manager who signs off. §41 took the
+one piece that could be done deterministically (fundamentals scoring).
+This is the rest of it, on the **Research desk** tab of any stock page
+(issue #19).
+
+**Who writes what, in order** — 12 model calls per brief:
+
+| Team | Agents | Model |
+| --- | --- | --- |
+| Analysts (in parallel) | market, sentiment, news, fundamentals | Haiku 4.5, low effort |
+| Researchers | bull and bear, one round each | Sonnet 5, medium effort |
+| Research manager | rules on the debate, writes the investment plan | Sonnet 5 |
+| Trader | proposes long, short or stand aside | Sonnet 5 |
+| Risk team | aggressive, conservative, neutral | Sonnet 5 |
+| Portfolio manager | final rating and verdict on the trader | Sonnet 5 |
+
+It runs on the Anthropic API when `ANTHROPIC_API_KEY` is set, and
+otherwise on the Claude Code CLI against your Claude plan. It is **off by
+default**, capped at 25 briefs and $10 of list-price model spend a day.
+
+**Three rules keep this honest, and they are the reason it exists:**
+
+1. **It cannot place an order.** The desk is never imported by the
+   engine, the broker, the scanner or the checklist. It only reads state
+   and writes a `research_briefs` row. A test asserts that
+   (`test_desk_has_no_path_to_orders_or_gates`).
+2. **Every sentence must cite the snapshot.** Each agent gets one JSON
+   snapshot of real state — the checklist read, scanner rank,
+   fundamentals, news scores, market breadth, open positions, the Dimaag
+   Scorecard — and every point must name the snapshot paths it came from.
+   A point citing a path that isn't there, or a number that appears
+   nowhere in the snapshot, is **dropped before you see it** and listed
+   under "statement(s) dropped" so the drop itself is visible. The trader
+   cannot invent an entry, stop or target: it gets the checklist's own
+   levels or none.
+3. **The rating carries no weight anywhere.** Like every other signal, it
+   has to clear the same predictive-skill bar first: a per-session
+   Spearman IC with t ≥ 2 over at least 20 sessions of 20+ rated stocks
+   (`database.research_rating_ic()`). It reads "0 of 20 sessions" today,
+   and until it passes, the rating changes no trade, no size and no gate.
+
+**One real brief, measured** (RELIANCE, 18 Sep 00:07 IST, Claude CLI):
+
+- 12 calls, no errors, **110 s** end to end (snapshot build included),
+  **$0.32** at list prices.
+- The market analyst returned "insufficient data" and the trader
+  **stood aside** — correctly: the market was closed, so there was no
+  checklist read or scanner rank to trade against, and it said so instead
+  of inventing a setup.
+- The portfolio manager rated it **Underweight** on the news tilt alone
+  and approved standing aside.
+- **2 of the sentiment analyst's statements were dropped**: one wrote
+  "8 headlines" where the snapshot doesn't carry that count, the other
+  cited `news.headlines[6].text`, a field that doesn't exist.
+
+An earlier run before the effort settings and parallel analysts took
+317 s and $0.57. That was a different stock at a different time of day,
+so treat the comparison as an indication, not a controlled measurement.
+
+**What this does not do:** it does not forecast prices, it is not a
+second opinion the engine listens to, and a brief written after the close
+has no technical evidence to work with — which is exactly when it should
+stand aside, and did.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
@@ -2527,6 +2595,12 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
   measured yet — it's too new. Whether reading headlines this way helps,
   hurts, or does nothing is an open, honestly-unanswered question until
   enough logged pairs accumulate with it turned on.
+- The Research Desk's rating (§44) has **no measured skill at all** yet —
+  0 of the 20 sessions it needs. Its briefs are written prose about real
+  data, nothing more; they change no trade. The grounding check can only
+  catch a claim that cites a missing path or an unseen number — an agent
+  can still reason badly about numbers that are genuinely in the snapshot,
+  and no code catches that.
 - Holdings diagnostic assumes NSE (`.NS`); a BSE-only listing among your
   holdings will show up under `unreadable` rather than a wrong read. It
   also runs the same indicators regardless of whether a holding is a stock

@@ -14,7 +14,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -34,6 +34,7 @@ import methods
 import news_sentiment
 import nse_feed
 import portfolio_diagnostic
+import research_desk
 import universe
 from state import AppState
 from trading_engine import TradingEngine
@@ -223,6 +224,43 @@ def chaywanaprash_reports(limit: int = 20):
 @app.get("/api/chaywanaprash/status")
 def chaywanaprash_status():
     return chaywanaprash.stats()
+
+
+class ResearchDeskUpdate(BaseModel):
+    enabled: bool
+
+
+class ResearchRunRequest(BaseModel):
+    symbols: List[str]
+
+
+@app.post("/api/research/enable")
+def set_research_desk_enabled(update: ResearchDeskUpdate):
+    if update.enabled and research_desk.backend_name() is None:
+        raise HTTPException(status_code=400,
+                            detail="No LLM is available: set ANTHROPIC_API_KEY, or install the Claude Code CLI.")
+    enabled = research_desk.set_enabled(update.enabled)
+    state.log("system", f"Research Desk switched {'on' if enabled else 'off'} via the dashboard")
+    return research_desk.stats()
+
+
+@app.get("/api/research/status")
+def research_desk_status():
+    """Research only: the LLM backend, today's usage, the running brief's progress, and the rating's IC check."""
+    return research_desk.stats()
+
+
+@app.post("/api/research/run")
+def research_desk_run(req: ResearchRunRequest):
+    started, message, _ = research_desk.request_run(state, req.symbols)
+    if not started:
+        raise HTTPException(status_code=409 if "in progress" in message else 400, detail=message)
+    return {"started": True, "message": message}
+
+
+@app.get("/api/research/briefs/{symbol}")
+def research_desk_briefs(symbol: str, limit: int = 3):
+    return research_desk.latest_briefs(symbol, limit=limit)
 
 
 @app.get("/api/dimag-ki-batti")

@@ -192,6 +192,30 @@ CHAYWANAPRASH = {
     "lookback_hours": 24,
 }
 
+# Sahab's Research Desk (research_desk.py): TradingAgents-style research briefs.
+# Research only — it never places an order and feeds no gate or position size.
+# Off until switched on from the stock page, since one brief is about a dozen model calls.
+RESEARCH_DESK = {
+    "enabled": False,
+    # "auto" uses the Anthropic API when ANTHROPIC_API_KEY is set, otherwise the
+    # Claude Code CLI (`claude -p`, billed to your Claude plan). Or pick one:
+    # "anthropic_api" / "claude_cli".
+    "llm_backend": "auto",
+    "analyst_model": "claude-haiku-4-5-20251001",  # the four analysts
+    "team_model": "claude-sonnet-5",  # researchers, research manager, trader, risk team, portfolio manager
+    # Thinking effort per call on the CLI backend (low / medium / high). At the CLI's default, one
+    # brief took 317 s and the research manager alone used 68k input tokens across internal turns.
+    "analyst_effort": "low",
+    "team_effort": "medium",
+    "debate_rounds": 1,
+    # The rating's IC only counts sessions with 20+ rated stocks
+    # (database.research_rating_ic), so a cap below that means it can never be measured.
+    "daily_brief_limit": 25,
+    "daily_cost_limit_usd": 10.0,  # list-price cost; on the CLI this is usage of your plan, not a bill
+    "max_symbols_per_run": 25,
+    "cli_timeout_s": 240,
+}
+
 RISK = {
     "max_risk_per_trade_pct": 1.0,
     "stop_loss_pct": 0.8,       # fallback when ATR isn't available yet
