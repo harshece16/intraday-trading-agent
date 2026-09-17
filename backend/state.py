@@ -17,9 +17,20 @@ ACTIVITY_LIMIT = 300
 IST = ZoneInfo("Asia/Kolkata")
 
 
+def _gross_of(trade):
+    """A trade's P&L before charges. Falls back to the net figure for any row
+    written before issue #21 added the column and never backfilled."""
+    gross = trade.get("realized_gross")
+    return gross if gross is not None else (trade.get("realized") or 0.0)
+
+
 def _new_position():
+    # "charges" holds the brokerage + statutory charges already paid to open
+    # this position. They're released against the realized figure when it
+    # closes, so a round trip's P&L is net of both legs (issue #21).
     return {"quantity": 0, "avg_price": 0.0, "entry_atr": None,
-            "stop_price": None, "target_price": None, "initial_risk": None, "position_id": None}
+            "stop_price": None, "target_price": None, "initial_risk": None, "position_id": None,
+            "charges": 0.0}
 
 
 class AppState:
@@ -145,40 +156,64 @@ class AppState:
                 "kite_connected": bool(config.KITE_ACCESS_TOKEN),
             }
 
-    def apply_fill(self, symbol, side, quantity, price) -> float:
+    def apply_fill(self, symbol, side, quantity, price, charges=0.0) -> dict:
         """
         Update positions + realized P&L for an order fill. Used by both the
         paper broker and the live (Kite) path, so position/P&L bookkeeping
         stays correct regardless of mode — this is also what stop-loss /
         take-profit checks and the daily loss limit read from.
-        Returns realized P&L for this fill (0.0 if just opening/adding).
+
+        `charges` is this leg's brokerage + statutory charges (costs.leg_cost).
+        Slippage is already inside `price`, but until issue #21 these charges
+        were only filed beside the trade and never taken off the P&L, so every
+        realized figure the app reported — the header, the trade journal, the
+        2% daily loss limit, the Scorecard's R-multiples — was gross. The
+        opening leg's charges now ride on the position and are released when
+        it closes, so the closing fill reports what the account actually
+        gained or lost.
+
+        Returns {"gross", "charges_deducted", "net"} for this fill — all 0.0
+        when the fill only opens or adds to a position.
         """
         with self.lock:
             pos = self.positions.setdefault(symbol, _new_position())
             signed_qty = quantity if side == "BUY" else -quantity
             new_qty = pos["quantity"] + signed_qty
-            realized = 0.0
+            gross = 0.0
+            deducted = 0.0
 
             if pos["quantity"] == 0 or (pos["quantity"] > 0) == (signed_qty > 0):
                 total_cost = pos["avg_price"] * pos["quantity"] + price * signed_qty
                 pos["avg_price"] = total_cost / new_qty if new_qty != 0 else 0.0
+                pos["charges"] = pos.get("charges", 0.0) + (charges or 0.0)
             else:
-                closed_qty = min(abs(signed_qty), abs(pos["quantity"]))
-                realized = (price - pos["avg_price"]) * closed_qty * (1 if pos["quantity"] > 0 else -1)
-                self.realized_pnl_today += realized
+                open_qty = abs(pos["quantity"])
+                closed_qty = min(abs(signed_qty), open_qty)
+                gross = (price - pos["avg_price"]) * closed_qty * (1 if pos["quantity"] > 0 else -1)
+                # only the share of the opening charges that belongs to the
+                # quantity being closed, so a partial exit isn't charged twice.
+                entry_share = pos.get("charges", 0.0) * closed_qty / open_qty if open_qty else 0.0
+                pos["charges"] = pos.get("charges", 0.0) - entry_share
+                deducted = entry_share + (charges or 0.0)
+                self.realized_pnl_today += gross - deducted
                 if new_qty == 0:
                     pos.update(_new_position())
 
             pos["quantity"] = new_qty
-            return realized
+            return {"gross": gross, "charges_deducted": deducted, "net": gross - deducted}
 
     def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None,
-                     charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None):
+                     charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None,
+                     realized_gross=None):
+        """`realized` is net of both legs' charges; `realized_gross` is the same
+        figure before them, and `charges` stays this one leg's own charges, so
+        summing the column over every row still gives the day's total (#21)."""
         trade = {
             "id": str(uuid.uuid4())[:8], "position_id": position_id,
             "symbol": symbol, "side": side, "quantity": quantity,
             "price": price, "mode": mode, "ts": time.time(),
-            "reason": reason, "note": note, "realized": realized, "charges": charges,
+            "reason": reason, "note": note, "realized": realized,
+            "realized_gross": realized_gross, "charges": charges,
             "initial_risk": initial_risk, "r_multiple": r_multiple,
         }
         with self.lock:
@@ -187,11 +222,15 @@ class AppState:
 
     def _tax_summary(self):
         """Intraday equity is speculative business income (Varsity Markets & Taxation ch 3-6).
-        Trade-wise turnover is the sum of the absolute profit or loss of each closed trade."""
+        Trade-wise turnover is the sum of the absolute profit or loss of each closed
+        trade, taken *before* expenses — brokerage and statutory charges are a
+        business expense claimed separately, not netted off turnover. So turnover
+        reads gross while net_pnl reads net (issue #21)."""
         closed = [t for t in self.trades if t.get("realized")]
         return {
-            "turnover": sum(abs(t["realized"]) for t in closed),
+            "turnover": sum(abs(_gross_of(t)) for t in closed),
             "net_pnl": sum(t["realized"] for t in closed),
+            "gross_pnl": sum(_gross_of(t) for t in closed),
             "charges": sum(t.get("charges") or 0 for t in self.trades),
             "closed_trades": len(closed),
         }
