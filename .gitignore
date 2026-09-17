@@ -12,3 +12,5 @@ backend/data/backtest_trials.json
 research/*.pdf
 research/*.zip
 research/Hands-On-Machine-Learning-for-Algorithmic-Trading-master/
+.claude/worktrees/
+.claude/settings.local.json

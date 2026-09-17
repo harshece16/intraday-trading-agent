@@ -8,6 +8,7 @@ import RuleBook from "../components/RuleBook";
 import Chart from "../components/Chart";
 import SymLink from "../components/SymLink";
 import Tip from "../components/Tip";
+import ResearchDesk from "../components/ResearchDesk";
 
 function PlanBox({ s, r, b, pos }) {
   const levels = [];
@@ -289,11 +290,13 @@ export default function Stock({ state: s }) {
         <button className="tab" role="tab" aria-selected={tab === "timing"} onClick={() => setTab("timing")}>Timing read</button>
         <button className="tab" role="tab" aria-selected={tab === "scan"} onClick={() => setTab("scan")}>Why it ranks</button>
         <button className="tab" role="tab" aria-selected={tab === "news"} onClick={() => setTab("news")}>News{news && !news.error ? <span className="n">{news.count}</span> : null}</button>
+        <button className="tab" role="tab" aria-selected={tab === "research"} onClick={() => setTab("research")}>Research desk</button>
       </div>
       <div className="tab-content">
         {tab === "timing" && <TimingTab r={r} a={a} />}
         {tab === "scan" && <ScanTab r={r} totalRows={scanRows(s).length || 100} />}
         {tab === "news" && <NewsTab s={s} symbol={symbol} news={news} />}
+        {tab === "research" && <ResearchDesk symbol={symbol} watchlist={s.watchlist} />}
       </div>
     </>
   );
