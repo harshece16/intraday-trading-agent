@@ -58,6 +58,20 @@ DEFAULTS = {
     "min_pattern_atr": 0.3,
     "max_pattern_atr": 3.0,
     "cost_pct": 0.12,
+    # A pattern stop can sit closer to the entry than the round trip costs to
+    # make (issue #25). Below 1x, the charges exceed the entire risk the
+    # position was sized on, so a stop-out is worse than 2R by construction and
+    # no setup quality can rescue it: TMPV's stop was 0.41x the cost and it
+    # lost 4.33R net in 38 seconds. That structural argument is the reason for
+    # the floor, and it only justifies 1x.
+    #
+    # Higher floors are NOT supported by the evidence, though they look
+    # obviously better in theory. Measured over 54 sessions of NIFTY 100
+    # (README section 46), raising it to 2x removed 3 of 10 backtested trades
+    # and made expectancy worse, not better; on the 8 real trades a 3x floor
+    # would have blocked both winners and kept two losers. Read section 46
+    # before raising this.
+    "min_stop_to_cost": 1.0,
     "rrr_without_level": 2.0,
     "max_target_atr": 3.0,           # how far out to look for a level that actually clears min_rrr
     "adx_trend": 25,
@@ -128,6 +142,8 @@ CHECKLIST_SOURCES = {
     "indicators": "Varsity Technical Analysis, ch 13-16 (moving averages, RSI, MACD)",
     "catalyst": "NSE filings + news sentiment (news_sentiment.py) — the news side of the checklist",
     "rrr": "Varsity Technical Analysis ch 18.5 (Reward-to-Risk), targets from Bulkowski's measured pattern moves when available",
+    "cost": "Varsity Markets & Taxation ch 1-2 (what a round trip actually costs); the trade's own charges "
+            "measured against its stop distance (costs.py)",
     "fundamentals": "Real ROE/margin/PEG/debt-equity via Yahoo Finance (fundamentals.py) — Peter Lynch / Graham-style "
                     "screening thresholds, also covered in Zerodha Varsity's Fundamental Analysis module",
 }
@@ -150,6 +166,14 @@ def recheck_plan(plan, side, price, params=None):
     if (target - price) * s <= 0:
         return {"ok": False, "rrr": None,
                 "reason": f"price {price:.2f} has already reached the plan's target {target:.2f}"}
+    # The fill price moves against the plan, so a stop that cleared the
+    # cost floor on the finished bar can be inside it by the time we trade.
+    stop_pct = abs(price - stop) / price * 100
+    floor = p["cost_pct"] * p["min_stop_to_cost"]
+    if stop_pct < floor:
+        return {"ok": False, "rrr": None,
+                "reason": f"at the live price {price:.2f} the stop is only {stop_pct / p['cost_pct']:.1f}× the round "
+                          f"trip's cost, under the {p['min_stop_to_cost']:g}× floor"}
     rrr = _net_rrr(price, stop, target, p["cost_pct"])
     if rrr < p["min_rrr"]:
         return {"ok": False, "rrr": rrr,
@@ -199,6 +223,20 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
              f"No {level_word} within {p['sr_tolerance_atr']:g} ATR of the stop {stop:.2f}")
     else:
         item("sr", f"Stop-loss sits at {level_word}", False, "Needs a pattern to place the stop")
+
+    floor = p["cost_pct"] * p["min_stop_to_cost"]
+    if risk > 0:
+        stop_pct = risk / price * 100
+        # cost_pct of 0 means costs aren't being modelled at all, so there is
+        # nothing to measure the stop against and the item simply passes.
+        ratio = f"{stop_pct / p['cost_pct']:.1f}× the cost" if p["cost_pct"] else "unbounded (costs are set to zero)"
+        item("cost", f"Stop is at least {p['min_stop_to_cost']:g}× the round trip's cost",
+             stop_pct >= floor,
+             f"Stop is {stop_pct:.3f}% away and a round trip costs {p['cost_pct']:g}%, so the stop is {ratio}"
+             + ("" if stop_pct >= floor else f" — under {p['min_stop_to_cost']:g}×, costs decide the trade, not the setup"))
+    else:
+        item("cost", f"Stop is at least {p['min_stop_to_cost']:g}× the round trip's cost", False,
+             "Needs a stop to compare against costs")
 
     item("volume", "Above-average volume", vol10 is not None and vol10 > 1.0,
          f"Volume is {vol10:.1f}× its {p['volume_lookback']}-candle average" if vol10 is not None else "No volume data")

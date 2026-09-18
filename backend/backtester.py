@@ -242,8 +242,8 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
                     plan = (st.get("checklist") or {}).get("long" if side == "BUY" else "short")
                     if not plan or plan.get("stop") is None:
                         plan = None
-                qty = int(risk.position_size(bar["close"], atr=atr_val, stop_price=plan["stop"] if plan else None)
-                          * (plan["size_factor"] if plan else 1.0))
+                qty = risk.position_size(bar["close"], atr=atr_val, stop_price=plan["stop"] if plan else None,
+                                         size_factor=plan["size_factor"] if plan else 1.0)
                 if qty <= 0:
                     continue
                 _open_position(pos, side, bar["close"], qty, atr_val, costs_cfg, risk,

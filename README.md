@@ -2097,6 +2097,121 @@ P&L, the gross figure it came from.
 premium) aren't modelled at all — `charges` is recorded as 0 there, so
 F&O P&L is unchanged by this and remains optimistic.
 
+### 46. Two ways a trade's economics went wrong before it was placed
+
+§45 made the costs visible. These two fix what the costs were doing.
+
+#### The share count was rounded twice (issue #28)
+
+`position_size()` returned whole shares, and the caller *then* applied the
+checklist's reduced size factor and truncated again. So 60% of a 3-share
+cap became `int(1.8)` = 1 share — a third of the cap, while the journal
+note said "60% size" — and 60% of a 1-share cap became 0, blocking the
+trade outright.
+
+Seen live on 17 Sep: DIVISLAB went in at 1 share at ₹9,289.29.
+
+The size factor now goes into `position_size()`, which rounds once, at
+the end. Measured against the real config (₹1L capital, 33% notional cap):
+
+| Stock | Price | Full size | Old 60% | New 60% |
+| --- | --- | --- | --- | --- |
+| DIVISLAB | ₹9,289 | 3 | 1 | **2** |
+| MARUTI | ₹12,264 | 2 | 1 | 1 |
+| SHREECEM | ₹21,705 | 1 | 0 | 0 |
+| BOSCHLTD | ₹48,035 | 0 | 0 | 0 |
+| TMPV | ₹301 | 109 | 65 | 65 |
+
+Rounding stays *downward*. Rounding to nearest would let a reduced
+position come out larger than the risk and notional caps allow, which is
+the wrong direction for a rule whose whole job is to be a ceiling. Cheap
+stocks are unaffected — the bug only ever mattered where the share count
+was small. Both `trading_engine` and `backtester` call the one sizing
+function the same way, and a test asserts neither rounds outside it.
+
+When a reduced size does round to 0, the trade is **skipped**, and the
+block message now says which of the two reasons applied: a setup the
+checklist wanted smaller, or a share too expensive for the notional cap.
+
+#### A stop can be tighter than the round trip costs (issue #25)
+
+If the stop sits closer to the entry than the round trip costs to make,
+losing at the stop costs more than 2R by construction, and no amount of
+setup quality rescues it. TMPV's stop was **0.41×** the cost and it lost
+**4.33R net in 38 seconds**. A nominal 3:1 reward-to-risk at a stop that
+tight is really **0.60:1** after costs — the ratio is mostly measuring
+charges.
+
+There is now a required checklist rule, `min_stop_to_cost`, applied both
+on the finished bar and again at the live fill price (slippage can pull a
+stop inside the floor between the two).
+
+**The value is 1×, and the evidence is why it isn't higher.** A bigger
+floor looks obviously better in theory, and the reason to backtest it was
+to find out whether that survives contact with data. It doesn't.
+
+Backtested over 54 sessions of NIFTY 100 (100 stocks, the scanner's daily
+picks, real costs), split by date into two halves. The confidence gate is
+switched off here so the floor is measured over the whole
+checklist-passing population rather than the handful live actually takes —
+42 trades instead of 10:
+
+| Floor | Trades | R/trade | P&L | 1st half | 2nd half |
+| --- | --- | --- | --- | --- | --- |
+| off | 42 | −1.15 | −₹1,282 | −0.80R (24) | −1.56R (17) |
+| **1×** | **30** | **−0.76** | **−₹927** | **−0.51R (18)** | **−1.13R (12)** |
+| 2× | 13 | −0.43 | −₹340 | +0.31R (7) | −1.30R (6) |
+| 3× | 6 | −0.20 | −₹27 | +1.84R (2) | −1.22R (4) |
+
+**1× is the only floor that improves both halves.** 2× and 3× have the
+better headline numbers and get there the same way: a big improvement in
+the first half while the second half gets *worse*. A parameter that helps
+one period and hurts the other is the definition of an unstable one, and
+the aggregate it produces is not something to trade on. The trend is also
+the giveaway — each step up looks better and rests on fewer trades, until
+3× is reporting +1.84R off **two** trades in the first half.
+
+Modelled against the 8 real trades, the same ordering holds:
+
+| Floor | Kept | R/trade | Winners lost |
+| --- | --- | --- | --- |
+| off | 8 | −0.99 | — |
+| **1×** | **6** | **−0.12** | **none** |
+| 2× | 4 | −0.45 | TCS |
+| 3× | 2 | −1.37 | TCS **and** INDHOTEL |
+
+A 3× floor keeps two losers, blocks both winners, and lands at −1.37R per
+trade — worse than having no floor at all.
+
+1× also has the one argument that doesn't depend on any sample: **below
+it, the charges exceed the entire risk the position was sized on**, so a
+stop-out is worse than 2R however good the setup was. That is why the
+floor exists, and a value chosen for a reason the data merely agrees with
+is worth more than one fitted to the data alone.
+
+This is not an artifact of §42's unfinished-candle bug, which was the
+first suspicion — all 8 live trades predate that fix, and a partial candle
+understates a pattern's range, which is exactly how a 0.05% stop appears.
+Checked directly on real finished 5-minute bars (RELIANCE, 15–18 Sep):
+
+```
+[PASS] 10:00 short: stop 0.224% away, round trip 0.12% -> 1.9x the cost
+[PASS] 10:35 short: stop 0.144% away                   -> 1.2x
+[FAIL] 11:00 short: stop 0.056% away                   -> 0.5x
+[FAIL] 11:05 short: stop 0.040% away                   -> 0.3x
+```
+
+So sub-1× stops occur on finished candles too, and the rule has real work
+to do.
+
+**What this does not claim.** It isn't a winning strategy — every row
+above is still negative, and the floor removes bad trades rather than
+creating good ones. And in the *gated* backtest, the 10 trades live would
+actually have taken in that window, the 1× floor removes nothing at all:
+the confidence gate was already filtering these out. Its value shows up in
+the wider checklist population, so it matters most if the confidence gate
+is ever loosened.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single

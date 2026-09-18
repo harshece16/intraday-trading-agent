@@ -44,19 +44,34 @@ class RiskManager:
             return atr * self.cfg.get("atr_tp_multiplier", 3.0)
         return entry_price * self.cfg["take_profit_pct"] / 100
 
-    def position_size(self, entry_price: float, atr: float | None = None, stop_price: float | None = None) -> int:
+    def position_size(self, entry_price: float, atr: float | None = None, stop_price: float | None = None,
+                      size_factor: float = 1.0) -> int:
         """Percentage-risk sizing (Varsity Risk Management ch 14): risk amount / stop distance.
-        A structural stop (e.g. the candlestick pattern's low) is used when given."""
+        A structural stop (e.g. the candlestick pattern's low) is used when given.
+
+        `size_factor` covers every reduction applied to a full position — the
+        checklist's reduced size for a missing indicator, and the high-VIX
+        multiplier. It belongs here rather than at the call site because the
+        share count must be rounded exactly once (issue #28): callers used to
+        round the full size to whole shares and then multiply, so 60% of a
+        3-share cap became int(1.8) = 1 share, a third of the cap rather than
+        the intended 60%, and a 1-share cap became 0 and blocked the trade.
+
+        Rounding is still downward at the end. Rounding to the nearest share
+        would let a reduced position come out *larger* than the risk and
+        notional caps allow, which is the wrong direction for a rule whose
+        whole job is to be a ceiling.
+        """
         risk_amount = self.cfg["total_capital"] * self.cfg["max_risk_per_trade_pct"] / 100
         stop_distance = abs(entry_price - stop_price) if stop_price else self._stop_distance(entry_price, atr)
         if stop_distance <= 0:
             return 0
-        qty = int(risk_amount / stop_distance)
+        qty = risk_amount / stop_distance
         # Tight intraday ATR stops otherwise imply several times the account in notional.
         cap_pct = self.cfg.get("max_position_notional_pct")
         if cap_pct and entry_price > 0:
-            qty = min(qty, int(self.cfg["total_capital"] * cap_pct / 100 / entry_price))
-        return max(qty, 0)
+            qty = min(qty, self.cfg["total_capital"] * cap_pct / 100 / entry_price)
+        return max(int(qty * size_factor), 0)
 
     def stop_loss_price(self, entry_price: float, side: str, atr: float | None = None) -> float:
         d = self._stop_distance(entry_price, atr)
