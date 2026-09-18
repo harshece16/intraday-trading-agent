@@ -2212,6 +2212,63 @@ the confidence gate was already filtering these out. Its value shows up in
 the wider checklist population, so it matters most if the confidence gate
 is ever loosened.
 
+### 47. Keeping the engine up when the Mac sleeps
+
+Trader Sahab only trades while its backend is running, and a laptop that
+sleeps at 10:40 and wakes at 11:05 silently misses that part of the
+session. `scripts/sahab_watchdog.sh` closes that gap.
+
+```bash
+scripts/install_watchdog.sh              # install and start
+scripts/install_watchdog.sh --status     # is it loaded, and what has it done
+scripts/install_watchdog.sh --uninstall  # remove it
+```
+
+It installs one launchd agent that runs the watchdog every two minutes —
+and again as soon as the Mac wakes, which is the case it exists for. Each
+run does one of four things:
+
+| Situation | What happens |
+| --- | --- |
+| Not a trading session | Nothing at all |
+| Backend up and answering | Nothing, silently |
+| Nothing on the port | Starts it |
+| Port held but not answering | Kills it and starts a fresh one |
+
+Three deliberate choices:
+
+- **It only ever starts things.** It never stops a backend you started
+  yourself, and outside session hours it does nothing, so it can't
+  interfere with a backtest you're running in the evening.
+- **A wedged process is worse than a dead one**, because it holds the port
+  while stops go unchecked. So "listening but not answering `/api/state`"
+  counts as down — after a 15-second grace period, so one slow request
+  during a heavy scan doesn't cause a restart.
+- **"In session" comes from the app's own `config.py` and `holidays.py`,**
+  not a second copy of the market calendar, so NSE holidays and any
+  change to market hours are picked up automatically. The window runs from
+  20 minutes before the open (time for the pre-market scan) to 20 minutes
+  after the close (time for the 15:15 square-off and journal writes).
+
+The dashboard is **not** supervised by default — set
+`SAHAB_START_DASHBOARD=1` if you want that too. It's off because a
+dashboard that isn't up announces itself the moment you open the browser,
+while a missed trading session is invisible until you look at the journal.
+
+One trap worth knowing, because it nearly went into the script: Vite binds
+IPv6 loopback only, so `http://127.0.0.1:5500` is refused while
+`http://localhost:5500` returns 200. A health check on the IPv4 address
+makes a perfectly healthy dashboard look dead, and the watchdog would have
+killed and restarted it every two minutes. It probes the name.
+
+Logs are in `~/Library/Logs/TraderSahab/`: `watchdog.log` (what it did,
+and it stays quiet when nothing needed doing), `backend.log`, and
+`dashboard.log`.
+
+**This does not wake the Mac.** launchd fires on wake, not instead of it.
+A machine that is asleep or shut down for the whole session still misses
+it — for that you'd need the Mac awake (`pmset`) or the app on a server.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
