@@ -78,9 +78,28 @@ responds() {
   curl -sf -m 10 -o /dev/null "http://127.0.0.1:$PORT/api/state?key=$key"
 }
 
+# The backend has to outlive this script. `nohup ... &` is not enough under
+# launchd: when the job exits, launchd cleans up the whole process group and
+# takes the new backend with it. Measured — two "started backend" lines two
+# minutes apart, and nothing listening either time, because each one was
+# killed the instant the watchdog returned.
+#
+# start_new_session=True calls setsid(), putting the backend in its own
+# session and process group, out of reach of that cleanup. (macOS has no
+# setsid binary, hence doing it through Python.)
 start_backend() {
-  nohup "$PY" -m uvicorn app:app --port "$PORT" >> "$SERVER_LOG" 2>&1 &
-  log "started backend on :$PORT (pid $!)"
+  local pid
+  pid=$("$PY" - "$PORT" "$SERVER_LOG" <<'PY'
+import subprocess, sys
+port, logfile = sys.argv[1], sys.argv[2]
+with open(logfile, "a") as out:
+    p = subprocess.Popen([sys.executable, "-m", "uvicorn", "app:app", "--port", port],
+                         stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                         start_new_session=True)
+print(p.pid)
+PY
+  )
+  log "started backend on :$PORT (pid ${pid:-unknown})"
 }
 
 # Vite binds IPv6 loopback only, so http://127.0.0.1:5500 is refused while
@@ -98,7 +117,14 @@ check_dashboard() {
     log "something holds :$DASH_PORT but doesn't serve — leaving it alone, check it by hand"
     return 0
   fi
-  ( cd "$REPO/frontend" && nohup npm run dev >> "$DASH_LOG" 2>&1 & )
+  # Same detach as start_backend: launchd would otherwise reap it too.
+  "$PY" - "$REPO/frontend" "$DASH_LOG" <<'PY'
+import subprocess, sys
+cwd, logfile = sys.argv[1], sys.argv[2]
+with open(logfile, "a") as out:
+    subprocess.Popen(["npm", "run", "dev"], cwd=cwd, stdout=out, stderr=subprocess.STDOUT,
+                     stdin=subprocess.DEVNULL, start_new_session=True)
+PY
   log "started dashboard on :$DASH_PORT"
 }
 
