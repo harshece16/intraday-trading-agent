@@ -2255,11 +2255,32 @@ The dashboard is **not** supervised by default — set
 dashboard that isn't up announces itself the moment you open the browser,
 while a missed trading session is invisible until you look at the journal.
 
-One trap worth knowing, because it nearly went into the script: Vite binds
-IPv6 loopback only, so `http://127.0.0.1:5500` is refused while
-`http://localhost:5500` returns 200. A health check on the IPv4 address
-makes a perfectly healthy dashboard look dead, and the watchdog would have
-killed and restarted it every two minutes. It probes the name.
+**The app must not live in `~/Downloads`, `~/Documents` or `~/Desktop`.**
+macOS TCC protects those folders, and a launchd agent inherits none of the
+permission your Terminal has. Installed from `~/Downloads/webapp`, the
+watchdog loaded, reported `last exit: 0`, and failed every single run with
+`/bin/bash: …/sahab_watchdog.sh: Operation not permitted` — a job that
+looks healthy and does nothing. That is why this repo now lives in
+`~/Projects/webapp`. Moving it needs the venv rebuilt (`backend/.venv`
+bakes in absolute paths) and `git worktree repair` for anything under
+`.claude/worktrees/`.
+
+Two traps found by testing this under launchd rather than in a shell,
+both now handled in the script:
+
+- **launchd kills the job's background children when the job exits.**
+  `nohup … &` does not prevent it — `nohup` only ignores SIGHUP. The first
+  version logged "started backend" twice, two minutes apart, with nothing
+  listening either time and not a line in the backend's own log: each
+  uvicorn was killed the moment the watchdog returned. Run by hand from a
+  shell the same script worked perfectly, which is what makes this easy to
+  miss. The backend is now started with `start_new_session=True` (setsid;
+  macOS has no `setsid` binary), which puts it outside the job's process
+  group — a surviving backend shows **PPID 1**.
+- **Vite binds IPv6 loopback only**, so `http://127.0.0.1:5500` is refused
+  while `http://localhost:5500` returns 200. A health check on the IPv4
+  address makes a healthy dashboard look dead, and the watchdog would have
+  killed and restarted it every two minutes. It probes the name.
 
 Logs are in `~/Library/Logs/TraderSahab/`: `watchdog.log` (what it did,
 and it stays quiet when nothing needed doing), `backend.log`, and
