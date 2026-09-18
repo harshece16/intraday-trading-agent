@@ -541,9 +541,22 @@ class TradingEngine:
                 return self._blocked(symbol, setup, live["reason"])
         stop_price = plan["stop"] if plan else None
         size_factor = plan["size_factor"] if plan else 1.0
-        qty = int(self.risk.position_size(ltp, atr=atr_val, stop_price=stop_price) * self.size_multiplier * size_factor)
+        qty = self.risk.position_size(ltp, atr=atr_val, stop_price=stop_price,
+                                      size_factor=self.size_multiplier * size_factor)
         if qty <= 0:
-            return self._blocked(symbol, setup, "position size rounds to 0 shares")
+            # Say which of the two reasons it was: a setup the checklist wants
+            # taken smaller, or a stock too expensive for the notional cap.
+            full = self.risk.position_size(ltp, atr=atr_val, stop_price=stop_price)
+            if full > 0:
+                return self._blocked(symbol, setup,
+                                     f"position size rounds to 0 shares at {self.size_multiplier * size_factor:.0%} size "
+                                     f"(full size would be {full}) — a setup the checklist wants smaller isn't "
+                                     f"worth taking at full size")
+            cap_pct = config.RISK.get("max_position_notional_pct")
+            return self._blocked(symbol, setup,
+                                 f"position size rounds to 0 shares: at {ltp:,.2f} even one share is more than the "
+                                 f"{cap_pct:g}% cap on one position (₹{config.RISK['total_capital'] * cap_pct / 100:,.0f})"
+                                 if cap_pct else "position size rounds to 0 shares")
 
         if plan:
             bar = (analysis.get("bar_time") or "")[11:16]
