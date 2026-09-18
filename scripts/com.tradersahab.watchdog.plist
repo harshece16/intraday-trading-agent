@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Runs scripts/sahab_watchdog.sh every 2 minutes while you are logged in.
+  StartInterval also fires on wake, so a Mac that sleeps mid-session brings
+  the engine back on its own. The script itself decides whether it is a
+  trading session; outside one it does nothing.
+
+  Install with scripts/install_watchdog.sh, which rewrites __REPO__ to the
+  real path. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tradersahab.watchdog</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__REPO__/scripts/sahab_watchdog.sh</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>120</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- The watchdog is meant to exit immediately most of the time. Without
+         this, launchd throttles a fast-exiting job and complains. -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/TraderSahab/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/TraderSahab/launchd.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO__/backend</string>
+</dict>
+</plist>
