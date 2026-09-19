@@ -2290,6 +2290,83 @@ and it stays quiet when nothing needed doing), `backend.log`, and
 A machine that is asleep or shut down for the whole session still misses
 it — for that you'd need the Mac awake (`pmset`) or the app on a server.
 
+### 48. The reward-to-risk rule was rejecting 96% of setups, and the stop was why
+
+The R:R rule passed **679 of 18,550** evaluations in a day, with a median
+R:R after costs of **−0.08**. That reads like a target-selection problem.
+It wasn't (issue #41).
+
+**The diagnosis**, from 8,674 real checklist evaluations:
+
+| | |
+| --- | --- |
+| Round-trip cost, as a fraction of the risk sized on | **median 0.85R** |
+| Setups where cost exceeds the *entire* risk budget | **41%** |
+| Target distance needed to clear 1.5R after costs | **median 3.62R** |
+| Target distance actually available | median 0.89R |
+
+A 5-minute pattern's own extreme sits a median **0.142%** from the entry,
+against a **0.12%** round trip. At that distance the trade is mostly a bet
+on costs: with `c = cost / risk`, clearing 1.5R net needs a gross target
+`1.5 + 2.5c` away — 3.6× the pattern's own range — which intraday moves
+essentially never deliver. Half the chosen targets were closer than 1R and
+so could never have qualified.
+
+**The lever is the stop, and it is nearly free.** Position sizing holds the
+rupee risk, and the system was risking about **0.05% of capital per trade
+against a 1% budget**. Widening the stop shrinks `c` directly.
+
+**`min_stop_atr = 1.0`** — a stop never sits closer than 1 ATR to the
+entry. Backtested over 54 sessions of NIFTY 100, split into halves:
+
+| Config | Trades | R/trade | P&L | Win | 1st half | 2nd half |
+| --- | --- | --- | --- | --- | --- | --- |
+| baseline | 30 | −0.76 | −₹927 | 23% | −0.51 | −1.13 |
+| buffer 0.25 ATR | 17 | −0.58 | −₹431 | 29% | −0.39 | −0.75 |
+| buffer 0.50 ATR | 13 | −0.22 | −₹351 | 39% | +0.36 | −0.59 |
+| floor 0.5 ATR | 34 | −0.63 | −₹826 | 27% | −0.29 | **−1.19** |
+| **floor 1.0 ATR** | **21** | **−0.13** | **+₹130** | **38%** | **+0.44** | **−0.89** |
+| buffer .25 + floor .5 | 20 | −0.40 | −₹278 | 35% | +0.06 | −0.86 |
+
+Four of those improve both halves, so the number alone doesn't decide it.
+The floor wins on a reason that doesn't depend on this sample: **a floor
+only widens the stops that are pathologically tight, while a buffer widens
+every stop, including healthy ones.** Since a wider stop pushes the
+required target *further out in absolute terms*, a blanket buffer shoves
+good setups past `max_target_atr` — which is why `buffer 0.50` shows the
+best first half in the table off **five trades**. The floor improves
+expectancy while keeping 21 of the baseline's 30 trades. `floor 0.5`
+failing is the same mechanism confirming itself: half an ATR is too small
+to fix the cost ratio, so it lets in 34 still-cost-dominated trades and the
+second half comes out worse than baseline.
+
+**The target cap earns its place.** Holding the floor at 1.0 and loosening
+`max_target_atr`:
+
+| Cap | Trades | R/trade | P&L |
+| --- | --- | --- | --- |
+| **3.0** | **21** | **−0.13** | **+₹130** |
+| 4.0 | 56 | −0.78 | −₹2,054 |
+| 5.0 | 71 | −0.76 | −₹2,335 |
+| 6.0 | 77 | −0.56 | −₹1,284 |
+
+The 35 extra trades cap 4.0 admits average **−1.17R each**. Targets more
+than 3 ATR away don't get reached inside a session, so the cap is a real
+quality filter and stays at 3.0. That also settles the one confound in the
+table above: where the floor pushes a target out of reach, the trade it
+removes is one that would have lost.
+
+**What this does not claim.** The second half is still **−0.89R** and the
++₹130 comes from 21 trades — the Scorecard's verdict is unchanged and
+every criterion still reads "not enough data". This removes a structural
+loss; it does not add an edge. The stop check also sits on the pattern's
+own extreme rather than the widened stop, so the "stop at support" rule
+still measures the structure the trade leans on.
+
+**Still open:** `rrr_without_level` is a *gross* 2.0R target measured
+against a *net* bar, so that branch nets 0.62 at the old cost fraction and
+has never once passed (issue #40).
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
