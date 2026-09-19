@@ -72,6 +72,23 @@ DEFAULTS = {
     # would have blocked both winners and kept two losers. Read section 46
     # before raising this.
     "min_stop_to_cost": 1.0,
+    # How far beyond the pattern's extreme the stop is parked, and how close to
+    # the entry a stop may ever sit, both in ATR. These widen the stop rather
+    # than rejecting the trade (which is what min_stop_to_cost does): a wider
+    # stop makes the fixed round-trip cost a smaller fraction of the risk the
+    # trade is sized on, and so lowers the target distance needed to clear
+    # min_rrr. Issue #41.
+    #
+    # The floor is on and the buffer is off, and the backtest is the reason
+    # (README section 48). A floor only widens the stops that are pathologically
+    # tight; a buffer widens every stop, including healthy ones, and since a
+    # wider stop pushes the required target further out in absolute terms, it
+    # shoves good setups past max_target_atr. That shows up as better headline
+    # numbers on a collapsing sample: buffer 0.50 posted the best first half in
+    # the sweep off five trades. The floor improved both halves while keeping
+    # 21 of the baseline's 30 trades.
+    "stop_buffer_atr": 0.0,
+    "min_stop_atr": 1.0,
     "rrr_without_level": 2.0,
     "max_target_atr": 3.0,           # how far out to look for a level that actually clears min_rrr
     "adx_trend": 25,
@@ -200,9 +217,24 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
     candidates = sorted((x for x in patterns if x["bias"] == bias), key=lambda x: -x["strength"])
     pattern = candidates[0] if candidates else None
     stop = target = rrr = None
+    structural_stop = None
     if pattern:
         bars = window[-PATTERN_BARS.get(pattern["name"], 1):]
-        stop = min(b["low"] for b in bars) if s > 0 else max(b["high"] for b in bars)
+        # The pattern's own extreme is the structure; the stop goes just beyond
+        # it. Sitting exactly on the extreme makes the stop both easy to wick
+        # out and — because a 5-minute pattern is small — so close to the entry
+        # that the round trip's cost is most of the risk the trade is sized on.
+        # Measured over 8,674 real evaluations: costs were a median 0.85R and
+        # exceeded the whole risk budget in 41% of setups, which forced the
+        # target 3.62R away just to clear 1.5R after costs. Varsity and
+        # Bulkowski both place the stop beyond the pattern rather than on it.
+        structural_stop = min(b["low"] for b in bars) if s > 0 else max(b["high"] for b in bars)
+        stop = structural_stop - s * p["stop_buffer_atr"] * atr_v
+        # ...and never closer to the entry than this, so a very small pattern
+        # can't produce a stop that costs more than it risks.
+        floor_dist = p["min_stop_atr"] * atr_v
+        if abs(price - stop) < floor_dist:
+            stop = price - s * floor_dist
         span = max(b["high"] for b in bars) - min(b["low"] for b in bars)
         sane = p["min_pattern_atr"] * atr_v <= span <= p["max_pattern_atr"] * atr_v
         item("pattern", "Recognisable candlestick pattern", sane,
@@ -213,14 +245,20 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
 
     risk = abs(price - stop) if stop is not None else 0.0
     if risk > 0:
+        # Measured against the pattern's own extreme, not the buffered stop:
+        # the question is whether the structure the trade leans on is a real
+        # level, and the buffer is only how far beyond it the stop is parked.
+        # Using the buffered price here would spend half the tolerance on the
+        # buffer and quietly fail setups that are sitting exactly where we want.
+        anchor = structural_stop if structural_stop is not None else stop
         tol = p["sr_tolerance_atr"] * atr_v
         near = [lv for lv in levels
                 if (lv["price"] <= price if s > 0 else lv["price"] >= price)
-                and abs(lv["price"] - stop) <= tol and (lv["touches"] >= 2 or lv["kind"] != "swing")]
-        best = min(near, key=lambda lv: abs(lv["price"] - stop)) if near else None
+                and abs(lv["price"] - anchor) <= tol and (lv["touches"] >= 2 or lv["kind"] != "swing")]
+        best = min(near, key=lambda lv: abs(lv["price"] - anchor)) if near else None
         item("sr", f"Stop-loss sits at {level_word}", best is not None,
-             f"Stop {stop:.2f} is at {_level_name(best)} ({best['price']:.2f})" if best else
-             f"No {level_word} within {p['sr_tolerance_atr']:g} ATR of the stop {stop:.2f}")
+             f"Stop {stop:.2f} sits just beyond {_level_name(best)} ({best['price']:.2f})" if best else
+             f"No {level_word} within {p['sr_tolerance_atr']:g} ATR of the pattern's low {anchor:.2f}")
     else:
         item("sr", f"Stop-loss sits at {level_word}", False, "Needs a pattern to place the stop")
 
