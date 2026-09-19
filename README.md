@@ -2363,7 +2363,21 @@ loss; it does not add an edge. The stop check also sits on the pattern's
 own extreme rather than the widened stop, so the "stop at support" rule
 still measures the structure the trade leans on.
 
-**Still open:** `rrr_without_level` is a *gross* 2.0R target measured
+**A limitation found while verifying the deploy, not before it.** The floor
+is in ATR, but the problem is in cost, and the two are unrelated. On
+RELIANCE the ATR is a median 0.116% of price against a 0.12% round trip, so
+one ATR is worth about **0.97× the cost** there — and in quieter stretches
+24 of 68 plans still came out under 1× cost, the lowest at 0.51×.
+
+Nothing unsafe follows: §46's `min_stop_to_cost` catches every one, and a
+check over those same bars found **zero** sub-1× plans passed by the cost
+rule. But it means that on a quiet stock the floor gives up the setup
+rather than repairing it — the outcome is "no trade" instead of "stop
+placed where the economics work". Making the floor the wider of the ATR and
+cost ideas is issue #43, and it would need its own backtest because it
+pushes trade count the opposite way from this section's change.
+
+**Also still open:** `rrr_without_level` is a *gross* 2.0R target measured
 against a *net* bar, so that branch nets 0.62 at the old cost fraction and
 has never once passed (issue #40).
 
