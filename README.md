@@ -2430,6 +2430,62 @@ decision logic, the subscription lifecycle, the error handling and the
 concurrency guard are all covered; the actual WebSocket handshake and Kite's
 real packet format are not. First live session will tell.
 
+### 50. Deep history, so a strategy question can actually be answered
+
+Every strategy decision in this README so far was made on 13 to 42 backtested
+trades. That is not enough to decide anything, and the arithmetic says so:
+the standard deviation of trade outcomes is **2.51R**, so detecting a real
+edge at t = 2 needs
+
+| Edge | Trades needed |
+| --- | --- |
+| +0.5R | **101** |
+| +0.2R | **631** |
+
+The cap was the data. yfinance stops at about 60 days of 5-minute candles,
+which over 54 sessions and 100 stocks yields 21–42 trades. At the live rate of
+2.7 trades a session, waiting for 101 would take two months and 631 would take
+eleven (issue #46).
+
+`kite_history.py` fetches from Kite instead, which paginates back years:
+
+```bash
+python kite_history.py --days 730          # two years, the NIFTY 100
+python kite_history.py --status            # what's cached
+python backtester.py --universe nifty100 --source kite --days 730
+```
+
+Candles land in `backend/data/kite_history.db` and are read from there
+afterwards, so the download happens once. The pull is **resumable** — every
+window is recorded as it completes, including empty ones (a holiday stretch is
+a real answer, not a gap), so an interrupted two-year fetch continues rather
+than starting over, and one failed window doesn't cost the other twelve.
+Requests are paced below Kite's documented 3/second through a process-wide
+limiter, because being throttled mid-pull costs far more than going slightly
+slower.
+
+**There is a second reason to use it beyond depth.** Live trading reads Kite
+and backtests read yfinance — two different feeds with different bars. Some
+part of any backtest-versus-live divergence has always been the data rather
+than the strategy, with no way to tell which. Backtesting on the feed the
+engine actually trades on removes that question.
+
+`--source kite` **refuses to run** when the cache is empty rather than falling
+back. A run intended to cover two years must not quietly answer a different
+question using 60 days; `auto` (the default) prefers the cache and falls back,
+`yfinance` forces the old path.
+
+**The live engine still keeps yfinance.** That fallback is what carries it
+through a Kite session expiring mid-session, which happens daily — see §43,
+where a dead token cost 5h20m of a trading day. Deep history is a backtest
+source, not a replacement for the engine's safety net.
+
+**Not verified against Kite yet.** The session has been expired since 16 Sep,
+so the tests run against a fake Kite pinned to the documented API shape.
+Pagination, resume, pacing, storage and source selection are covered; Kite's
+real responses are not, and historical data may need a separate subscription
+on the account. The first real pull will say.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single

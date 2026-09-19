@@ -425,12 +425,61 @@ def print_walk_forward_report(results, starting_capital):
     print("small, recent, delayed-data yfinance sample every backtest here draws from.")
 
 
+def _require_source(args):
+    """Fail before any downloading if --source kite has nothing to read."""
+    import kite_history
+    if getattr(args, "source", "auto") == "kite" and not kite_history.available(args.interval):
+        raise SystemExit(
+            "--source kite, but the Kite history cache is empty.\n"
+            "Fill it first:  python kite_history.py --days 730\n"
+            "Or run with --source yfinance to use the ~60 days yfinance allows.")
+
+
+def _intraday_source(args, symbols):
+    """Intraday candles for a backtest, from the deepest source available.
+
+    `--source kite` insists on the Kite cache and stops if it is empty, so a
+    run meant to use two years of history can't silently fall back to 60 days
+    of yfinance and quietly answer a different question. `auto` prefers the
+    cache and falls back; `yfinance` forces the old path."""
+    import kite_history
+    import scanner
+
+    want = getattr(args, "source", "auto")
+    have = kite_history.available(args.interval)
+    if want == "kite" and not have:
+        raise SystemExit(
+            "--source kite, but the Kite history cache is empty.\n"
+            "Fill it first:  python kite_history.py --days 730\n"
+            "Or run with --source yfinance to use the ~60 days yfinance allows.")
+    if want != "yfinance" and have:
+        cached = kite_history.load_batch(symbols, interval=args.interval, days=args.days)
+        if cached:
+            st = kite_history.status(args.interval)
+            print(f"Intraday from the Kite cache: {len(cached)} symbols, {st['sessions']} sessions "
+                  f"({st['from']} to {st['to']}).")
+            return cached
+        if want == "kite":
+            raise SystemExit("--source kite, but none of these symbols are in the cache.")
+    if want != "yfinance":
+        print("Kite history cache is empty — falling back to yfinance (~60 days). "
+              "Run kite_history.py to go deeper.")
+    tickers = [scanner.yf_ticker(s) for s in symbols]
+    return {t[:-3]: c for t, c in scanner.download_batch(tickers, f"{args.days}d", args.interval).items() if c}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--symbols", default=",".join(config.WATCHLIST), help="Comma-separated NSE symbols")
     parser.add_argument("--strategy", default=config.STRATEGY, choices=list(STRATEGY_FUNCTIONS))
     parser.add_argument("--interval", default=config.CANDLE_INTERVAL)
-    parser.add_argument("--days", type=int, default=55, help="yfinance caps 5m history at ~60 days")
+    parser.add_argument("--days", type=int, default=55,
+                        help="How far back to test. yfinance caps 5m history at ~60 days; "
+                             "with the Kite cache filled (kite_history.py) this can be years.")
+    parser.add_argument("--source", choices=["auto", "kite", "yfinance"], default="auto",
+                        help="Intraday candle source. 'auto' prefers the Kite cache and falls back "
+                             "to yfinance; 'kite' refuses to run without the cache, so a deep "
+                             "backtest can't silently shrink to 60 days.")
     parser.add_argument("--capital", type=float, default=config.RISK["total_capital"])
     parser.add_argument("--no-costs", action="store_true",
                          help="Disable brokerage/STT/slippage modeling (frictionless, for comparison only)")
@@ -460,10 +509,17 @@ def main():
         import universe
         rows = universe.load()
         tickers = [scanner.yf_ticker(r["symbol"]) for r in rows]
+        # Check the intraday source before spending a minute on daily data, so
+        # "the cache is empty" arrives immediately rather than after a download.
+        _require_source(args)
         print(f"Downloading daily + {args.interval} history for {len(rows)} NIFTY 100 stocks...")
         daily = scanner.download_batch(tickers + [scanner.NIFTY], "2y", "1d")
-        intraday = scanner.download_batch(tickers, f"{args.days}d", args.interval)
-        preloaded = {t[:-3]: c for t, c in intraday.items()}
+        # Intraday comes from the Kite cache when it has been filled
+        # (kite_history.py), because yfinance stops at ~60 days and that caps
+        # this backtest at far too few trades to decide anything — see issue
+        # #46. It is also the feed live trading reads, so a divergence between
+        # backtest and live is the strategy rather than the data.
+        preloaded = _intraday_source(args, [r["symbol"] for r in rows])
         symbols = sorted(preloaded)
         sessions = sorted({c["time"][:10] for cs in preloaded.values() for c in cs})
         picks = scanner.premarket_picks(daily, rows, sessions, args.scan_top, config.SCANNER,
