@@ -228,6 +228,13 @@ RISK = {
     # undermines max_daily_loss_pct's implicit assumption of some independence
     # between positions. None disables the check.
     "max_positions_per_sector": 1,
+    # Check stops on Kite's tick stream as well as on the 30-second poll, so a
+    # breached stop is acted on in milliseconds instead of waiting up to a
+    # full poll interval (worth ~Rs 12 on a Rs 33,000 position at the worst
+    # case, on every losing trade). Needs a live Kite session for the feed,
+    # but not live trading. Turning this off loses nothing else: the poll
+    # keeps checking stops exactly as it always has. See stop_watcher.py.
+    "tick_stops": True,
     # Cap each position's value at this % of capital. Without it, 1% risk
     # with a tight 5-min ATR stop sized trades at ~5x the account (median
     # Rs 4.8L notional on Rs 1L) and multiplied both losses and costs.

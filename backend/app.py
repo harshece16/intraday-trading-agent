@@ -491,6 +491,20 @@ def kite_status():
     }
 
 
+@app.get("/api/stops/status")
+def stops_status():
+    """Whether stops are being checked on Kite's tick stream or only on the
+    30-second poll. "connected: false" isn't an error — it's the fallback the
+    engine has always used, and stops are still enforced every poll."""
+    watcher = getattr(engine, "stop_watcher", None)
+    if watcher is None:
+        return {"available": False, "started": False, "connected": False, "watching": [],
+                "note": "Tick-driven stops are switched off (RISK['tick_stops']); "
+                        "the 30-second poll checks stops as it always has.",
+                "poll_interval_seconds": config.POLL_INTERVAL_SECONDS}
+    return {**watcher.stats(), "poll_interval_seconds": config.POLL_INTERVAL_SECONDS}
+
+
 @app.get("/kite/login")
 def kite_login():
     """Step 1 of the in-app 'Connect Kite' flow — redirects to Zerodha's login page."""

@@ -2381,6 +2381,55 @@ pushes trade count the opposite way from this section's change.
 against a *net* bar, so that branch nets 0.62 at the old cost fraction and
 has never once passed (issue #40).
 
+### 49. Stops are checked on every tick, not every 30 seconds
+
+Stops used to be enforced only inside the 30-second poll, so a breached stop
+could sit unnoticed for up to a full poll interval. Against the measured
+5-minute ATR that is worth about **₹12** on a ₹33,000 position at the worst
+case — roughly a third of what the entire round trip costs in charges — and
+it lands on every losing trade, which is where this strategy's expectancy
+currently lives.
+
+`stop_watcher.py` subscribes to Kite's tick stream for the symbols actually
+held and acts on a breach in milliseconds.
+
+**What it is allowed to do is deliberately tiny.** It can only ever *close* a
+position that is already open. There is no path from it to an entry, a size
+change, or an order for a symbol not currently held, and it reuses the same
+`_check_stop_take()` the poll uses, so the fast path and the slow path can
+never disagree about what a stop means. The poll keeps checking stops exactly
+as before — this is an accelerator, not a replacement, so a dropped socket
+degrades to the old behaviour rather than to no behaviour.
+
+**The part that needed real care was concurrency.** Until now only one thread
+ever closed a position, so `_check_stop_take()` and `_close()` could read the
+quantity and *then* place the closing order with no lock across the two steps.
+With a tick stream that stops being safe: the poll and the stream both watch
+the same stop, and two threads seeing one breach would each send a **full
+closing order** — turning a flat exit into a reversed position. Every exit now
+goes through `engine._exit_position()`, which claims the symbol first, so
+exactly one thread can close it.
+
+That claim has three regression tests, and they were rewritten once because
+the first versions were worthless: firing threads at a barrier and hoping they
+collide **passes even with the claim removed**, because Python's 5 ms GIL
+switch interval lets the first caller finish the whole close before the second
+resumes. The tests now hold the first caller *inside* `_execute` — position
+still showing its full quantity, order not yet filled — and run the others
+against exactly that state. Verified by deleting the claim and watching all
+three fail, including `assert 1 == 2` on the position counter, which the
+`max(0, …)` clamp had been hiding.
+
+It needs a live Kite session for the feed but **not** live trading: a
+paper-mode run with a valid token gets real-time stops too. Check it at
+`GET /api/stops/status`; `RISK["tick_stops"] = False` turns it off.
+
+**Not yet verified against a live feed.** The Kite session has been expired
+since 16 Sep, so every test here runs against an injected fake ticker. The
+decision logic, the subscription lifecycle, the error handling and the
+concurrency guard are all covered; the actual WebSocket handshake and Kite's
+real packet format are not. First live session will tell.
+
 ## Dashboard
 
 Rebuilt across two sessions: first as a multi-page site (hash-routed, single
