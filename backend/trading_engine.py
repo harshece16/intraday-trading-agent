@@ -114,6 +114,14 @@ class TradingEngine:
         self._last_premarket_seed_date = None
         self._tick_started_at = None
         self._stall_reported_for = None
+        # Symbols whose exit one thread has claimed. Until the tick stream
+        # existed only the poll loop ever closed a position, so "read the
+        # quantity, then place the closing order" was safe without a lock
+        # across both steps. It isn't any more: two threads seeing the same
+        # breached stop would each send a full closing order and turn a flat
+        # exit into a reversed position. See _claim_exit().
+        self._exiting = set()
+        self.stop_watcher = None
 
     def _ensure_kite(self):
         if self.kite_executor is None:
@@ -421,7 +429,48 @@ class TradingEngine:
                          position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
         self.risk.open_positions_count = 0
 
+    def _claim_exit(self, symbol) -> bool:
+        """Claim the right to close `symbol`, so exactly one thread sends the
+        closing order. The poll loop and the tick stream both watch the same
+        stops; without this, one breached stop becomes two full closing orders
+        and the position flips instead of going flat. Returns False when
+        another thread already holds the claim or the position is already
+        flat — in both cases there is nothing for this caller to do."""
+        with self.state.lock:
+            if symbol in self._exiting:
+                return False
+            if self.state.positions.get(symbol, {}).get("quantity", 0) == 0:
+                return False
+            self._exiting.add(symbol)
+            return True
+
+    def _release_exit(self, symbol):
+        with self.state.lock:
+            self._exiting.discard(symbol)
+
+    def _exit_position(self, symbol, ltp, reason, note=None) -> bool:
+        """The single way out of a cash position. Everything that closes one —
+        a stop, a target, a brain exit, the 15:15 square-off — goes through
+        here so the claim above is never bypassed."""
+        if not self._claim_exit(symbol):
+            return False
+        try:
+            with self.state.lock:
+                pos = self.state.positions[symbol]
+                qty = pos["quantity"]
+                position_id, initial_risk = pos.get("position_id"), pos.get("initial_risk")
+            if qty == 0:
+                return False
+            self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason,
+                          note=note, position_id=position_id, initial_risk=initial_risk)
+            self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+            return True
+        finally:
+            self._release_exit(symbol)
+
     def _check_stop_take(self, symbol, ltp) -> bool:
+        """Called by the 30-second poll and, when Kite's tick stream is up, by
+        stop_watcher on every tick for a symbol we hold."""
         pos = self.state.positions[symbol]
         qty = pos["quantity"]
         if qty == 0:
@@ -436,12 +485,24 @@ class TradingEngine:
         if not (hit_stop or hit_target):
             self._trail_stop(symbol, pos, ltp, stop, sign)
             return False
-        exit_side = "SELL" if qty > 0 else "BUY"
-        self._execute(symbol, exit_side, abs(qty), ltp, reason="stop_loss" if hit_stop else "take_profit",
-                      note=f"stop {stop:.2f} / target {target:.2f}",
-                      position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
-        self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
-        return True
+        return self._exit_position(symbol, ltp, reason="stop_loss" if hit_stop else "take_profit",
+                                   note=f"stop {stop:.2f} / target {target:.2f}")
+
+    def check_stop_from_tick(self, symbol, ltp) -> bool:
+        """Entry point for stop_watcher, called on the tick stream's thread.
+
+        Deliberately narrow: it can only ever close a position that is already
+        open, and only through the same _check_stop_take() the poll uses, so
+        the fast path and the slow path can never disagree about what a stop
+        means. Exceptions are swallowed rather than raised, because raising
+        would kill the tick stream and take the fast stops down with it."""
+        try:
+            if self.state.positions.get(symbol, {}).get("quantity", 0) == 0:
+                return False
+            return self._check_stop_take(symbol, ltp)
+        except Exception:
+            logger.exception(f"Tick-driven stop check failed for {symbol}")
+            return False
 
     def _trail_stop(self, symbol, pos, ltp, stop, sign):
         """Step trailing stop (Varsity Futures ch 7): after `trail_after_r` R in profit, lock in
@@ -464,13 +525,7 @@ class TradingEngine:
         return False
 
     def _close(self, symbol, ltp, reason, note=None):
-        pos = self.state.positions[symbol]
-        qty = pos["quantity"]
-        if qty == 0:
-            return
-        self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason, note=note,
-                      position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
-        self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+        self._exit_position(symbol, ltp, reason, note)
 
     def _try_enter(self, symbol, side, ltp, candles, analysis):
         """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15).
@@ -972,6 +1027,14 @@ class TradingEngine:
                 self._process_fno()
             except Exception:
                 logger.exception("F&O processing failed")
+            # Keep the tick stream subscribed to exactly what we hold, so a
+            # position opened this cycle is under tick-by-tick stop watch
+            # within a second of its order going in.
+            try:
+                if self.stop_watcher is not None:
+                    self.stop_watcher.sync()
+            except Exception:
+                logger.exception("Stop watcher sync failed — stops still covered by this poll")
 
         with self.state.lock:
             self.state.last_update_ts = now.timestamp()
@@ -979,6 +1042,9 @@ class TradingEngine:
     async def run_forever(self):
         self.state.running = True
         threading.Thread(target=self._watch_ticks, name="tick-watchdog", daemon=True).start()
+        if config.RISK.get("tick_stops", True):
+            import stop_watcher
+            self.stop_watcher = stop_watcher.StopWatcher(self)
         self.state.log("system", f"Trader Sahab started in {'paper' if self.state.paper_mode else 'live'} mode "
                                  f"with {config.STRATEGY_DISPLAY_NAMES.get(config.STRATEGY, config.STRATEGY)} "
                                  f"calling the shots.")
