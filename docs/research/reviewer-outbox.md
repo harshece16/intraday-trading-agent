@@ -88,6 +88,10 @@ adjusting it — it is pre-registered.
 
 ### Decisions I need from you
 
+**D1 — RESOLVED 2026-09-20: let the faithful run finish.** No deviation; the
+pre-registered design (100 symbols, 495 sessions, 200 seeds × 2 cost modes)
+runs to completion. Original question below for the record.
+
 **D1 — accept the 5-hour serial run, or approve a documented deviation?**
 The prereg says 100 symbols, 495 sessions, 200 seeds. Running each seed on a
 random ~25-symbol subset would cut it to ~75 minutes.
