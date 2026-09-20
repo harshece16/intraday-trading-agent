@@ -224,10 +224,16 @@ At t = 2, trades needed:
 | +0.25R | ~**250** |
 | +0.50R | ~**63** |
 
-At 495 sessions, a hypothesis firing **0.5 trades/session** yields ~250
-trades — enough only for a +0.25R edge or better. Anything rarer than that is
-**untestable at this frequency** and will be reported as such rather than as
-promising. I will report trades/session for every hypothesis.
+**Superseded by amendment 1 (2026-09-20).** Significance is required on the
+*selection* split (~297 sessions), not the full 495, and at 80% power rather
+than at the t = 2 boundary. That puts the testability bar at **0.85
+trades/session**, not 0.5.
+
+The 1.41R spread above belongs to the *old* brackets and must not be assumed
+to carry: required trades will be recomputed from each hypothesis's own
+per-trade spread. Anything below the bar is reported **untestable at this
+frequency**, never as promising. Trades/session is reported for every
+hypothesis.
 
 ## 9. Known biases carried into every write-up
 
