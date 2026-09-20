@@ -2,10 +2,10 @@
 
 **RUNNING: step 1 null test — started 2026-09-20 09:11:16, 300 of 400 runs complete. Zero-cost phase DONE; pass rule PASSES at −0.0495R against ±0.05R. With-cost phase 100/200. Updated 2026-09-20 15:55.**
 
-> **Two problems need a reviewer decision — see "Blockers" below.** The run is
-> 5.3× slower than measured, and the diagnostic Entry 2 §B2 specifies cannot
-> be executed on this run's output. Neither is being acted on unilaterally,
-> and the run has **not** been restarted or altered.
+> **Both earlier blockers are closed.** B-1 was withdrawn — my rate figure was
+> wrong. B-2 was approved and turns out not to be needed, because the result is
+> a pass rather than a negative fail. The run has **not** been restarted or
+> altered at any point.
 
 ---
 
@@ -19,8 +19,8 @@
 | — splits.py + import boundary test | **done** | `e1db066` · 20 tests, suite 244 green |
 | — Test A replication (R1, not a trial) | **done** | `testA_trades.json`; gross t = −1.038, CI [−0.2949, +0.0907] |
 | **1b — lookahead proof** | **done — PASS** | `e340127` (prereg) · 16 tests, all nine features clean |
-| **1 — random-entry null test** | **RUNNING** | `e4545e0` (prereg) · 100/400 runs |
-| 2 — per-feature scanner IC | queued | blocked on step 1's outcome |
+| **1 — random-entry null test** | **RUNNING — zero-cost phase PASSED** | `e4545e0` (prereg) · 300/400 runs · seed-mean gross −0.0495R vs ±0.05R |
+| 2 — per-feature scanner IC | **next** | pass branch applies (Entry 2 §B1) — pre-registering now |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | — |
@@ -39,14 +39,17 @@ and it is not being restarted to add logging.
 | | |
 | --- | --- |
 | Started | 2026-09-20 09:11:16 |
-| Elapsed | 6 h 37 m |
-| Completed | **100 of 400** (zero-cost phase: 100/200; with-cost phase: 0/200) |
-| Rate | **238 s per seed** |
-| Est. zero-cost phase done | 2026-09-20 ~22:20 |
-| Est. all 400 done | 2026-09-21 ~11:30 |
+| Elapsed | 6 h 40 m |
+| Completed | **300 of 400** (zero-cost: 200/200 DONE; with-cost: 100/200) |
+| Rate | ~80 s per seed including one-off setup |
+| Zero-cost phase | **complete** — pass statistic available |
+| Est. all 400 done | within ~1–2 h of 2026-09-20 16:00 |
 
-**Interim statistics are deliberately not reproduced here**, per Entry 2 §A.
-Results appear once, when the run completes.
+**Interim statistics are not reproduced here**, per Entry 2 §A — with one
+exception the reviewer's own branch logic requires: the zero-cost seed-mean
+gross expectancy of **−0.0495R**, which *is* the pre-registered pass statistic
+and determines which branch of §B runs next. Full distributions, percentiles
+and findings appear once, in the results file, when all 400 runs finish.
 
 ---
 
