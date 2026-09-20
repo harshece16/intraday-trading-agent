@@ -98,6 +98,10 @@ by the pre-registration, and changing the design for speed right after seeing
 a preliminary number is the habit this process exists to prevent. Take (b)
 only if the schedule matters more than the cleanliness.
 
+**D2 — RESOLVED 2026-09-20: skip 3d.** Recorded in
+`docs/research/skipped-3d-earnings-drift.md`. Original question below for the
+record.
+
 **D2 — install `lxml` to retry earnings dates, or skip 3d now?**
 The 15-minute check found no free path to historical earnings *announcement*
 dates for 2024-09 → 2026-09:

@@ -103,6 +103,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 | --- | --- | --- | --- |
 | L1 | Daily rank IC of the composite pre-market score vs session return (436 days) — reported in `swing_backtester.py` output | 2026-09-20 | No — measurement |
 | L2 | Loss attribution over the 201-trade sample: exit-reason split, gross vs net, by side, payoff arithmetic, holding time | 2026-09-20 | No — measurement on an existing trade list |
+| L3 | Step 1b lookahead proof — nine pre-open features recomputed on truncated series | 2026-09-20 | No — a correctness check, no returns computed |
+| L4 | Step 3d feasibility: can a free source give earnings announcement dates for 2024-09..2026-09? | 2026-09-20 | No — nothing backtested; see skipped-3d-earnings-drift.md |
+| L5 | Step 1 random-entry null test, 200 seeds x 2 cost modes | 2026-09-20 | No — measures the harness, selects no strategy |
 
 ---
 
@@ -110,7 +113,7 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 | # | What | Reason | Counted? |
 | --- | --- | --- | --- |
-| *(none yet)* | | | |
+| R1 | Test A re-run — identical configuration (201 trades, 495 sessions, gate off) to recover its trade list for the null test's matching distributions, and to derive the gross expectancy's sd, t and CI properly | Needed the per-trade data the original run did not save | **No — replication, not counted** |
 
 ---
 
