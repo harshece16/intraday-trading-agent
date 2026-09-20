@@ -105,7 +105,7 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L2 | Loss attribution over the 201-trade sample: exit-reason split, gross vs net, by side, payoff arithmetic, holding time | 2026-09-20 | No — measurement on an existing trade list |
 | L3 | Step 1b lookahead proof — nine pre-open features recomputed on truncated series | 2026-09-20 | No — a correctness check, no returns computed |
 | L4 | Step 3d feasibility: can a free source give earnings announcement dates for 2024-09..2026-09? | 2026-09-20 | No — nothing backtested; see skipped-3d-earnings-drift.md |
-| L5 | Step 1 random-entry null test, 200 seeds x 2 cost modes | 2026-09-20 | No — measures the harness, selects no strategy |
+| L5 | Step 1 random-entry null test, 200 seeds × 2 cost modes — **complete**, PASS at −0.0495R | 2026-09-20 | No — measures the harness, selects no strategy · `results-step1-null-test.md` |
 
 ---
 

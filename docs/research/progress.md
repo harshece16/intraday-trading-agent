@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**RUNNING: step 1 null test — started 2026-09-20 09:11:16, 300 of 400 runs complete. Zero-cost phase DONE; pass rule PASSES at −0.0495R against ±0.05R. With-cost phase 100/200. Updated 2026-09-20 15:55.**
+**IDLE: step 1 null test COMPLETE (400/400) — PASS at −0.0495R against ±0.05R, marginally. Next: step 2, per-feature IC, pre-registered at `bc704e5`. Updated 2026-09-20 16:20.**
 
 > **Both earlier blockers are closed.** B-1 was withdrawn — my rate figure was
 > wrong. B-2 was approved and turns out not to be needed, because the result is
@@ -19,8 +19,8 @@
 | — splits.py + import boundary test | **done** | `e1db066` · 20 tests, suite 244 green |
 | — Test A replication (R1, not a trial) | **done** | `testA_trades.json`; gross t = −1.038, CI [−0.2949, +0.0907] |
 | **1b — lookahead proof** | **done — PASS** | `e340127` (prereg) · 16 tests, all nine features clean |
-| **1 — random-entry null test** | **RUNNING — zero-cost phase PASSED** | `e4545e0` (prereg) · 300/400 runs · seed-mean gross −0.0495R vs ±0.05R |
-| 2 — per-feature scanner IC | **next** | pass branch applies (Entry 2 §B1) — pre-registering now |
+| **1 — random-entry null test** | **done — PASS (marginal)** | `e4545e0` (prereg) · `results-step1-null-test.md` · −0.0495R vs ±0.05R, CI [−0.0616, −0.0373] straddles the band edge |
+| 2 — per-feature scanner IC | **next** | `bc704e5` (prereg, committed before step 1's result existed) |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | — |
@@ -167,3 +167,7 @@ is not worth the disruption.
 | 2026-09-20 15:55 | B-1 WITHDRAWN — rate figure was wrong, read a stale log under swap pressure |
 | 2026-09-20 15:55 | Zero-cost phase complete: seed-mean gross −0.0495R → **PASS** against ±0.05R, by 0.0005R |
 | 2026-09-20 15:55 | B-2 approved but not needed — pass branch, not negative-fail |
+| 2026-09-20 16:05 | Step 2 pre-registered (`bc704e5`) while step 1 still running, so its result could not shape the design |
+| 2026-09-20 16:20 | Step 1 COMPLETE, 400/400. PASS at −0.0495R. Results: `results-step1-null-test.md` |
+| 2026-09-20 16:20 | Found and corrected my own error: the script compared real gross against the ZERO-cost null, but the real figure includes slippage. Correct comparator is the with-cost null |
+| 2026-09-20 16:20 | **Verdict correction queued**: README §51 / artifact / issue #49 say the signal is "worse than a coin flip" on a 31.9% formula benchmark. Measured null is 25.02%; the signal is +0.94σ BETTER than random, not worse |
