@@ -19,10 +19,21 @@ buying calls/puts once the checklist and a confidence gate both clear.
 
 ## ⚠️ Read this first
 
-- **It is not profitable yet.** Every configuration in the
-  [backtests](#backtest-results) loses money after costs. The best current
-  default loses ~10% over 55 days. This is a well-instrumented, explainable
-  decision engine that still needs an edge. Don't trade real money with it.
+- **The strategy has been measured and it does not work.** Not "unproven" —
+  measured, over 495 sessions and 201 trades, at **−0.36R per trade with
+  t = −3.59** and a 95% confidence interval of **[−0.55, −0.16]** that does
+  not contain zero. Both halves of the sample agree independently. The entry
+  has **no edge** (gross ≈ 0, statistically indistinguishable from a coin
+  flip) and friction turns that into a significant loss. Holding for days
+  instead of minutes doesn't help, and the scanner's ranking has **no
+  predictive power** (IC −0.0021, t = −0.26). See
+  [§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work)
+  and [§52](#52-holding-longer-doesnt-rescue-it-either).
+  **Do not trade real money with it.**
+- **What this repo is, then.** A well-instrumented decision engine, an honest
+  cost model, and an evidence pipeline that correctly refused to certify an
+  edge for months and has now explained why. The machinery is the asset; the
+  strategy it currently runs is not.
 - **Most retail intraday traders lose.** SEBI's own study (Jul 2024) found
   71% of individual intraday cash traders net-lost in FY23, rising to 80%
   above 500 trades/year. A separate SEBI study (Sep 2024) found 93% of
@@ -2485,6 +2496,183 @@ so the tests run against a fake Kite pinned to the documented API shape.
 Pagination, resume, pacing, storage and source selection are covered; Kite's
 real responses are not, and historical data may need a separate subscription
 on the account. The first real pull will say.
+
+### 51. The strategy was measured over 495 sessions, and it does not work
+
+Every strategy decision in this README before now rested on 8 to 42 trades.
+§50 removed that constraint: 3,633,891 candles, 100 stocks, **495 sessions**
+(Sep 2024 – Sep 2026), pulled from Kite in nine minutes with zero errors.
+
+Then the question that had been unanswerable for months got answered.
+
+**Over the whole checklist-passing population, 201 trades:**
+
+| Sample | n | Expectancy | t | 95% CI | Win rate |
+| --- | --- | --- | --- | --- | --- |
+| **All** | 201 | **−0.356R** | **−3.59** | **[−0.55, −0.16]** | 32% |
+| First half | 95 | −0.344R | −2.43 | [−0.62, −0.07] | 33% |
+| Second half | 106 | −0.367R | −2.63 | [−0.64, −0.09] | 32% |
+
+**The confidence interval excludes zero.** This is the first result in the
+project's history to clear the bar §38 set — `|t| > 2`, interval clear of
+zero — and it clears it pointing the wrong way.
+
+**Both halves are independently significant and agree to within 0.02R.** Two
+non-overlapping year-long periods, 95 and 106 trades, both landing near
+−0.35R. That is what separates a conclusion from bad luck: an unstable
+strategy gives wildly different halves. This one is a stable, reproducible
+negative expectancy.
+
+**As the engine would actually have traded it** (scanner picks, live
+confidence gate), 75 trades:
+
+| | |
+| --- | --- |
+| Win rate | 33.3% (25W / 50L) |
+| **Gross P&L** | **−₹2,185** *(before costs)* |
+| Costs + slippage | −₹1,951 (₹26.01/trade) |
+| **Net P&L** | **−₹4,136 (−4.14% of capital)** |
+| Max drawdown | ₹4,398 (4.40%) |
+| Expectancy | −0.41R |
+| Profit factor | 0.49 |
+| Kelly | −34.7% — the right bet size is zero |
+| **Deflated Sharpe** | **0.0% probability of real skill**, after correcting for the 30 configurations tried |
+
+**Where the loss comes from**, attributed over the same 201 trades:
+
+```
+gross    -0.102R per trade      (t ~ -1.0: indistinguishable from zero)
+net      -0.356R per trade      (t = -3.59: significant)
+friction  0.254R per trade      -- 71% of the loss
+```
+
+The honest reading is narrower than "the strategy loses money". **The entry
+has no edge, and friction turns a fair game into a losing one.** Gross is
+negative but not significantly so; what is significant is what remains after
+costs.
+
+The mechanics say the same thing. Targets sit about 2.14R away against a 1R
+stop, and a pure random walk with those brackets resolves **31.9% targets /
+68.1% stops** for an expected value of exactly zero — a fair game by
+construction. The actual resolved trades come in at **28.4% / 71.6%**. The
+signal performs like a coin flip, a shade worse, which is consistent with the
+scanner IC of −0.0021 and a gross edge of zero.
+
+| Exit | Share | Net | Gross |
+| --- | --- | --- | --- |
+| Stop hit | 63% | −1.345R | −1.077R |
+| Target hit | 25% | +1.886R | +2.136R |
+| Timed out at 15:15 | 12% | +0.145R | +0.336R |
+
+The 15:15 square-offs are mildly **positive** and only 12% of trades, so the
+time exit is not the drag it was assumed to be.
+
+**What it would take to turn positive.** Gross edge must exceed the 0.254R of
+friction, and it is currently about zero. Widening R helps arithmetically —
+friction is a fixed ~₹26 per trade, so doubling the stop distance roughly
+halves it as a fraction of R — but a fair game scaled up is still a fair
+game: it moves the result from −0.356R to roughly −0.18R and cannot reach
+positive. The gap has to be closed by a signal with real predictive power,
+and nothing currently in the system has any: checklist gross ≈ 0, scanner
+IC ≈ 0.
+
+### 52. Holding longer doesn't rescue it either
+
+The natural next hypothesis, and the one §36/§37 pointed at: the ranking has
+a positive IC against *next-session* returns while the intraday agent exits
+within bars, so perhaps a real signal was being harvested on the wrong
+horizon. Friction also argues for it — a 17 bp round trip against a 12 bp
+5-minute ATR means paying more to trade than the bar typically moves, while a
+multi-day hold pays the same to chase a far larger move.
+
+Measured over 436 sessions, long-only, against a benchmark of the same rules
+applied to every universe stock:
+
+| Hold | Picks (net) | Benchmark | **Picks − benchmark** | Friction |
+| --- | --- | --- | --- | --- |
+| 1 day | −0.057R | −0.049R | **−0.008R** | 0.023R |
+| 2 days | −0.134R | −0.112R | **−0.023R** | 0.086R |
+| 3 days | −0.158R | −0.137R | **−0.021R** | 0.105R |
+| 5 days | −0.195R | −0.175R | **−0.020R** | 0.144R |
+
+Every hold length loses, and holding longer makes it **worse** — friction
+scales with the holding period (0.023R → 0.144R) while the edge does not.
+Deflated Sharpe was 0.0% on all twelve variants.
+
+Exactly one positive number appeared in the whole run: hold 5 on the
+selection split, **+0.002R**. The same configuration on held-out data gives
+**−0.052R**. That is what overfitting looks like, and the backtester's own
+held-out split is what caught it.
+
+**And the measurement that explains all of it:**
+
+```
+daily rank IC of the pre-market score vs that session's return
+  436 days   mean IC -0.0021   t = -0.26   days IC > 0: 49%
+```
+
+**The scanner's ranking has no predictive power.** Positive on 49% of days —
+a coin flip. That is why picks barely differ from the benchmark in every row
+above: the ranking isn't selecting anything. The hoped-for next-session edge
+from §36/§37 does not survive direct measurement.
+
+So both halves of the system are now measured and both are empty: the
+checklist's gross edge is zero, and the ranking's IC is zero. Note also that
+the universe is survivorship-biased — today's NIFTY 100 applied to history —
+which flatters these long-only figures, so the real numbers are likely
+slightly worse.
+
+**The instruments were right the whole time.** The Dimaag Scorecard refused
+to certify an edge. The confidence gate throttled trading to almost nothing
+(§32, and the deadlock noted in §48). The Information Coefficient never
+passed. Every one of those was correct. The system spent months saying *"I
+cannot prove this works"*, and the answer turned out to be that it doesn't.
+
+**The hazard from here is now the opposite one.** A hypothesis can be
+falsified in an afternoon, which makes searching configurations until one
+looks good the central risk. The Deflated Sharpe already discounts for 30
+attempts; that counter is cumulative and it is the honest referee. A variant
+that shows +0.3R after fifty more attempts is a coin flip, and the DSR is
+what will say so.
+
+## Requirements
+
+What this system is *for*, stated separately from how it is built, so a
+change can be checked against intent rather than against the code that
+happens to exist.
+
+### Functional requirements
+
+| # | Requirement | Where it lives | Status |
+| --- | --- | --- | --- |
+| F1 | Rank the NIFTY 100 each session and choose what to watch | `scanner.py` | Built |
+| F2 | Decide entry from an explainable, sourced checklist — never an opaque score | `trader_brain.py` | Built |
+| F3 | Size every position from a stated risk budget, never a fixed quantity | `risk_manager.py` | Built (§46) |
+| F4 | Enforce a stop and a target on every open position | `trading_engine.py`, `stop_watcher.py` | Built (§49) |
+| F5 | Square off all intraday positions before the session closes | `_square_off_all()` | Built |
+| F6 | Record every order, reason and checklist read to a durable journal | `database.py` | Built |
+| F7 | Report P&L net of brokerage, STT, GST and stamp duty | `costs.py`, `state.py` | Built (§45) |
+| F8 | Refuse to trade until the strategy demonstrates a measured edge | `confidence.py`, Scorecard | Built — **currently refusing, correctly** |
+| F9 | Backtest on the same feed and cost model the live engine uses | `backtester.py`, `kite_history.py` | Built (§50) |
+| F10 | Explain every blocked signal in plain language | `_blocked()`, Journal page | Built |
+| F11 | Trade F&O as long options only, never written | `fno_risk.py` | Built |
+| F12 | Deduct real charges from F&O P&L | — | **Not built (#35)** |
+
+### Non-functional requirements
+
+| # | Requirement | How it is met | Status |
+| --- | --- | --- | --- |
+| N1 | **Never fabricate a number.** Every figure traces to real data or is absent | Grounded snapshots, `"Not enough data"` verdicts | Held |
+| N2 | **Evidence before belief.** No claim of edge without `\|t\| > 2`, both halves, and multiple-testing correction | Scorecard, IC, Deflated Sharpe | Held — and it produced §51 |
+| N3 | A strategy change is judged by net-of-cost backtest on both halves | `WORKFLOW.md`, every §44–§50 sweep | Held |
+| N4 | Survive a broker outage without stalling or trading blind | yfinance fallback, rejected-token skip | Held (§43) |
+| N5 | Survive the machine sleeping during a session | launchd watchdog | Held (§47) |
+| N6 | A stop must be enforced even if the poll loop is late | tick-driven stops | Held (§49) |
+| N7 | Exactly one closing order per position, whatever the concurrency | `_exit_position()` claim | Held (§49) |
+| N8 | Never commit secrets, journals or market data | `.gitignore`, review rule | Held |
+| N9 | Every confirmed bug gets an issue and a `BUG_LOG.md` row | Project rule | Held |
+| N10 | The engine restarts cleanly mid-session without losing the day's state | `_rehydrate_today()` | Partial — **entry counts still reset (#22)** |
+| N11 | Single-user, local-only; not hardened for public exposure | API key on every route | Accepted limitation |
 
 ## Dashboard
 
