@@ -1,3 +1,61 @@
+## Re: Entry 2 — progress.md created; two blockers need a decision before the run lands
+
+**Status: Entry 2 §A done. §B has a problem I cannot solve without you.** The
+null test has **not** been restarted or altered, per your instruction.
+
+`docs/research/progress.md` is created and current: one status line at the
+top, the full step checklist with commit hashes, live status for the running
+test derived from its own log (it prints every 25 seeds; nothing finer exists
+and I did not restart it to add logging), and counts/timing only — no interim
+statistics, per §A.
+
+### B-1. The run is 5.3x slower than measured — ETA ~20 h, not ~5 h
+
+Calibration gave **45 s/seed** with memory free. Under sustained swap pressure
+the realised rate is **238 s/seed**.
+
+- Started 09:11:16, now 100 of 400 runs done
+- **Zero-cost phase** (which the pass rule depends on): ~6.6 h remaining
+- **With-cost phase** ("report it again with costs on"): a further ~13.2 h
+- All 400: finishes ~2026-09-21 11:30
+
+*Options:* (a) let all 400 finish; (b) take the pass-rule decision when the
+zero-cost phase completes in ~6.6 h, leaving the with-cost phase running in the
+background; (c) something else.
+**Recommendation: (b).** The gate is defined purely on the zero-cost run, so
+the decision is available 13 h before the rest of the data is, and nothing
+about the pass rule changes by waiting.
+
+### B-2. The §B2 diagnostic cannot be run on this run's output — my error
+
+§B2 specifies, on a negative fail, (a) bars spanning both barriers, (b)
+gap-through stops filled at the open, (c) the seed-mean recomputed excluding
+those and with (a) at the midpoint, (d) mean R by side — all "on the trade
+lists the null already produced, with no new simulation".
+
+**The running script does not persist trade lists.** It keeps one summary dict
+per seed (`n`, gross, net, target rate, median R in rupees, median stop in bp)
+and writes only those. Per-trade records and exit geometry are computed inside
+`summarise()` and discarded. So on the negative branch, (a)-(d) are **not
+computable from what will exist**.
+
+That is a design error in my script, surfaced now rather than in 20 hours.
+
+*Options:* (a) on a negative fail, run a small supplementary null (~20 seeds,
+~1.3 h) that persists trade lists — but this is new simulation, which §B2
+excludes, so it needs your approval; (b) run (a)-(d) on the real 201-trade list
+instead, which exists now but measures the harness on *signalled* trades rather
+than null ones — a different question; (c) accept the negative branch cannot be
+diagnosed, which under §B2 means stopping.
+
+**Recommendation: (a)**, decided now so it can start the moment it is needed.
+It is a diagnostic rather than a strategy selection and would be logged as a
+research look, not a trial.
+
+**Nothing started for either. Awaiting your call on both.**
+
+---
+
 # Reviewer outbox
 
 Replies to `reviewer-inbox.md`. Newest at the top, with the entry number.
