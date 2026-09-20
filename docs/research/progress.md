@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**RUNNING: step 1 null test — started 2026-09-20 09:11:16, 100 of 400 runs complete, est. finish 2026-09-21 ~11:30 (≈19.8 h remaining). Updated 2026-09-20 15:48.**
+**RUNNING: step 1 null test — started 2026-09-20 09:11:16, 300 of 400 runs complete. Zero-cost phase DONE; pass rule PASSES at −0.0495R against ±0.05R. With-cost phase 100/200. Updated 2026-09-20 15:55.**
 
 > **Two problems need a reviewer decision — see "Blockers" below.** The run is
 > 5.3× slower than measured, and the diagnostic Entry 2 §B2 specifies cannot
@@ -52,7 +52,25 @@ Results appear once, when the run completes.
 
 ## Blockers — reviewer decision needed
 
-### B-1. The run is 5.3× slower than measured, so the ETA is ~20 h, not ~5 h
+### B-1. WITHDRAWN 2026-09-20 15:55 — my rate figure was wrong
+
+The 238 s/seed and ~20 h ETA below were **incorrect**. The zero-cost phase is
+complete and the with-cost phase is at 100/200: **300 of 400 runs in 6 h 40 m**,
+about 80 s/seed including setup.
+
+The earlier reading showed 100/200 when the run was substantially further
+along. Under the swap pressure Entry 2 §C describes ("file access from outside
+has been timing out"), that read appears to have returned a stale view of the
+log, and I then attributed fixed setup cost — the 2-year daily download and
+`premarket_picks()` over 100 stocks × 495 sessions — to the per-seed rate.
+
+Reviewer chose option (b) on the strength of a wrong number. The decision
+turns out not to matter: the zero-cost phase finished on its own and the pass
+statistic is available. **No action was taken on the run, and none is needed.**
+
+Original, incorrect text follows.
+
+### B-1 (superseded). The run is 5.3× slower than measured, so the ETA is ~20 h, not ~5 h
 
 Calibration measured **45 s per seed** with memory free. Under sustained swap
 pressure (swap 5.5 GB of 7 GB used; ~0.76 GB reclaimable) the realised rate is
@@ -68,7 +86,17 @@ the background; (c) something else.
 
 **Not acted on.** The run continues untouched.
 
-### B-2. Entry 2 §B2's diagnostic cannot be run on this run's output
+### B-2. RESOLVED — approved, and now NOT NEEDED
+
+The reviewer approved the supplementary run. It is written and ready at
+`null_diagnostic.py` (20 seeds, persists trade lists and exit-bar geometry).
+
+**It will not be run.** It exists for the negative-fail branch, and the result
+is a pass. Recorded here so the approval and the non-use are both on record.
+
+Original text follows.
+
+### B-2 (resolved). Entry 2 §B2's diagnostic cannot be run on this run's output
 
 §B2 specifies, on a negative fail, a diagnostic over "the trade lists the null
 already produced, with no new simulation":
@@ -133,3 +161,6 @@ is not worth the disruption.
 | 2026-09-20 09:11 | Step 1 null test started, as pre-registered |
 | 2026-09-20 ~14:00 | Step 3d skipped and recorded (`5ba1d93`) |
 | 2026-09-20 15:48 | progress.md created; B-1 and B-2 raised; run untouched |
+| 2026-09-20 15:55 | B-1 WITHDRAWN — rate figure was wrong, read a stale log under swap pressure |
+| 2026-09-20 15:55 | Zero-cost phase complete: seed-mean gross −0.0495R → **PASS** against ±0.05R, by 0.0005R |
+| 2026-09-20 15:55 | B-2 approved but not needed — pass branch, not negative-fail |
