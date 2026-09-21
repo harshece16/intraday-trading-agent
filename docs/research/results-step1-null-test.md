@@ -98,7 +98,7 @@ resolves faster and far-target trades are disproportionately timed out.
 percentage points below the 31.26% reference.** The prediction is confirmed
 and quantified — and it is a magnitude no formula supplies.
 
-### Against the correct benchmark, the signal is better than random
+### Against the correct benchmark, the signal is indistinguishable from random
 
 All three comparisons below are like-for-like: the real figures come from a
 `config.COSTS` run, so they include slippage, and are therefore compared
@@ -110,16 +110,20 @@ against the **with-cost** null, not the zero-cost one.
 | Net expectancy | −0.3560R | −0.4135R | **+0.0575R** | +0.70 | 74.5th |
 | Resolved-target rate | 28.41% | 25.02% | **+3.39pp** | +1.05 | 86th |
 
-**The entry signal is modestly better than random, consistently across three
-independent statistics — and not significantly so.** Every margin is under
-1σ. The honest reading is *"indistinguishable from random, leaning slightly
-positive"*, not *"worse than random"*.
+**The supportable statement is: the entry signal is indistinguishable from
+random entries** — 82nd percentile of a matched random-entry null, with a
+resolved-target rate of 28.4% against a simulated 25.0%.
+
+Two cautions against reading more into it. Every margin is under 1σ, so
+"better than random" is not supported either. And gross, net and target rate
+are **not three independent statistics** — they are largely the same
+information re-expressed, so their agreement is not corroboration.
 
 **This does not rescue the strategy.** Net expectancy is still −0.356R with
-t = −3.59 and a confidence interval clear of zero. Being marginally better
-than random while losing 0.356R per trade means the signal is real-ish but far
-too small to cover 0.254R of friction. What changes is the *diagnosis*: the
-entry is not actively harmful, it is insufficient.
+t = −3.59 and a confidence interval clear of zero. What changes is the
+*diagnosis*: the entry is not demonstrably worse than random, but nothing here
+shows it is better either, and an unproven excess of ~+0.08R against friction
+of roughly 0.25R — likely more, pending §B's decomposition — is not a lead.
 
 ### An unresolved tension
 
