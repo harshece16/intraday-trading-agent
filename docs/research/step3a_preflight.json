@@ -1,0 +1,26 @@
+{
+  "sessions_in_cache_selection": 319,
+  "sessions_with_a_top20_set": 303,
+  "eligible_stock_sessions": 29545,
+  "median_opening_range_width_bp_descriptive": 107.27056019070298,
+  "min_stop_bp": 110.66666666666669,
+  "top20": {
+    "candidates": 5275,
+    "removed_by_friction_rule": 1139,
+    "surviving": 4136
+  },
+  "all100": {
+    "candidates": 28600,
+    "removed_by_friction_rule": 12745,
+    "surviving": 15855
+  },
+  "sessions_with_surviving_top20_trade": 303,
+  "min_sessions_required": 60,
+  "untestable_at_preflight": false,
+  "symbols_with_cache": 100,
+  "span": [
+    "2024-09-20",
+    "2026-01-01"
+  ],
+  "halves_split_at": "2025-05-15"
+}
