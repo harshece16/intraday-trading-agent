@@ -6,6 +6,116 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 10 — 2026-09-21 — automated reviewer: amendment 3 accepted with corrections; still STOPPED for the user's go-ahead on 3a; nothing here to merge or run
+
+Reviewed `prereg-3a-opening-range.md` amendment 3 (`815ba4c`) against Entry 9
+and against Entry 8 §D / amendments 1–2. Spot-checked: `results-universe-b-replication.md`
+against the outbox's cited −0.0332/t=−6.68/+5.97bp/0.26x/0.85x — all match.
+`results-entry7-d-feasibility.md` §D.1 correction and §D.2 correction
+against Entry 8 §B.4/§B.6/§B.10's required wording — match near-verbatim.
+`git ls-files` and the stated branch history (`0332ffb` → `ba75b15` →
+`ad7b05c` → `815ba4c` → `52eec60`) confirm no 3a script exists anywhere in
+that sequence. `trials.md` still shows 34, correctly unchanged since nothing
+has run.
+
+### Verdict: amendment 3 is sound. Approved with corrections (documentation only, no threshold changed).
+
+Amendment 3 correctly takes precedence over Entry 8 §D where the two differ,
+restores the relative-volume hypothesis exactly as Entry 9 specified it
+(`or_vol`/`rel_vol` formula, top-20, 14-session eligibility, both secondary
+lines carrying no pass rule and barred from justifying a follow-up variant),
+and replaces the median-width withdrawal with the per-trade friction rule as
+instructed. Nothing in 3.4 weakens what amendments 1–2 already fixed
+(next-bar-open fill, stop rules, 14:30 cutoff, halves, ₹33,000 sizing,
+self-contained implementation with no harness-bias figure asserted). One run,
+stated once more.
+
+### A. The three open choices — ruling
+
+1. **§3.3 thresholds: accepted as written.** The pre-flight count check
+   (< 60 sessions with a surviving capped trade → untestable, not run, not a
+   trial) and the post-run MDE check (`2·sd(session means)/√n > 16.60 bp net`
+   → untestable, trial 35 still counted) are consistent with the project's
+   own trial-accounting rule: no return is read in the first branch, a return
+   is read in the second. The post-run formula is exactly what Entry 8 (i)
+   asked for — the smallest bp effect detectable at the pre-registered t = 2
+   — so it isn't a new invention, it's (i) applied as a decision rule instead
+   of only a reported number. 60 sessions is a coarse backstop, not a precise
+   power calibration, and that's fine: the real power statement is the MDE,
+   computed from realised dispersion after the run. **One correction:**
+   whichever branch fires, report the exact number that triggered it — the
+   pre-flight session count, or the realised sd and MDE — in the results
+   file, not just the word "untestable". A reader needs to see how close to
+   60 (or to 16.60 bp) it landed, precisely because the threshold is fixed
+   and auditable and should stay that way.
+2. **§3.1 eligibility and the alphabetical tie-break: accepted.** Both are
+   forced by Entry 9's own wording ("its own mean ... over the prior 14
+   cached sessions" requires 14 prior sessions to exist) or are a direct,
+   symmetric extension of the tie-break Entry 8 (e) already fixed for the
+   five-position cap. Neither introduces a new researcher degree of freedom
+   that could move the result.
+3. **Skipped-trade handling: accepted.** No cap slot, no re-entry, and
+   applying the friction rule to both secondary lines is the right call —
+   without it the two secondary lines would not be comparable to the primary
+   one, and a design could otherwise look better only because it kept
+   costlier-to-cross trades in the descriptive lines.
+
+### B. Order of operations, lookahead, and the R/stop_bp consistency
+
+`eligibility → top-20 by rel_vol → signal → friction rule → cap` has no
+lookahead: `rel_vol` and the opening range both resolve at 09:30 from the
+three 09:15/09:20/09:25 bars, before any signal bar (earliest close at 09:35)
+can fire; the cap is applied chronologically as signals arrive, not with
+foreknowledge of later signals in the session. `stop_bp` is computed from the
+next-bar open (amendment 1 b) and the opposite side of the opening range,
+which is exactly Entry 8 (f)'s `R = entry price to stop price` restated in
+bp — consistent, not a redefinition.
+
+### C. Outbox corrections footnote — satisfies Entry 8 corrections 1, 4, 6, 10 and §E
+
+Confirmed against source files, not just the outbox's own claim:
+`results-universe-b-overnight.md` withdraws "decaying" and states the
+supportable sentence (correction 1); `results-entry7-d-feasibility.md`
+withdraws "40% survivorship" and gives the required reworded sentence
+(correction 4), states "2025 is the weakest year... no trend test was run"
+without adding one (correction 6), and reads "not cleanly measured even in
+the level" (correction 10). The outbox's footnote under the Entry 7 block
+corrects "Committed and on main" to name PR #60 and its merge commit
+(§E). All four plus §E are done, with the original wording left visible
+rather than deleted, as the project's standing rule requires.
+
+### D. For the results-file step, not a correction to the amendment
+
+When 3a is eventually run: state the primary verdict (pass / fail /
+untestable) as the headline before either secondary line is shown, regardless
+of which of the three numbers looks best. That already follows from Entry
+9's "no pass rule, cannot justify a follow-up variant" language; flagging it
+now so it isn't relitigated after a number is on screen.
+
+### E. Needs the user's decision
+
+- **3a still does not run without the user's explicit confirmation.** I
+  cannot give that confirmation; nothing in this review is it. The amendment
+  is approved as a design; executing it is the user's call, as Entry 9's own
+  final line already says.
+- Nothing here touches the held-out 2026 window, makes a Kite call, or
+  changes anything in the live path. Branch `research/entry8-3a` remains
+  unpushed and unmerged; merging is the user's alone, not mine or the main
+  agent's.
+
+### F. Next step, and where to stop
+
+With the one documentation correction in §A.1 folded into the amendment file
+by the main agent (or simply honoured in the results file when it's written
+— either is fine, it doesn't require a new commit on its own), the design is
+ready. **Stop here.** Do not write 3a code or run it until the user
+confirms. When the user does confirm: code, pre-flight reported on its own
+(with the exact count either way, per §A.1), the single run as trial 35,
+`results-3a`, and stop for review again before 3b or any mention of the
+held-out window.
+
+---
+
 ## Entry 9 — 2026-09-21 — external reviewer, reconciling with Entry 8 §D: restore the relative-volume hypothesis; per-trade friction rule replaces the median-width withdrawal
 
 Source: the external reviewer, relayed by the user and recorded here by the main agent at the user's instruction. **Where this entry differs from Entry 8 it takes precedence.** It is to be folded into the 3a amendment, committed before any 3a code exists.
