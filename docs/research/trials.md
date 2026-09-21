@@ -139,11 +139,11 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — split holds with the same sign and similar size (+12.01 / −6.42). **NOT PRE-REGISTERED — omission recorded (Entry 8 §B.3).** BANKNIFTY measured beyond the instruction. The "40% survivorship" reading is **withdrawn** (§B.4): the gap confounds survivorship, period and weighting | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
 | L30 | Like-for-like fix of L29 — index means on **exactly universe A's 1,546 sessions**. Overnight gap **+3.91bp (23%, not 40%)**; intraday gap **−0.21bp (3%)**. Weighting confound remains | 2026-09-21 | No — measurement, no pass rule · `prereg-L30-index-like-for-like.md` |
 
-| L31 | 3b **stage 1a** — cross-sectional spread of first-half-hour momentum vs 09:50 open → 15:10 close, gate **33.20 bp** (two legs, Entry 12 §1). Withdraws 3b without spending a trial if it does not clear | pending | No — measurement · `prereg-3b-intraday-momentum.md` |
+| L31 | 3b **stage 1a** — cross-sectional momentum, quintile spread **−1.60 bp, t = −0.48** vs a 33.20 bp gate. **DOES NOT CLEAR** (MDE 6.70 bp) | 2026-09-21 | No — measurement · `prereg-3b-intraday-momentum.md` |
 
-| L32 | 3b **stage 1b** — the published TIME-SERIES effect, adapted: market prev-close→09:45 sign predicting 14:40 open→15:10 close. Gate **16.60 bp** (one leg) | pending | No — measurement · `prereg-3b-intraday-momentum.md` amendment 1 §2 |
+| L32 | 3b **stage 1b** — adapted time-series, **+0.70 bp, t = +0.61** vs a 16.60 bp gate. **DOES NOT CLEAR** — 4% of its own cost | 2026-09-21 | No — measurement · `prereg-3b-intraday-momentum.md` amendment 1 §2 |
 
-**Thirty-two looks, thirty-five trials.** L7–L16 are the ten members of the
+**Thirty-two looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
