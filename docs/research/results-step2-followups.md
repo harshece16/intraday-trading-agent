@@ -190,11 +190,14 @@ round-trip cost in cash equities.** That expectation was recorded in the
 pre-registration precisely so confirming it could not be dressed up as a
 discovery, and it isn't one.
 
-The top-5 version comes within 0.3 bp of break-even, which is worth stating
-honestly in both directions. **Against it:** that is the noisiest slice
+~~The top-5 version comes within 0.3 bp of break-even, which is worth stating
+honestly in both directions.~~ **WITHDRAWN (Entry 13 §E.1): at the correct
+33.20 bp two-leg hurdle the top-5 version is 0.49× — half of break-even, not
+within 0.3 bp of it. The rest of this paragraph argued 0.98× was not a lead;
+it holds with far more room.** **Against it:** that is the noisiest slice
 (t = 2.12 on a 316-session sample), it needs *both* legs including a short,
 and it is a gross spread against a cost figure that already includes the
-slippage estimate — landing at 0.98× cost means an expectancy of
+slippage estimate — landing at ~~0.98×~~ **0.49×** cost means an expectancy of
 **approximately zero before any of the things a real implementation adds**
 (borrow, impact at size, the days you cannot short, the 33% notional cap).
 

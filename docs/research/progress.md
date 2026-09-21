@@ -46,7 +46,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | **2 — per-feature scanner IC** | **done — 3 of 10 survive, reviewed** | `bc704e5` (prereg) · `d165699`/`535a082` (amendments) · `4c503ad` · `results-step2-feature-ic.md` |
 | 2-A — are the three survivors one factor? | **done — YES, one factor** | `results-step2-followups.md` · ρ(atr_pct, from_low) = +0.43; partials collapse to \|t\| = 1.05 and 1.90 |
 | 2-B — Kite tradable-target robustness | **done — all three pass** | 09:20 open → 15:10 close, 316 sessions; `atr_pct` retains 0.77× |
-| 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **16.60 bp** round trip |
+| 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **33.20 bp** (two legs) = **0.24× / 0.49×** round trip |
 | §A null diagnostic | **done — explanation refuted** | `results-null-diagnostic.md` · (a) 0.00%, (b) 6.8%; drift explains the rest |
 | §B friction decomposition | **done** | slippage 0.144R + charges 0.254R = **0.398R** · README §51 corrected |
 | §C verdict correction | **done** | README §51/§52 + issue #49 comment |

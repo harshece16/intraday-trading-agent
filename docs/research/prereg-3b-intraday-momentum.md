@@ -60,13 +60,15 @@ the rest of the session, by more than the round trip costs.
 | Data | **Kite 5-min cache, already downloaded** — no Kite calls |
 | Period | **Selection only**, before 2026-01-02; held-out untouched |
 | Signal | **09:15 open → 09:45 close** return, per stock-session, in bp |
-| Target | **09:45 close → 15:10 close** return, in bp — disjoint from the signal by construction, so no overlap |
+| Target | ~~09:45 close → 15:10 close~~ **SUPERSEDED by amendment 1 §3: the target is 09:50 OPEN → 15:10 close**, matching stage 2's entry |
 | Eligibility | `scanner.tradability_exclusion()`, ≥ 20 stocks per session |
 
-**The signal window and the target window do not overlap.** The signal ends
-at the 09:45 close and the target starts there. That is stated because an
-overlapping definition would manufacture correlation, and it is the first
-thing a reader should check.
+**The signal window and the target window do not overlap.** ~~The signal ends
+at the 09:45 close and the target starts there.~~ **SUPERSEDED by amendment 1
+§3:** the signal ends at the **09:45 close** and the target starts at the
+**09:50 open** — a **five-minute gap between them, not touching**. That is
+stated because an overlapping definition would manufacture correlation, and
+it is the first thing a reader should check.
 
 ### What is reported
 
@@ -107,7 +109,7 @@ Fixed now so it cannot be shaped by stage 1's numbers.
 | Exit | **15:10 bar close**, or stop | Same tradable window used throughout |
 | Stop fills | **Identical to 3a amendment 1 (c)** | Intrabar touch → stop price less slippage; bar opening beyond → that open; entry bar may stop |
 | Entries per name per session | **1** | Entry 5 §C |
-| Concurrent positions | **5**, slots reopen on exit; chronological, ties alphabetical | 3a amendment 1 (e), as Entry 11 §D.3 ruled |
+| Concurrent positions | ~~5, slots reopen on exit; chronological, ties alphabetical~~ **SUPERSEDED by amendment 1 §4: TEN positions — long top 5, short bottom 5 — all entered simultaneously at the 09:50 open. The tie-break is deleted.** | Nothing to order when every entry is simultaneous |
 | Sizing | **Fixed ₹33,000 notional** | bp primary, R derived |
 | Costs | `config.COSTS`, full **16.60 bp** | Unverified against the broker's tariff — caveat carried |
 | Harness | **Self-contained**, as 3a | `run_backtest()` enters at the signal bar's close, which the fill rule forbids (3a amendment 2) |
@@ -229,3 +231,74 @@ date.
 - **Stage 2: NOT authorised.** If stage 1 clears, **stop and ask the user.**
 - Afterwards, whatever stage 1 shows: the results file, then a **closing
   phase-2 report**, then stop. **No new hypotheses are to be proposed in it.**
+
+---
+
+# Amendment 2 — Entry 13 (research-reviewer)
+
+**Committed before any 3b code exists.** Entry 13 accepted amendment 1 and
+required §B and §F fixed before stage 1 is coded. §B is annotated in place
+above. §F's two ambiguities are resolved below, **stating the choice in the
+file rather than deciding it silently in code**.
+
+## §F.1 — which spread gates stage 1a
+
+The reviewer is right that this was ambiguous and that it matters: this
+project's two measured quintile-vs-top-5 pairs run **1.5× to 2× apart**
+(8.11 → 16.30 bp; 5.97 → 9.03 bp), so the two constructions can land on
+**opposite sides of 33.20 bp**.
+
+> **THE GATE IS THE QUINTILE TOP-MINUS-BOTTOM SPREAD** — item 2 of "What is
+> reported". It must be positive, t > 2, and **above 33.20 bp**.
+>
+> **The top-5 / bottom-5 spread (item 3) is DESCRIPTIVE ONLY. It has no pass
+> rule, cannot clear stage 1 on its own, and cannot justify a follow-up
+> variant** — the same wording Entry 9 §1 required of 3a's broader lines.
+
+The reviewer's default is adopted. The reason to prefer it, stated rather
+than assumed: the quintile spread is the **more conservative and better-powered**
+of the two — it averages ~20 names a side instead of 5, so it is less
+sensitive to a handful of outliers, and it is the construction every earlier
+spread in this project was measured on, which keeps the 33.20 bp comparison
+like-for-like.
+
+**Noted honestly:** stage 2 would trade top-5/bottom-5, so the gate is
+*stricter* than the thing stage 2 would do. That is the intended direction —
+a gate should not be easier than the trade it authorises.
+
+## §F.2 — the per-stock time-series line
+
+> **The per-stock line uses THAT STOCK'S OWN signal** — `sign(that stock's
+> previous close → its own 09:45 close)` — i.e. true per-stock momentum, not
+> the market-level sign applied to every name.
+>
+> **It is DESCRIPTIVE ONLY, with no pass rule.** Only the market-level line
+> (amendment 1 §2) has a gate, and only that gate can clear stage 1b.
+
+## §G — the minor items, all adopted
+
+1. **Stage 2 rank tie at the 5th/6th boundary.** A genuine tie in the signal
+   ranking, distinct from the deleted entry-order rule. **Tie-break: symbol
+   alphabetical.** Expected to be vanishingly rare at bp precision, and fixed
+   now so it is never a decision made at runtime.
+2. **Stage 2 inherits stage 1's universe, eligibility, data, period and cost
+   model** — universe A, `scanner.tradability_exclusion()`, ≥ 20 eligible
+   stocks per session, the existing Kite 5-min cache, selection dates only,
+   `config.COSTS`. Stated explicitly rather than left to context.
+3. **Amendment 1 §1's "equivalently, the mean per-leg return exceeds
+   16.60 bp" is a loose paraphrase and is withdrawn.** Only the **sum** of
+   the two legs must exceed 33.20 bp; neither leg individually has to clear
+   16.60. **The gate is the 33.20 bp figure on the spread**, and nothing else.
+
+## §D and §E — the stale figures elsewhere
+
+Fixed in the same commit as this amendment: the three stale prose passages
+(§E.1–E.3) are struck in their own files, and `report-2026-09-21.md` gets a
+pointer footnote. The **closing phase-2 report will restate these at
+33.20 bp / 0.24× and 0.49×**, never the withdrawn figures.
+
+## Unchanged
+
+Everything else in the pre-registration and amendment 1 stands. **Stage 1 may
+now be coded and run** under the standing go-ahead Entry 12 recorded and
+Entry 13 §J confirmed. **Stage 2 remains unauthorised.**

@@ -117,7 +117,7 @@ a different script on the same window — a consistency check that passes.
 
 **And every tradable intraday bucket is negative**, Q1 through Q5. There is
 no long-only version of this. The spread exists only as long-quiet against
-short-volatile, and even then it returns half the cost of executing it.
+short-volatile, and even then it returns ~~half~~ **about a quarter** of the cost of executing it *(Entry 13 §E.2: 0.24×, not 0.49×, at the two-leg hurdle)*.
 
 ---
 

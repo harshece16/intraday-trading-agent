@@ -116,14 +116,19 @@ round trip                39.05 bp
 > bar, and the corrected bar is twice as far away.
 
 
-The same 0.36× the index-level calculation gave by a different route. **Both
-the level and the spread cost about three times what they yield.**
+~~The same 0.36× the index-level calculation gave by a different route. Both
+the level and the spread cost about three times what they yield.~~
+**CORRECTED (Entry 13 §E.3): the spread is 0.18× at the two-leg hurdle, not
+0.36×. The index-level 0.36× is a genuinely different, single-leg figure that
+was never wrong — a lone long position pays exactly one round trip — so the
+two only coincided before this correction. The spread costs about FIVE times
+what it yields; the level about three.**
 
 **And 0.36× is generous, in the safe direction (Entry 8 §A.2).** A
 quiet-minus-volatile *spread* requires a **short leg held overnight, which
 cash equities do not permit at all**, and a two-legged position would pay
 **two** round trips rather than one. The true figure is worse than 0.36×;
-it is not recomputed here because the conclusion does not turn on it.
+~~it is not recomputed here because the conclusion does not turn on it.~~ **It has since been recomputed — see the correction footnote above: 0.18×.**
 
 ---
 
