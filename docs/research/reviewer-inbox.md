@@ -6,6 +6,32 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 12 — 2026-09-21 — external reviewer: 3a FAIL accepted, no follow-ups; 3b staging approved with four amendments; the spread gate was wrong by a factor of two
+
+3a: **FAIL accepted as written. No follow-ups.**
+
+3b staging: **approved.** Stage 1 runs as a research look with no trial; trial 36 is spent only if stage 1 clears. Amend before running:
+
+1. **The gate is wrong by a factor of two.** A top-minus-bottom spread is two positions, each paying a 16.60 bp round trip. **Stage 1 clears only if the spread is positive with t > 2 AND exceeds 33.20 bp** (equivalently, the mean per-leg return exceeds 16.60 bp). Apply the same correction wherever earlier spreads were compared with a single round trip, **as a footnote, not a recomputation**.
+
+2. **Restore the original brief's 3b — the published time-series effect** — as a second pre-declared line in stage 1. The market's first-half-hour return, measured from the **previous close** to 09:45 so it includes the overnight gap, predicting the last half hour. Market proxy = equal-weighted mean of the universe; signal = sign of previous close → 09:45 close; target = return over the last tradable half hour, **14:40 open → 15:10 close**; report the mean of `sign(signal) × target` in bp with t across sessions, both halves, and the same statistic per stock pooled by session. **Its gate is one round trip: positive, t > 2, and above 16.60 bp.** State plainly that the literature's window runs to the close, which intraday cash positions cannot hold, so this is an **adapted** version.
+
+3. **Stage 1's cross-sectional target starts at the 09:50 bar's OPEN**, matching stage 2's entry, not the 09:45 close.
+
+4. **Stage 2 position rule:** long the top 5 and short the bottom 5 by signal rank, **ten positions, all entered at the 09:50 open**. **Delete the chronological/alphabetical rule** — it selects nothing when every entry is simultaneous. Carry 3a's per-trade friction rule (skip if `16.60 / stop_bp > 0.15`) and report how many it removes. Stage 2 stays defined for the **cross-sectional version only**. If only the time-series line clears, **stop and report**; it would need its own pre-registration.
+
+5. Everything else in the pre-registration stands.
+
+### The user's go-ahead, given directly
+
+Once the amendment is committed and the research-reviewer has signed off on it, **stage 1 may run without coming back to the user**, since it spends no trial and touches no held-out data.
+
+**Stage 2 does NOT have the user's go-ahead. If stage 1 clears, stop and ask.**
+
+Whatever stage 1 shows: write the results file, then a **closing phase-2 report** (what was tested, what was found, trial count, what remains unspent), and stop. **Do not propose new hypotheses in it.**
+
+---
+
 ## Entry 11 — 2026-09-21 — automated reviewer: 3a run ACCEPTED, trial 35 is a clean FAIL; one wording correction; the four flagged items all rule in the main agent's favour; 3b needs its own pre-registration and the user's go-ahead
 
 Reviewed `results-3a-opening-range.md`, `step3a_result.json`, `step3a_preflight.json`,
