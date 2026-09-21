@@ -242,3 +242,67 @@ shorts +0.0351R), so a direction-symmetric design carries less of it than the
 
 **One run.** A crash **before any statistic is seen** may be re-run and
 recorded. Nothing else.
+
+---
+
+# Amendment 2 — a conflict inside amendment 1, found before writing code
+
+**Committed before any 3a code exists.** Raised rather than resolved
+silently, because it is a deviation from a clause I committed to one commit
+earlier.
+
+## The conflict
+
+**Amendment 1 (k)** commits 3a to `backtester.run_backtest()`, "the same
+harness as every other result here".
+
+**Amendment 1 (b)** requires: *"Entry = open of the NEXT bar. **Never the
+signal bar's close.**"*
+
+**The harness does exactly what (b) forbids.** `backend/backtester.py:249`:
+
+```python
+_open_position(pos, side, bar["close"], qty, atr_val, costs_cfg, risk, ...)
+```
+
+It enters at `bar["close"]` — the close of the very bar that produced the
+signal. There is no parameter to defer entry by one bar.
+
+This was found by reading the harness before writing 3a, not assumed either
+way.
+
+## Resolution: (b) wins, (k) is amended
+
+**(b) is a scientific requirement; (k) was a bookkeeping note.** Entering at
+the close of the bar that just told you to enter is not executable — the
+signal is only known once that bar has closed, at which point the close has
+passed. The reviewer's emphasis ("Never") is on (b).
+
+> **3a is therefore implemented as a self-contained measurement with the
+> exact fill rules in (b) and (c), and does NOT use
+> `backtester.run_backtest()`.**
+
+## What this costs, stated plainly
+
+1. **The −0.05R harness-bias figure does not transfer.** It was measured on
+   `run_backtest()` and 3a does not use it. 3a's results carry **no harness
+   bias estimate**, and none will be asserted.
+2. **3a's fills are not directly comparable** to §51's −0.356R or to the null
+   test, which used the shared harness with its close-fill convention. Any
+   comparison to those numbers must be flagged.
+3. **The benefit is that (b) and (c) are implemented exactly and verifiably**,
+   rather than assumed to match a shared harness that, as it turns out, they
+   do not.
+
+## What is unchanged
+
+Everything else in amendment 1 stands: the unit (a), the stop rules (c), the
+14:30 cutoff (d), the five-position cap and its tie-break (e), R and the
+pre-flight (f), the halves (g), ₹33,000 sizing (h), the power statement (i),
+and the code-ordering requirement (j). Costs remain `config.COSTS` at the
+full 16.60 bp, with `costs.leg_cost()` and `costs.apply_slippage()` — the
+project's own cost functions — applied directly.
+
+**Amendment 1 (c)'s stop rules happen to match the harness's** (stop price on
+an intrabar touch, the bar's open on a gap-through), which is stated because
+it means the deviation is confined to the entry fill.
