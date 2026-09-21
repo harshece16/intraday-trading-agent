@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: null diagnostic COMPLETE (Entry 3 §A) — the step-1 file's explanation is REFUTED. Stop-first explains 0.00%, gap-through 6.8%; the bias is negative intraday drift on a long-heavy book. Harness bias revised to −0.042R at the real strategy's side mix. Remaining: the ten-section report. Held-out look NOT taken. Updated 2026-09-21 10:05.**
+**IDLE: Entry 4 A–C complete and reported; Entry 5 §A journal summary accepted. Ten-section report written (`report-2026-09-21.md`) and 3c pre-registered under Entry 5 §C. BLOCKED on one reviewer decision: the held-out period is contested between step 2's `atr_pct` look and 3c's confirmation. Neither taken. Updated 2026-09-21 11:00.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -33,7 +33,9 @@
 | §A null diagnostic | **done — explanation refuted** | `results-null-diagnostic.md` · (a) 0.00%, (b) 6.8%; drift explains the rest |
 | §B friction decomposition | **done** | slippage 0.144R + charges 0.254R = **0.398R** · README §51 corrected |
 | §C verdict correction | **done** | README §51/§52 + issue #49 comment |
-| Ten-section standalone report | **next** | Entry 2 §D |
+| Ten-section standalone report | **done** | `report-2026-09-21.md` |
+| Entry 5 §A journal summary | **done — accepted** | `journal-summary-2026-09-21.md` · all legs paper, 0 live orders |
+| 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |

@@ -126,7 +126,11 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 | L22 | Null diagnostic (Entry 3 §A) — 20 seeds with trade lists persisted; (a)-(d) attribution of the −0.05R harness bias | 2026-09-21 | No — measures the harness · `results-null-diagnostic.md` |
 
-**Twenty-two looks, thirty-four trials.** L7–L16 are the ten members of the
+| L23 | 3c §A unconditional overnight/intraday decomposition | pending | No — measurement · `prereg-3c-overnight-intraday.md` |
+| L24 | 3c §B volatility-sorted decomposition (Entry 4 §E) | pending | No — measurement |
+| L25 | 3c §C same on the tradable Kite target | pending | No — measurement |
+
+**Twenty-five looks (22 taken, 3 pre-registered), thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
