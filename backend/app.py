@@ -310,7 +310,7 @@ def fno_status():
     order fires — see confidence.py and fno_risk.py."""
     return {
         "enabled": config.FNO["enabled"],
-        "kite_connected": bool(config.KITE_ACCESS_TOKEN),
+        "kite_connected": data_provider.kite_session_live(),
         "capital": config.FNO["capital"],
         "min_confidence_to_trade": config.FNO["min_confidence_to_trade"],
         "max_premium_risk_pct": config.FNO["max_premium_risk_pct"],
@@ -355,7 +355,8 @@ def get_portfolio():
         fno_positions = dict(state.fno_positions)
         capital_sync = dict(state.capital_sync) if state.capital_sync else None
     out = {
-        "paper_positions": positions, "fno_positions": fno_positions, "kite_connected": bool(config.KITE_ACCESS_TOKEN),
+        "paper_positions": positions, "fno_positions": fno_positions,
+        "kite_connected": data_provider.kite_session_live(),
         "risk_total_capital": config.RISK["total_capital"], "capital_sync": capital_sync,
         "sync_capital_with_kite": config.RISK.get("sync_capital_with_kite", False),
     }
@@ -481,14 +482,13 @@ def set_watchlist(update: WatchlistUpdate):
 
 
 @app.get("/api/kite/status")
-def kite_status():
-    return {
-        "app_configured": bool(config.KITE_API_KEY and config.KITE_API_SECRET),
-        "connected": bool(config.KITE_ACCESS_TOKEN),
-        "using_live_data": data_provider.kite_data_active(),
-        "generated_at": config.KITE_SESSION_GENERATED_AT,
-        "redirect_url": config.KITE_REDIRECT_URL,
-    }
+def kite_status(probe: bool = False):
+    """Whether Kite is actually usable right now, and if not, why not.
+
+    `probe=true` spends one live API call to confirm the session instead of
+    trusting the clock; the dashboard uses it on load and on window focus,
+    not on its 15-second poll."""
+    return data_provider.kite_session_status(probe=probe)
 
 
 @app.get("/api/stops/status")

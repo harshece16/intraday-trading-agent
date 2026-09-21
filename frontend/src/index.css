@@ -74,6 +74,24 @@
   .stat strong { font-size: 15px; font-weight: 600; }
   .divider { flex: none; width: 1px; height: 28px; background: var(--rule); }
   .kite { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  /* The Kite chip carries connection state in colour as well as words: "Kite
+     session expired" read as ordinary grey text for as long as the label was
+     wrong, so nobody noticed the session had died. */
+  .kite-chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px;
+    border-radius: 13px; font-size: 13px; font-weight: 500; cursor: help;
+  }
+  .kite-chip .dot { width: 7px; height: 7px; background: currentColor; box-shadow: none; }
+  .kite-chip--ok { background: var(--long-bg); color: var(--long); }
+  .kite-chip--warn { background: var(--wait-bg); color: var(--wait); }
+  .kite-chip--bad { background: var(--short-bg); color: var(--short); }
+  .kite-chip--idle { background: var(--sunken); color: var(--ink-2); }
+  .kite-chip--bad .dot { animation: pulse-bad 2s ease-in-out infinite; }
+  @keyframes pulse-bad {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50% { box-shadow: 0 0 0 3px var(--short-bg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .kite-chip--bad .dot { animation: none; } }
   .btn {
     height: 32px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 6px;
     background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; white-space: nowrap;

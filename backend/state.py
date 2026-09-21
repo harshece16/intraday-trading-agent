@@ -11,6 +11,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import config
+import data_provider
 import database
 
 ACTIVITY_LIMIT = 300
@@ -116,6 +117,9 @@ class AppState:
 
     def snapshot(self):
         """Return a plain-dict snapshot safe to JSON-serialize for the API/WebSocket."""
+        # Read outside self.lock: it touches only config and module state, and
+        # the snapshot lock guards this object's own fields.
+        kite = data_provider.kite_session_status()
         with self.lock:
             unrealized = 0.0
             positions_out = {}
@@ -153,7 +157,13 @@ class AppState:
                 "risk_total_capital": config.RISK["total_capital"],
                 "real_capital": self.real_capital,
                 "capital_sync": self.capital_sync,
-                "kite_connected": bool(config.KITE_ACCESS_TOKEN),
+                "kite_connected": kite["connected"],
+                # Carried in the snapshot (which the WebSocket pushes every 3s)
+                # so any page can say *why* Kite isn't usable without polling
+                # /api/kite/status of its own.
+                "kite_state": kite["state"],
+                "kite_reason": kite["reason"],
+                "kite_expires_at": kite["expires_at"],
             }
 
     def apply_fill(self, symbol, side, quantity, price, charges=0.0) -> dict:
