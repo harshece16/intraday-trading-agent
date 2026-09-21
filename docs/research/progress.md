@@ -1,11 +1,17 @@
 # Phase 2 — progress
 
-**IDLE: step 1 null test COMPLETE (400/400) — PASS at −0.0495R against ±0.05R, marginally. Next: step 2, per-feature IC, pre-registered at `bc704e5`. Updated 2026-09-20 16:20.**
+**IDLE: step 2 COMPLETE and reviewed. Three of ten features survived BH + Bonferroni on selection; the held-out look is NOT taken. Reviewer Entry 4 received — next action is committing its §B and §D amendments, then runs A, B and C on selection data. Updated 2026-09-21 08:05.**
 
-> **Both earlier blockers are closed.** B-1 was withdrawn — my rate figure was
-> wrong. B-2 was approved and turns out not to be needed, because the result is
-> a pass rather than a negative fail. The run has **not** been restarted or
-> altered at any point.
+> **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
+> reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
+> requires partial ICs before any of them is promoted. Two of the three also
+> carried interpretation problems of my own finding — see
+> `results-step2-feature-ic.md`.
+>
+> **A process failure is on the record**: the §D4 data-quality gate was coded
+> as a report rather than a halt, so its "agreement is adequate" judgement was
+> made after seeing the ICs. Separately, the step-1b lookahead proof test file
+> had never been committed — only its pre-registration was (fixed in `c681bc4`).
 
 ---
 
@@ -18,15 +24,24 @@
 | — trials.md mirror (34 entries) | **done** | `e7320e5` · `trials.md` |
 | — splits.py + import boundary test | **done** | `e1db066` · 20 tests, suite 244 green |
 | — Test A replication (R1, not a trial) | **done** | `testA_trades.json`; gross t = −1.038, CI [−0.2949, +0.0907] |
-| **1b — lookahead proof** | **done — PASS** | `e340127` (prereg) · 16 tests, all nine features clean |
+| **1b — lookahead proof** | **done — PASS** | `e340127` (prereg) · `c681bc4` (the test file itself, which had never been committed) · 16 tests, all nine features clean |
 | **1 — random-entry null test** | **done — PASS (marginal)** | `e4545e0` (prereg) · `results-step1-null-test.md` · −0.0495R vs ±0.05R, CI [−0.0616, −0.0373] straddles the band edge |
-| 2 — per-feature scanner IC | **next** | `bc704e5` (prereg, committed before step 1's result existed) |
+| **2 — per-feature scanner IC** | **done — 3 of 10 survive, reviewed** | `bc704e5` (prereg) · `d165699`/`535a082` (amendments) · `4c503ad` · `results-step2-feature-ic.md` |
+| 2-A — are the three survivors one factor? | **next** | Entry 4 §A — cross-correlations + partial ICs, exploratory |
+| 2-B — Kite tradable-target robustness | queued | Entry 4 §B — 09:20 open → 15:10 close; amendment to commit first |
+| 2-C — IC translated into bp vs round-trip cost | queued | Entry 4 §C — descriptive, no trial |
+| 2 — held-out look | **blocked, deliberately** | Entry 4 §D — needs BH + §B + partial IC \|t\|>2 to qualify. **One look, not yet taken.** |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |
-| 3c — overnight vs intraday split | queued | — |
+| 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
 
-Strategy trial count: **34**, unchanged. Research looks: 5. Replications: 1.
+Carried over from Entry 3, after the step-2 block clears: null diagnostic,
+friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
+to the user before committing, and the ten-section standalone report.
+
+Strategy trial count: **34**, unchanged. Research looks: **16** (L1–L16).
+Replications: 1.
 
 ---
 
@@ -171,3 +186,35 @@ is not worth the disruption.
 | 2026-09-20 16:20 | Step 1 COMPLETE, 400/400. PASS at −0.0495R. Results: `results-step1-null-test.md` |
 | 2026-09-20 16:20 | Found and corrected my own error: the script compared real gross against the ZERO-cost null, but the real figure includes slippage. Correct comparator is the with-cost null |
 | 2026-09-20 16:20 | **Verdict correction queued**: README §51 / artifact / issue #49 say the signal is "worse than a coin flip" on a 31.9% formula benchmark. Measured null is 25.02%; the signal is +0.94σ BETTER than random, not worse |
+| 07:32 | step 2 feature build: 25/813, 0 min elapsed, est. finish 07:34 |
+| 07:32 | step 2 feature build: 50/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 75/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 100/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 125/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 150/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 175/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 200/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 225/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 250/813, 0 min elapsed, est. finish 07:32 |
+| 07:32 | step 2 feature build: 275/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 300/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 325/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 350/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 375/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 400/813, 0 min elapsed, est. finish 07:33 |
+| 07:32 | step 2 feature build: 425/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 450/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 475/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 500/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 525/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 550/813, 0 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 575/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 600/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 625/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 650/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 675/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 700/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 725/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 750/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 775/813, 1 min elapsed, est. finish 07:33 |
+| 07:33 | step 2 feature build: 800/813, 1 min elapsed, est. finish 07:33 |

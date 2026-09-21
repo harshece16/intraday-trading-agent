@@ -1,3 +1,70 @@
+## Re: Entry 3 — step 2 run and reported; §A, §B and §C not started; two process failures on the record
+
+**Current state as of 2026-09-21 08:05.** Step 2 is complete and written up
+(`results-step2-feature-ic.md`, commit `4c503ad`). **Three of ten features
+survive both BH at q=0.10 and Bonferroni.** The held-out look has **not** been
+taken. Entry 4 has since been received and read; its §F order supersedes what
+follows, and its §B/§D amendments are the next thing to commit.
+
+### What is done
+
+- **§D (step 2 amendments)** — all four committed before any measurement ran
+  (`d165699`, `535a082`): per-session differences instead of pooled stock-day
+  t-tests, trend as one test giving a family of ten, the 252-bar warm-up with
+  history downloaded far enough back to hold from the first selection session,
+  and the yfinance-vs-Kite data-quality gate.
+- **Step 2 itself** — 561 usable sessions, 51,962 stock-sessions, 27,626
+  dropped for warm-up. Survivors: `atr_pct` (t = −6.13), `from_low`
+  (|t| = 5.23), `from_high` (t = +3.33). Full table, detectable effect sizes
+  and all seven nulls are in the results file.
+- **Trials** — L6–L16 logged; strategy trial count unchanged at **34**.
+
+### What is NOT done
+
+**§A (null diagnostic), §B (friction decomposition) and §C (the README /
+issue #49 diff)** have not been started. Entry 3 §E put them after step 2, and
+Entry 4 §F puts them after the step-2 block clears. Flagging it explicitly so
+the ordering is a decision rather than a slip: **the verdict correction in §C
+is still unmade, and README §51 still carries the wrong "worse than a coin
+flip" claim.** If you would rather that were fixed before more measurement,
+say so and it moves to the front.
+
+### Three problems I found in my own step 2, and two process failures
+
+Problems 1–3 are in the results file and Entry 4 §D has already ruled on them.
+Two failures are worth stating here rather than only in a results file:
+
+1. **The §D4 gate was coded as a report, not a halt.** The script printed
+   r = 0.9832 and 18.55% > 25 bp, then ran the ten ICs unconditionally. So my
+   judgement that agreement is adequate was made *after* seeing the results —
+   the exact contamination the gate existed to prevent. I believe I would have
+   passed 0.983 either way, but I cannot demonstrate it. Noted that Entry 4 §B
+   takes part of this on the undefined threshold; the un-enforcement is mine.
+
+2. **The step-1b lookahead proof test file had never been committed.** Only
+   its pre-registration (`e340127`) was. Entry 2 accepted step 1b on the basis
+   of a report about a file that was not in version control and that nobody
+   could have re-run. Committed unchanged as `c681bc4`, 16 tests still
+   passing. No result changes; the evidence simply did not exist in the repo
+   for a day.
+
+### One thing I did not do, deliberately
+
+The pre-registration permitted the held-out look as soon as a feature survived
+BH. **I did not take it**, because two of the three survivors had known
+interpretation problems and the look is available only once. Entry 4 §D has
+since made the promotion rule stricter, which is the right outcome — but the
+decision to hold was taken before that entry arrived, not because of it.
+
+### Next, per Entry 4 §F
+
+Commit the §B and §D amendments, then run A (cross-correlations and partial
+ICs), B (Kite tradable target, 09:20 open → 15:10 close) and C (quintile
+spread in bp against round-trip cost) on selection data only. Write results
+and **stop for review before the held-out look**.
+
+---
+
 ## Re: Entry 2 — CLOSED. §A done; both blockers resolved; step 1 complete and PASSED
 
 **Current state as of 2026-09-20 16:20.** Both blockers below are closed:
