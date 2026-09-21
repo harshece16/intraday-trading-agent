@@ -16,7 +16,7 @@ could be diluted by eight uninformative ones. This tests each separately.
 
 **This is a measurement, not a strategy search.** No trading rule is built, no
 position is sized, no backtest is run. It answers "does any of these nine
-quantities carry information about the next session?" — and the honest
+quantities carries information about the coming session?" — and the honest
 expected answer, given the composite, is no.
 
 ## The nine features
@@ -132,8 +132,8 @@ size is 10 and will be stated in the results.** Reported three ways (amendment 7
 
 1. **Raw** p-value per feature.
 2. **Benjamini–Hochberg at q = 0.10** — the gate. Controls false discovery
-   rate; chosen over family-wise control because at nine tests Bonferroni
-   would require p < 0.0056 and, given a composite IC of −0.002, would almost
+   rate; chosen over family-wise control because at ten tests Bonferroni
+   would require p < 0.005 and, given a composite IC of −0.002, would almost
    certainly pass nothing. Reporting all three lets a stricter reviewer apply
    their own standard without a rerun.
 3. **Bonferroni at α = 0.05** alongside.
@@ -148,7 +148,7 @@ selection split gets a held-out look, **once**. If **more than one** survives,
 the held-out look retains the **same sign** with **|t| > 1.5** (and clears
 Bonferroni across survivors if more than one was promoted).
 
-**The full table is reported including every failure.** A table of nine
+**The full table is reported including every failure.** A table of ten
 failures is the expected outcome and is a complete result, not an absence of
 one.
 
