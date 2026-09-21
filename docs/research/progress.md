@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: Entry 4 A–C complete and reported; Entry 5 §A journal summary accepted. Ten-section report written (`report-2026-09-21.md`) and 3c pre-registered under Entry 5 §C. BLOCKED on one reviewer decision: the held-out period is contested between step 2's `atr_pct` look and 3c's confirmation. Neither taken. Updated 2026-09-21 11:00.**
+**IDLE: universe B replication COMPLETE — PRIMARY PASSES. `atr_pct` replicates on 113 names outside the NIFTY 100 at −0.0332, t = −6.68 (0.85× of universe A). But the spread is +5.97bp against a 22.60bp bar = 0.26×, WORSE than universe A's 0.49×. The statistic strengthened; the economics weakened. Held-out look still NOT taken. Updated 2026-09-21 12:30.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -35,6 +35,8 @@
 | §C verdict correction | **done** | README §51/§52 + issue #49 comment |
 | Ten-section standalone report | **done** | `report-2026-09-21.md` |
 | Entry 5 §A journal summary | **done — accepted** | `journal-summary-2026-09-21.md` · all legs paper, 0 live orders |
+| 3c §A–C | **done — mechanism HOLDS** | `results-3c-overnight-intraday.md` · overnight +16.78bp, intraday −6.94bp |
+| Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | queued | — |

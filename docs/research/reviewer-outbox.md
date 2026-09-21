@@ -1,3 +1,91 @@
+## Re: Entry 6 §C.1 — universe B replication PASSES. The statistic strengthened; the economics got worse.
+
+**`results-universe-b-replication.md`.** Pre-registered at `edd3471` before
+the measurement code existed. Daily data only, **no Kite calls**. Trial count
+stays at 34 (L26). **The held-out window is still unspent — this cost it
+nothing.**
+
+### Primary: PASS, against the rule as written
+
+| | Mean IC | t |
+| --- | --- | --- |
+| Universe A (8y) | −0.0388 | −7.32 |
+| **Universe B (113 names, 1,544 sessions)** | **−0.0332** | **−6.68** |
+
+Same sign, |t| = 6.68 against a bar of 2, **0.85× of universe A's effect**.
+Your §A rationale was right: a fresh cross-section is a more demanding test
+than a later date range on the same stocks, and it passed. **The volatility
+association is a real property of the Indian large/mid-cap cross-section.**
+
+### And it moved the economics in the wrong direction
+
+| Version | Spread | t | vs the 22.60 bp bar |
+| --- | --- | --- | --- |
+| Quintile | **+5.97 bp** | +1.63 | **0.26×** |
+| Top-5 / bottom-5 | +9.03 bp | +1.85 | 0.40× |
+| *Universe A* | *+8.11 bp* | *+1.68* | *0.49× vs 16.60 bp* |
+
+**A smaller spread against a higher cost bar.** Universe B is a worse place
+to trade this, not a better one. Note also that neither spread reaches
+|t| = 2 while the rank IC reaches 6.68 — a rank correlation is unitless and
+scale-free, a bp spread is neither, and **only the second one pays for
+anything.**
+
+**Two structural differences from universe A worth your attention:**
+
+1. **Universe B is not monotone.** Q1–Q4 sit flat between −8 and −9.3 bp;
+   only Q5 (−14.63 bp) separates. The clean gradient that made universe A
+   look like a factor is absent. What survives is "the most volatile quintile
+   is worse", not "return declines with volatility".
+2. **Every universe B bucket is far more negative.** The *quietest* mid-cap
+   quintile loses −9.01 bp intraday where the quietest large-cap quintile
+   lost −0.08 bp. That independently corroborates 3c §A, and the intraday
+   drag is **worse** outside the NIFTY 100.
+
+### "One factor, not three" — two of three replicate decisively
+
+| Partial IC | Universe B | Universe A |
+| --- | --- | --- |
+| `from_low` \| `atr_pct` | **t = −0.14** | t = −1.90 |
+| `atr_pct` \| both | **t = −6.18** | t = −6.59 |
+| `from_high` \| `atr_pct` | **t = +2.24** | t = +1.05 |
+
+`from_low` collapses to essentially zero — a cleaner proxy demonstration than
+universe A gave. `atr_pct` survives at −6.18, near-identical to A.
+
+**`from_high` disagrees between universes**, and I am **not** promoting it.
+It was disqualified on universe A under a rule fixed in advance; this test
+was pre-registered as exploratory with no pass rule; and t = 2.24 against a
+2.0 bar is marginal. **A feature that qualifies in one universe and not
+another is *less* credible, not more** — it means the verdict is
+sample-dependent, which is exactly what already happened to `from_high`'s raw
+IC between the 4y and 8y windows (t = +3.33 → +1.73).
+
+### One process note
+
+The first run crashed in a `print` call — I passed `unit=` to a `report()`
+that takes `extra=`, having confused it with 3c's. It crashed **before
+computing any statistic**, so nothing was seen and the re-run is a bug fix,
+not a second look. Recorded in the commit rather than left implicit. I also
+added a build cache so a printing bug can never force another 113-symbol
+download during market hours.
+
+### Where this leaves things
+
+**The best result phase 2 has produced is a statistically strong, genuinely
+replicated factor that returns 0.26× its own transaction cost.** The
+edge-to-cost ratio is invariant to stop width, so no stop redesign reaches
+1.0×.
+
+**The held-out look is now worth less**, not more: universe B has already
+answered "is it real" more demandingly than a later date range on the same
+100 stocks would. I would not spend it, but that is your call and I have not.
+
+**Awaiting your direction** on 3a/3b under Entry 5 §C, and on whether the
+held-out window is spent at all.
+
+---
+
 ## Re: 3c — the mechanism HOLDS, and the money is in the half we cannot trade
 
 **`results-3c-overnight-intraday.md`.** Pre-registered at `8306b2c` before

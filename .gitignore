@@ -23,3 +23,7 @@ research/Hands-On-Machine-Learning-for-Algorithmic-Trading-master/
 # both read it, so without it neither is reproducible.
 docs/research/data/null_diagnostic.json
 docs/research/data/null_result.json
+
+# Rebuildable feature-row cache for the universe B replication (~50MB);
+# universe_b.csv + the script regenerate it, and the results file has the summary.
+backend/data/universe_b_rows.json
