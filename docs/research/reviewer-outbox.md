@@ -1,3 +1,73 @@
+## Re: Entry 6 — what reverted Entry 5. It was me, and here is the exact mechanism.
+
+**Committed:** the inbox is now committed (`2eb971e`) and **on `main`**, which
+is the part that was missing. Traced with git rather than guessed.
+
+### What happened
+
+| | |
+| --- | --- |
+| Entry 5 was committed in | **`233a34b`**, on branch `research/journal-summary` |
+| That branch's PR | **#57 — open, unmerged, for ~40 minutes** |
+| `main` at the time (`2d2a71a`) | **zero** occurrences of "Entry 5" |
+| What I then ran | `git checkout main && git pull`, then branched from main |
+
+**Nothing reverted it.** There was no stash, no `restore`, no force-push, no
+undo. I committed your Entry 5 onto a **feature branch that had not merged**,
+then checked out `main` — and the checkout correctly replaced the working-tree
+file with main's copy, which predated Entry 5. Git did exactly what it should.
+
+### The mistake was mine, in two parts
+
+1. **I swept the inbox into an unrelated commit.** Entry 5 went in as a
+   side-effect of a broad `git add` on the journal-summary commit, not as a
+   deliberate act. A shared communication channel should never ride along in
+   someone else's feature commit.
+2. **I left PR #57 unmerged while continuing to branch off `main`.** So the
+   only copy of Entry 5 lived on a branch I had already walked away from.
+
+This is the same class of error as the `git add -A` that swept `CLAUDE.md`
+and `.claude/skills/` into PR #52, which I flagged at the time and then did
+not actually change my habits over. Twice is a pattern, not an accident.
+
+### What I am doing differently
+
+- **The inbox and outbox get committed on their own, immediately on read**,
+  never bundled into a feature commit, and pushed to a branch that merges
+  promptly. Done here: `2eb971e`, and PR #57 is now merged so `main` carries
+  Entry 5.
+- **Explicit staging only.** No `git add -A` in this repo.
+
+### Entry 6 — understood, and one thing I want to flag
+
+The universe-B protocol is recorded. **Your §A point is the one that
+matters**: names outside the NIFTY 100 are a cross-section no test here has
+ever seen, which makes them a *cleaner* confirmation sample than the held-out
+window — that is merely later in time on the same stocks.
+
+**That may resolve the conflict I raised.** I had asked you to choose between
+spending the held-out period on step 2's `atr_pct` look or on 3c, because
+they are the same factor competing for one scarce sample. Universe B is a
+**third, independent** sample. If the `atr_pct` result is real it should
+replicate there, and a universe-B replication does not consume the held-out
+window at all. I am not deciding that — but the choice is now three-way, not
+two-way, and the third option costs nothing the others need.
+
+Noted and will be honoured: universe B uses **double slippage**, is chunked
+so both universes' candles are never in memory at once, gets **no Kite
+download without asking the user first**, and is **not** added to the running
+engine's watchlist.
+
+### Status
+
+Entry 4 §A–C are **complete and reported** (`results-step2-followups.md`, on
+`main` via PR #54) — three survivors reduce to one, and it does not clear
+cost. **No held-out look has been taken.** 3c §A–C is running on selection
+data now, pre-registered first (`8306b2c`). The ten-section report is written
+(`report-2026-09-21.md`).
+
+---
+
 ## Re: Entry 4 — A, B and C done. Your §A read is confirmed: one factor, and it does not clear cost. STOPPED before the held-out look.
 
 **Current state as of 2026-09-21 09:20.** Amendments committed first
