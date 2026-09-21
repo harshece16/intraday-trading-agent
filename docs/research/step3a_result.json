@@ -1,0 +1,288 @@
+{
+  "preflight": {
+    "sessions_in_cache_selection": 319,
+    "sessions_with_a_top20_set": 303,
+    "eligible_stock_sessions": 29545,
+    "median_opening_range_width_bp_descriptive": 107.27056019070298,
+    "min_stop_bp": 110.66666666666669,
+    "top20": {
+      "candidates": 5275,
+      "removed_by_friction_rule": 1139,
+      "surviving": 4136
+    },
+    "all100": {
+      "candidates": 28600,
+      "removed_by_friction_rule": 12745,
+      "surviving": 15855
+    },
+    "sessions_with_surviving_top20_trade": 303,
+    "min_sessions_required": 60,
+    "untestable_at_preflight": false,
+    "symbols_with_cache": 100,
+    "span": [
+      "2024-09-20",
+      "2026-01-01"
+    ],
+    "halves_split_at": "2025-05-15"
+  },
+  "primary": {
+    "label": "PRIMARY top-20, friction rule, capped at 5",
+    "n_trades": 1656,
+    "n_sessions": 303,
+    "trades_per_session": 5.465346534653466,
+    "net_bp": {
+      "session_mean": -12.086427884178198,
+      "sd": 77.67097497800846,
+      "t": -2.7086975978725123,
+      "pooled_trade_mean": -15.865482912179845
+    },
+    "gross_bp": {
+      "session_mean": 4.516692295372883,
+      "sd": 77.69333433492515,
+      "t": 1.011947679216809,
+      "pooled_trade_mean": 0.7374017216409418
+    },
+    "net_r": {
+      "session_mean": -0.07814683330780256,
+      "sd": 0.34364471544564457,
+      "t": -3.958430539826254,
+      "pooled_trade_mean": -0.0956423677144335
+    },
+    "gross_r": {
+      "session_mean": 0.013726579760560822,
+      "sd": 0.3422024815275244,
+      "t": 0.6982332041583119,
+      "pooled_trade_mean": -0.0038023779862024613
+    },
+    "mde_net_bp_at_t2": 8.924161850825445,
+    "exit_mix": {
+      "stop": 246,
+      "stop_gap": 2,
+      "timeout": 1408
+    },
+    "median_stop_bp": 184.89038892541288
+  },
+  "primary_first_half": {
+    "label": "first half",
+    "n_trades": 801,
+    "n_sessions": 144,
+    "trades_per_session": 5.5625,
+    "net_bp": {
+      "session_mean": -1.1821010900622526,
+      "sd": 95.75208093546688,
+      "t": -0.14814521984443665,
+      "pooled_trade_mean": -7.403689862842251
+    },
+    "gross_bp": {
+      "session_mean": 15.426978630491618,
+      "sd": 95.77818054758612,
+      "t": 1.9328383824740036,
+      "pooled_trade_mean": 9.204475588051597
+    },
+    "net_r": {
+      "session_mean": -0.012843923349185854,
+      "sd": 0.3801819919586326,
+      "t": -0.40540342112521927,
+      "pooled_trade_mean": -0.04072804863069118
+    },
+    "gross_r": {
+      "session_mean": 0.07008962066116674,
+      "sd": 0.3808087995179788,
+      "t": 2.208655495877773,
+      "pooled_trade_mean": 0.042329803484776114
+    },
+    "mde_net_bp_at_t2": 15.958680155911146,
+    "exit_mix": {
+      "stop": 118,
+      "stop_gap": 2,
+      "timeout": 681
+    },
+    "median_stop_bp": 207.00636942675158
+  },
+  "primary_second_half": {
+    "label": "second half",
+    "n_trades": 855,
+    "n_sessions": 159,
+    "trades_per_session": 5.377358490566038,
+    "net_bp": {
+      "session_mean": -21.962044603377542,
+      "sd": 55.01326634974804,
+      "t": -5.033892072190601,
+      "pooled_trade_mean": -23.79284692682243
+    },
+    "gross_bp": {
+      "session_mean": -5.364321743979933,
+      "sd": 55.030439525089946,
+      "t": -1.2291656044010595,
+      "pooled_trade_mean": -7.194909584785882
+    },
+    "net_r": {
+      "session_mean": -0.1372890913835309,
+      "sd": 0.2957983398741408,
+      "t": -5.852465478847629,
+      "pooled_trade_mean": -0.14708841401393946
+    },
+    "gross_r": {
+      "session_mean": -0.037319193130553964,
+      "sd": 0.2950650317641243,
+      "t": -1.594825104472934,
+      "pooled_trade_mean": -0.04702094799585608
+    },
+    "mde_net_bp_at_t2": 8.72567162284046,
+    "exit_mix": {
+      "stop": 128,
+      "stop_gap": 0,
+      "timeout": 727
+    },
+    "median_stop_bp": 166.5073802697242
+  },
+  "primary_long": {
+    "label": "longs",
+    "n_trades": 891,
+    "n_sessions": 272,
+    "trades_per_session": 3.275735294117647,
+    "net_bp": {
+      "session_mean": -14.71664594729061,
+      "sd": 116.18992235631774,
+      "t": -2.0889345466439386,
+      "pooled_trade_mean": -13.070430784549984
+    },
+    "gross_bp": {
+      "session_mean": 1.8853860402942484,
+      "sd": 116.29922664807488,
+      "t": 0.26736706728829823,
+      "pooled_trade_mean": 3.533149860429532
+    },
+    "net_r": {
+      "session_mean": -0.10391938142150747,
+      "sd": 0.5294837132760212,
+      "t": -3.2368934145202846,
+      "pooled_trade_mean": -0.09149667677202271
+    },
+    "gross_r": {
+      "session_mean": -0.00925490241074847,
+      "sd": 0.5277382124368268,
+      "t": -0.28922628147846924,
+      "pooled_trade_mean": 0.0013665623789354342
+    },
+    "mde_net_bp_at_t2": 14.090097720806261,
+    "exit_mix": {
+      "stop": 127,
+      "stop_gap": 1,
+      "timeout": 763
+    },
+    "median_stop_bp": 182.55097202465623
+  },
+  "primary_short": {
+    "label": "shorts",
+    "n_trades": 765,
+    "n_sessions": 265,
+    "trades_per_session": 2.8867924528301887,
+    "net_bp": {
+      "session_mean": -13.309448543150934,
+      "sd": 122.29173170445982,
+      "t": -1.771682533620327,
+      "pooled_trade_mean": -19.120896566713448
+    },
+    "gross_bp": {
+      "session_mean": 3.288443212078086,
+      "sd": 122.20372400245108,
+      "t": 0.4380552027105763,
+      "pooled_trade_mean": -2.518822581183416
+    },
+    "net_r": {
+      "session_mean": -0.08068719267443508,
+      "sd": 0.5452105700460699,
+      "t": -2.4091468619896164,
+      "pooled_trade_mean": -0.10047087834147667
+    },
+    "gross_r": {
+      "session_mean": 0.012139263334003845,
+      "sd": 0.5438307501472447,
+      "t": 0.36337204163162007,
+      "pooled_trade_mean": -0.009822673235010128
+    },
+    "mde_net_bp_at_t2": 15.024642723043472,
+    "exit_mix": {
+      "stop": 119,
+      "stop_gap": 1,
+      "timeout": 645
+    },
+    "median_stop_bp": 186.6162917167549
+  },
+  "secondary_uncapped_top20": {
+    "label": "SECONDARY uncapped top-20 (no pass rule)",
+    "n_trades": 4136,
+    "n_sessions": 303,
+    "trades_per_session": 13.650165016501651,
+    "net_bp": {
+      "session_mean": -14.988576060421682,
+      "sd": 48.53060403297228,
+      "t": -5.376083353234814,
+      "pooled_trade_mean": -13.828884218855972
+    },
+    "gross_bp": {
+      "session_mean": 1.6111288416760388,
+      "sd": 48.53323333852683,
+      "t": 0.5778463322610594,
+      "pooled_trade_mean": 2.770757800457429
+    },
+    "net_r": {
+      "session_mean": -0.0933329896597375,
+      "sd": 0.23552991716146282,
+      "t": -6.897797052445761,
+      "pooled_trade_mean": -0.08394036421175131
+    },
+    "gross_r": {
+      "session_mean": -0.00046367278661869844,
+      "sd": 0.23329921427655187,
+      "t": -0.0345955026984638,
+      "pooled_trade_mean": 0.007099429742027552
+    },
+    "mde_net_bp_at_t2": 5.576020710840723,
+    "exit_mix": {
+      "stop": 529,
+      "stop_gap": 2,
+      "timeout": 3605
+    },
+    "median_stop_bp": 185.10341104120954
+  },
+  "secondary_uncapped_all100": {
+    "label": "SECONDARY uncapped all-100, no rel-vol filter (no pass rule)",
+    "n_trades": 15040,
+    "n_sessions": 303,
+    "trades_per_session": 49.636963696369634,
+    "net_bp": {
+      "session_mean": -13.640695198844572,
+      "sd": 37.99793585756395,
+      "t": -6.248817106121128,
+      "pooled_trade_mean": -12.54003955812336
+    },
+    "gross_bp": {
+      "session_mean": 2.9592886740163906,
+      "sd": 37.98850964372884,
+      "t": 1.3559896993966614,
+      "pooled_trade_mean": 4.060053402513174
+    },
+    "net_r": {
+      "session_mean": -0.09542923095188602,
+      "sd": 0.22628027801354036,
+      "t": -7.341013699460542,
+      "pooled_trade_mean": -0.08534623111083862
+    },
+    "gross_r": {
+      "session_mean": 0.011596245732480265,
+      "sd": 0.2252401167078688,
+      "t": 0.8961753215246516,
+      "pooled_trade_mean": 0.018813431526109207
+    },
+    "mde_net_bp_at_t2": 4.365848757353648,
+    "exit_mix": {
+      "stop": 2483,
+      "stop_gap": 8,
+      "timeout": 12549
+    },
+    "median_stop_bp": 155.21958513134894
+  },
+  "verdict": "FAIL"
+}

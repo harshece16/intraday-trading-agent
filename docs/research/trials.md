@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-20: **34**
+## Strategy trials — count as of 2026-09-21: **35**
 
 | n | Label |
 | --- | --- |
@@ -65,6 +65,7 @@ backtest look better than it is.
 | 32 | `swing_backtester long-only hold=2 top5 2y stop_atr=None` |
 | 33 | `swing_backtester long-only hold=3 top5 2y stop_atr=None` |
 | 34 | `swing_backtester long-only hold=5 top5 2y stop_atr=None` |
+| 35 | **Phase 2 — 3a** opening-range breakout on top-20 relative volume, both sides, 5-cap, universe A, selection only · `prereg-3a-opening-range.md` (+ amendments 1–3, last `815ba4c`) · code `3841124` · **FAIL**: net −12.09 bp/session, t = −2.71 · `results-3a-opening-range.md` |
 
 ### What a reviewer should notice in this list
 
@@ -159,6 +160,6 @@ amendment 8.
 
 ## Phase-2 runs
 
-Nothing yet. Every phase-2 strategy run will be appended to the strategy table
+**Trial 35 — 3a, 2026-09-21, FAIL** (one run, no re-run). Every phase-2 strategy run is appended to the strategy table
 above with its pre-registration file named, and every measurement to the
 research-looks table.
