@@ -40,18 +40,41 @@ Do not add universe B to the running paper engine's watchlist or scanner. That i
 
 ---
 
-## Entry 5 (restored, condensed) — 2026-09-21 — journal summary, and the friction constraint on step 3
+> **Note:** Entry 5 was briefly missing from this file and the reviewer
+> restored a condensed version in Entry 6. The **original full text is
+> below**, recovered when PR #57 merged, so the condensed copy has been
+> dropped in favour of it. Cause of the loss is in the outbox.
 
-Section A (read-only journal summary): DONE and accepted. journal-summary-2026-09-21.md is good. Two loose ends you flagged (the 10x live-vs-backtest trade-rate gap, and the 9 fully-passed setups on 2026-09-18 that produced no order) concern the old strategy and are low priority; one read-only query on those 9 rows for the blocking reason is enough, whenever convenient.
+---
 
-Section B: BUG_LOG #53 accepted. Total friction is 0.398R, not 0.254R. That closes Entry 3 section B once it is in the results file. 0.40R is the hurdle figure for any design at comparable stop sizes.
+## Entry 5 — 2026-09-21 — read-only journal summary for the user, and how step 3 should be designed given 0.40R friction
 
-Section C, the design constraint for step 3, stated before anything is pre-registered: at a 42 bp median stop a 17 bp round trip costs 0.40R, and no plausible entry signal clears that. The lever is cost as a fraction of R, not the entry. So for 3a and 3b:
-- State each design's expected friction in R up front: friction_R = round_trip_bp / stop_bp. Do not pre-register a design whose expected friction exceeds 0.15R; redesign the stop and hold first (for example one entry per name per day, a stop based on daily ATR or the opening range rather than a 5-minute ATR, exit at the 15:10 bar rather than a near target). This is a constraint chosen before any result, not a parameter to tune afterwards.
-- One variant per hypothesis. If two stop definitions both seem reasonable, pick one in the pre-registration and say why.
-- 3c stays a measurement and includes the volatility-sorted split, per Entry 4 section E.
+This entry does not replace Entry 4. Do Entry 4 sections A to C first if they are not finished; this adds one read-only task that can be done immediately and one design constraint for step 3. The user is asking why the running engine trades so rarely and has made no money, and wants that answered from the journal, not from memory.
 
-Order: Entry 4 A to C, stop for review before the held-out look; then 3c, then 3a, then 3b; universe B replication per Entry 6 section C.
+### A. Read-only journal summary (do this first, it is quick)
+
+Query backend/data/sahab_journal.db READ-ONLY (open it with SQLite's read-only URI mode; do not write, migrate, vacuum or restart anything; do not touch the running backend). Write docs/research/journal-summary-2026-09-21.md with:
+
+1. Mode: is the engine currently in paper or live mode, and for each closed trade in the journal, was it a paper fill or a real Kite order? State how you determined it. If any real-money orders exist, list them separately with net P&L.
+2. Trades: count of closed round trips by day since the first entry, net and gross P&L in rupees and in R, win rate, exits by type.
+3. The funnel, for the most recent 5 sessions and in total: setups evaluated -> passed the checklist -> passed R:R -> passed min_stop_to_cost -> passed the confidence gate -> order placed. For each stage give the count and the top rejection reasons. The point is to show the user exactly which gate removes how many candidates.
+4. One paragraph, plain language: why trade count is low, and what the measured expectancy says would happen to P&L if each gate were loosened (use Test A: ungated = 201 trades at -0.356R net; gated = 75 trades at -0.41R).
+
+Do not change any gate, threshold or config as part of this. It is a report.
+
+### B. Friction decomposition: accepted
+
+I have seen BUG_LOG #53: total friction measured at 0.398R, not 0.254R, with slippage previously hidden inside gross. Accepted; that closes Entry 3 section B once it is in the results file. 0.40R is now the hurdle figure for every pre-registration at comparable stop sizes.
+
+### C. Design constraint for step 3, stated before any of it is pre-registered
+
+At a 42 bp median stop, a 17 bp round trip costs 0.40R. No plausible entry signal clears that. The structural lever is not the entry, it is cost as a fraction of R. So when you pre-register 3a and 3b:
+
+- Express every design's expected friction in R up front, from its own stop distance: friction_R = round_trip_bp / stop_bp. Do not pre-register a design whose expected friction exceeds 0.15R; redesign the stop/hold first (for example: one entry per name per day, stop at a multiple of the daily ATR or the opening range rather than a 5-minute ATR, exit at the 15:10 bar rather than a near target). This is a constraint chosen before seeing any result, not a parameter to tune afterwards.
+- One variant per hypothesis. If two stop definitions both seem reasonable, pick one in the pre-registration and say why. Do not run both.
+- 3c stays a measurement and includes the volatility-sorted split, as Entry 4 section E says.
+
+Order after Entry 4 A to C are reviewed: 3c (measurement, no trial spent), then 3a, then 3b.
 
 ---
 
