@@ -1,7 +1,9 @@
 # Pre-registration — step 2, per-feature scanner IC
 
-**Committed before the measurement was written or run.** Incorporates
-amendments 1, 3, 4, 6 and 7 of the approved plan.
+**Committed before the measurement was written or run** (`bc704e5`).
+**Amended 2026-09-21 per reviewer Entry 3 §D, before any measurement was run**
+— see "Amendments" at the foot. Incorporates amendments 1, 3, 4, 6 and 7 of
+the approved plan.
 
 ## Why this step exists
 
@@ -25,16 +27,18 @@ the data contains T and everything after it. None is excluded.
 
 | # | Feature | Type | Test |
 | --- | --- | --- | --- |
-| 1 | Daily trend (close vs EMA20 vs EMA50) | categorical (up/down/sideways) | group means |
+| 1 | Daily trend (close vs EMA20 vs EMA50) | categorical | **one** test: per-session up minus down |
 | 2 | 10-day relative strength vs NIFTY (`rs10`) | continuous | rank IC |
 | 3a | % from 52-week high | continuous | rank IC |
 | 3b | % from 52-week low | continuous | rank IC |
 | 4 | Daily RSI | continuous | rank IC |
 | 5 | Daily ATR % | continuous | rank IC |
-| 6 | NR7 | binary | flagged vs unflagged |
-| 7 | Inside day | binary | flagged vs unflagged |
-| 8 | Bulkowski swing pattern present | binary | flagged vs unflagged |
-| 9 | Murphy reversal day | binary | flagged vs unflagged |
+| 6 | NR7 | binary | per-session flagged − unflagged |
+| 7 | Inside day | binary | per-session flagged − unflagged |
+| 8 | Bulkowski swing pattern present | binary | per-session flagged − unflagged |
+| 9 | Murphy reversal day | binary | per-session flagged − unflagged |
+
+Counting 3a and 3b separately, this is **ten tests**.
 
 March seasonality is **not tested**: it is a published constant keyed on the
 calendar month, not a per-stock quantity, so a cross-sectional IC is undefined
@@ -60,13 +64,21 @@ rank correlation. Report the mean IC across sessions, its t-statistic
 (mean / standard error across sessions), and the percentage of sessions with
 IC > 0.
 
-**Binary and sparse features** (amendment 4) — **flagged-vs-unflagged mean
-return with a two-sample t-statistic**. Rank IC on a mostly-zero column is
-ill-defined and would be dominated by tie-handling. Report flagged n,
-unflagged n, both means, the difference, and its t.
+**Binary and sparse features** (amendment 4, as amended by Entry 3 §D1) —
+**per-session** mean target return of flagged minus unflagged stocks, then the
+mean of that difference across sessions and its t-statistic **across
+sessions**, handled exactly like the rank-IC series.
 
-**Categorical feature** (trend) — group means per category with an F-style
-comparison reported as pairwise t-statistics against the pooled remainder.
+*Not* a pooled two-sample t over stock-days. Returns within a session are
+cross-sectionally correlated — one market-wide move affects every stock the
+same day — so pooling treats correlated observations as independent and
+inflates the t-statistic, often severely. Only sessions with **at least 3
+stocks on each side** contribute. **Report sessions used per feature.**
+
+**Categorical feature** (trend, as amended by Entry 3 §D2) — **one test**:
+per-session mean return of *up*-trend stocks minus *down*-trend stocks, in the
+direction the scanner uses it, then mean and t across sessions. Not a set of
+pairwise comparisons.
 
 Sign convention: every feature is tested in the direction the scanner uses it.
 A feature the scanner scores **negatively** (e.g. RSI > 75 for longs) is tested
@@ -77,6 +89,12 @@ a positive one by flipping the sign after the fact.
 ## Universe, period, split
 
 - NIFTY 100 universe list, daily bars, same source `premarket_picks()` uses.
+- **Warm-up (Entry 3 §D3): every tested stock-session must have at least 252
+  prior daily bars**, so a "52-week high" is a real 52 weeks and EMA50 / ATR14
+  are fully warmed. History is downloaded far enough back that this holds from
+  the **first** selection session, matching what the live scanner sees rather
+  than what a truncated download happens to allow. **Any stock-session still
+  short of 252 prior bars is dropped and the count reported.**
 - **Selection split only** for this pass: sessions **before 2026-01-02**
   (`splits.HELD_OUT_START`).
 - Eligibility per session follows `scanner.tradability_exclusion()`, so the
@@ -90,9 +108,27 @@ at seen data and is weaker than the term normally implies. This will be
 restated in the results. The only genuinely unseen sample is data after
 2026-09-20, of which there is currently none.
 
+## Data-quality gate, before any IC is computed (Entry 3 §D4)
+
+The target is yfinance open-to-close; the intraday cache is Kite. **This is a
+check, not a second test, and it produces no p-value.**
+
+On the overlap between the two sources, per stock-session, correlate yfinance
+open-to-close against Kite first-bar-open → last-bar-close. **Report the
+correlation and the share of stock-sessions differing by more than 25 bp.**
+
+**If agreement is poor, stop and report instead of running the ICs.** A
+disagreement between sources would mean the target variable is partly vendor
+artefact, and nine ICs measured against a corrupted target are worse than no
+ICs at all. The threshold for "poor" is deliberately left to judgement and
+will be stated with the number when reported, rather than pre-set to a value
+that could be chosen to clear whatever comes back.
+
 ## Multiple-comparison correction
 
-Nine simultaneous tests. Reported three ways (amendment 7):
+**Ten simultaneous tests** (Entry 3 §D2): trend counts as one, and the two
+52-week features (3a from-high, 3b from-low) count separately. **The family
+size is 10 and will be stated in the results.** Reported three ways (amendment 7):
 
 1. **Raw** p-value per feature.
 2. **Benjamini–Hochberg at q = 0.10** — the gate. Controls false discovery
@@ -151,3 +187,31 @@ auditable even though the DSR trial count stays at 34.
   features, so the two are at least consistent with each other.
 - A null result here does **not** establish that no pre-open signal exists —
   only that these nine, as currently computed, do not carry one.
+
+
+---
+
+## Amendments
+
+### 2026-09-21 — reviewer Entry 3 §D. Committed before any measurement ran.
+
+1. **Binary and categorical tests are per-session differences, not pooled
+   two-sample t-tests.** Returns within a session are cross-sectionally
+   correlated, so pooling stock-days inflates the t-statistic. Sessions need
+   ≥3 stocks on each side to contribute; sessions used are reported per
+   feature.
+2. **Trend is one test, not several.** Up minus down in the scanner's
+   direction. With 3a and 3b counted separately the BH family is **ten**, and
+   the family size is stated in the results.
+3. **52-week features require 252 prior daily bars** per tested stock-session,
+   with history downloaded far enough back that this holds from the first
+   selection session. Same warm-up check for EMA50 and ATR. Dropped
+   stock-sessions are counted and reported.
+4. **A data-quality gate is added before the ICs**: yfinance open-to-close
+   versus Kite first-open-to-last-close on the overlap, reporting correlation
+   and the share differing by more than 25 bp. Poor agreement stops the step
+   rather than being noted in passing.
+
+None of these amendments changes what counts as a pass. They change how the
+statistics are computed and add a gate that can halt the step, both of which
+make a false positive less likely rather than more.
