@@ -1,3 +1,87 @@
+## Re: Entry 5 §A — journal summary ready. NO real-money orders have ever been placed. Entry 3 §A and §B also closed.
+
+**Current state as of 2026-09-21 10:30.** `journal-summary-2026-09-21.md`.
+Read-only throughout (`mode=ro` URI); no gate, threshold or config changed,
+and the running engine was not touched.
+
+### The answer to the user's question
+
+> **All 16 trade legs are `mode='paper'`. Zero real Kite orders, ever.**
+> `/api/state` confirms `paper_mode: true` right now. `fno_trades` is empty.
+
+The eight round trips are often called "live trades" — they were taken by the
+**live running engine on real data, in paper mode**. No money was ever at
+risk. Both halves are true and easy to conflate, so the summary says so
+explicitly.
+
+**Net −₹168.71 across 8 round trips. Gross −₹5.26.** Charges are **₹163.45 —
+97% of the entire loss.** The live sample says exactly what the 495-session
+backtest says.
+
+### The funnel
+
+82,548 side-evaluations → 92 complete checklist passes → 51 cleared the
+confidence gate → 45 signals → **8 orders**.
+
+- **`rrr` is the top blocker on every single session**, and the most common
+  *sole* blocker (857 near-misses vs 771 for volume).
+- **`cost` has the scarcest pass rate (7.5%)** but is only assessed on 3.6%
+  of side-evaluations — it is never the sole blocker.
+- **Median R:R across 8,770 scored setups is 0.050.** Not 0.5. That is your
+  §C thesis measured from the live journal: the setup population has almost
+  nothing worth trading in it because 0.40R of friction eats a 42 bp stop
+  before the market moves.
+
+### Two things I could not explain, flagged rather than smoothed
+
+1. **A 10× rate discrepancy.** The journal shows 8 orders over 5 sessions
+   (1.6/session); the gated backtest produced 75 over 495 (0.15/session).
+   Unresolved. Candidates, none verified: the live sessions predate the
+   19 Sep R:R/stop-floor fixes, the live config may differ, or 5 sessions is
+   too few. The funnel is only as trustworthy as this is understood.
+2. **2026-09-18 had 9 complete passes that cleared the confidence gate and
+   still placed zero orders.** Something downstream — one-entry-per-day,
+   one-per-sector, or capital — and this summary does not isolate which.
+
+Also worth knowing: the journal is being written to while being read (82,448
+→ 82,548 between queries), so counts are a snapshot; rates are stable.
+
+### Entry 3 §A and §B are now closed too
+
+**§B friction — accepted by you, and now in the results file.** 0.398R total,
+slippage 0.144R + charges 0.254R, proven by inverting the deterministic
+slippage model to a clean price on 100% of 402 legs.
+
+**§A null diagnostic — your objection was right and the results file was
+wrong.** Over 4,327 null trades: stop-first explains **0.00%** (0 of 4,327 —
+it has never once fired), gap-through 6.8%, both together 13%. The bias is
+**negative intraday drift on a long-heavy book**: longs −0.0947R, shorts
++0.0351R, and the side mix alone reproduces the whole figure. Your fourth
+candidate.
+
+**That forces a correction to the headline.** The null realised 71.4% long
+while the real strategy is 59.7%, so it overstated its own bias. At the real
+book's mix the harness bias is **−0.0424R, not −0.05R** — against us, since
+less of the loss is the harness's fault. And it is **not a constant**: it
+scales with how long-heavy the book is, so every future hypothesis must
+compute its own.
+
+I also got something wrong in the diagnostic and fixed it: the target-gap
+filter tested `reason == "target"` when the backtester writes `"take_profit"`,
+so the first run printed "0 of 0 target exits" — an empty set formatted like
+a finding. Re-derived from persisted trades without re-simulating.
+
+### Where that leaves the queue
+
+Entry 4 A–C are **done and awaiting your review** (see the entry below):
+three survivors reduce to one, and it does not clear cost. Entry 3 §A/§B/§C
+are closed. **Remaining: the ten-section standalone report**, then Entry 5 §C
+governs 3c → 3a → 3b.
+
+**The held-out look has NOT been taken.**
+
+---
+
 ## Re: Entry 4 — A, B and C done. Your §A read is confirmed: one factor, and it does not clear cost. STOPPED before the held-out look.
 
 **Current state as of 2026-09-21 09:20.** Amendments committed first
