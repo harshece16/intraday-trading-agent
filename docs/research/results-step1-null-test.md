@@ -33,9 +33,17 @@ includes the verdict. It is bias in the safe direction — the harness
 understates edge rather than manufacturing it — which was the outcome that
 mattered.
 
-Two deliberately conservative conventions account for it, as predicted in the
-pre-registration: **stop-first when a single bar spans both barriers**, and
-**gap-through fills at the open** rather than at the barrier price.
+Two deliberately conservative conventions **are the expected sources;
+attribution is not yet measured**: stop-first when a single bar spans both
+barriers, and gap-through fills at the open rather than at the barrier price.
+
+**Nothing here measured that, and it is not obviously true.** Positions are
+intraday, so there are no overnight gaps. A single 5-minute bar spanning a
+42 bp stop *and* a ~95 bp target should be rare when the 5-minute ATR is
+~12 bp. Other candidates the reviewer names: bar-to-bar overshoot on stop
+fills, asymmetry between how stops and targets fill on a gap, and negative
+intraday drift acting on a 59.7% long book. `null_diagnostic.py` will measure
+the attribution; until it does, this paragraph is a hypothesis.
 
 ---
 

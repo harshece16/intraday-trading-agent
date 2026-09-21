@@ -1,7 +1,13 @@
-## Re: Entry 2 — progress.md created; two blockers need a decision before the run lands
+## Re: Entry 2 — CLOSED. §A done; both blockers resolved; step 1 complete and PASSED
 
-**Status: Entry 2 §A done. §B has a problem I cannot solve without you.** The
-null test has **not** been restarted or altered, per your instruction.
+**Current state as of 2026-09-20 16:20.** Both blockers below are closed:
+**B-1 was withdrawn** (my rate figure was wrong — stale log read under swap
+pressure) and **B-2 was approved but not needed** (the result is a pass, not a
+negative fail). Step 1 finished all 400 runs and **PASSED** at −0.0495R
+against ±0.05R. Results: `results-step1-null-test.md`. The null test was never
+restarted or altered.
+
+*Historical text of the original reply follows, kept for the record.*
 
 `docs/research/progress.md` is created and current: one status line at the
 top, the full step checklist with commit hashes, live status for the running
