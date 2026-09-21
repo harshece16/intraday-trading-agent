@@ -106,6 +106,23 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L3 | Step 1b lookahead proof — nine pre-open features recomputed on truncated series | 2026-09-20 | No — a correctness check, no returns computed |
 | L4 | Step 3d feasibility: can a free source give earnings announcement dates for 2024-09..2026-09? | 2026-09-20 | No — nothing backtested; see skipped-3d-earnings-drift.md |
 | L5 | Step 1 random-entry null test, 200 seeds × 2 cost modes — **complete**, PASS at −0.0495R | 2026-09-20 | No — measures the harness, selects no strategy · `results-step1-null-test.md` |
+| L6 | Step 2 data-quality gate (§D4): yfinance open→close vs Kite first-open→last-close on 29,949 overlapping stock-sessions — r = 0.9832, 18.55% differ by >25 bp | 2026-09-21 | No — a data check, produces no p-value |
+| L7 | Step 2 rank IC — `atr_pct` (**band feature**, see results §Problem 2) | 2026-09-21 | No — measurement · `results-step2-feature-ic.md` |
+| L8 | Step 2 rank IC — `rs10` | 2026-09-21 | No — measurement |
+| L9 | Step 2 rank IC — `from_high` | 2026-09-21 | No — measurement |
+| L10 | Step 2 rank IC — `from_low` (**sign coded backwards**, see results §Problem 1) | 2026-09-21 | No — measurement |
+| L11 | Step 2 rank IC — `rsi` (**side-dependent band feature**) | 2026-09-21 | No — measurement |
+| L12 | Step 2 session-difference — `trend` (up minus down, one test per §D2) | 2026-09-21 | No — measurement |
+| L13 | Step 2 session-difference — `nr7` | 2026-09-21 | No — measurement |
+| L14 | Step 2 session-difference — `inside` | 2026-09-21 | No — measurement |
+| L15 | Step 2 session-difference — `pattern` (Bulkowski swing) | 2026-09-21 | No — measurement |
+| L16 | Step 2 session-difference — `reversal` (Murphy reversal day) | 2026-09-21 | No — measurement |
+
+**Sixteen looks, thirty-four trials.** L7–L16 are the ten members of the
+step-2 BH family; they are listed individually so the family size is
+auditable from this file alone. The held-out confirmation look for the three
+survivors has **not** been taken — see `results-step2-feature-ic.md`
+§Problem 3.
 
 ---
 
