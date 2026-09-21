@@ -143,7 +143,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 | L32 | 3b **stage 1b** — adapted time-series, **+0.70 bp, t = +0.61** vs a 16.60 bp gate. **DOES NOT CLEAR** — 4% of its own cost | 2026-09-21 | No — measurement · `prereg-3b-intraday-momentum.md` amendment 1 §2 |
 
-**Thirty-two looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
+| L33 | Read-only chase of the 09-18 "9 passes, 0 orders" gap — it was **1 setup re-evaluated 9 times**, blocked by the confidence gate (53/60) and fully logged. Corrects the journal summary's mislabelled "cleared confidence" column and surfaces **19 direction-conflict blocks** | 2026-09-21 | No — read-only journal query, no returns computed · `journal-summary-2026-09-21.md` §3b |
+
+**Thirty-three looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
