@@ -1,0 +1,12 @@
+{
+  "seeds": 20,
+  "trades": 4327,
+  "baseline_seed_mean_gross": -0.0556688889024237,
+  "spanned_pct": 0.0,
+  "stop_gapped_pct": 0.41599260457591863,
+  "stop_gap_cost_r_per_trade": 0.0037767280197034533,
+  "target_gapped_pct": 0.0,
+  "target_gap_gain_r_per_trade": 0.0,
+  "excl_ab_seed_mean": -0.04826845448650628,
+  "mid_scored_seed_mean": -0.0556688889024237
+}

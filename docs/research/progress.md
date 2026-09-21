@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: step 2 follow-ups A, B and C COMPLETE. Three survivors reduce to ONE — `from_high` and `from_low` fail the partial-IC gate. `atr_pct` passes the tradable target but its spread (+8.11 bp) does NOT clear round-trip cost (16.60 bp). STOPPED for review before the held-out look, per Entry 4 §F. Updated 2026-09-21 09:20.**
+**IDLE: null diagnostic COMPLETE (Entry 3 §A) — the step-1 file's explanation is REFUTED. Stop-first explains 0.00%, gap-through 6.8%; the bias is negative intraday drift on a long-heavy book. Harness bias revised to −0.042R at the real strategy's side mix. Remaining: the ten-section report. Held-out look NOT taken. Updated 2026-09-21 10:05.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -30,6 +30,10 @@
 | 2-A — are the three survivors one factor? | **done — YES, one factor** | `results-step2-followups.md` · ρ(atr_pct, from_low) = +0.43; partials collapse to \|t\| = 1.05 and 1.90 |
 | 2-B — Kite tradable-target robustness | **done — all three pass** | 09:20 open → 15:10 close, 316 sessions; `atr_pct` retains 0.77× |
 | 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **16.60 bp** round trip |
+| §A null diagnostic | **done — explanation refuted** | `results-null-diagnostic.md` · (a) 0.00%, (b) 6.8%; drift explains the rest |
+| §B friction decomposition | **done** | slippage 0.144R + charges 0.254R = **0.398R** · README §51 corrected |
+| §C verdict correction | **done** | README §51/§52 + issue #49 comment |
+| Ten-section standalone report | **next** | Entry 2 §D |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |
@@ -218,3 +222,23 @@ is not worth the disruption.
 | 07:33 | step 2 feature build: 750/813, 1 min elapsed, est. finish 07:33 |
 | 07:33 | step 2 feature build: 775/813, 1 min elapsed, est. finish 07:33 |
 | 07:33 | step 2 feature build: 800/813, 1 min elapsed, est. finish 07:33 |
+| 09:14 | supplementary null diagnostic: 1/20 seeds, 0 min elapsed, est. finish 2026-09-21 09:18 |
+| 09:14 | supplementary null diagnostic: 2/20 seeds, 0 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:14 | supplementary null diagnostic: 3/20 seeds, 1 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:15 | supplementary null diagnostic: 4/20 seeds, 1 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:15 | supplementary null diagnostic: 5/20 seeds, 1 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:15 | supplementary null diagnostic: 6/20 seeds, 2 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:15 | supplementary null diagnostic: 7/20 seeds, 2 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:16 | supplementary null diagnostic: 8/20 seeds, 2 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:16 | supplementary null diagnostic: 9/20 seeds, 2 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:16 | supplementary null diagnostic: 10/20 seeds, 3 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:16 | supplementary null diagnostic: 11/20 seeds, 3 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:17 | supplementary null diagnostic: 12/20 seeds, 3 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:17 | supplementary null diagnostic: 13/20 seeds, 3 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:17 | supplementary null diagnostic: 14/20 seeds, 4 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:17 | supplementary null diagnostic: 15/20 seeds, 4 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:18 | supplementary null diagnostic: 16/20 seeds, 4 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:18 | supplementary null diagnostic: 17/20 seeds, 4 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:18 | supplementary null diagnostic: 18/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:18 | supplementary null diagnostic: 19/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
+| 09:19 | supplementary null diagnostic: 20/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |

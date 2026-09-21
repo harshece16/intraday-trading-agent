@@ -16,3 +16,10 @@ research/*.zip
 research/Hands-On-Machine-Learning-for-Algorithmic-Trading-master/
 .claude/worktrees/
 .claude/settings.local.json
+
+# Raw null-simulation trade dumps — megabytes of intermediate output that the
+# committed results files already summarise. docs/research/data/testA_trades.json
+# is the exception and IS tracked: the friction decomposition and the null test
+# both read it, so without it neither is reproducible.
+docs/research/data/null_diagnostic.json
+docs/research/data/null_result.json

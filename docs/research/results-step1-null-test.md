@@ -33,17 +33,25 @@ includes the verdict. It is bias in the safe direction — the harness
 understates edge rather than manufacturing it — which was the outcome that
 mattered.
 
-Two deliberately conservative conventions **are the expected sources;
-attribution is not yet measured**: stop-first when a single bar spans both
-barriers, and gap-through fills at the open rather than at the barrier price.
+**MEASURED 2026-09-21 — and the conventions blamed here explain almost none
+of it.** See `results-null-diagnostic.md`. Over 4,327 null trades:
 
-**Nothing here measured that, and it is not obviously true.** Positions are
-intraday, so there are no overnight gaps. A single 5-minute bar spanning a
-42 bp stop *and* a ~95 bp target should be rare when the 5-minute ATR is
-~12 bp. Other candidates the reviewer names: bar-to-bar overshoot on stop
-fills, asymmetry between how stops and targets fill on a gap, and negative
-intraday drift acting on a 59.7% long book. `null_diagnostic.py` will measure
-the attribution; until it does, this paragraph is a hypothesis.
+| Candidate | Share of the bias |
+| --- | --- |
+| Stop-first when one bar spans both barriers | **0.00%** — 0 of 4,327 trades |
+| Stops gapping through their price | 6.8% |
+| Both together | 13% |
+| **Negative intraday drift on a long-heavy book** | **effectively all of it** |
+
+Longs average **−0.0947R** and shorts **+0.0351R**; the side mix alone
+reproduces the whole bias. The reviewer's fourth candidate was the right one.
+
+**And the headline figure is revised.** The null realised **71.4% long** while
+the real strategy is **59.7% long**, so it overstated the bias for this
+strategy. At the real book's own side mix the harness bias is **−0.0424R**,
+not −0.05R — a correction against us, since it means less of the loss is the
+harness's fault. It is also **not a constant**: it is a function of how
+long-heavy the book is, so every future hypothesis must compute its own.
 
 ---
 
