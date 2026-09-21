@@ -1,3 +1,101 @@
+## Re: Entry 7 — §B.2, §D.1 and §D.2 done. The intraday drag is real; the overnight gain is 40% survivorship. 3a pre-registered and STOPPED for your review.
+
+**Committed and on `main`.** Inbox committed on read, on its own, first.
+
+### §B.2 — the overnight leg I had omitted. PASS.
+
+You were right that my universe B pre-registration covered only §B.1. Before
+writing the addendum I **verified** the omitted data was unseen rather than
+asserting it: the cached rows held exactly
+`{sym, target, atr_pct, from_high, from_low}` and the script contained zero
+occurrences of "overnight" or "prev". Clean pre-registration, fresh download.
+
+| Spread (quiet − volatile) | Universe B | Universe A | Retained |
+| --- | --- | --- | --- |
+| **OVERNIGHT** *(pass rule)* | **−14.15 bp, t = −8.55** | −13.83 bp, t = −9.79 | **1.02×** |
+| Intraday *(no pass rule)* | +5.97 bp, **t = +1.63** | +7.40 bp, t = +2.38 | 0.81× |
+
+**The declared 4-year window is the line that matters:** over 2022–2026 the
+overnight spread **strengthened** to −16.48 bp (t = −10.70) while the
+intraday spread **weakened** to +3.99 bp (t = +1.15). **The tradable half is
+decaying; the untradable half is not.**
+
+### §D.1 — the key result of the whole phase
+
+| | Universe A (today's members) | **NIFTY 100 index (point-in-time)** | Inflation |
+| --- | --- | --- | --- |
+| Overnight | +16.78 bp | **+12.01 bp** | **40%** |
+| Intraday | −6.94 bp | **−6.42 bp** | **8%** |
+| Total/day | +9.84 bp | +5.59 bp | 76% |
+
+**The intraday drag survives survivorship almost untouched. The overnight
+gain is 40% artefact.** Exactly the asymmetry one should expect — survivorship
+flatters returns, the overnight leg carries all the return, and a *drag* is
+not flattered by dropping losers.
+
+**So 3c's finding that matters to an intraday agent is the one that holds,
+and the finding I declined to propose is the one that was partly fake.**
+
+It is also **decaying**: the split holds in 16/20 years (NIFTY 100), 13/19
+(NIFTY 50), 11/19 (BANKNIFTY), and **2025 is the weakest year on all three**,
+failing outright on two.
+
+### §D.2 — and this closes the overnight route
+
+Verified from the official NSE lots file: NIFTY notional **₹15.19 lakh**,
+smallest liquid stock future (INFY) **₹4.14 lakh**. Cash costs from the
+project's model: intraday **16.60 bp** at ₹33k, **delivery 33.05 bp** —
+roughly double — and **60.08 bp at ₹5,000**.
+
+| | |
+| --- | --- |
+| Index overnight return, survivorship-free | +12.01 bp/day |
+| Delivery round trip at ₹33,000 | 33.05 bp |
+| **Ratio** | **0.36×** |
+
+The universe B spread gives **the same 0.36×** by a different route. The only
+way to avoid the daily delivery round trip is to hold continuously — which
+eats the intraday drag and is simply being long the index.
+
+**Futures are unreachable at ₹5,500, ₹1,00,000 and ₹3,00,000 on verified
+notional alone.** Futures charges and SPAN margins were **not verified and
+are recorded as unverified, not estimated**, per §D.2.
+
+**One gap I want on the record:** §D.1 measured survivorship in the **level**,
+not in the quintile **spread** — an index has no cross-section. The overnight
+spread's survivorship exposure is still unmeasured, and I am not claiming it
+is clean.
+
+### §C — recorded
+
+Your held-out reasoning is written into `progress.md` as directed. Not spent.
+
+### 3a — pre-registered, NOT run, awaiting your review
+
+`prereg-3a-opening-range.md`. **Stopped here as §E requires.**
+
+- **Why it earns a trial when the cross-sectional signals did not:** it is
+  event-conditioned, so its per-trade gross is not derivable from the
+  cross-sectional figures and must be measured. Your §A invariance argument
+  does not apply to it.
+- **Pass rule in bp:** mean **net** return per round trip > 0 with **t > 2**,
+  net of the full 16.60 bp, sign holding in **both halves**. A design that
+  clears `friction_R < 0.15R` but not the bp hurdle **fails** — the
+  distinction you corrected is explicit.
+- **Direction-symmetric**, per §A and §D.1's −6.42 bp long-book handicap.
+- **One variant.** Opening-range stop chosen, daily-ATR **not run**, with the
+  reason given in advance.
+- **A pre-flight withdrawal condition:** if the median opening-range width is
+  under 111 bp then `friction_R` > 0.15 and **the design is withdrawn before
+  any statistic is read**. That check runs first and is reported either way.
+- Universe A, selection only, existing Kite cache — **no new Kite calls**.
+
+**It counts as trial 35 on execution.** Nothing has been measured.
+
+**Awaiting your approval of the pre-registration before running it.**
+
+---
+
 ## Re: Entry 6 §C.1 — universe B replication PASSES. The statistic strengthened; the economics got worse.
 
 **`results-universe-b-replication.md`.** Pre-registered at `edd3471` before

@@ -60,7 +60,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
-| 3a — opening-range breakout | queued | — |
+| 3a — opening-range breakout | **pre-registered, NOT RUN** | `prereg-3a-opening-range.md` · awaiting reviewer approval (Entry 7 §E) · trial 35 on execution |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
