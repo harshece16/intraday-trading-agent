@@ -23,8 +23,9 @@ buying calls/puts once the checklist and a confidence gate both clear.
   measured, over 495 sessions and 201 trades, at **−0.36R per trade with
   t = −3.59** and a 95% confidence interval of **[−0.55, −0.16]** that does
   not contain zero. Both halves of the sample agree independently. The entry
-  has **no edge** (gross ≈ 0, statistically indistinguishable from a coin
-  flip) and friction turns that into a significant loss. Holding for days
+  has **no edge** — gross ≈ 0, and against 200 seeds of matched random
+  entries it is **indistinguishable from random**, not worse — and **0.398R
+  of friction per trade** turns that into a significant loss. Holding for days
   instead of minutes doesn't help, and the scanner's ranking has **no
   predictive power** (IC −0.0021, t = −0.26). See
   [§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work)
@@ -2538,25 +2539,47 @@ confidence gate), 75 trades:
 | Kelly | −34.7% — the right bet size is zero |
 | **Deflated Sharpe** | **0.0% probability of real skill**, after correcting for the 30 configurations tried |
 
-**Where the loss comes from**, attributed over the same 201 trades:
+**Where the loss comes from**, attributed over the same 201 trades. The
+figures below were **corrected on 2026-09-21** — see the note at the end of
+this section for what was wrong and why.
 
 ```
-gross    -0.102R per trade      (t ~ -1.0: indistinguishable from zero)
-net      -0.356R per trade      (t = -3.59: significant)
-friction  0.254R per trade      -- 71% of the loss
+pre-friction  +0.042R per trade   (t = +0.42: NOT distinguishable from zero)
+  slippage     0.144R per trade   -- 36% of friction
+  charges      0.254R per trade   -- 64% of friction
+gross         -0.102R per trade   (t = -1.04: indistinguishable from zero)
+net           -0.356R per trade   (t = -3.59: significant)
+TOTAL FRICTION 0.398R per trade   -- 112% of the loss
 ```
+
+**"Gross" in this project already has slippage deducted.** Only the statutory
+charges were being called friction, which understated the real figure by more
+than half. Recovered per trade: **₹14.46 of slippage and ₹25.55 of charges,
+₹40.01 in total**, against a median realised R of ₹101.2 and a median stop of
+42.4 bp. That decomposition is not inferred — `costs.apply_slippage()` is
+deterministic, so inverting it recovers the pre-slippage signal price, and it
+lands on a clean two-decimal bar or stop price on **100% of all 402 legs**.
 
 The honest reading is narrower than "the strategy loses money". **The entry
-has no edge, and friction turns a fair game into a losing one.** Gross is
-negative but not significantly so; what is significant is what remains after
-costs.
+has no edge, and friction turns a fair game into a losing one.** Note that
+pre-friction expectancy is **+0.042R but with t = +0.42** — that is *not*
+evidence the strategy works before costs; it is indistinguishable from zero,
+and reporting it as a positive would be reading noise.
 
 The mechanics say the same thing. Targets sit about 2.14R away against a 1R
-stop, and a pure random walk with those brackets resolves **31.9% targets /
-68.1% stops** for an expected value of exactly zero — a fair game by
-construction. The actual resolved trades come in at **28.4% / 71.6%**. The
-signal performs like a coin flip, a shade worse, which is consistent with the
-scanner IC of −0.0021 and a gross edge of zero.
+stop. **The right benchmark is a simulated one, not a formula:** 200 seeds of
+random entries pushed through the same harness, matched on time-of-day, side
+and stop size, resolve **25.0%** targets — not the 31.9% that 1/(1+RR)
+predicts, because under a 15:15 timeout the nearer barrier resolves faster
+and far-target trades are disproportionately timed out. The actual resolved
+trades come in at **28.4%**.
+
+**The supportable statement is that the entry signal is indistinguishable
+from random entries** — 82nd percentile of that matched null on gross
+expectancy, with a resolved-target rate of 28.4% against a simulated 25.0%.
+Every margin is under 1σ, so "better than random" is not supported either.
+And gross, net and target rate are largely the same information re-expressed,
+so their agreement is not independent corroboration.
 
 | Exit | Share | Net | Gross |
 | --- | --- | --- | --- |
@@ -2567,14 +2590,35 @@ scanner IC of −0.0021 and a gross edge of zero.
 The 15:15 square-offs are mildly **positive** and only 12% of trades, so the
 time exit is not the drag it was assumed to be.
 
-**What it would take to turn positive.** Gross edge must exceed the 0.254R of
-friction, and it is currently about zero. Widening R helps arithmetically —
-friction is a fixed ~₹26 per trade, so doubling the stop distance roughly
-halves it as a fraction of R — but a fair game scaled up is still a fair
-game: it moves the result from −0.356R to roughly −0.18R and cannot reach
-positive. The gap has to be closed by a signal with real predictive power,
-and nothing currently in the system has any: checklist gross ≈ 0, scanner
-IC ≈ 0.
+**What it would take to turn positive.** Pre-friction edge must exceed the
+**0.398R** of total friction, and it is currently about zero. Widening R
+helps arithmetically — friction is ~₹40 per trade and roughly fixed in rupees
+at a constant notional, so doubling the stop distance roughly halves it as a
+fraction of R — but a fair game scaled up is still a fair game: it moves the
+result from −0.356R to roughly **−0.16R** and cannot reach positive. The gap
+has to be closed by a signal with real predictive power, and nothing
+currently in the system has any: checklist gross ≈ 0, scanner IC ≈ 0.
+
+**Correction, 2026-09-21.** Two claims in the original version of this
+section were wrong, and the verdict is unchanged by both.
+
+| | Said | Measured |
+| --- | --- | --- |
+| Random-walk target rate | 31.9%, from the formula 1/(1+RR) | **25.0%**, simulated through the same harness |
+| Verdict on the signal | "performs like a coin flip, **a shade worse**" | **Indistinguishable from random** — 82nd percentile, all margins under 1σ |
+| Friction | 0.254R, "71% of the loss" | **0.398R, 112% of the loss** — the original figure was charges only |
+
+The formula was the wrong benchmark: under a 15:15 timeout the nearer
+barrier resolves faster, so the resolved-only target rate under a driftless
+null sits *below* 1/(1+RR). Measuring it rather than computing it moved the
+reference from 31.9% to 25.0%, and the strategy's 28.4% went from "slightly
+worse than a fair game" to "indistinguishable from random".
+
+**That is a correction to one mechanism sentence, not to the conclusion.**
+Net expectancy is still −0.356R at t = −3.59 with a confidence interval clear
+of zero. An unproven ~+0.08R excess over random, against ~0.40R of friction,
+is not a lead. Evidence: `docs/research/results-step1-null-test.md` (200
+seeds × 2 cost modes) and `docs/research/friction_decomposition.json`.
 
 ### 52. Holding longer doesn't rescue it either
 
@@ -2598,6 +2642,16 @@ applied to every universe stock:
 Every hold length loses, and holding longer makes it **worse** — friction
 scales with the holding period (0.023R → 0.144R) while the edge does not.
 Deflated Sharpe was 0.0% on all twelve variants.
+
+> **The Friction column above is charges only, and understates the real
+> figure.** `swing_backtester.py` applies `apply_slippage()` to both legs
+> before computing `gross`, and reports `cost_r` from `leg_cost()` alone —
+> the same convention that made §51's friction read 0.254R when it was
+> actually 0.398R. The direction of the error is known; the size is not
+> measured here, because these runs did not persist the per-trade fills that
+> §51's correction was derived from. **It makes these results worse, not
+> better**, so the conclusion is unaffected. Tracked as
+> [#53](https://github.com/harshece16/intraday-trading-agent/issues/53).
 
 Exactly one positive number appeared in the whole run: hold 5 on the
 selection split, **+0.002R**. The same configuration on held-out data gives
