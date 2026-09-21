@@ -128,6 +128,7 @@ Listed because the corrections are part of the result.
 | Spread compared against one round trip | **0.98× → 0.49×**, and four other ratios halved |
 | Reviewer Entry 5 stranded on an unmerged branch | A shared channel put on a branch then walked away from |
 | A frontend regression shipped in #52 | A live Kite session displayed as disconnected |
+| The journal funnel labelled the checklist entry threshold as "cleared the confidence gate" | Two different gates conflated. The 09-18 "9 passes, 0 orders" gap was **1 setup re-evaluated 9 times**, blocked by the confidence gate at 53/60 and fully logged — the gap was in the analysis, not the engine |
 
 ---
 

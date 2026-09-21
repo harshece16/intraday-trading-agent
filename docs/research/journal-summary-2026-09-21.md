@@ -92,7 +92,16 @@ Every checklist evaluation is scored for **both** a long and a short side, so
 | passed `rrr` (reward:risk) | 2,872 | 3.5% |
 | **passed `cost` (stop vs cost)** | **220** | **0.27%** |
 | **All required items passed** | **92** | **0.11%** |
-| ...and cleared the confidence gate | **51** | 0.06% |
+| ...and cleared the **checklist entry threshold** | **51** | 0.06% |
+
+> **CORRECTION, 2026-09-21.** This row was originally labelled *"cleared the
+> confidence gate"*. **That was wrong.** It counts
+> `bull_score >= entry_threshold`, which is the **checklist's own entry
+> threshold**, not the confidence gate. The confidence gate is a separate,
+> later check — `confidence.score_trade()` against
+> `min_confidence_to_trade = 60` — and it does not appear in
+> `checklist_evals` at all. The real record of it is the `blocked` rows in
+> the `activity` table. See the new section **§3b**.
 | Signals recorded | 45 | — |
 | **Orders placed** | **8** | **0.0097%** |
 
@@ -119,7 +128,7 @@ figure: **median 0.050**, p90 1.94, max 15.42.
 
 ### Last five sessions
 
-| Session | Side-evals | Passed checklist | Cleared confidence | Top blockers |
+| Session | Side-evals | Passed checklist | Cleared **entry threshold** (not confidence — see §3b) | Top blockers |
 | --- | --- | --- | --- | --- |
 | 2026-09-15 | 23,984 | 20 | 14 | rrr, sr, pattern |
 | 2026-09-16 | 28,240 | 47 | 17 | rrr, sr, pattern |
@@ -128,6 +137,54 @@ figure: **median 0.050**, p90 1.94, max 15.42.
 | 2026-09-21 | 950 | **0** | **0** | rrr, pattern, sr |
 
 `rrr` is the top blocker on every single session.
+
+---
+
+## 3b. What actually blocks a trade after the checklist — the `blocked` log
+
+**Added 2026-09-21**, after the §3 correction above. The post-checklist gate
+is not visible in `checklist_evals`; it is the `activity` table's `blocked`
+rows. There are **52 of them in the whole journal**.
+
+| Reason | Count |
+| --- | --- |
+| **Confidence gate** (`confidence N/100 below the 60 bar`) | **21** |
+| **Direction conflict** — *"scanner favours SHORT/LONG for this name"* | **19** |
+| Test-harness artefacts (`TESTCO`, untracked Kite position) | 7 |
+| F&O premium × lot too large for the capital | 2 |
+| Already at the max of 1 open position | 1 |
+| Other | 2 |
+
+### Distinct setups, not evaluation rows
+
+| Day | Distinct (symbol, side) clearing the checklist | Blocked rows |
+| --- | --- | --- |
+| 2026-09-13 | 0 | 4 |
+| 2026-09-15 | 8 | 21 |
+| 2026-09-16 | 19 | 18 |
+| 2026-09-17 | 10 | 8 |
+| **2026-09-18** | **1** | **1** |
+
+Far smaller than the row counts in §3 suggest, and the right denominator for
+any statement about how often a real opportunity appears.
+
+### The finding nobody was looking for
+
+> **19 of 52 blocks — almost as many as the confidence gate — are the two
+> halves of the system disagreeing about direction.** The checklist fires
+> long while the scanner ranks that name short, or the reverse.
+
+Neither the original funnel nor any phase-2 measurement surfaced this. It is
+recorded here as an observation, **not** a proposal: phase 2 established that
+the entry has no edge in either direction, so making the two halves agree
+would change which losing trades get taken, not whether they lose.
+
+### Two further things the 09-18 trail exposed
+
+- **76 `Kite session has expired` errors** — that session ran entirely on
+  delayed yfinance data. This is the defect later fixed as #24/#51.
+- **One watchdog fire:** *"The engine has been stuck on one cycle for 26 min,
+  so stops and entries aren't being checked."*
 
 ---
 
@@ -149,11 +206,30 @@ from the backtest config, or five sessions is simply too few to compare. It
 is flagged here rather than smoothed over, because the funnel above is only
 trustworthy to the extent this is understood.
 
-Note also that **all 8 trades fell on 15–17 September and none since**, while
-2026-09-18 recorded 9 complete checklist passes that cleared the confidence
-gate and still produced zero orders. Something downstream of the gates —
-one-entry-per-day, one-per-sector, or capital — stopped those, and this
-summary does not isolate which.
+Note also that **all 8 trades fell on 15–17 September and none since**.
+
+> **RESOLVED, 2026-09-21 — and the original framing was wrong.** This
+> paragraph said 2026-09-18 *"recorded 9 complete checklist passes that
+> cleared the confidence gate and still produced zero orders"*, and guessed
+> at one-entry-per-day, one-per-sector or capital.
+>
+> **It was never 9 setups.** It was **one** — JINDALSTEL long — re-evaluated
+> **nine times over four minutes** by the 30-second polling loop, logging an
+> identical row each time (score 13.38, threshold 6.0, rrr 2.39). The funnel
+> counted rows and called them setups.
+>
+> **And nothing was unexplained.** One `blocked` row that day names the
+> reason in full:
+>
+> ```
+> 09:45:39 JINDALSTEL: Inverted Hammer (long) signal skipped —
+> confidence 53/100 below the 60 bar
+> (Local setup scored 88/100, scaled by a 0.60x system-evidence factor)
+> ```
+>
+> **The confidence gate stopped it** — a locally strong setup scaled down
+> because the Scorecard cannot confirm an edge. The gate worked as designed.
+> The gap was in this analysis, not the engine.
 
 **The reason it bites so hard is cost, not caution.** At a median stop of
 42 bp, a 17 bp round trip is **0.40R of friction** before the market moves
