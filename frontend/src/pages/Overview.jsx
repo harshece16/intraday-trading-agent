@@ -62,25 +62,38 @@ function OnboardingBanner({ s }) {
    delayed prices. It can't be dismissed; it goes away when Kite comes back. */
 function KiteSessionAlert({ s }) {
   const state = s?.kite_state;
-  if (state !== "expired" && state !== "error") return null;
+  const stalled = !!s?.kite_login_stalled;
+  if (!stalled && state !== "expired" && state !== "error") return null;
   const expired = state === "expired";
+  const title = stalled ? "Kite login didn't come back"
+    : expired ? "Kite session expired" : "Kite isn't reachable";
   return (
     <div className="cardbox" style={{ marginBottom: 20, borderColor: "var(--short)" }} role="alert">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h2 className="h" style={{ fontSize: 16, color: "var(--short)" }}>
-            {expired ? "Kite session expired" : "Kite isn't reachable"}
-          </h2>
+        <div style={{ minWidth: 0 }}>
+          <h2 className="h" style={{ fontSize: 16, color: "var(--short)" }}>{title}</h2>
           <p style={{ margin: "6px 0 0", fontSize: 13.5, lineHeight: 1.7 }}>
             {s.kite_reason}{" "}
-            {expired && "Until you reconnect, prices come from the delayed free feed and no live order can be placed."}
+            {expired && !stalled && "Until you reconnect, prices come from the delayed free feed and no live order can be placed."}
           </p>
+          {/* The half of the round trip the app can't see from inside: which
+              URL Zerodha will send the browser back to. A mismatch here looks
+              identical to "the button did nothing". */}
+          {s.kite_redirect_url && (
+            <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.7, color: "var(--ink-2)" }}>
+              Zerodha must redirect back to{" "}
+              <code style={{ wordBreak: "break-all" }}>{s.kite_redirect_url}</code>{" "}
+              — register that exact URL at{" "}
+              <a href="https://developers.kite.trade" target="_blank" rel="noreferrer">developers.kite.trade</a>
+              {stalled && ", and make sure whatever it points at is running right now"}.
+            </p>
+          )}
         </div>
         <button
           className="btn primary"
           onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}
         >
-          Reconnect
+          {stalled ? "Try again" : "Reconnect"}
         </button>
       </div>
     </div>

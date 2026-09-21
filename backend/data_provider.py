@@ -80,6 +80,45 @@ KITE_TOKEN_EXPIRY_HOUR_IST = 6
 # Short on purpose: the answer feeds a status chip, not a trading decision.
 KITE_PROBE_TIMEOUT_SECONDS = 4
 
+# A Kite login is a browser round trip: we redirect to Zerodha, the user logs
+# in, and Zerodha redirects back to the Redirect URL registered in the Kite
+# Connect app — NOT to a URL we choose. If that registered URL doesn't point
+# at this backend, the round trip simply never completes and nothing here ever
+# hears about it. That failed silently for two days: the tunnel the URL named
+# was offline, the browser got the tunnel's error page, and the dashboard's
+# only symptom was that clicking Connect Kite "did nothing".
+#
+# Recording both ends of the round trip turns that into a diagnosis.
+_kite_login_started_at = None   # we sent the user to Zerodha
+_kite_callback_at = None        # Zerodha actually came back to us
+
+# How long to wait before calling a started-but-unreturned login stalled.
+# Generous: it has to cover typing a password, a TOTP, and ngrok's free-tier
+# browser interstitial.
+KITE_LOGIN_STALL_SECONDS = 120
+
+
+def note_kite_login_started():
+    global _kite_login_started_at
+    _kite_login_started_at = datetime.now(IST)
+
+
+def note_kite_callback():
+    global _kite_callback_at
+    _kite_callback_at = datetime.now(IST)
+
+
+def kite_login_stalled():
+    """True when we sent the user to Zerodha and Zerodha never came back.
+
+    Almost always means the Redirect URL registered at developers.kite.trade
+    does not reach this backend."""
+    if _kite_login_started_at is None:
+        return False
+    if _kite_callback_at is not None and _kite_callback_at >= _kite_login_started_at:
+        return False
+    return (datetime.now(IST) - _kite_login_started_at).total_seconds() > KITE_LOGIN_STALL_SECONDS
+
 
 def kite_token_expires_at(generated_at: str):
     """The 06:00 IST boundary that kills the session generated at `generated_at`
@@ -186,10 +225,22 @@ def kite_session_status(probe: bool = False) -> dict:
         "generated_at": config.KITE_SESSION_GENERATED_AT,
         "expires_at": expires_at.isoformat() if expires_at else None,
         "seconds_until_expiry": int((expires_at - now_ist).total_seconds()) if expires_at else None,
+        # Which URL Zerodha will actually send the browser back to. Shown
+        # whenever we are not connected, because a mismatch between this and
+        # the Redirect URL registered at developers.kite.trade is invisible
+        # from inside the app and looks exactly like "the button did nothing".
         "redirect_url": config.KITE_REDIRECT_URL,
+        "login_started_at": _kite_login_started_at.isoformat() if _kite_login_started_at else None,
+        "login_stalled": False,
         "checked_at": now_ist.isoformat(),
         "probed": False,
     }
+    if state_name != "connected" and kite_login_stalled():
+        out["login_stalled"] = True
+        out["reason"] = (
+            "A Kite login was started but Zerodha never came back. That almost always means the "
+            f"Redirect URL registered at developers.kite.trade is not {config.KITE_REDIRECT_URL} — "
+            "it must match exactly, and whatever it points at has to be reachable right now.")
     if probe and state_name == "connected":
         out["probed"] = True
         try:

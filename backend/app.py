@@ -520,12 +520,18 @@ def kite_login():
         )
     from kiteconnect import KiteConnect
     kite = KiteConnect(api_key=config.KITE_API_KEY)
+    # Mark the start of the round trip. If Zerodha never redirects back,
+    # /api/kite/status can say so instead of leaving the user to guess.
+    data_provider.note_kite_login_started()
     return RedirectResponse(kite.login_url())
 
 
 @app.get("/kite/callback")
 def kite_callback(request_token: Optional[str] = None, status: Optional[str] = None):
     """Step 2 — Kite redirects here after login (must match the app's registered Redirect URL)."""
+    # Reaching this route at all is the proof the round trip closed, whatever
+    # the outcome — record it before any early return.
+    data_provider.note_kite_callback()
     if status != "success" or not request_token:
         return HTMLResponse(
             "<h3>Kite login didn't complete</h3><p>Close this tab and try again from the dashboard.</p>",

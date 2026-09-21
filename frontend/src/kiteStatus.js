@@ -30,6 +30,18 @@ export function localTime(iso) {
   });
 }
 
+/** Stand-in for `reason` when talking to a backend that predates it. Says
+ *  less than the real thing, because the old payload knows less. */
+function legacyReason(state, k) {
+  if (state === "connected") {
+    return k.using_live_data
+      ? "Logged in to Kite. Live prices and live order routing are available."
+      : "Logged in to Kite, but the engine is still on the delayed feed.";
+  }
+  if (state === "not_configured") return "Kite API key and secret aren't set.";
+  return "Not logged in to Kite yet. Click Connect Kite.";
+}
+
 /**
  * @param {object|null} k the /api/kite/status payload, or null while loading
  * @returns {{label:string, tone:string, action:string, reason:string,
@@ -38,9 +50,17 @@ export function localTime(iso) {
 export function describeKite(k) {
   if (!k) {
     return { label: "Checking Kite…", tone: "idle", action: "Connect Kite", reason: "",
-             detail: "", urgent: false, loading: true };
+             detail: "", redirectUrl: "", loginStalled: false, urgent: false, loading: true };
   }
-  const base = KITE_STATES[k.state] || KITE_STATES.disconnected;
+  // A backend older than this file doesn't send `state` at all. Defaulting a
+  // missing field to "disconnected" made the dashboard report "Kite not
+  // connected" over a live, working session — the same confidently-wrong
+  // display this module exists to prevent, just with the sign flipped.
+  // Derive it from the legacy fields instead, and only then fall back.
+  const derived = k.state
+    || (!k.app_configured ? "not_configured" : k.connected ? "connected" : "disconnected");
+  const base = KITE_STATES[derived] || KITE_STATES.disconnected;
+  k = { ...k, state: derived, reason: k.reason || legacyReason(derived, k) };
   // Connected but the engine is still on the delayed feed is its own case:
   // the login worked, so "expired" would be wrong, but so would "live".
   const live = k.state === "connected" && k.using_live_data;
@@ -59,15 +79,25 @@ export function describeKite(k) {
       : `Expired ${localTime(k.expires_at)} (${rel}).`);
   }
   if (k.probed) lines.push("Confirmed against Kite just now.");
+  // Only when it can matter. A working session proves the redirect is fine,
+  // and repeating it on every hover would be noise.
+  if (k.state !== "connected" && k.redirect_url) {
+    lines.push(`Zerodha must redirect back to: ${k.redirect_url}`);
+    lines.push("That exact URL has to be registered at developers.kite.trade and reachable.");
+  }
 
   return {
-    label,
-    tone,
+    label: k.login_stalled ? "Kite login didn't return" : label,
+    tone: k.login_stalled ? "bad" : tone,
     action: base.action,
     reason: k.reason || "",
     detail: lines.filter(Boolean).join("\n"),
+    redirectUrl: k.redirect_url || "",
+    // A login that went out and never came back is its own failure: the
+    // button appears to do nothing, and nothing in the app says why.
+    loginStalled: !!k.login_stalled,
     // Worth pulling the eye to: it was working and now isn't, or it broke.
-    urgent: k.state === "expired" || k.state === "error",
+    urgent: k.state === "expired" || k.state === "error" || !!k.login_stalled,
     loading: false,
   };
 }

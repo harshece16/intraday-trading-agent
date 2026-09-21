@@ -164,6 +164,11 @@ class AppState:
                 "kite_state": kite["state"],
                 "kite_reason": kite["reason"],
                 "kite_expires_at": kite["expires_at"],
+                # Which URL Zerodha redirects back to. Only actionable when
+                # something is wrong, but the page that shows it is the page
+                # you land on when it is.
+                "kite_redirect_url": kite["redirect_url"],
+                "kite_login_stalled": kite["login_stalled"],
             }
 
     def apply_fill(self, symbol, side, quantity, price, charges=0.0) -> dict:

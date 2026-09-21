@@ -253,3 +253,72 @@ def test_probe_is_skipped_when_the_clock_already_says_expired(kite_env):
     s = data_provider.kite_session_status(probe=True)
     assert s["probed"] is False
     assert s["state"] == "expired"
+
+
+# --- the login round trip ----------------------------------------------
+#
+# A Kite login is a browser round trip and Zerodha redirects to the URL
+# registered in the Kite Connect app, not one we choose. When that URL does
+# not reach this backend the round trip never completes and nothing in the app
+# hears about it — clicking Connect Kite simply appears to do nothing. That
+# happened for real on 2026-09-21: the tunnel the registered URL named was
+# offline, and two request tokens were burned before anyone could tell.
+
+
+@pytest.fixture
+def logged_out(kite_env):
+    kite_env.setattr(config, "KITE_ACCESS_TOKEN", "", raising=False)
+    kite_env.setattr(data_provider, "_kite_login_started_at", None, raising=False)
+    kite_env.setattr(data_provider, "_kite_callback_at", None, raising=False)
+    return kite_env
+
+
+def test_a_login_never_started_is_not_stalled(logged_out):
+    assert data_provider.kite_login_stalled() is False
+    assert data_provider.kite_session_status()["login_stalled"] is False
+
+
+def test_a_login_just_started_is_not_yet_stalled(logged_out):
+    data_provider.note_kite_login_started()
+    assert data_provider.kite_login_stalled() is False
+
+
+def test_a_login_that_never_returned_is_stalled(logged_out):
+    logged_out.setattr(data_provider, "_kite_login_started_at",
+                       datetime.now(IST) - timedelta(minutes=10), raising=False)
+    assert data_provider.kite_login_stalled() is True
+    s = data_provider.kite_session_status()
+    assert s["login_stalled"] is True
+    assert "never came back" in s["reason"]
+    assert config.KITE_REDIRECT_URL in s["reason"]
+
+
+def test_a_callback_clears_the_stall(logged_out):
+    logged_out.setattr(data_provider, "_kite_login_started_at",
+                       datetime.now(IST) - timedelta(minutes=10), raising=False)
+    data_provider.note_kite_callback()
+    assert data_provider.kite_login_stalled() is False
+
+
+def test_an_old_callback_does_not_clear_a_newer_stalled_login(logged_out):
+    """Yesterday's successful login must not mask today's broken one."""
+    logged_out.setattr(data_provider, "_kite_callback_at",
+                       datetime.now(IST) - timedelta(days=1), raising=False)
+    logged_out.setattr(data_provider, "_kite_login_started_at",
+                       datetime.now(IST) - timedelta(minutes=10), raising=False)
+    assert data_provider.kite_login_stalled() is True
+
+
+def test_a_connected_session_is_never_reported_as_stalled(kite_env):
+    """If it works, the redirect obviously reached us — whatever the timers say."""
+    kite_env.setattr(data_provider, "_kite_login_started_at",
+                     datetime.now(IST) - timedelta(minutes=10), raising=False)
+    kite_env.setattr(data_provider, "_kite_callback_at", None, raising=False)
+    s = data_provider.kite_session_status()
+    assert s["state"] == "connected"
+    assert s["login_stalled"] is False
+
+
+def test_status_always_reports_the_redirect_url(kite_env):
+    """The half of the round trip the app cannot see from inside."""
+    assert data_provider.kite_session_status()["redirect_url"] == config.KITE_REDIRECT_URL
