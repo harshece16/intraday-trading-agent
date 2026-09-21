@@ -6,6 +6,142 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 11 — 2026-09-21 — automated reviewer: 3a run ACCEPTED, trial 35 is a clean FAIL; one wording correction; the four flagged items all rule in the main agent's favour; 3b needs its own pre-registration and the user's go-ahead
+
+Reviewed `results-3a-opening-range.md`, `step3a_result.json`, `step3a_preflight.json`,
+`prereg-3a-opening-range.md` (amendments 1–3), `backend/research/step3a_opening_range.py`,
+`backend/tests/test_step3a_fills.py`, `trials.md`, `progress.md`, and the outbox
+entry "Re: Entry 10". The user's "go-ahead" after Entry 10 is noted as the
+user's own confirmation, not mine, and is the only thing that authorised the
+run — consistent with the hard limit that I cannot spend or authorise a run
+myself.
+
+### Verdict: **ACCEPTED with one wording correction.** Trial 35 stands as FAIL.
+
+### A. Every figure checked against the two JSON files — all match
+
+Primary: net −12.086 → −12.09 bp, t −2.709 → −2.71, gross +4.517 → +4.52 bp,
+t +1.012 → +1.01, net R −0.0781 → −0.08, 1,656 trades, 303 sessions — all
+exact. Halves (−1.18/t −0.15/gross +15.43/t +1.93 and −21.96/t −5.03/gross
+−5.36/t −1.23), sides (longs −14.72/t −2.09/gross +1.89/t +0.27, shorts
+−13.31/t −1.77/gross +3.29/t +0.44), secondary lines (−14.99/t −5.38 and
+−13.64/t −6.25), the power line (sd 77.67 bp, n 303, MDE 8.92 bp), the
+pre-flight line (1,139 of 5,275, 21.6%; 12,745 of 28,600; median width 107.3
+bp; min stop 110.67 bp) and the pooled per-trade mean (−15.87 bp) all
+reproduce the JSON to the reported precision. Internal cross-checks also
+close: longs (891) + shorts (765) = 1,656; first half (801) + second half
+(855) = 1,656; every exit-mix row sums to its trade count. Nothing in the
+prose overstates or rounds favourably.
+
+### B. The script against the pre-registration as amended
+
+Read `step3a_opening_range.py` line by line against amendments 1–3. Order of
+operations is `eligibility → top-20 by rel_vol → signal → friction rule →
+cap`, exactly as 3.1 fixes it, and it is enforced by construction: `rel_vol`
+only exists for a (symbol, date) once 14 prior cached sessions with all three
+opening bars exist (`rel_vol_table` checks `len(prior) >= REL_VOL_LOOKBACK`
+*before* appending the current session — no lookahead, and the synthetic test
+`test_rel_vol_needs_14_prior_sessions_and_uses_only_the_past` proves it).
+Entry is the open of the bar *after* the signal bar, never the signal bar's
+close (amendment 1 b, tested). Stop fills match amendment 1 (c) exactly: an
+intrabar touch fills at the stop price, a bar that opens beyond the stop fills
+at that open, and the entry bar itself can stop the trade — all three paths
+have a synthetic test with a hand-computed expected fill. The 14:30 cutoff is
+enforced in `find_signal`'s bar loop, and a signal with no following bar
+before 15:10 returns no trade. The top-20 tie-break is alphabetical, proven
+by `test_top20_tie_is_alphabetical`. The friction rule (`stop_bp >=
+110.666...`) is applied identically to all three lines and a skipped
+candidate takes no cap slot, because the capped-list comprehension filters on
+`kept` before `capped()` ever sees it. Halves are split at the median of the
+full 319-session cache list (not the 303 live-only sessions), which is the
+literal reading of amendment 1 (g) — "selection sessions in the Kite cache" —
+and the reported 144/159 split is internally consistent with the 16
+non-eligible sessions falling near the start of the series. Sizing is a fixed
+₹33,000 notional; gross uses raw fills, net applies `costs.apply_slippage`
+and `costs.leg_cost` on both legs, and the synthetic zero-gross test proves
+net − gross ≈ −16.60 bp. `load_days` drops any bar dated on or after
+`splits.HELD_OUT_START` before anything else can see it, and `kite_history.load`
+only reads the local sqlite cache — no network path exists in it — so "no
+Kite calls" is not just asserted, it is structurally true.
+
+### C. The verdict logic
+
+`untestable if MDE > 16.60`, else `PASS if net>0 and t>2 and both halves >0`,
+else `FAIL` — read directly from `main()` — is exactly amendment 3.3 plus the
+original pass rule. MDE (8.92 bp) is well under 16.60, so the untestable
+branch correctly did not fire, and the results file states the exact number
+that would have triggered it either way, honouring Entry 10 §A.1. Entry 10
+§D (state the verdict as the headline, secondary lines last) is honoured —
+`## Verdict: FAIL` is the first line under the title, the two descriptive
+lines are the last section.
+
+### D. Ruling on the four items the main agent flagged
+
+1. **Not calling the half-to-half drop "decay": correct.** The results file
+   says so explicitly and gives the reason (two sub-sample numbers, no trend
+   test registered). No correction needed.
+2. **The all-100 line restricted to the primary line's 303 sessions: accepted.**
+   The restriction is in a code comment inside `3841124`, which predates both
+   the pre-flight commit and the run commit, so it was a pre-run design
+   decision, not a post-hoc adjustment — and it is disclosed in the results
+   file itself with the exact number. It is descriptive-only, carries no pass
+   rule, and is barred from justifying a variant either way, so it cannot
+   move the verdict. The 319-session figure is not needed; do not compute it.
+3. **"Max concurrent positions" read as concurrent (slots reopen on exit),
+   giving 5.47 trades/session: correct, and self-consistently verified.** A
+   literal daily cap of 5 could not produce an average of 5.47 trades per
+   session; the observed rate is only possible under the reopening reading,
+   which also matches the original hypothesis text ("Max concurrent
+   positions... matches the live engine's shape") more literally than a
+   fixed daily cap would. Ruled: this is the correct reading, not a
+   researcher degree of freedom that needs to be re-litigated.
+4. **Gross on raw fills, slippage and charges both inside net: confirmed** by
+   reading `simulate()` and by the synthetic zero-gross test, which asserts
+   net ≈ −16.60 bp when gross ≈ 0.
+
+### E. One correction — wording, not a number
+
+"**It is the fifth time the project has found gross ≈ 0 and net ≈ −cost.**"
+This is a count claim without a citation. Most of the project's other
+findings (the `atr_pct` quintile spreads, the universe B replication, 3c's
+intraday leg) found a small but *non-zero, sometimes significant* gross edge
+that fell short of cost — a different and more informative pattern than
+"gross indistinguishable from zero." The pattern this sentence describes
+(gross statistically indistinguishable from zero, net ≈ −cost) most cleanly
+matches only the original checklist result (§51) and this one. **Fix:** name
+the specific instance(s) being counted, or drop the ordinal and say "another
+instance of the same shape: no measurable edge before cost, cost eats what
+was there." This does not change the verdict or any number; it is a claims-
+match-evidence correction only.
+
+### F. Trial accounting
+
+`trials.md` shows trial 35 with the correct label, hashes and the FAIL result,
+count 35 as of 2026-09-21, and logs it under "Phase-2 runs" as one run, no
+re-run. Matches the JSON and the results file. No replication, no withdrawal.
+
+### G. Needs the user's decision
+
+Nothing new. A FAIL earns no held-out look — this was already the rule, and
+the main agent has correctly not touched it. Nothing here makes a Kite call,
+spends the 2026 window, or touches the live path. Branch `research/entry8-3a`
+remains unpushed; merging is the user's alone.
+
+### H. Next step, and where to stop
+
+3b ("intraday momentum," `progress.md`, queued) is the natural next item, but
+it needs its own pre-registration — hypothesis, one variant, fill and stop
+rules, pass rule in bp against 16.60, halves, power statement — committed
+*before* any 3b code, exactly as 3a's was. Fix the one wording item above in
+the results file (or note it in the next commit; it does not need its own
+commit). **Do not write or run 3b code until that pre-registration is written
+and reviewed, and do not run it even then without the user's explicit
+go-ahead**, the same two-step gate 3a went through. Stop again after the
+pre-registration for review, and again after any run, before touching the
+held-out window or proposing anything further.
+
+---
+
 ## Entry 10 — 2026-09-21 — automated reviewer: amendment 3 accepted with corrections; still STOPPED for the user's go-ahead on 3a; nothing here to merge or run
 
 Reviewed `prereg-3a-opening-range.md` amendment 3 (`815ba4c`) against Entry 9
