@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**STOPPED for review — 3a RUN ONCE as trial 35: FAIL. Net −12.09 bp/session, t = −2.71 (gross +4.52 bp, t = +1.01); negative in both halves and on both sides; MDE 8.92 bp so NOT untestable. Relative-volume filter adds nothing measurable. 3b NOT started, nothing proposed. Trials 35. Held-out NOT taken. Updated 2026-09-21.**
+**STOPPED for review — Entry 11 ACCEPTS 3a: trial 35 stands as a clean FAIL (net −12.09 bp/session, t = −2.71; gross +4.52 bp, t = +1.01; negative in both halves and both sides; MDE 8.92 bp so NOT untestable). §E's wording fix is committed (`d602c00`). **3b is now PRE-REGISTERED and NOT RUN**, with a proposed two-stage split so a cheap measurement (L31) can withdraw it without spending trial 36. Needs reviewer review AND the user's go-ahead before any run. Trials 35. Held-out NOT taken. Updated 2026-09-21 11:15.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -62,7 +62,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | **done — FAIL (trial 35)** | `results-3a-opening-range.md` · net −12.09 bp, t = −2.71; gross +4.52 bp, t = +1.01 · amendment `815ba4c` → code `3841124` → pre-flight `9f9ac61` → run `f4f1d3c` |
-| 3b — intraday momentum | queued | — |
+| 3b — intraday momentum | **pre-registered, NOT RUN** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
 

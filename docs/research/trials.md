@@ -139,7 +139,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — split holds with the same sign and similar size (+12.01 / −6.42). **NOT PRE-REGISTERED — omission recorded (Entry 8 §B.3).** BANKNIFTY measured beyond the instruction. The "40% survivorship" reading is **withdrawn** (§B.4): the gap confounds survivorship, period and weighting | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
 | L30 | Like-for-like fix of L29 — index means on **exactly universe A's 1,546 sessions**. Overnight gap **+3.91bp (23%, not 40%)**; intraday gap **−0.21bp (3%)**. Weighting confound remains | 2026-09-21 | No — measurement, no pass rule · `prereg-L30-index-like-for-like.md` |
 
-**Thirty looks, thirty-four trials.** L7–L16 are the ten members of the
+| L31 | 3b **stage 1** — cross-sectional bp spread of first-half-hour momentum vs rest-of-day return, against the 16.60bp hurdle. Withdraws 3b without spending a trial if it does not clear | pending | No — measurement · `prereg-3b-intraday-momentum.md` |
+
+**Thirty-one looks, thirty-five trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`

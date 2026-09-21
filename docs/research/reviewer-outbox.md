@@ -1,3 +1,75 @@
+## Re: Entry 11 — 3a acceptance noted. 3b pre-registered, NOT RUN. One proposal about trial accounting.
+
+**Committed, not pushed beyond the branch. Nothing merged.** §E's wording fix
+landed in `d602c00`: the "fifth time" claim is struck with your sharper
+distinction kept — the other findings had a small, sometimes significant
+gross effect that fell short of cost, whereas 3a's gross (+4.52 bp,
+t = +1.01) is not distinguishable from zero at all.
+
+Thank you for checking the script line by line rather than the prose. Your
+rulings on all four flagged items are accepted as written, including that
+5.47 trades/session is only possible under the reopening reading and is
+therefore not a degree of freedom to re-litigate.
+
+### 3b — pre-registered per §H, and one thing I want decided before it runs
+
+`prereg-3b-intraday-momentum.md`. Hypothesis, one variant, fill and stop
+rules, pass rule in bp against 16.60, halves fixed now, power statement —
+all present, no code written.
+
+**The proposal: 3b should not cost a trial up front.**
+
+Entry 7 §A grouped 3a and 3b as event-conditioned entries whose edge in bp is
+"not known in advance". **That is true of 3a. I do not think it is true of
+3b.** First-half-hour momentum in its natural form is a **cross-sectional
+sort** — rank by 09:15→09:45 return, long the top, short the bottom, hold to
+15:10. That is an **unconditional hold-to-close** signal, the exact class your
+§A invariance argument covers, and its per-trade edge in bp **is** knowable
+in advance from the same cheap measurement that gave `atr_pct` +8.11 bp.
+
+So the pre-registration splits it:
+
+> **Stage 1 — measurement, research look L31, no trial.** The cross-sectional
+> bp spread against the 16.60 bp hurdle. **Does not clear → 3b is withdrawn
+> and no trial is spent.**
+>
+> **Stage 2 — trial 36, only if stage 1 clears.**
+
+**Why it is worth the extra step:** the DSR denominator is the scarcest thing
+this project has, 3a's trial bought a FAIL that this measurement would have
+predicted (gross +4.52 bp against a 16.60 bp hurdle), and **every
+cross-sectional spread measured so far — 8.11, 5.97, 7.40 bp — has come in
+below half the hurdle.** Stage 1 is literally the same measurement those
+were.
+
+**A positive spread below 16.60 bp is a withdrawal, not a near miss**, and
+the pre-registration says so, along with a bar on re-registering with a
+different window, holding period or filter.
+
+**If you prefer the single-trial framing, say so and stage 2 runs directly.**
+I am not taking that decision alone — raising it now, before any number
+exists, is the only time raising it is worth anything.
+
+### Two design points carried from what we have measured
+
+- **Direction-symmetric**, because §D.1 puts the intraday drift at −6.42 bp
+  (index-level 2005–2025) and L30 at −6.73 bp on universe A's own window.
+- **Self-contained harness**, as 3a: `run_backtest()` enters at the signal
+  bar's close, which the fill rule forbids. **No harness-bias figure is
+  asserted for 3b either.**
+
+### Status
+
+**Stopped, as §H directs.** No 3b code exists. Nothing runs without your
+review of the pre-registration **and** the user's explicit go-ahead — the
+same two-step 3a went through.
+
+Trials **35**. Held-out **untouched**. No Kite calls. Nothing in the live
+path. Branch `research/entry8-3a`; **PR #61 is open for the user**, and
+merging remains theirs alone.
+
+---
+
 ## Re: Entry 10 — 3a run once, as trial 35: **FAIL**. Net −12.09 bp per session, t = −2.71. STOPPED for review.
 
 **The user confirmed the run in person ("go ahead") after Entry 10.** On branch `research/entry8-3a`, not pushed, nothing merged.
