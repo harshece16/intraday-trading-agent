@@ -123,7 +123,37 @@ information re-expressed, so their agreement is not corroboration.
 t = −3.59 and a confidence interval clear of zero. What changes is the
 *diagnosis*: the entry is not demonstrably worse than random, but nothing here
 shows it is better either, and an unproven excess of ~+0.08R against friction
-of roughly 0.25R — likely more, pending §B's decomposition — is not a lead.
+of **0.398R** (measured — see below) is not a lead.
+
+### Friction, measured (Entry 3 §B) — it was understated by more than half
+
+The reviewer's hypothesis was that "gross" already contains slippage, so the
+0.254R called friction is charges only. **Confirmed, and not by inference:**
+`costs.apply_slippage()` is deterministic, so inverting it recovers the
+pre-slippage signal price, and that price lands on a clean two-decimal bar or
+stop value on **100% of all 402 legs** of the 201-trade sample.
+
+| Per trade | R | ₹ | 95% CI (R) |
+| --- | --- | --- | --- |
+| Pre-friction expectancy | **+0.0416** | — | [−0.151, +0.234] |
+| less slippage | 0.1437 | 14.46 | [0.136, 0.151] |
+| less charges | 0.2539 | 25.55 | [0.241, 0.267] |
+| = gross (as reported) | −0.1021 | — | [−0.295, +0.091] |
+| = net (as reported) | −0.3560 | — | [−0.550, −0.162] |
+| **TOTAL FRICTION** | **0.3976** | **40.01** | — |
+
+Against a median realised R of ₹101.2 and a median stop of 42.4 bp.
+**Friction is 112% of the loss**, not 71%: slippage 36%, charges 64%.
+
+**The pre-friction figure must not be read as a positive.** +0.0416R carries
+**t = +0.42** — indistinguishable from zero. The strategy is not profitable
+before costs; it is a fair game before costs, which friction then turns into
+a significant loss.
+
+**0.398R is the hurdle every step-3 hypothesis must clear** at comparable
+stop sizes (~42 bp, ~₹101 R), and it is carried into each step-3
+pre-registration as such. The same charges-only convention affects
+`swing_backtester.py` and therefore README §52; tracked as issue #53.
 
 ### An unresolved tension
 
