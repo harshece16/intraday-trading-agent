@@ -306,3 +306,108 @@ project's own cost functions — applied directly.
 **Amendment 1 (c)'s stop rules happen to match the harness's** (stop price on
 an intrabar touch, the bar's open on a gap-through), which is stated because
 it means the deviation is confined to the entry fill.
+
+---
+
+# Amendment 3 — Entry 9 (external reviewer), reconciling with Entry 8 §D
+
+**Committed before any 3a code exists** (`git ls-files` shows no 3a script;
+the inbox entry is `ad7b05c`). **Where this amendment differs from the
+original text or from amendments 1–2, it takes precedence.** Nothing has been
+measured.
+
+## 3.1 The hypothesis is restored to the original brief
+
+> **Opening-range breakout on stocks with unusually high relative volume.**
+
+The original pre-registration dropped the relative-volume condition. It is
+part of the hypothesis, **fixed in advance, not a tie-break**.
+
+**Relative volume, computed at 09:30 from information available at 09:30:**
+
+```
+or_vol(name, s)  = volume of the 09:15 + 09:20 + 09:25 bars on session s
+rel_vol(name, s) = or_vol(name, s) / mean( or_vol(name, s') for the 14 most
+                   recent prior cached sessions s' of that name )
+```
+
+- **Eligible** on session *s*: the name has all three opening-range bars on
+  *s* **and** 14 prior cached sessions each with all three bars. A name with
+  fewer is ineligible that session; nothing is imputed. **The first 14
+  sessions of the cache therefore produce no trades.**
+- **Only the top 20 eligible names by `rel_vol` are tradable that session.**
+  A tie at rank 20 is broken by symbol, alphabetically.
+- **Within that set, Entry 8 (e) stands unchanged:** five-position cap,
+  chronological by signal bar, ties within a bar alphabetical.
+
+**Order of operations, fixed:** eligibility → top-20 by `rel_vol` → signal
+(amendment 1 b) → per-trade friction rule (3.2) → five-position cap.
+
+**The primary statistic and the pass rule apply to this set only:** top-20,
+friction rule applied, capped. Unit as amendment 1 (a).
+
+**Two secondary lines, no pass rule, descriptive only:**
+
+1. the **uncapped** mean over all signals **in the top-20 set**;
+2. the **uncapped** mean over **all 100 names with no relative-volume
+   filter**.
+
+Both have the per-trade friction rule applied, so they are comparable with
+the primary line. **They are not further trials, and neither can justify a
+follow-up variant** — not "drop the filter" if line 2 looks better, and not
+"raise the cap" if line 1 does.
+
+## 3.2 The median-width withdrawal is replaced by a per-trade rule
+
+Amendment 1 (f)'s pre-flight withdrawal ("median range width under 111 bp →
+design withdrawn") **is removed.** In its place:
+
+> **Skip any trade for which `16.60 / stop_bp > 0.15`** — that is,
+> `stop_bp < 110.67`, where `stop_bp = |entry − stop| / entry × 10,000`,
+> entry is the next-bar open (amendment 1 b) and stop is the opposite side
+> of the opening range.
+
+- **R is unchanged:** entry price to stop price, per trade (Entry 8 f).
+- The rule is executable: `stop_bp` is known at the moment of entry.
+- A skipped candidate **takes no cap slot**, and the name is **not
+  re-entered** that session (one signal per name per session stands).
+- **Reported before any return is read:** the number of candidate trades and
+  the number this rule removes — for the top-20 set and for the all-100
+  line — with the median opening-range width alongside as description only.
+- **The rule is not loosened** — not to 0.20, not "0.15 on the median" — for
+  any reason, including too few trades.
+
+## 3.3 "Untestable at this frequency" — the threshold, fixed now
+
+Entry 9 requires that if too few trades remain for the power statement (i)
+to detect a plausible effect, 3a is reported **untestable**, not rescued. It
+does not define "plausible". **That definition is mine, made here before any
+number exists, and is flagged for the reviewer to overrule:**
+
+| Check | When | Threshold | Consequence |
+| --- | --- | --- | --- |
+| **Count** | pre-flight, **no return read** | fewer than **60 sessions** with ≥ 1 surviving capped trade | **Untestable. Not run.** No return is read, so **not a trial**; logged in `trials.md` as *untestable — withdrawn at pre-flight*. |
+| **Power** | after the run, from the realised dispersion | `MDE = 2 × sd(session means) / √n_sessions` **> 16.60 bp** net | The run is spent and **counts as trial 35**. Everything is reported; the verdict is **"untestable at this frequency: no edge larger than MDE bp can be excluded or confirmed"**, not pass and not fail. |
+
+Why 16.60 bp: a **net** edge that size means a gross edge of twice the round
+trip per trade. An opening-range effect larger than that on NIFTY 100 names
+is not plausible, so a test that cannot see anything smaller cannot see
+anything that could be there.
+
+A **PASS** still requires everything in the original pass rule: net > 0,
+t > 2 on session means, sign holding in both halves (amendment 1 g).
+
+## 3.4 What stands exactly as written in Entry 8 §D / amendments 1–2
+
+Next-bar-open fills (b) · stop fills (c) · **no signal bar after 14:30** (d)
+· halves split at the median session date (g) · **fixed ₹33,000 notional**
+(h) · power statement (i), now with 3.3's threshold · **code committed after
+the amendment**, both hashes cited (j) — *the amendment hash to cite is now
+this commit, the last one before code* · self-contained implementation with
+no harness-bias figure asserted (amendment 2). One run.
+
+## 3.5 Sequence from here
+
+Reviewer reviews this amendment → **STOP** → **3a runs only after the user
+confirms.** Then: code, pre-flight reported on its own, the single run,
+`results-3a`, stop for review.
