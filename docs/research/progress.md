@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: Entry 7 §B.2, §D.1 and §D.2 complete. Universe B overnight spread PASSES (−14.15bp, t=−8.55, 1.02× of A). §D.1 is the key finding: the intraday drag survives survivorship (−6.94 → −6.42 on the index) but the overnight gain is **40% inflated** (+16.78 → +12.01). Both legs cost ~3× what they yield. NEXT: pre-register 3a and STOP for review. Held-out NOT taken. Updated 2026-09-21 13:45.**
+**IDLE: Entry 8 received — §B.2 accepted, §D.1/§D.2 accepted WITH CORRECTIONS, 3a approved with amendments a–k. The "40% survivorship" headline is WITHDRAWN: the comparison confounds survivorship, period and weighting. Working §F order: corrections → L30 → 3a amendment → 3a code → pre-flight → one run. Held-out NOT taken. Updated 2026-09-21 14:30.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -53,8 +53,9 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | Ten-section standalone report | **done** | `report-2026-09-21.md` |
 | Entry 5 §A journal summary | **done — accepted** | `journal-summary-2026-09-21.md` · all legs paper, 0 live orders |
 | 3c §A–C | **done — mechanism HOLDS** | `results-3c-overnight-intraday.md` · overnight +16.78bp, intraday −6.94bp |
-| Entry 7 §B.2 universe B overnight | **done — PASS** | `results-universe-b-overnight.md` · overnight −14.15bp t=−8.55; intraday +5.97bp t=+1.63 (n.s.) |
-| Entry 7 §D.1 index-level split | **done** | `results-entry7-d-feasibility.md` · overnight 40% survivorship-inflated, intraday drag real |
+| Entry 7 §B.2 universe B overnight | **done — PASS** | `results-universe-b-overnight.md` · overnight −14.15bp t=−8.55 significant in both windows; intraday **not distinguishable from zero in either** (§A.1 correction: "decaying" withdrawn) |
+| Entry 7 §D.1 index-level split | **done, corrected** | `results-entry7-d-feasibility.md` · split holds (+12.01 / −6.42); the **40% survivorship claim is withdrawn** (Entry 8 §B.4) — it confounds survivorship, period and weighting. **Was not pre-registered** (§B.3) |
+| L30 like-for-like index fix | **next** | `prereg-L30-index-like-for-like.md` · index means on universe A's own 1,546 sessions |
 | Entry 7 §D.2 cost sheet | **done** | delivery 33.05bp vs intraday 16.60bp at ₹33k; futures unreachable at all three capital levels |
 | Entry 7 §C held-out decision | **recorded — DO NOT SPEND** | reviewer's call: no decision changes, so save 2026 for 3a/3b |
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
