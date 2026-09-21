@@ -2705,7 +2705,8 @@ timeout reports `error`, never `expired`: a slow network is not a dead token,
 and telling someone to reconnect would send them round a login loop that
 cannot help.
 
-22 tests in `backend/tests/test_kite_session_status.py`, including the exact
+This was already open as **#24** since 17 Sep; #51 duplicates it with fresher
+evidence. 22 tests in `backend/tests/test_kite_session_status.py`, including the exact
 timestamp from the bug report.
 
 ## Requirements
