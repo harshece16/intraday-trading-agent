@@ -26,7 +26,7 @@ has to be measured. That is what earns it a trial.
 | Hurdle | Value | Source |
 | --- | --- | --- |
 | Round-trip cost, cash intraday, ₹33,000 | **16.60 bp** | `costs.py`, §D.2 sheet |
-| Intraday drift against a long book | **−6.42 bp/day** | §D.1, index-level, survivorship-free |
+| Intraday drift against a long book | **−6.42 bp/day** | §D.1, **index-level, 2005–2025** (not survivorship-corrected; −6.73 bp on universe A's own window, L30) |
 | `friction_R < 0.15R` (necessary, not sufficient) | — | Entry 5 §C, retained |
 
 > **PASS RULE, fixed now: mean NET return per round trip must be positive
@@ -143,3 +143,102 @@ variant with entries, stops, sizing and a backtest — categorically unlike the
 - **The Kite cache starts 2024-09-20**, so 3a's sample is ~316 sessions, far
   shorter than the daily-bar work. Power is correspondingly lower and the
   detectable effect size will be reported alongside the result.
+
+---
+
+# Amendment 1 — Entry 8 §D (a–k)
+
+**Committed before any 3a code is written or run.** The reviewer approved the
+design as trial 35 and required these specifics fixed first. All defaults are
+adopted as given; each deviation, if any, is stated here rather than
+afterwards. **There are no deviations.**
+
+### (a) Unit of the test
+
+The original text said "mean net per round trip, t across sessions", which
+conflates two units. **Fixed:**
+
+> **Primary statistic:** per session, the mean net bp of that session's
+> trades. The pass statistic is the **mean and t of those session means**,
+> over sessions with **at least one trade**.
+>
+> **Secondary, no pass rule:** the pooled per-trade mean net bp.
+
+### (b) Fill rule
+
+**Signal** = the first 5-minute bar, from the **09:30** bar onward, that
+**closes** beyond the opening range.
+**Entry** = the **open of the next bar**. **Never the signal bar's close.**
+
+### (c) Stop fill
+
+- Stop touched intrabar → fills at the **stop price less modelled slippage**.
+- A bar that **opens beyond** the stop → fills at **that bar's open**.
+- If the **entry bar itself** touches the stop → **the stop is taken**.
+
+### (d) Last entry time
+
+**No signal bar after 14:30.** A signal at 14:30 enters at 14:35 and holds to
+15:10 — 35 minutes. This keeps a five-minute hold out of the sample.
+
+### (e) The five-position cap
+
+When more than five names signal: **chronological by signal bar; ties within
+the same bar broken by symbol, alphabetically.** Explicitly **not** by range
+width, volume, or anything that is itself a signal.
+
+**Secondary, no pass rule:** the **uncapped all-signals** mean.
+
+### (f) R definition, and the pre-flight
+
+**R = entry price to stop price, per trade.**
+
+The **pre-flight check** uses the **median opening-range width in bp across
+all eligible stock-sessions** — computable without reading any return.
+
+> **A withdrawal does NOT count as a trial**, because no return is read. It
+> is logged in `trials.md` as **withdrawn**, and **the design is not
+> re-registered with a different range window.**
+
+### (g) Halves
+
+Selection sessions in the Kite cache, **split at the median session date**,
+fixed now and computed before the run.
+
+### (h) Sizing
+
+**Fixed ₹33,000 notional per trade.** Basis points are the primary unit; R is
+derived.
+
+### (i) Power
+
+Before the statistics are read, report **the smallest mean net bp detectable
+at t = 2** given the session count, from the realised per-session dispersion.
+A null then reads as *"no edge larger than X bp"* rather than "nothing found".
+
+### (j) Code ordering
+
+**The 3a script's commit must postdate this amendment commit.** Both hashes
+are cited in the results file.
+
+### (k) Harness
+
+**`backtester.run_backtest()`**, the same harness as every other result here.
+Its measured bias is **≈ −0.05R pessimistic** — and, per the null diagnostic,
+that bias is **not a constant**: it is driven by side mix (longs −0.0947R,
+shorts +0.0351R), so a direction-symmetric design carries less of it than the
+59.7%-long strategy that figure was measured on. Recorded, not corrected for.
+
+### Also carried (Entry 8 §B.7, §B.9)
+
+- The **−6.42 bp** intraday drift is cited as **"index-level, 2005–2025"**
+  — and now also **−6.73 bp on universe A's own window (L30)**. It is **not**
+  a survivorship-corrected version of −6.94.
+- **`costs.py`'s rates are unverified** against the broker's current tariff.
+  That caveat sits under 3a's 16.60 bp hurdle and will be repeated in the
+  results file.
+
+### Run discipline
+
+**One run.** A crash **before any statistic is seen** may be re-run and
+recorded. Nothing else.
