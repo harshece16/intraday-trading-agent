@@ -132,10 +132,12 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 | L26 | Universe B replication of `atr_pct` — 113 F&O-eligible names outside the NIFTY 100 — **PASS** at −0.0332, t = −6.68 (0.85× of A), but spread +5.97bp vs 22.60bp bar = **0.26×** | 2026-09-21 | No — measurement · `results-universe-b-replication.md` |
 
-| L27 | Universe B overnight/intraday unconditional means (Entry 7 §B.2) | pending | No — measurement · `prereg-universe-b-addendum-overnight.md` |
-| L28 | Universe B volatility-sorted overnight/intraday spreads — pass rule on the OVERNIGHT leg | pending | No — measurement |
+| L27 | Universe B unconditional means — overnight **+19.84bp** (t=+10.57), intraday **−9.93bp** (t=−3.45) | 2026-09-21 | No — measurement · `prereg-universe-b-addendum-overnight.md` |
+| L28 | Universe B volatility-sorted — overnight spread **−14.15bp, t=−8.55, PASS** (1.02× of A); intraday +5.97bp, t=+1.63, not significant | 2026-09-21 | No — measurement |
 
-**Twenty-eight looks, thirty-four trials.** L7–L16 are the ten members of the
+| L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — intraday drag survives survivorship, overnight gain **40% inflated** | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
+
+**Twenty-nine looks, thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
