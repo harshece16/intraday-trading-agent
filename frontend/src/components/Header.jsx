@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { API_BASE, API_KEY, apiFetch } from "../api";
 import { clock, money, num, tone } from "../format";
 import { sessionInfo } from "../helpers";
+import { describeKite } from "../kiteStatus";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 const PAGES = [
@@ -37,19 +38,26 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
 
   useEffect(() => {
     let stopped = false;
-    async function refresh() {
+    // probe=true spends a real Kite API call to confirm the session. Worth it
+    // on load and when the user comes back to the tab — both moments where a
+    // stale answer is the one they'd act on — but not on the 15s poll.
+    async function refresh(probe = false) {
       try {
-        const res = await apiFetch(`/api/kite/status`);
+        const res = await apiFetch(`/api/kite/status${probe ? "?probe=true" : ""}`);
         const k = await res.json();
         if (!stopped) setKite(k);
       } catch (e) {
         /* backend not reachable yet */
       }
     }
-    refresh();
-    const onFocus = () => refresh();
+    // Cheap answer first so the chip paints immediately, then the probe
+    // refines it. Waiting on the probe left the header reading
+    // "Checking Kite…" for as long as Kite took to answer — the one moment
+    // the user is actually looking at it.
+    refresh(false).then(() => refresh(true));
+    const onFocus = () => refresh(true);
     window.addEventListener("focus", onFocus);
-    const id = setInterval(refresh, 15000);
+    const id = setInterval(() => refresh(false), 15000);
     return () => {
       stopped = true;
       window.removeEventListener("focus", onFocus);
@@ -63,8 +71,7 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
     ? Object.values(state.positions || {}).reduce((sum, p) => sum + (p.quantity ? Math.abs(p.quantity) * p.avg_price : 0), 0) +
       Object.values(state.fno_positions || {}).reduce((sum, p) => sum + (p.lots || 0) * (p.lot_size || 0) * (p.entry_premium || 0), 0)
     : 0;
-  const kiteLabel = !kite ? "Checking Kite…" : kite.connected && kite.using_live_data ? "Kite live prices" : kite.connected ? "Kite connected" : kite.app_configured ? "Kite not connected" : "Delayed prices";
-  const kiteBtnLabel = kite?.connected ? "Reconnect" : "Connect Kite";
+  const k = describeKite(kite);
 
   return (
     <>
@@ -83,8 +90,17 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
         <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
         <span className="divider"></span>
         <div className="kite">
-          <span>{kiteLabel}</span>
-          <button className="btn" onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}>{kiteBtnLabel}</button>
+          <span className={`kite-chip kite-chip--${k.tone}`} title={k.detail} aria-live="polite">
+            <span className="dot" aria-hidden="true"></span>
+            {k.label}
+          </span>
+          <button
+            className={`btn ${k.urgent ? "primary" : ""}`}
+            title={k.detail}
+            onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}
+          >
+            {k.action}
+          </button>
         </div>
         {alertsSupported() && (
           <button className={`btn ${alertsOn ? "primary" : ""}`} onClick={toggleAlerts} title="Browser notifications for trade fills, risk warnings, and price moves">
