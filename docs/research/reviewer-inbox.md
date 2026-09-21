@@ -6,6 +6,55 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 6 — 2026-09-21 — universe expansion: yes, but as an out-of-sample replication, not a change to tests in flight
+
+Note first: Entry 5 had disappeared from this file when I came to write this (the file was back at its Entry 4 state, probably from a git checkout, stash or restore). You acted on Entry 5 section A, so you did see it. I have restored it below in condensed form. Please commit this file after reading so reviewer entries cannot be lost again, and tell me in the outbox what reverted it.
+
+The user wants to expand the universe beyond the NIFTY 100. Agreed in principle, with the rules below. This does not alter Entry 4 or Entry 5: every test already registered runs and is judged on the registered NIFTY 100 universe. Changing the universe of a test after seeing its selection result would be another fork.
+
+### A. Why it is worth doing, and how to use it
+
+More names means more cross-sectional breadth for any rank-based signal and more candidate trades per session for power. More valuable than either: names outside the NIFTY 100 are a cross-section no test in this project has ever seen. For the step 2 volatility result that makes them a cleaner confirmation sample than the held-out window, which is merely later in time on the same stocks.
+
+### B. The expansion universe
+
+Use the current NSE F&O-eligible stock list minus the NIFTY 100 names as "universe B" (liquid, shortable intraday, and stock futures exist, which matters later for cost). If that list cannot be obtained from a free official source, fall back to NIFTY 200 minus NIFTY 100 and say so. Save the list with its retrieval date under backend/data/ beside nifty100.csv. Record, as with the NIFTY 100, that it is today's membership applied to history, and that survivorship distortion is likely larger in mid-caps.
+
+### C. Order of work
+
+1. Daily data only first (yfinance, cheap, no Kite calls): after Entry 4 A to C are written up and reviewed, pre-register a replication of the surviving step 2 feature(s) on universe B over the same selection dates, same 252-bar rule, same test, same sign. One look. Logged as a research look. Pass rule: same sign and |t| > 2.
+2. Only if something survives both universe A's held-out look and universe B's replication: extend the Kite 5-minute cache to universe B so the tradable 09:20 to 15:10 target can be checked there too. Ask the user before starting that download; it needs a live Kite session, is rate-limited, will roughly double the cache, and must not compete with the running engine for API budget during market hours.
+3. Step 3 strategy hypotheses (3a, 3b) are pre-registered on universe A as planned. A hypothesis that passes on A may then be replicated once on B. Do not pool A and B in a first test, and do not pick whichever universe looks better.
+
+### D. Costs on universe B, fixed now
+
+Names outside the NIFTY 100 have wider spreads. For any universe B result expressed in money or R, use double the configured slippage per leg unless a measured figure from the project's own fills exists. State the assumption every time. Do not tune it afterwards.
+
+### E. Machine limits
+
+The null test nearly exhausted RAM with 100 symbols. Anything on universe B that touches 5-minute data must process symbols in chunks and never hold both universes' candles in memory at once.
+
+### F. Not in scope
+
+Do not add universe B to the running paper engine's watchlist or scanner. That is a live-path config change and a separate decision for the user.
+
+---
+
+## Entry 5 (restored, condensed) — 2026-09-21 — journal summary, and the friction constraint on step 3
+
+Section A (read-only journal summary): DONE and accepted. journal-summary-2026-09-21.md is good. Two loose ends you flagged (the 10x live-vs-backtest trade-rate gap, and the 9 fully-passed setups on 2026-09-18 that produced no order) concern the old strategy and are low priority; one read-only query on those 9 rows for the blocking reason is enough, whenever convenient.
+
+Section B: BUG_LOG #53 accepted. Total friction is 0.398R, not 0.254R. That closes Entry 3 section B once it is in the results file. 0.40R is the hurdle figure for any design at comparable stop sizes.
+
+Section C, the design constraint for step 3, stated before anything is pre-registered: at a 42 bp median stop a 17 bp round trip costs 0.40R, and no plausible entry signal clears that. The lever is cost as a fraction of R, not the entry. So for 3a and 3b:
+- State each design's expected friction in R up front: friction_R = round_trip_bp / stop_bp. Do not pre-register a design whose expected friction exceeds 0.15R; redesign the stop and hold first (for example one entry per name per day, a stop based on daily ATR or the opening range rather than a 5-minute ATR, exit at the 15:10 bar rather than a near target). This is a constraint chosen before any result, not a parameter to tune afterwards.
+- One variant per hypothesis. If two stop definitions both seem reasonable, pick one in the pre-registration and say why.
+- 3c stays a measurement and includes the volatility-sorted split, per Entry 4 section E.
+
+Order: Entry 4 A to C, stop for review before the held-out look; then 3c, then 3a, then 3b; universe B replication per Entry 6 section C.
+
+---
+
 ## Entry 4 — 2026-09-21 — step 2 reviewed: decisions on Problems 1-3, and two checks before the held-out look
 
 Reviewed results-step2-feature-ic.md. The write-up is honest and the three problems are the right ones to raise. Holding back the held-out look was the correct call. Decisions below. Nothing here authorises a held-out look yet; section D says when.
