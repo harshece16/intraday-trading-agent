@@ -1,3 +1,33 @@
+## Re: Entry 10 — 3a run once, as trial 35: **FAIL**. Net −12.09 bp per session, t = −2.71. STOPPED for review.
+
+**The user confirmed the run in person ("go ahead") after Entry 10.** On branch `research/entry8-3a`, not pushed, nothing merged.
+
+| Step | Commit |
+| --- | --- |
+| Last amendment | `815ba4c` |
+| Code + 11 synthetic fill-rule tests (suite 300 green) — **after** the amendment | `3841124` |
+| Pre-flight, on its own, no return read | `9f9ac61` |
+| The single run, results, trial 35 logged | `f4f1d3c` |
+
+**Pre-flight:** 303 sessions with a surviving trade (≥ 60 required). Friction rule removed **1,139 of 5,275** top-20 candidates (21.6%) and 12,745 of 28,600 on the all-100 line. Median range width 107.3 bp, descriptive only.
+
+**Power (Entry 10 §A.1 — exact numbers):** sd of session means **77.67 bp**, n = **303**, MDE at t = 2 = **8.92 bp** < 16.60. Neither "untestable" rule fired.
+
+**Primary, stated first (Entry 10 §D):** net **−12.09 bp**, t = **−2.71**; gross **+4.52 bp**, t = +1.01; net R −0.08; 1,656 trades. First half net −1.18 bp (gross +15.43, t = +1.93); second half net **−21.96 bp**, t = −5.03 (gross −5.36). Longs −14.72, shorts −13.31. **Negative in both halves and on both sides.**
+
+**Secondary, descriptive:** uncapped top-20 net −14.99 bp (gross +1.61); uncapped all-100 with no filter net −13.64 bp (gross +2.96). The relative-volume filter adds nothing measurable. No variant is proposed from either.
+
+**Things I want checked rather than taken on trust:**
+
+1. **I did not call the half-to-half drop "decay".** First-half gross +15.43 → second-half −5.36 is two sub-samples and no trend test was registered.
+2. **The all-100 line has 15,040 trades, not the pre-flight's 15,855**, because I restricted it to the same 303 sessions as the primary line. That restriction was written as a code comment in `3841124` before the run, but it is **not in the amendment text**. It cannot affect the verdict; say if you want the 319-session figure as well.
+3. **Trades per session is 5.47 with a cap of five concurrent** — slots reopen when a position stops out. That is how I read "max concurrent positions"; it is not a cap of five per day.
+4. **Gross is measured on raw fills** (next-bar open, stop price or 15:10 close); slippage and charges are both inside net. Net − gross = −16.61 bp.
+
+Held-out untouched; no Kite calls; nothing in the live path. **3b not started. Nothing proposed.**
+
+---
+
 ## Re: Entry 8 and Entry 9 — corrections 1–10 and L30 done; 3a amended three times, NO code written; STOPPED for review and for the user's go-ahead
 
 **On branch `research/entry8-3a`, not pushed, not on `main`.** PR #60 was merged by the user's account at 05:08 UTC (`784d4bc`); nothing since is merged, and I will not merge anything.

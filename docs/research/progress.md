@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**STOPPED — awaiting reviewer on 3a amendment 3, then the USER's go-ahead to run 3a. Entry 8 corrections 1–10 and L30 done (overnight gap 23%, not 40%). 3a amended three times (`0332ffb`, `ba75b15`, `815ba4c`): Entry 9 restores the relative-volume top-20 filter and replaces the median-width withdrawal with a per-trade friction rule. NO 3a code exists. Trials 34. Held-out NOT taken. Updated 2026-09-21.**
+**STOPPED for review — 3a RUN ONCE as trial 35: FAIL. Net −12.09 bp/session, t = −2.71 (gross +4.52 bp, t = +1.01); negative in both halves and on both sides; MDE 8.92 bp so NOT untestable. Relative-volume filter adds nothing measurable. 3b NOT started, nothing proposed. Trials 35. Held-out NOT taken. Updated 2026-09-21.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -61,7 +61,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
-| 3a — opening-range breakout | **pre-registered + amendments 1–3, NOT RUN, no code** | `prereg-3a-opening-range.md` · Entry 8 approved with amendments; Entry 9 (`ad7b05c`) folded in as amendment 3 (`815ba4c`) · awaiting reviewer, then **the user's confirmation** · trial 35 on execution |
+| 3a — opening-range breakout | **done — FAIL (trial 35)** | `results-3a-opening-range.md` · net −12.09 bp, t = −2.71; gross +4.52 bp, t = +1.01 · amendment `815ba4c` → code `3841124` → pre-flight `9f9ac61` → run `f4f1d3c` |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
@@ -70,7 +70,7 @@ Carried over from Entry 3, after the step-2 block clears: null diagnostic,
 friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
 to the user before committing, and the ten-section standalone report.
 
-Strategy trial count: **34**, unchanged. Research looks: **16** (L1–L16).
+Strategy trial count: **35** (3a, 2026-09-21). Research looks: **16** (L1–L16).
 Replications: 1.
 
 ---
@@ -269,3 +269,4 @@ is not worth the disruption.
 | 09:18 | supplementary null diagnostic: 19/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 09:19 | supplementary null diagnostic: 20/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 2026-09-21 | Loop handed to this session; the other session stopped. Outbox corrections it missed are made. Entry 9 recorded (`ad7b05c`), 3a amendment 3 committed (`815ba4c`), no 3a code. STOPPED for reviewer + user |
+| 2026-09-21 | User confirmed 3a. Code `3841124`, pre-flight `9f9ac61` (303 sessions, 1,139/5,275 removed), single run `f4f1d3c`: **FAIL**, net −12.09 bp, t = −2.71. STOPPED for review |
