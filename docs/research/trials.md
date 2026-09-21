@@ -124,7 +124,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L20 | Step 2-C `atr_pct` quintile spread in bp vs round-trip cost | 2026-09-21 | No — descriptive, no backtest · `results-step2-followups.md` |
 | L21 | Raw ICs on A's own 8y sample — the correct denominator for L18, added after finding I had changed `YEARS` from 4y to 8y between step 2 and the follow-ups | 2026-09-21 | No — the same measurement as L7/L9/L10 on a different sample; logged rather than folded into L18 silently |
 
-**Twenty-one looks, thirty-four trials.** L7–L16 are the ten members of the
+| L22 | Null diagnostic (Entry 3 §A) — 20 seeds with trade lists persisted; (a)-(d) attribution of the −0.05R harness bias | 2026-09-21 | No — measures the harness · `results-null-diagnostic.md` |
+
+**Twenty-two looks, thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
