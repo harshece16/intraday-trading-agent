@@ -215,3 +215,80 @@ auditable even though the DSR trial count stays at 34.
 None of these amendments changes what counts as a pass. They change how the
 statistics are computed and add a gate that can halt the step, both of which
 make a false positive less likely rather than more.
+
+### 2026-09-21 — reviewer Entry 4 §B and §D. Committed before any of the new measurements ran, and before the held-out look.
+
+**This amendment makes the promotion rule strictly harder than registered.**
+It is being written after the selection-split results are known, which is
+normally the shape of a rule bent to fit a result. It is recorded here in the
+other direction: three features already qualified under the original rule and
+this amendment can only disqualify them. Nothing here can promote a feature
+that did not already survive BH.
+
+#### 5. `from_low`'s sign is corrected by relabelling, not by re-running
+
+The scanner awards `pct_from_low <= 3` its +10 on the **short** side, so "the
+scanner is correct" requires sign **+1**, and the run used −1. The measured
+statistic is unchanged — p depends on |t| — so **no rerun happens**. The
+results table carries the corrected sign, with the original figure kept
+visible as a footnote so the history is auditable.
+
+#### 6. No band tests are added for `atr_pct` or `rsi`
+
+The composite is already dead, so whether the scanner's bands are well chosen
+is no longer a live question, and each extra test enlarges the BH family for
+no gain. Both are recorded as **"monotonic association measured; the
+scanner's banded use is not tested"**. `atr_pct`'s result stands as a
+measurement of ATR against return, **not** as support for the scanner.
+
+#### 7. A tradable target, and a robustness rule committed before it is run
+
+The registered target is yfinance open-to-close. Nobody can trade the opening
+print, the official NSE close is a last-30-minute weighted average rather than
+a last trade, and 18.55% of stock-sessions disagreed between vendors by more
+than 25 bp.
+
+So on the selection sessions that overlap the Kite cache
+(**2024-09-20 → 2026-01-01**), the three survivors are re-measured against a
+**tradable Kite target**: open of the **09:20** bar → close of the **15:10**
+bar, the last bar before the 15:15 square-off. Same eligibility, same 252-bar
+warm-up, signs as corrected in amendment 5.
+
+> **Committed before running:** a survivor keeps its status only if the
+> Kite-target IC has the **same sign** and **|t| > 2** on the overlap.
+
+The ratio of the Kite-target mean IC to the yfinance-target mean IC is
+reported, so how much of the effect survives is a number rather than an
+impression. **If most of it disappears once the first five minutes are
+excluded, that is stated plainly**: it would mean the effect lives in the
+opening print and cannot be captured.
+
+#### 8. The promotion rule for the held-out look is tightened
+
+A feature gets the **one** held-out look only if **all three** hold:
+
+1. it survived **BH at q = 0.10** on the selection split (already true for
+   `atr_pct`, `from_low`, `from_high`);
+2. it **passes amendment 7** on the Kite target; and
+3. for `from_high` and `from_low` only — its **partial IC controlling for
+   `atr_pct`** has **|t| > 2** on selection.
+
+**Bonferroni across however many qualify.** If only `atr_pct` qualifies it is
+a single test at α = 0.05. The held-out look uses the **Kite target**, since
+that is the tradable one, and the registered pass rule is unchanged: same
+sign, **|t| > 1.5**.
+
+Condition 3 exists because `atr_pct`, `from_high` and `from_low` are probably
+**one factor, not three** — a volatile stock has a wide 52-week range, so all
+three move together. Treating them as three independent discoveries would
+triple-count a single association.
+
+#### 9. Two caveats to carry into the write-up
+
+- **The held-out window has not been examined for this particular
+  relationship before**, so this look is cleaner than most in this phase. The
+  general contamination note (earlier work ran against 2026-01-02 onward)
+  still applies and is stated alongside it.
+- **Survivorship bias is worst exactly here.** A volatility sort is where
+  today's-NIFTY-100-applied-to-history distorts most, because the volatile
+  names that fell out of the index are the ones missing.

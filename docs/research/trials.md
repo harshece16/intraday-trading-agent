@@ -118,11 +118,19 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L15 | Step 2 session-difference — `pattern` (Bulkowski swing) | 2026-09-21 | No — measurement |
 | L16 | Step 2 session-difference — `reversal` (Murphy reversal day) | 2026-09-21 | No — measurement |
 
-**Sixteen looks, thirty-four trials.** L7–L16 are the ten members of the
+| L17 | Step 2-A1 cross-correlations among `atr_pct`, `from_high`, `from_low` (exploratory) | 2026-09-21 | No — descriptive, selects nothing · `prereg-step2-followups.md` |
+| L18 | Step 2-A2 partial ICs, each survivor residualised on the others | 2026-09-21 | No — measurement; also gates the held-out look per amendment 8 |
+| L19 | Step 2-B rank IC of the three survivors vs the **tradable Kite target** (09:20 open → 15:10 close), 2024-09-20 → 2026-01-01 | 2026-09-21 | No — measurement; pass rule committed before running |
+| L20 | Step 2-C `atr_pct` quintile spread in bp vs round-trip cost | 2026-09-21 | No — descriptive, no backtest |
+
+**Twenty looks, thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
-§Problem 3.
+§Problem 3. L17–L20 are pre-registered in `prereg-step2-followups.md` and are
+selection-split only; **L18 and L19 also act as gates** on whether that look
+happens at all, under the tightened rule in `prereg-step2-feature-ic.md`
+amendment 8.
 
 ---
 

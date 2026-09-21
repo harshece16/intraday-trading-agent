@@ -70,20 +70,35 @@ Selection split only — **no held-out look has been taken** (see Problems).
 
 | Feature | Test | Sessions | Mean | t | p | % pos | BH | Bonf |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `atr_pct` | rank IC | 561 | **−0.0558** | **−6.13** | <0.0001 | 39.4 | **Y** | **Y** |
-| `from_low` | rank IC | 561 | **+0.0415** | **+5.23** | <0.0001 | 59.0 | **Y** | **Y** |
+| `atr_pct` [^band] | rank IC | 561 | **−0.0558** | **−6.13** | <0.0001 | 39.4 | **Y** | **Y** |
+| `from_low` [^sign] | rank IC | 561 | **−0.0415** | **−5.23** | <0.0001 | 41.0 | **Y** | **Y** |
 | `from_high` | rank IC | 561 | **+0.0258** | **+3.33** | 0.0009 | 55.6 | **Y** | **Y** |
 | `nr7` | session diff | 509 | +0.0346 | +1.54 | 0.1229 | 51.7 | . | . |
 | `rs10` | rank IC | 561 | −0.0090 | −1.24 | 0.2167 | 49.2 | . | . |
 | `pattern` | session diff | 556 | −0.0221 | −1.01 | 0.3118 | 47.7 | . | . |
-| `rsi` | rank IC | 561 | −0.0060 | −0.82 | 0.4115 | 49.6 | . | . |
+| `rsi` [^band] | rank IC | 561 | −0.0060 | −0.82 | 0.4115 | 49.6 | . | . |
 | `reversal` | session diff | 372 | −0.0286 | −0.76 | 0.4486 | 48.7 | . | . |
 | `inside` | session diff | 537 | +0.0211 | +0.71 | 0.4752 | 48.2 | . | . |
 | `trend` | session diff | 521 | −0.0062 | −0.18 | 0.8595 | 52.6 | . | . |
 
 Mean is in the sign convention registered: positive = "the scanner's use of
-this feature is correct". **For `from_low` that convention was implemented
-backwards — see Problem 1.**
+this feature is correct".
+
+[^sign]: **Corrected sign.** The run printed **+0.0415, t = +5.23, 59.0%
+positive**, because the code applied sign −1 where the scanner's +10 sits on
+the SHORT side. The table above carries the corrected **−0.0415, t = −5.23,
+41.0%**. The statistic is unchanged — p depends on |t|, so BH and Bonferroni
+outcomes are identical — and **no rerun was done**. Only the meaning flips,
+and it flips to "the scanner's 52-week-low short signal is backwards". Both
+figures are kept visible so the history is auditable. See Problem 1.
+
+[^band]: **Monotonic association measured; the scanner's banded use of this
+feature is not tested.** `atr_pct` (band 1.5–4.0%) and `rsi` (side-dependent
+bands) are not monotonic preferences, so a fixed-sign rank IC cannot test
+"the direction the scanner uses it". Per reviewer Entry 4 §D, no band test is
+added: the composite is already dead, so validating its bands is no longer
+the question, and each extra test would enlarge the family for no gain. See
+Problem 2.
 
 ### Detectable effect sizes (amendment 1)
 
@@ -95,7 +110,7 @@ than X" rather than "nothing found".
 | `rs10` | 0.0145 | −0.0090 |
 | `rsi` | 0.0145 | −0.0060 |
 | `from_high` | 0.0155 | +0.0258 |
-| `from_low` | 0.0159 | +0.0415 |
+| `from_low` | 0.0159 | −0.0415 |
 | `atr_pct` | 0.0182 | −0.0558 |
 | `nr7` | 0.0449 | +0.0346 |
 | `pattern` | 0.0438 | −0.0221 |
@@ -155,6 +170,11 @@ The pre-registration's sign-convention paragraph assumed every feature was
 monotonic. It is not. **This is a specification gap, not a coding bug**, and I
 have not chosen a replacement test unilaterally.
 
+**Reviewer ruling (Entry 4 §D):** no band tests are added, and both features
+are recorded as *"monotonic association measured; scanner's banded use not
+tested"*. `atr_pct`'s result stands as a measurement, **not** as support for
+the scanner.
+
 ### Problem 3: the held-out look has NOT been taken
 
 The pre-registration allows the survivors **one** held-out look, with
@@ -184,10 +204,30 @@ measurable information about the coming session's return at a resolution of
 the scanner adds points for is, over 561 sessions, associated with the
 opposite outcome.
 
+**Survivorship bias is worst exactly here.** The universe is today's NIFTY 100
+applied to history, and a volatility sort is where that distorts most: the
+volatile names that fell out of the index are precisely the ones missing.
+Carried into every later statement about this factor.
+
 ---
 
-## Next
+## Next — reviewed, and the rule is now stricter
 
-Blocked pending reviewer decisions on Problems 1–3 (see outbox). The
-diagnostic, §B's friction decomposition and §C's diff are unaffected and
-follow in the order Entry 3 §E sets.
+Entry 4 ruled on all three problems and added a fourth consideration I had
+not raised: **the three survivors are probably one factor, not three.**
+`from_high` and `from_low` are both distances across a 52-week range, and a
+volatile stock has a wide range — so all three plausibly measure the same
+thing, and promoting them as three discoveries would triple-count one
+association.
+
+The held-out look now requires **all three** of: BH survival on selection
+(already true), passing a **tradable Kite target** (09:20 open → 15:10 close,
+same sign and |t| > 2), and — for `from_high`/`from_low` — a **partial IC
+controlling for `atr_pct` with |t| > 2**. Bonferroni across whatever
+qualifies. Committed in `prereg-step2-feature-ic.md` amendments 7–9 and
+`prereg-step2-followups.md`, **before any of those measurements ran.**
+
+Runs A, B and C follow, on selection data only. **The held-out look does not
+happen until the reviewer has seen them.** The Entry 3 items — null
+diagnostic, friction decomposition, README §51/§52 diff for the user, the
+ten-section report — follow after.
