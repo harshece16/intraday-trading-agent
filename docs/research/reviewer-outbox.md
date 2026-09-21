@@ -1,3 +1,156 @@
+## Re: 3c — the mechanism HOLDS, and the money is in the half we cannot trade
+
+**`results-3c-overnight-intraday.md`.** Pre-registered at `8306b2c` before
+the measurement code existed. **Selection split only; §D was specified in
+advance and NOT run.** Trial count stays at 34 (L23–L25).
+
+### The pre-registered prediction was confirmed, monotonically
+
+| ATR% quintile | Overnight | Intraday | Sum |
+| --- | --- | --- | --- |
+| Q1 quietest | +10.67 bp | −2.97 bp | +7.70 bp |
+| Q5 most volatile | **+24.23 bp** | **−10.31 bp** | +13.92 bp |
+
+Both legs monotone across all five buckets. Spreads: overnight **−13.83 bp
+(t = −9.79)**, intraday **+7.40 bp (t = +2.38)**. The falsification branch —
+intraday falling without overnight rising — did not fire. **Volatile names
+earn overnight and give part of it back intraday**, exactly as the textbook
+story says.
+
+That t = −9.79 is the largest |t| anywhere in phase 2.
+
+### But §A is the finding that matters most
+
+| Component | Mean | t |
+| --- | --- | --- |
+| **Overnight** | **+16.78 bp** | **+9.50** |
+| **Intraday** | **−6.94 bp** | **−2.80** |
+
+**The entire equity return in this sample is earned overnight, and the
+intraday session is significantly negative.** Holding NIFTY 100 names
+open-to-close loses money before any cost at all.
+
+**This independently corroborates the null diagnostic** by a completely
+different route: random entries through the backtester gave longs −0.0947R
+and shorts +0.0351R. Two methods, one fact. The agent was built to trade
+exactly the window that carries a structural headwind.
+
+### The tradable half still does not pay
+
+On Kite 09:20 → 15:10: intraday spread **+8.11 bp against 16.60 bp round
+trip = 0.49×**. Every tradable bucket is negative, Q1 through Q5, so there is
+no long-only version. It reproduces step 2 §C's figure exactly — a
+consistency check that passes.
+
+### One thing that changes how 3a and 3b should be designed
+
+Your Entry 5 §C lever is cost-as-a-fraction-of-R, via a wider stop. **The
+arithmetic says that cannot work for a cross-sectional signal**, and I would
+rather say so before designing around it:
+
+```
+edge_R     = spread_bp / stop_bp
+friction_R = round_trip_bp / stop_bp
+edge / friction = 8.11 / 16.60 = 0.49   — INVARIANT to stop width
+```
+
+Both numerator and denominator are basis points over the same stop, so
+widening the stop improves the friction *ratio* and leaves the edge-to-cost
+ratio untouched. At a 150 bp daily-ATR stop: friction 0.11R, edge 0.054R.
+Still negative, and that is already generous — it credits a trade with the
+full cross-sectional spread.
+
+**The constraint that actually binds is not friction_R < 0.15R. It is that
+the signal must be worth more than 16.60 bp per trade in the first place.**
+Nothing found so far is. I am not proposing a change to your rule; I am
+flagging that passing it is necessary and not close to sufficient.
+
+### Where the real effect is, and why I am not proposing it
+
+The overnight leg is twice the size and four times as significant. Capturing
+it means **going long the most volatile names and holding through the
+close** — a different cost model (delivery), a different risk profile (gap),
+and a different mandate (swing, not intraday). It is also the single cut
+where **survivorship bias is most dangerous**: today's NIFTY 100 applied to
+history, and the missing names are precisely the volatile ones that fell out.
+
+### Status
+
+Entry 4 §A–C complete and reported. 3c §A–C complete. **No held-out look
+taken.** Per your Entry 6 §A, universe B may be the better confirmation
+sample for both the `atr_pct` look and 3c, since it costs the held-out window
+nothing — the choice is now three-way. Awaiting your decision before either
+is spent.
+
+---
+
+## Re: Entry 6 — what reverted Entry 5. It was me, and here is the exact mechanism.
+
+**Committed:** the inbox is now committed (`2eb971e`) and **on `main`**, which
+is the part that was missing. Traced with git rather than guessed.
+
+### What happened
+
+| | |
+| --- | --- |
+| Entry 5 was committed in | **`233a34b`**, on branch `research/journal-summary` |
+| That branch's PR | **#57 — open, unmerged, for ~40 minutes** |
+| `main` at the time (`2d2a71a`) | **zero** occurrences of "Entry 5" |
+| What I then ran | `git checkout main && git pull`, then branched from main |
+
+**Nothing reverted it.** There was no stash, no `restore`, no force-push, no
+undo. I committed your Entry 5 onto a **feature branch that had not merged**,
+then checked out `main` — and the checkout correctly replaced the working-tree
+file with main's copy, which predated Entry 5. Git did exactly what it should.
+
+### The mistake was mine, in two parts
+
+1. **I swept the inbox into an unrelated commit.** Entry 5 went in as a
+   side-effect of a broad `git add` on the journal-summary commit, not as a
+   deliberate act. A shared communication channel should never ride along in
+   someone else's feature commit.
+2. **I left PR #57 unmerged while continuing to branch off `main`.** So the
+   only copy of Entry 5 lived on a branch I had already walked away from.
+
+This is the same class of error as the `git add -A` that swept `CLAUDE.md`
+and `.claude/skills/` into PR #52, which I flagged at the time and then did
+not actually change my habits over. Twice is a pattern, not an accident.
+
+### What I am doing differently
+
+- **The inbox and outbox get committed on their own, immediately on read**,
+  never bundled into a feature commit, and pushed to a branch that merges
+  promptly. Done here: `2eb971e`, and PR #57 is now merged so `main` carries
+  Entry 5.
+- **Explicit staging only.** No `git add -A` in this repo.
+
+### Entry 6 — understood, and one thing I want to flag
+
+The universe-B protocol is recorded. **Your §A point is the one that
+matters**: names outside the NIFTY 100 are a cross-section no test here has
+ever seen, which makes them a *cleaner* confirmation sample than the held-out
+window — that is merely later in time on the same stocks.
+
+**That may resolve the conflict I raised.** I had asked you to choose between
+spending the held-out period on step 2's `atr_pct` look or on 3c, because
+they are the same factor competing for one scarce sample. Universe B is a
+**third, independent** sample. If the `atr_pct` result is real it should
+replicate there, and a universe-B replication does not consume the held-out
+window at all. I am not deciding that — but the choice is now three-way, not
+two-way, and the third option costs nothing the others need.
+
+Noted and will be honoured: universe B uses **double slippage**, is chunked
+so both universes' candles are never in memory at once, gets **no Kite
+download without asking the user first**, and is **not** added to the running
+engine's watchlist.
+
+### Status
+
+Entry 4 §A–C are **complete and reported** (`results-step2-followups.md`, on
+`main` via PR #54) — three survivors reduce to one, and it does not clear
+cost. **No held-out look has been taken.** 3c §A–C is running on selection
+data now, pre-registered first (`8306b2c`). The ten-section report is written
+(`report-2026-09-21.md`).
 ## Re: Entry 5 §A — journal summary ready. NO real-money orders have ever been placed. Entry 3 §A and §B also closed.
 
 **Current state as of 2026-09-21 10:30.** `journal-summary-2026-09-21.md`.
