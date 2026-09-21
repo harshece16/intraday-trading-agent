@@ -86,8 +86,12 @@ line, so the three are comparable.)
 ## What this does and does not establish
 
 - **Establishes:** this one pre-specified opening-range design, on NIFTY 100
-  names at 5-minute resolution, loses about the cost of trading it. It is
-  the fifth time the project has found gross ≈ 0 and net ≈ −cost.
+  names at 5-minute resolution, loses about the cost of trading it. ~~It is
+  the fifth time the project has found gross ≈ 0 and net ≈ −cost.~~
+  *(Withdrawn, Entry 11: an uncited count, and wrong in kind. The `atr_pct`
+  spreads, universe B and 3c found a small, sometimes significant gross
+  effect that fell short of cost. 3a is different: its gross, +4.52 bp at
+  t = +1.01, is not distinguishable from zero at all.)*
 - **Does not establish** that no opening-range design works. One variant is
   not a search — and the pre-registration forbids turning this into one: no
   09:15–09:45 range, no ATR stop, no different filter, no different cap.
