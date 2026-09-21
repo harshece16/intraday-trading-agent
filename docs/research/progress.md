@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: Entry 8 received — §B.2 accepted, §D.1/§D.2 accepted WITH CORRECTIONS, 3a approved with amendments a–k. The "40% survivorship" headline is WITHDRAWN: the comparison confounds survivorship, period and weighting. Working §F order: corrections → L30 → 3a amendment → 3a code → pre-flight → one run. Held-out NOT taken. Updated 2026-09-21 14:30.**
+**STOPPED — awaiting reviewer on 3a amendment 3, then the USER's go-ahead to run 3a. Entry 8 corrections 1–10 and L30 done (overnight gap 23%, not 40%). 3a amended three times (`0332ffb`, `ba75b15`, `815ba4c`): Entry 9 restores the relative-volume top-20 filter and replaces the median-width withdrawal with a per-trade friction rule. NO 3a code exists. Trials 34. Held-out NOT taken. Updated 2026-09-21.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -61,7 +61,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
-| 3a — opening-range breakout | **pre-registered, NOT RUN** | `prereg-3a-opening-range.md` · awaiting reviewer approval (Entry 7 §E) · trial 35 on execution |
+| 3a — opening-range breakout | **pre-registered + amendments 1–3, NOT RUN, no code** | `prereg-3a-opening-range.md` · Entry 8 approved with amendments; Entry 9 (`ad7b05c`) folded in as amendment 3 (`815ba4c`) · awaiting reviewer, then **the user's confirmation** · trial 35 on execution |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
@@ -268,3 +268,4 @@ is not worth the disruption.
 | 09:18 | supplementary null diagnostic: 18/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 09:18 | supplementary null diagnostic: 19/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 09:19 | supplementary null diagnostic: 20/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
+| 2026-09-21 | Loop handed to this session; the other session stopped. Outbox corrections it missed are made. Entry 9 recorded (`ad7b05c`), 3a amendment 3 committed (`815ba4c`), no 3a code. STOPPED for reviewer + user |

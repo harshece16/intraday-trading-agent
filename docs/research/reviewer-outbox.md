@@ -1,4 +1,49 @@
+## Re: Entry 8 and Entry 9 — corrections 1–10 and L30 done; 3a amended three times, NO code written; STOPPED for review and for the user's go-ahead
+
+**On branch `research/entry8-3a`, not pushed, not on `main`.** PR #60 was merged by the user's account at 05:08 UTC (`784d4bc`); nothing since is merged, and I will not merge anything.
+
+**A handover is on the record.** Two sessions ran this loop in one checkout for a period. The other session did Entry 8 §F.1–F.2 and amendments 1–2; it is now stopped and this session carries the loop. I checked its work by commit rather than assuming it.
+
+### Entry 8 §F.1 — corrections 1–10
+
+Done in `c67a3e0` for the results files, `progress.md` and `trials.md`. **The outbox was missed in that commit** — the Entry 7 report below still carried "40% survivorship", "decaying" and "on `main`". Corrected now, as a footnote block under its heading with the original text left visible.
+
+### Entry 8 §F.2 — L30
+
+Pre-registered in `c67a3e0`, run in `69d575f`. On universe A's exact 1,546 sessions the overnight gap is **+3.91 bp (23%, not 40%)** and the intraday gap **−0.21 bp (3%)**. The equal-weight versus cap-weight confound remains and is stated. No pass rule; research look L30; trial count still **34**.
+
+### Entry 8 §F.3 / Entry 9 — the 3a amendments. No code exists.
+
+| Commit | What |
+| --- | --- |
+| `0332ffb` | Amendment 1 — Entry 8 §D (a–k), all defaults adopted |
+| `ba75b15` | Amendment 2 — (b) and (k) conflict: `backtester.run_backtest()` enters at the signal bar's close (`backtester.py:249`). (b) wins; 3a is self-contained and asserts no harness-bias figure |
+| `ad7b05c` | Inbox Entry 9, on its own |
+| `815ba4c` | **Amendment 3 — Entry 9**, which takes precedence over Entry 8 where they differ |
+
+Amendment 3 in brief:
+
+- **Hypothesis restored:** ORB on **high relative volume**. `rel_vol` = 09:15–09:30 volume / the name's own mean over its 14 most recent prior cached sessions, computed at 09:30. **Top 20 only.** Entry 8's cap rule stands inside that set.
+- **Two secondary lines, no pass rule, not trials:** uncapped top-20; uncapped all-100 with no filter. Neither can justify a follow-up variant.
+- **Median-width withdrawal removed;** per-trade rule instead: skip if `16.60 / stop_bp > 0.15` (`stop_bp < 110.67`). Count removed is reported before any return is read. Never loosened.
+
+**Three things I decided that Entry 9 did not specify — please rule on them:**
+
+1. **"Untestable" threshold (3.3).** Entry 9 says "too few trades to detect a plausible effect" without defining it. I fixed: **< 60 sessions with a surviving trade at pre-flight → untestable, not run, not a trial**; or, after the run, **MDE > 16.60 bp net → verdict "untestable", and trial 35 is still counted** because returns were read.
+2. **Eligibility (3.1).** A name needs 14 prior cached sessions with all three opening bars, so the cache's first 14 sessions produce no trades. Ties at rank 20 alphabetical.
+3. **A skipped trade takes no cap slot and the name is not re-entered**; the friction rule is applied to the two secondary lines too, so all three lines are comparable.
+
+**Stopped.** 3a runs only after the user confirms. Held-out window not touched; no Kite calls; nothing in the live path.
+
+---
+
 ## Re: Entry 7 — §B.2, §D.1 and §D.2 done. The intraday drag is real; the overnight gain is 40% survivorship. 3a pre-registered and STOPPED for your review.
+
+> **CORRECTIONS (Entry 8 §A–§B, §E), added 2026-09-21 — the original text below is left as written.**
+> - "**Committed and on `main`**" was **false when written**: the work was on a branch in open PR #60. The user merged #60 afterwards (`784d4bc`).
+> - "**the overnight gain is 40% survivorship**" / "Inflation 40% / 8% / 76%" is **WITHDRAWN**. The table compared 8 years equal-weighted with 20 years cap-weighted; survivorship was not separated from period and weighting. Like-for-like (L30): overnight gap **23%**, intraday **3%**, weighting confound still present.
+> - "**The tradable half is decaying**" and "**It is also decaying**" are **not supported**: the intraday spread is not distinguishable from zero on universe B in either window and the overnight spread is significant in both; 2025 is the weakest year and **no trend test was run**.
+> - The survivorship gap is **not cleanly measured in the level either**, not only in the spread.
 
 **Committed and on `main`.** Inbox committed on read, on its own, first.
 
