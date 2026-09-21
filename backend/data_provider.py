@@ -14,7 +14,7 @@ import concurrent.futures
 import logging
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -63,6 +63,156 @@ def kite_data_active() -> bool:
 def mark_kite_token_rejected():
     global _kite_rejected_token
     _kite_rejected_token = config.KITE_ACCESS_TOKEN
+
+
+def kite_token_rejected() -> bool:
+    """True once a Kite call has come back with a TokenException for the token
+    config currently holds — i.e. we have proof it is dead, not a guess."""
+    return bool(config.KITE_ACCESS_TOKEN) and config.KITE_ACCESS_TOKEN == _kite_rejected_token
+
+
+# Zerodha invalidates every access token daily at 06:00 IST, whatever time it
+# was generated. A token made at 21:34 on Friday is therefore dead by Saturday
+# morning — it does not last 24 hours.
+KITE_TOKEN_EXPIRY_HOUR_IST = 6
+
+# How long the dashboard's connection probe waits on Kite before giving up.
+# Short on purpose: the answer feeds a status chip, not a trading decision.
+KITE_PROBE_TIMEOUT_SECONDS = 4
+
+
+def kite_token_expires_at(generated_at: str):
+    """The 06:00 IST boundary that kills the session generated at `generated_at`
+    (an ISO-8601 string). Returns None if the timestamp can't be read."""
+    if not generated_at:
+        return None
+    try:
+        made = datetime.fromisoformat(generated_at)
+    except ValueError:
+        return None
+    if made.tzinfo is None:
+        made = made.replace(tzinfo=timezone.utc)
+    made_ist = made.astimezone(IST)
+    expiry = made_ist.replace(hour=KITE_TOKEN_EXPIRY_HOUR_IST, minute=0, second=0, microsecond=0)
+    if expiry <= made_ist:
+        expiry += timedelta(days=1)
+    return expiry
+
+
+def _probe_kite(timeout_seconds: float):
+    """Call kite.profile() with a hard deadline, raising whatever it raised.
+    Raises TimeoutError if Kite hasn't answered in `timeout_seconds`; the
+    abandoned thread is a daemon, so it can't keep the process alive."""
+    box = {}
+
+    def run():
+        try:
+            box["ok"] = _get_kite().profile()
+        except BaseException as exc:  # noqa: BLE001 — re-raised on the caller's thread below
+            box["err"] = exc
+
+    t = threading.Thread(target=run, name="kite-probe", daemon=True)
+    t.start()
+    t.join(timeout_seconds)
+    if t.is_alive():
+        raise TimeoutError(f"Kite did not answer within {timeout_seconds:g}s")
+    if "err" in box:
+        raise box["err"]
+    return box.get("ok")
+
+
+def kite_session_live() -> bool:
+    """Whether the Kite session should actually work right now: configured,
+    present, inside its 06:00 IST life, and not already rejected.
+
+    Every `kite_connected` flag the dashboard reads comes through here. They
+    used to be `bool(config.KITE_ACCESS_TOKEN)`, which stayed true for days
+    after a token died and made the UI claim a connection that wasn't there.
+    """
+    if not (config.KITE_API_KEY and config.KITE_ACCESS_TOKEN) or kite_token_rejected():
+        return False
+    expires_at = kite_token_expires_at(config.KITE_SESSION_GENERATED_AT)
+    # No generated_at means the token came from the environment rather than the
+    # in-app login, so there is no timestamp to age it against — trust it until
+    # Kite says otherwise.
+    return expires_at is None or datetime.now(IST) < expires_at
+
+
+def kite_session_status(probe: bool = False) -> dict:
+    """Everything the dashboard needs to say plainly whether Kite is usable.
+
+    `connected` used to mean "an access token string exists", which stayed true
+    for days after the token died and let the header report a working
+    connection while every Kite call was failing. It now means the session
+    should actually work: configured, present, not past its 06:00 IST expiry,
+    and not already rejected by Kite.
+
+    `probe=True` additionally spends one live API call to confirm it, for the
+    cases the clock can't see — a token revoked from Zerodha's side, or an API
+    key whose plan lapsed. The dashboard's 15-second poll leaves it off.
+    """
+    now_ist = datetime.now(IST)
+    configured = bool(config.KITE_API_KEY and config.KITE_API_SECRET)
+    has_token = bool(config.KITE_ACCESS_TOKEN)
+    expires_at = kite_token_expires_at(config.KITE_SESSION_GENERATED_AT)
+    rejected = kite_token_rejected()
+    expired = bool(expires_at and now_ist >= expires_at)
+
+    if not configured:
+        state_name, reason = "not_configured", (
+            "Kite API key and secret aren't set, so the dashboard can't log in at all. "
+            "Prices come from the delayed free feed and orders stay in paper mode.")
+    elif not has_token:
+        state_name, reason = "disconnected", (
+            "Not logged in to Kite yet. Click Connect Kite — it opens Zerodha's login in a popup.")
+    elif rejected:
+        state_name, reason = "expired", (
+            "Kite rejected this session — the token is dead. Click Reconnect to log in again.")
+    elif expired:
+        state_name, reason = "expired", (
+            "This Kite session expired at the 06:00 IST daily cutoff. Click Reconnect to log in again.")
+    else:
+        state_name, reason = "connected", "Logged in to Kite. Live prices and live order routing are available."
+
+    out = {
+        # Kept for older callers; now means "should actually work", not "a token string exists".
+        "connected": state_name == "connected",
+        "state": state_name,
+        "reason": reason,
+        "app_configured": configured,
+        "has_token": has_token,
+        "token_rejected": rejected,
+        "using_live_data": kite_data_active() and state_name == "connected",
+        "generated_at": config.KITE_SESSION_GENERATED_AT,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+        "seconds_until_expiry": int((expires_at - now_ist).total_seconds()) if expires_at else None,
+        "redirect_url": config.KITE_REDIRECT_URL,
+        "checked_at": now_ist.isoformat(),
+        "probed": False,
+    }
+    if probe and state_name == "connected":
+        out["probed"] = True
+        try:
+            # Bounded: this runs inside a dashboard request, and an unreachable
+            # Kite must not hold the response open for its full socket timeout
+            # while the user stares at "Checking Kite…". A daemon thread rather
+            # than an executor, because an executor's shutdown would wait for
+            # the very call we just gave up on.
+            _probe_kite(KITE_PROBE_TIMEOUT_SECONDS)
+        except Exception as exc:  # noqa: BLE001 — any failure here means "don't trust the session"
+            _note_kite_failure(exc)
+            out["connected"] = False
+            out["using_live_data"] = False
+            out["state"] = "expired" if isinstance(exc, TokenException) else "error"
+            if isinstance(exc, TokenException):
+                out["reason"] = "Kite rejected this session — the token is dead. Click Reconnect to log in again."
+            elif isinstance(exc, TimeoutError):
+                out["reason"] = (f"Kite didn't answer within {KITE_PROBE_TIMEOUT_SECONDS}s. The session may still be "
+                                 "fine — this usually means the network or Zerodha's API is slow.")
+            else:
+                out["reason"] = f"Kite is configured but the connection check failed: {exc}"
+            out["token_rejected"] = kite_token_rejected()
+    return out
 
 
 def _note_kite_failure(exc):

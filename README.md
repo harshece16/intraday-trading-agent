@@ -2635,6 +2635,80 @@ attempts; that counter is cumulative and it is the honest referee. A variant
 that shows +0.3R after fifty more attempts is a coin flip, and the DSR is
 what will say so.
 
+### 53. The dashboard said "Kite connected" for two days after the session died
+
+Found by accident, on the real running backend. The header read a connected
+Kite session; `/api/kite/status` agreed:
+
+```
+{"app_configured": true, "connected": true, "using_live_data": false,
+ "generated_at": "2026-09-19T21:34:50+00:00"}
+```
+
+The token behind it had been dead since **06:00 IST on the 20th** — over
+25 hours. The engine knew: it had already caught a `TokenException` and
+switched to the delayed feed. The dashboard was the only part of the system
+still claiming a connection.
+
+**The cause was one line, repeated in four places:**
+
+```python
+"connected": bool(config.KITE_ACCESS_TOKEN)
+```
+
+A token *string* exists forever. A Kite *session* does not: Zerodha
+invalidates every access token daily at 06:00 IST, whatever time it was
+generated — so a login at 21:34 is dead by the next morning, not 24 hours
+later. Checking `bool(token)` answers "did we ever log in", which is never
+the question anyone is asking.
+
+**What it now reports.** `data_provider.kite_session_status()` is the single
+source, and `connected` means the session should actually work — configured,
+present, inside its 06:00 IST life, and not already rejected:
+
+| state | When | Chip |
+| --- | --- | --- |
+| `connected` | Logged in and inside its life | Green — *Kite live* |
+| `connected`, delayed feed | Logged in, but `USE_KITE_DATA` is off | Amber — *Kite connected* |
+| `expired` | Past the 06:00 IST cutoff, or Kite returned `TokenException` | **Red — *Kite session expired*** |
+| `disconnected` | Configured but never logged in | Grey — *Kite not connected* |
+| `not_configured` | No API key or secret | Grey — *Delayed prices* |
+| `error` | Kite unreachable — **not** treated as a dead token | Amber — *Kite unreachable* |
+
+Every state carries a `reason` written for a person, plus `generated_at`,
+`expires_at` and `seconds_until_expiry`. The header chip's tooltip reads:
+
+```
+Kite rejected this session — the token is dead. Click Reconnect to log in again.
+Logged in Sep 20, 03:04 AM.
+Expired Sep 20, 06:00 AM (25h 51m ago).
+```
+
+**Three places it now shows up**, because a single grey label was exactly
+what let this hide for two days:
+
+- **The header chip** carries state in colour as well as words, and the
+  Connect button turns primary when the session is expired or broken.
+- **A red banner on Overview** for `expired` / `error` only. It cannot be
+  dismissed and disappears on reconnect — distinct from the onboarding
+  banner, which is dismissed forever once you first connect.
+- **`state.snapshot()`** carries `kite_state`, `kite_reason` and
+  `kite_expires_at`, so any page gets the full story over the existing
+  WebSocket push without polling.
+
+**Two smaller things fixed alongside.** `/api/kite/status?probe=true` spends
+one real API call to confirm the session, for the case the clock can't see —
+a token revoked from Zerodha's side. The dashboard probes on load and on
+window focus, not on its 15-second poll, and the probe is bounded to 4s on a
+daemon thread so an unreachable Kite can't hold the response open. A probe
+timeout reports `error`, never `expired`: a slow network is not a dead token,
+and telling someone to reconnect would send them round a login loop that
+cannot help.
+
+This was already open as **#24** since 17 Sep; #51 duplicates it with fresher
+evidence. 22 tests in `backend/tests/test_kite_session_status.py`, including the exact
+timestamp from the bug report.
+
 ## Requirements
 
 What this system is *for*, stated separately from how it is built, so a

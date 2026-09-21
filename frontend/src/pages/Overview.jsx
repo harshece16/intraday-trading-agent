@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch, apiJson } from "../api";
+import { API_BASE, API_KEY, apiFetch, apiJson } from "../api";
 import { clock, dateLabel, money, num, pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
@@ -50,6 +50,38 @@ function OnboardingBanner({ s }) {
           </ol>
         </div>
         <button className="btn" onClick={dismiss}>Dismiss</button>
+      </div>
+    </div>
+  );
+}
+
+/* Distinct from the onboarding banner above: that one teaches a new user and
+   is dismissed forever once they connect. This one fires when a session that
+   WAS working has died — the case that used to be invisible, because the
+   header went on saying "Kite connected" and the engine quietly fell back to
+   delayed prices. It can't be dismissed; it goes away when Kite comes back. */
+function KiteSessionAlert({ s }) {
+  const state = s?.kite_state;
+  if (state !== "expired" && state !== "error") return null;
+  const expired = state === "expired";
+  return (
+    <div className="cardbox" style={{ marginBottom: 20, borderColor: "var(--short)" }} role="alert">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h2 className="h" style={{ fontSize: 16, color: "var(--short)" }}>
+            {expired ? "Kite session expired" : "Kite isn't reachable"}
+          </h2>
+          <p style={{ margin: "6px 0 0", fontSize: 13.5, lineHeight: 1.7 }}>
+            {s.kite_reason}{" "}
+            {expired && "Until you reconnect, prices come from the delayed free feed and no live order can be placed."}
+          </p>
+        </div>
+        <button
+          className="btn primary"
+          onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}
+        >
+          Reconnect
+        </button>
       </div>
     </div>
   );
@@ -285,6 +317,7 @@ export default function Overview({ state: s }) {
 
   return (
     <>
+      <KiteSessionAlert s={s} />
       <OnboardingBanner s={s} />
       <AutonomyCard s={s} />
       <section className="hero">
