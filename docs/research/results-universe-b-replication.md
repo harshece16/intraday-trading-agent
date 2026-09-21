@@ -105,6 +105,17 @@ NIFTY 100.
 | Bottom-5 minus top-5 | +9.03 bp | +1.85 | **0.40× — does not clear** |
 | *Universe A, for reference* | *+8.11 bp* | *+1.68* | *0.49× vs 16.60 bp* |
 
+> **Correction footnote (Entry 12 §1, 2026-09-21).** The comparison above
+> measures a **top-minus-bottom spread against ONE round trip**. A spread is
+> **two positions** — long and short — and **each pays its own round trip**,
+> so the correct hurdle is **double** the figure quoted. As a footnote, not a
+> recomputation: universe B's quintile spread is **+5.97 bp against 45.20 bp (2 × 22.60), not 22.60 — 0.13×, not 0.26×**; the top-5/bottom-5 line is **+9.03 bp against 45.20 bp = 0.20×, not 0.40×**.
+>
+> **This makes every spread result worse, never better**, so no conclusion
+> here is reversed — each was already a failure against the single-round-trip
+> bar, and the corrected bar is twice as far away.
+
+
 > **A smaller spread against a higher cost bar. Universe B is a worse place
 > to trade this than universe A, not a better one.**
 

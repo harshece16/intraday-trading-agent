@@ -83,6 +83,9 @@ thing a reader should check.
 > **Stage 1 clears only if the top-minus-bottom spread is positive with
 > t > 2 AND exceeds 16.60 bp.**
 >
+> **SUPERSEDED by amendment 1 §1 — the correct hurdle is 33.20 bp**, because
+> a spread is two positions each paying a round trip.
+>
 > Anything else **withdraws 3b**, no trial is spent, and the design is **not**
 > re-registered with a different signal window, a different holding period or
 > a filter.
@@ -144,3 +147,85 @@ as **untestable**, not as a null.
 
 **Stopped here for review.** No 3b code exists. Nothing runs without the
 reviewer's review of this file **and** the user's explicit go-ahead.
+
+---
+
+# Amendment 1 — Entry 12 (external reviewer)
+
+**Committed before any 3b code exists.** Staging approved: stage 1 is a
+research look with no trial; trial 36 is spent only if stage 1 clears.
+
+## 1. The stage-1 gate was wrong by a factor of two
+
+**A top-minus-bottom spread is TWO positions**, long and short, and **each
+pays its own 16.60 bp round trip.** Comparing the spread against a single
+round trip understated the hurdle by half.
+
+> **CORRECTED STAGE-1 GATE: the cross-sectional spread clears only if it is
+> positive, with t > 2, AND exceeds 33.20 bp** — equivalently, the **mean
+> per-leg return exceeds 16.60 bp**.
+>
+> The superseded gate (16.60 bp) is struck, not deleted: ~~"Stage 1 clears
+> only if the top-minus-bottom spread is positive with t > 2 AND exceeds
+> 16.60 bp."~~
+
+A spread between 16.60 and 33.20 bp is **a withdrawal**, not a near miss.
+
+## 2. Restore the original brief's 3b as a second pre-declared line
+
+The published effect is a **time-series** one, not the cross-sectional sort:
+the market's first-half-hour return predicts the last half hour.
+
+| | |
+| --- | --- |
+| Market proxy | **equal-weighted mean of the universe** |
+| Signal | **sign(previous close → 09:45 close)** — includes the overnight gap |
+| Target | **14:40 open → 15:10 close** (the last tradable half hour) |
+| Statistic | mean of **`sign(signal) × target`** in bp, **t across sessions** |
+| Also reported | **both halves**, and the same statistic **per stock, pooled by session** |
+| **Gate** | **ONE round trip: positive, t > 2, and above 16.60 bp** |
+
+One leg, so one round trip — unlike the cross-sectional line.
+
+**This is an adapted version, stated plainly:** the literature's window runs
+**to the close**, which an intraday cash position cannot hold. Measuring to
+the 15:10 bar is a change to the published design, forced by the square-off,
+and any result is a result about the adapted version only.
+
+## 3. The cross-sectional target starts at the 09:50 OPEN
+
+Not the 09:45 close. **This matches stage 2's entry exactly**, so stage 1
+measures the return a stage-2 trade could actually have captured. The signal
+window still ends at the 09:45 close, so signal and target remain disjoint —
+with a five-minute gap between them rather than touching.
+
+## 4. Stage 2's position rule
+
+- **Long the top 5 and short the bottom 5 by signal rank — ten positions,
+  all entered at the 09:50 open.**
+- **The chronological / alphabetical tie-break is DELETED.** It selected
+  nothing: every entry is simultaneous, so there is no ordering to break.
+  ~~"Concurrent positions: 5, slots reopen on exit; chronological, ties
+  alphabetical."~~
+- **3a's per-trade friction rule is carried**: skip a candidate if
+  `16.60 / stop_bp > 0.15`, and **report how many it removes**.
+- **Stage 2 is defined for the cross-sectional version only.**
+
+> **If only the time-series line clears, STOP and report.** It would need its
+> own pre-registration; stage 2 as written does not cover it.
+
+## 5. Everything else stands
+
+Universe A, selection dates only, existing Kite cache, no Kite calls,
+direction-symmetric, self-contained harness, no harness-bias figure asserted,
+one variant, MDE reported before the statistics, halves at the median session
+date.
+
+## Authorisation, recorded
+
+- **Stage 1: the user has given a standing go-ahead**, effective once this
+  amendment is committed and the research-reviewer has signed off. It spends
+  no trial and touches no held-out data.
+- **Stage 2: NOT authorised.** If stage 1 clears, **stop and ask the user.**
+- Afterwards, whatever stage 1 shows: the results file, then a **closing
+  phase-2 report**, then stop. **No new hypotheses are to be proposed in it.**

@@ -105,6 +105,17 @@ round trip                39.05 bp
 | Delivery round trip at ₹33,000, doubled slippage | **39.05 bp** |
 | **Ratio** | **0.36× — it does not pay** |
 
+> **Correction footnote (Entry 12 §1, 2026-09-21).** The comparison above
+> measures a **top-minus-bottom spread against ONE round trip**. A spread is
+> **two positions** — long and short — and **each pays its own round trip**,
+> so the correct hurdle is **double** the figure quoted. As a footnote, not a
+> recomputation: the overnight spread is **+14.15 bp against 78.10 bp (2 × 39.05), not 39.05 — 0.18×, not 0.36×**. This compounds the point already made in the paragraph above: a short leg held overnight is not available in cash equities at all.
+>
+> **This makes every spread result worse, never better**, so no conclusion
+> here is reversed — each was already a failure against the single-round-trip
+> bar, and the corrected bar is twice as far away.
+
+
 The same 0.36× the index-level calculation gave by a different route. **Both
 the level and the spread cost about three times what they yield.**
 

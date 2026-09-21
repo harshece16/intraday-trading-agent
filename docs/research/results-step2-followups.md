@@ -167,6 +167,24 @@ model: **6.00 bp slippage + 10.60 bp charges = 16.60 bp**.
 | Quintile (~20 names/side) | +8.11 bp | 16.60 bp | **does not exceed — 0.49×** |
 | Top-5 / bottom-5 | +16.30 bp | 16.60 bp | **does not exceed — 0.98×** |
 
+> **Correction footnote (Entry 12 §1, 2026-09-21).** Both rows compare a
+> **top-minus-bottom spread against ONE round trip**. A spread is **two
+> positions** — long and short — and **each pays its own round trip**, so the
+> correct hurdle is **33.20 bp**, not 16.60. As a footnote, not a
+> recomputation:
+>
+> | Version | Spread | vs **33.20 bp** | was quoted as |
+> | --- | --- | --- | --- |
+> | Quintile | +8.11 bp | **0.24×** | 0.49× |
+> | Top-5 / bottom-5 | +16.30 bp | **0.49×** | 0.98× |
+>
+> **The "0.98× — within 0.3 bp of break-even" reading is withdrawn.** It was
+> the single most encouraging number this project produced and it was wrong
+> by a factor of two; the honest figure is **half of break-even**. The
+> paragraph below, which already argued that 0.98× was not a lead, holds with
+> more room to spare.
+
+
 **The reviewer's stated expectation is confirmed: the spread does not exceed
 round-trip cost in cash equities.** That expectation was recorded in the
 pre-registration precisely so confirming it could not be dressed up as a
