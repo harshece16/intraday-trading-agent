@@ -130,7 +130,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L24 | 3c §B volatility-sorted — **mechanism HOLDS**, both legs monotone across 5 quintiles | 2026-09-21 | No — measurement |
 | L25 | 3c §C tradable Kite window — intraday spread +8.11bp vs 16.60bp cost, **does not clear** | 2026-09-21 | No — measurement |
 
-**Twenty-five looks, thirty-four trials.** L7–L16 are the ten members of the
+| L26 | Universe B replication of `atr_pct` — 113 F&O-eligible names outside the NIFTY 100, same selection dates, same test, same sign | pending | No — measurement · `prereg-universe-b-replication.md` · pass rule fixed before running |
+
+**Twenty-six looks, thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
