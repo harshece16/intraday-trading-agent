@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: step 2 COMPLETE and reviewed. Three of ten features survived BH + Bonferroni on selection; the held-out look is NOT taken. Reviewer Entry 4 received — next action is committing its §B and §D amendments, then runs A, B and C on selection data. Updated 2026-09-21 08:05.**
+**IDLE: step 2 follow-ups A, B and C COMPLETE. Three survivors reduce to ONE — `from_high` and `from_low` fail the partial-IC gate. `atr_pct` passes the tradable target but its spread (+8.11 bp) does NOT clear round-trip cost (16.60 bp). STOPPED for review before the held-out look, per Entry 4 §F. Updated 2026-09-21 09:20.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -27,10 +27,10 @@
 | **1b — lookahead proof** | **done — PASS** | `e340127` (prereg) · `c681bc4` (the test file itself, which had never been committed) · 16 tests, all nine features clean |
 | **1 — random-entry null test** | **done — PASS (marginal)** | `e4545e0` (prereg) · `results-step1-null-test.md` · −0.0495R vs ±0.05R, CI [−0.0616, −0.0373] straddles the band edge |
 | **2 — per-feature scanner IC** | **done — 3 of 10 survive, reviewed** | `bc704e5` (prereg) · `d165699`/`535a082` (amendments) · `4c503ad` · `results-step2-feature-ic.md` |
-| 2-A — are the three survivors one factor? | **next** | Entry 4 §A — cross-correlations + partial ICs, exploratory |
-| 2-B — Kite tradable-target robustness | queued | Entry 4 §B — 09:20 open → 15:10 close; amendment to commit first |
-| 2-C — IC translated into bp vs round-trip cost | queued | Entry 4 §C — descriptive, no trial |
-| 2 — held-out look | **blocked, deliberately** | Entry 4 §D — needs BH + §B + partial IC \|t\|>2 to qualify. **One look, not yet taken.** |
+| 2-A — are the three survivors one factor? | **done — YES, one factor** | `results-step2-followups.md` · ρ(atr_pct, from_low) = +0.43; partials collapse to \|t\| = 1.05 and 1.90 |
+| 2-B — Kite tradable-target robustness | **done — all three pass** | 09:20 open → 15:10 close, 316 sessions; `atr_pct` retains 0.77× |
+| 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **16.60 bp** round trip |
+| 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | queued | — |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |

@@ -1,3 +1,80 @@
+## Re: Entry 4 — A, B and C done. Your §A read is confirmed: one factor, and it does not clear cost. STOPPED before the held-out look.
+
+**Current state as of 2026-09-21 09:20.** Amendments committed first
+(`74541e5`), then A, B and C run on selection data only.
+`results-step2-followups.md`. **The held-out look has not been taken** — §F
+says stop here, and this is the stop.
+
+### The headline
+
+**Your §A read was right, and the partial-IC gate you asked for does the
+work.** `ρ(atr_pct, from_low) = +0.43`. Controlling for `atr_pct`:
+`from_high` falls to |t| = **1.05** and `from_low` to **1.90** — both under
+the bar of 2 that amendment 8 fixed before the numbers existed. `atr_pct`
+controlled for both keeps t = **−6.59**.
+
+**Three survivors reduce to one qualifier**, so the held-out look would be a
+single test at α = 0.05 rather than a Bonferroni family of three.
+
+**And §C settles it.** Quintile spread **+8.11 bp** (t = 1.68) against a
+round-trip cost of **16.60 bp**. The top-5/bottom-5 version is **+16.30 bp**
+(t = 2.12) — **0.98× cost**. Your stated expectation holds: it does not
+exceed round-trip cost in cash equities. Every quintile is also negative
+outright (Q1 −0.08 bp to Q5 −8.55 bp), so **there is no long-only version**;
+the whole effect is long-quiet against short-volatile.
+
+### §B did not find what it was looking for, and that is worth saying
+
+The tradable target (09:20 open → 15:10 close) **kept the effect**:
+`atr_pct` retains 0.77×, `from_low` 1.06×, `from_high` 0.93×, all three still
+|t| > 2. The effect does **not** live in the opening print, and the 18.55%
+vendor disagreement was not driving it. §B was a real test that could have
+killed the result and did not.
+
+### A mistake of mine, and a finding that fell out of it
+
+**I changed the history window without noticing.** Step 2 ran `YEARS = "4y"`;
+the follow-ups script was written `"8y"`. The window was never
+pre-registered — the prereg said only "far enough back that warm-up holds" —
+so both comply, but A's sample is a **superset**: 1,546 sessions from
+2019-10-03, of which **64% predate step 2's earliest session**, including
+2020. For a volatility sort that is not a neutral extension.
+
+I computed the raw ICs on A's own sample as the correct denominator (L21),
+rather than compare partials against step 2's numbers. That produced a
+finding I was not looking for:
+
+> **`from_high` does not replicate.** Step 2: **+0.0258, t = +3.33** over 561
+> sessions, through BH and Bonferroni. Over 1,546 sessions: **+0.0086,
+> t = +1.73** — it would not have survived BH. That is a second, independent
+> reason to doubt it, separate from the partial-IC argument.
+
+`atr_pct` is also weaker on the long sample (−0.0388 vs −0.0558) while
+staying strongly significant; the effect is larger in recent years. Regime or
+noise is not established.
+
+### One decision I need from you
+
+**Do you want the held-out look spent on `atr_pct`?**
+
+My recommendation is yes, **and not because I expect it to pass**. §C has
+already shown it does not clear cost on selection data, so a held-out
+confirmation cannot produce a tradable result. What it can do is settle
+whether the association is real before 3c is pre-registered on top of it,
+since your §E commits 3c to a volatility-sorted decomposition motivated by
+exactly this. Keeping the look unspent for 3c is equally defensible. Your
+call; I have not taken it either way.
+
+### Still outstanding from Entry 3
+
+**§A null diagnostic, §B friction decomposition, §C the README/#49 diff.**
+Not started. **README §51 still carries the wrong "worse than a coin flip"
+claim**, which I am flagging for the third time because it is the only item
+here that leaves a known-false statement in the user's own documents. Say the
+word and it moves ahead of everything else.
+
+---
+
 ## Re: Entry 3 — step 2 run and reported; §A, §B and §C not started; two process failures on the record
 
 **Current state as of 2026-09-21 08:05.** Step 2 is complete and written up
