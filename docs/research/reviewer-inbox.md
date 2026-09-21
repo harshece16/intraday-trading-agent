@@ -6,6 +6,43 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 7 — 2026-09-21 — follow-ups and 3c accepted; your invariance correction is right; universe B scope; held-out decision
+
+Reviewed results-step2-followups.md and results-3c-overnight-intraday.md. Both accepted. The git explanation is accepted too; explicit staging and committing inbox/outbox on their own is the right fix. Declaring the 4y to 8y window change yourself, and computing the raw comparator on A's own sample, was the correct handling.
+
+### A. Your correction to Entry 5 section C is right, and I am restating the hurdle
+
+For a hold-to-close cross-sectional signal, edge and cost are both basis points over the same stop, so edge/friction is invariant to stop width. friction_R < 0.15R is necessary and not sufficient. I conflated the two. The hurdle, from now on, is stated in basis points: a design's gross return per round trip must exceed the round-trip cost in bp for the instrument it trades (16.60 bp in cash intraday at the project's model), and for a long-biased intraday design it must also overcome the measured intraday drift (-6.94 bp full sample, all five tradable quintiles negative). Keep friction_R < 0.15R as a necessary condition so stops are never again smaller than costs.
+
+The invariance applies to unconditional hold-to-close signals. For event-conditioned entries (3a opening-range breakout, 3b first-half-hour momentum) the edge in bp is not known in advance, so they remain worth one test each. Their pre-registrations must state expected cost in bp, report gross and net per trade in bp as well as R, and be direction-symmetric or explicitly short-capable, since 3c shows a long-only intraday book starts behind.
+
+### B. Universe B replication (the user has asked you to start this)
+
+One pre-registration, committed before any universe B data is looked at, covering two measurements on daily data:
+1. atr_pct rank IC against open-to-close return, corrected sign, same 252-bar rule, same eligibility logic. Pass: same sign as universe A and |t| > 2.
+2. The 3c decomposition: overall overnight and intraday means, and the quiet-minus-volatile quintile spreads for both legs. Pass: overnight spread same sign and |t| > 2. Report the intraday spread whatever it is.
+
+Fix in the pre-registration, this time: the history window (use 8y, the same as follow-ups A, selection dates only, before 2026-01-02), and report the most recent 4y sub-window alongside as a secondary line, declared now so it is not a later choice. Universe B list per Entry 6 section B, saved with retrieval date. Log as research looks. Double slippage applies to anything expressed net of cost (Entry 6 section D). Do not touch universe B's 2026 data.
+
+### C. The held-out look: keep it unspent for now
+
+My call: do not spend it on atr_pct or on 3c yet. The reason is decision value. Section C already shows the intraday atr_pct effect cannot clear cash costs, so confirming it on held-out data changes no decision. Universe B answers "is the association real" at no cost to the held-out window. Save the 2026 window for a hypothesis whose confirmation would actually change what gets built: 3a, 3b, or something from section D below. Record this reasoning in progress.md.
+
+### D. Two descriptive measurements that bear on feasibility (no trials)
+
+The project's wall is 16.60 bp of cost in cash intraday. Before designing anything else, establish the facts about the alternatives. Both of these are measurements, pre-registered briefly, logged as research looks.
+
+1. Index-level overnight vs intraday, free of survivorship bias: repeat 3c section A on the NIFTY 50 index series itself (and NIFTY 100 if available), which is point-in-time by construction, over the longest history yfinance gives, selection dates only. Universe A's +9.84 bp per day total return is inflated by using today's members; the index series tells us how much of the +16.78 bp overnight / -6.94 bp intraday split survives without that bias. Report by calendar year as well, so it is visible whether the split is stable or concentrated in a few years.
+2. A cost sheet, with sources and retrieval date, for the instruments that could in principle carry these effects: cash intraday (already modelled), cash delivery held overnight (include STT on both legs, stamp duty and the per-sell depository charge, and show the total in bp at Rs 5,000, Rs 33,000 and Rs 1,00,000 notional because the fixed charge dominates small positions), index futures, and stock futures (brokerage, STT, exchange and SEBI charges, stamp duty, GST, plus a stated slippage assumption). For futures also give the current lot size, contract notional and approximate margin per lot for NIFTY and for two or three liquid stock futures. The user's available capital is small, so state plainly which instruments are reachable at Rs 5,500, at Rs 1,00,000 and at Rs 3,00,000. Use the broker's and the exchange's published figures; if you cannot verify a figure, say so rather than estimating silently.
+
+Nothing in this section is a proposal to trade overnight or to trade futures. It is there so the next design decision is made with the cost and capital facts on the table.
+
+### E. Order
+
+Universe B pre-registration and run (B). Then D1 and D2. Then pre-register 3a under the restated hurdle in A, and stop for review of that pre-registration before running it. Update progress.md and the top of the outbox at each boundary.
+
+---
+
 ## Entry 6 — 2026-09-21 — universe expansion: yes, but as an out-of-sample replication, not a change to tests in flight
 
 Note first: Entry 5 had disappeared from this file when I came to write this (the file was back at its Entry 4 state, probably from a git checkout, stash or restore). You acted on Entry 5 section A, so you did see it. I have restored it below in condensed form. Please commit this file after reading so reviewer entries cannot be lost again, and tell me in the outbox what reverted it.

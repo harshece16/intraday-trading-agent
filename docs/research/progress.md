@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: universe B replication COMPLETE — PRIMARY PASSES. `atr_pct` replicates on 113 names outside the NIFTY 100 at −0.0332, t = −6.68 (0.85× of universe A). But the spread is +5.97bp against a 22.60bp bar = 0.26×, WORSE than universe A's 0.49×. The statistic strengthened; the economics weakened. Held-out look still NOT taken. Updated 2026-09-21 12:30.**
+**IDLE: Entry 7 §B.2, §D.1 and §D.2 complete. Universe B overnight spread PASSES (−14.15bp, t=−8.55, 1.02× of A). §D.1 is the key finding: the intraday drag survives survivorship (−6.94 → −6.42 on the index) but the overnight gain is **40% inflated** (+16.78 → +12.01). Both legs cost ~3× what they yield. NEXT: pre-register 3a and STOP for review. Held-out NOT taken. Updated 2026-09-21 13:45.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -12,6 +12,23 @@
 > as a report rather than a halt, so its "agreement is adequate" judgement was
 > made after seeing the ICs. Separately, the step-1b lookahead proof test file
 > had never been committed — only its pre-registration was (fixed in `c681bc4`).
+
+---
+
+## Why the held-out window is still unspent (Entry 7 §C)
+
+The reviewer's call, recorded here as §C directs. **Do not spend the 2026
+held-out window on `atr_pct` or on 3c.**
+
+The reason is **decision value, not caution**. Step 2 §C already established
+that the intraday `atr_pct` effect cannot clear cash costs, so confirming it
+on held-out data would change no decision anyone would take. Universe B
+answered "is the association real" at **no cost to the held-out window** —
+and it passed, twice.
+
+The 2026 window is therefore reserved for a hypothesis whose confirmation
+**would** change what gets built: 3a, 3b, or something arising from Entry 7
+§D. It has never been looked at for any of this work.
 
 ---
 
@@ -36,10 +53,14 @@
 | Ten-section standalone report | **done** | `report-2026-09-21.md` |
 | Entry 5 §A journal summary | **done — accepted** | `journal-summary-2026-09-21.md` · all legs paper, 0 live orders |
 | 3c §A–C | **done — mechanism HOLDS** | `results-3c-overnight-intraday.md` · overnight +16.78bp, intraday −6.94bp |
+| Entry 7 §B.2 universe B overnight | **done — PASS** | `results-universe-b-overnight.md` · overnight −14.15bp t=−8.55; intraday +5.97bp t=+1.63 (n.s.) |
+| Entry 7 §D.1 index-level split | **done** | `results-entry7-d-feasibility.md` · overnight 40% survivorship-inflated, intraday drag real |
+| Entry 7 §D.2 cost sheet | **done** | delivery 33.05bp vs intraday 16.60bp at ₹33k; futures unreachable at all three capital levels |
+| Entry 7 §C held-out decision | **recorded — DO NOT SPEND** | reviewer's call: no decision changes, so save 2026 for 3a/3b |
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
-| 3a — opening-range breakout | queued | — |
+| 3a — opening-range breakout | **pre-registered, NOT RUN** | `prereg-3a-opening-range.md` · awaiting reviewer approval (Entry 7 §E) · trial 35 on execution |
 | 3b — intraday momentum | queued | — |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
