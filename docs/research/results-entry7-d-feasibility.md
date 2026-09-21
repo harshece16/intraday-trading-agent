@@ -27,9 +27,46 @@ trials.** Trial count stays at **34**. Research look **L29**.
 > that is point-in-time by construction. How much of universe A's excess is
 > survivorship is not separated from period and weighting.**
 
-**L30 (Entry 8 §B.5) is the like-for-like fix**: the same index means
-recomputed on exactly universe A's 1,546 sessions. The equal-weight versus
-cap-weight difference will remain and cannot be removed with free data.
+### L30 — the like-for-like fix, run 2026-09-21
+
+Index means recomputed on **exactly universe A's 1,546 sessions**
+(2019-10-03 → 2026-01-01), removing the period confound.
+
+| | Universe A (equal-weight stocks) | NIFTY 100 index (cap-weight) | **Gap** |
+| --- | --- | --- | --- |
+| Overnight | +16.78 bp | **+12.87 bp** (t = +7.16) | **+3.91 bp (23%)** |
+| Intraday | −6.94 bp | **−6.73 bp** (t = −2.94) | **−0.21 bp (3%)** |
+
+| | Universe A | NIFTY 50 index | Gap |
+| --- | --- | --- | --- |
+| Overnight | +16.78 bp | +11.35 bp (t = +6.28) | +5.43 bp |
+| Intraday | −6.94 bp | −5.29 bp (t = −2.31) | −1.65 bp |
+
+**The period confound was small.** NIFTY 100 gave +12.01 / −6.42 over
+2005–2025 and **+12.87 / −6.73** over universe A's own window — so the
+original 20-year comparison was not badly misleading in size. But the
+overnight gap is **23%, not the 40% originally claimed**, and the intraday
+gap is **3%**, not 8%.
+
+> **The intraday drag is essentially the same for equal-weighted stocks and
+> the cap-weighted index: −6.94 vs −6.73 bp, a gap of 0.21 bp.** That is the
+> figure 3a's design constraint rests on, and it is now measured
+> like-for-like.
+
+**The remaining +3.91 bp overnight gap is survivorship AND weighting, and
+this cannot separate them** (pre-registered point 3). One observation from
+data already in hand, offered as an observation and not a decomposition:
+
+| Series | Construction | Overnight |
+| --- | --- | --- |
+| NIFTY 100 index | cap-weighted, point-in-time | +12.87 bp |
+| Universe A | equal-weighted, today's NIFTY 100 | +16.78 bp |
+| Universe B | equal-weighted, today's F&O mid-caps | **+19.84 bp** |
+
+Overnight return rises monotonically as the construction tilts smaller.
+**That gradient is what a weighting effect looks like**, and it suggests the
+equal-weight tilt accounts for a meaningful share of the +3.91 bp rather than
+survivorship alone. It is not proof, and no share is claimed.
 
 **What survives and is enough for the design constraint** (§B.7): the
 intraday drift is negative on a point-in-time series at **t = −4.02**

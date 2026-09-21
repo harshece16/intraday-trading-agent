@@ -136,7 +136,7 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L28 | Universe B volatility-sorted — overnight spread **−14.15bp, t=−8.55, PASS** (1.02× of A); intraday +5.97bp, t=+1.63, **not distinguishable from zero in either window** | 2026-09-21 | No — measurement |
 
 | L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — split holds with the same sign and similar size (+12.01 / −6.42). **NOT PRE-REGISTERED — omission recorded (Entry 8 §B.3).** BANKNIFTY measured beyond the instruction. The "40% survivorship" reading is **withdrawn** (§B.4): the gap confounds survivorship, period and weighting | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
-| L30 | Like-for-like fix of L29 — index means on **exactly universe A's 1,546 sessions** (^CNX100, ^NSEI) | pending | No — measurement, no pass rule · `prereg-L30-index-like-for-like.md` |
+| L30 | Like-for-like fix of L29 — index means on **exactly universe A's 1,546 sessions**. Overnight gap **+3.91bp (23%, not 40%)**; intraday gap **−0.21bp (3%)**. Weighting confound remains | 2026-09-21 | No — measurement, no pass rule · `prereg-L30-index-like-for-like.md` |
 
 **Thirty looks, thirty-four trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
