@@ -105,14 +105,30 @@ round trip                39.05 bp
 | Delivery round trip at ₹33,000, doubled slippage | **39.05 bp** |
 | **Ratio** | **0.36× — it does not pay** |
 
-The same 0.36× the index-level calculation gave by a different route. **Both
-the level and the spread cost about three times what they yield.**
+> **Correction footnote (Entry 12 §1, 2026-09-21).** The comparison above
+> measures a **top-minus-bottom spread against ONE round trip**. A spread is
+> **two positions** — long and short — and **each pays its own round trip**,
+> so the correct hurdle is **double** the figure quoted. As a footnote, not a
+> recomputation: the overnight spread is **+14.15 bp against 78.10 bp (2 × 39.05), not 39.05 — 0.18×, not 0.36×**. This compounds the point already made in the paragraph above: a short leg held overnight is not available in cash equities at all.
+>
+> **This makes every spread result worse, never better**, so no conclusion
+> here is reversed — each was already a failure against the single-round-trip
+> bar, and the corrected bar is twice as far away.
+
+
+~~The same 0.36× the index-level calculation gave by a different route. Both
+the level and the spread cost about three times what they yield.~~
+**CORRECTED (Entry 13 §E.3): the spread is 0.18× at the two-leg hurdle, not
+0.36×. The index-level 0.36× is a genuinely different, single-leg figure that
+was never wrong — a lone long position pays exactly one round trip — so the
+two only coincided before this correction. The spread costs about FIVE times
+what it yields; the level about three.**
 
 **And 0.36× is generous, in the safe direction (Entry 8 §A.2).** A
 quiet-minus-volatile *spread* requires a **short leg held overnight, which
 cash equities do not permit at all**, and a two-legged position would pay
 **two** round trips rather than one. The true figure is worse than 0.36×;
-it is not recomputed here because the conclusion does not turn on it.
+~~it is not recomputed here because the conclusion does not turn on it.~~ **It has since been recomputed — see the correction footnote above: 0.18×.**
 
 ---
 

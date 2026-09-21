@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**STOPPED for review — Entry 11 ACCEPTS 3a: trial 35 stands as a clean FAIL (net −12.09 bp/session, t = −2.71; gross +4.52 bp, t = +1.01; negative in both halves and both sides; MDE 8.92 bp so NOT untestable). §E's wording fix is committed (`d602c00`). **3b is now PRE-REGISTERED and NOT RUN**, with a proposed two-stage split so a cheap measurement (L31) can withdraw it without spending trial 36. Needs reviewer review AND the user's go-ahead before any run. Trials 35. Held-out NOT taken. Updated 2026-09-21 11:15.**
+**PHASE 2 CLOSED. 3b WITHDRAWN at stage 1 — cross-sectional −1.60 bp (t=−0.48) vs a 33.20 bp gate, time-series +0.70 bp (t=+0.61) vs 16.60 bp. NO TRIAL SPENT; count stays at 35. Closing report: `report-phase-2-closing.md`. The 2026 held-out window has NEVER been looked at. Stage 2 is defined but UNAUTHORISED. Updated 2026-09-21.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -46,7 +46,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | **2 — per-feature scanner IC** | **done — 3 of 10 survive, reviewed** | `bc704e5` (prereg) · `d165699`/`535a082` (amendments) · `4c503ad` · `results-step2-feature-ic.md` |
 | 2-A — are the three survivors one factor? | **done — YES, one factor** | `results-step2-followups.md` · ρ(atr_pct, from_low) = +0.43; partials collapse to \|t\| = 1.05 and 1.90 |
 | 2-B — Kite tradable-target robustness | **done — all three pass** | 09:20 open → 15:10 close, 316 sessions; `atr_pct` retains 0.77× |
-| 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **16.60 bp** round trip |
+| 2-C — IC translated into bp vs round-trip cost | **done — does NOT clear cost** | +8.11 bp quintile / +16.30 bp top-5 vs **33.20 bp** (two legs) = **0.24× / 0.49×** round trip |
 | §A null diagnostic | **done — explanation refuted** | `results-null-diagnostic.md` · (a) 0.00%, (b) 6.8%; drift explains the rest |
 | §B friction decomposition | **done** | slippage 0.144R + charges 0.254R = **0.398R** · README §51 corrected |
 | §C verdict correction | **done** | README §51/§52 + issue #49 comment |
@@ -62,7 +62,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
 | 3a — opening-range breakout | **done — FAIL (trial 35)** | `results-3a-opening-range.md` · net −12.09 bp, t = −2.71; gross +4.52 bp, t = +1.01 · amendment `815ba4c` → code `3841124` → pre-flight `9f9ac61` → run `f4f1d3c` |
-| 3b — intraday momentum | **pre-registered, NOT RUN** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
+| 3b — intraday momentum | **WITHDRAWN at stage 1, no trial** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
 

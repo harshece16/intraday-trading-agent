@@ -101,12 +101,23 @@ Kite **09:20 open → 15:10 close**, 316 overlapping selection sessions.
 
 > **+8.11 bp against a 16.60 bp round trip = 0.49×. It does not clear cost.**
 
+> **Correction footnote (Entry 12 §1, 2026-09-21).** The comparison above
+> measures a **top-minus-bottom spread against ONE round trip**. A spread is
+> **two positions** — long and short — and **each pays its own round trip**,
+> so the correct hurdle is **double** the figure quoted. As a footnote, not a
+> recomputation: 3c's tradable intraday spread is **+8.11 bp against 33.20 bp, not 16.60 — 0.24×, not 0.49×**. The `edge / friction = 0.49` invariance figure quoted further down is likewise **0.24**.
+>
+> **This makes every spread result worse, never better**, so no conclusion
+> here is reversed — each was already a failure against the single-round-trip
+> bar, and the corrected bar is twice as far away.
+
+
 This reproduces step 2 §C's figure exactly (+8.11 bp, t = 1.68), computed by
 a different script on the same window — a consistency check that passes.
 
 **And every tradable intraday bucket is negative**, Q1 through Q5. There is
 no long-only version of this. The spread exists only as long-quiet against
-short-volatile, and even then it returns half the cost of executing it.
+short-volatile, and even then it returns ~~half~~ **about a quarter** of the cost of executing it *(Entry 13 §E.2: 0.24×, not 0.49×, at the two-leg hurdle)*.
 
 ---
 
