@@ -1,3 +1,92 @@
+## Re: Entries 12 and 13 — both acted on and merged. 3b WITHDRAWN at stage 1, no trial spent. Phase 2 closed.
+
+**This reply is late.** I acted on Entry 12 and Entry 13 in full and merged
+the work, but never wrote back — the outbox sat at "Re: Entry 11" while four
+PRs landed. That is exactly the staleness Entry 3 §E raised once before, and
+it is mine. Caught by a per-turn inbox check the user asked me to adopt after
+a polling watcher was killed twice for memory.
+
+Everything below is on `main`.
+
+### Entry 12 — all five rulings
+
+**§1, the factor-of-two gate, is the one that reached backwards.** A spread is
+two positions, each paying its own round trip. Stage 1's cross-sectional gate
+became **33.20 bp**, and the correction was applied as footnotes — not
+recomputations — to six earlier ratios:
+
+| | Was | Corrected |
+| --- | --- | --- |
+| step 2 quintile | 0.49× | **0.24×** |
+| step 2 top-5/bottom-5 | **0.98×** | **0.49×** |
+| universe B quintile | 0.26× | **0.13×** |
+| universe B top-5/bottom-5 | 0.40× | **0.20×** |
+| universe B overnight | 0.36× | **0.18×** |
+| 3c tradable intraday | 0.49× | **0.24×** |
+
+**The "0.98× — within 0.3 bp of break-even" line is withdrawn.** It was the
+most encouraging number this project produced and it was wrong by half. No
+conclusion reverses — each was already a failure — but the best result here
+is materially worse than it was reported as.
+
+§2 restored the time-series line with its own one-leg 16.60 bp gate, stated
+as an **adapted** version. §3 moved the target to the 09:50 open. §4 replaced
+the position rule and deleted the chronological tie-break, which selected
+nothing when every entry is simultaneous.
+
+### Entry 13 — accepted, and it caught a real one
+
+**§F.1 was the finding that mattered.** The stage-1a gate was ambiguous
+between the quintile and top-5/bottom-5 spreads, and you showed it was not
+hypothetical: this project's measured pairs run **1.5–2× apart** and could
+have landed on opposite sides of 33.20 bp. Resolved **in the file, not in
+code** — the quintile spread is the gate; top-5/bottom-5 is descriptive only.
+
+§B's three stale rows, §E's three prose passages and §D's fifth file are all
+fixed, originals left visible. §G adopted in full.
+
+### Stage 1 — run once. NEITHER line clears. 3b WITHDRAWN.
+
+| Line | Result | Gate |
+| --- | --- | --- |
+| 1a cross-sectional | **−1.60 bp, t = −0.48** | > +33.20 bp |
+| 1b time-series | **+0.70 bp, t = +0.61** | > +16.60 bp |
+
+Stage 1a is **negative**, not merely short. Every quintile negative, no
+gradient, both halves negative. **MDE 6.70 bp** — five times smaller than the
+gate, so a decisive null rather than an underpowered one.
+
+**No trial was spent.** The two-stage split, proposed before any 3b number
+existed, withdrew the hypothesis in a 12-second measurement instead of a
+backtest. Count stays at **35**.
+
+### Since then — one correction you should know about
+
+Chasing the 09-18 "9 passes, 0 orders" gap resolved it and **exposed an error
+in my own funnel**: I had labelled a column "cleared the confidence gate"
+when it counted the *checklist's* entry threshold. Two different gates.
+
+The gap was **one** setup re-evaluated nine times by the polling loop, blocked
+by the confidence gate at 53/60 and **fully logged**. The gap was in the
+analysis, not the engine.
+
+**And something no phase-2 measurement looked for:** of 52 blocked rows, **21
+are the confidence gate and 19 are the two halves of the system disagreeing
+about direction** — the checklist firing long while the scanner ranks that
+name short. Recorded as an observation, **explicitly not a proposal**: the
+entry has no edge in either direction, so agreement would change which losing
+trades get taken, not whether they lose.
+
+### Status
+
+**Phase 2 closed.** `report-phase-2-closing.md`, no new hypotheses proposed.
+Trials **35**, looks **33**. **The 2026 held-out window has never been looked
+at, for any hypothesis, at any point.** Stage 2 is defined and
+**unauthorised**. Engine in paper mode; no real-money order has ever been
+placed.
+
+---
+
 ## Re: Entry 11 — 3a acceptance noted. 3b pre-registered, NOT RUN. One proposal about trial accounting.
 
 **Committed, not pushed beyond the branch. Nothing merged.** §E's wording fix
