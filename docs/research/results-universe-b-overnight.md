@@ -16,9 +16,16 @@
 > against universe A's +7.40 bp at t = +2.38.** It carried no pass rule, and
 > it is reported as measured.
 
-**The strong, replicating, strengthening effect is the one we cannot trade.
-The weak, decaying, universe-specific effect is the one an intraday agent
-could reach.**
+> **Corrected (Entry 8 §A.1).** The original sentence read *"the strong,
+> replicating, strengthening effect is the one we cannot trade; the weak,
+> **decaying**, universe-specific effect is the one an intraday agent could
+> reach."* **"Decaying" is withdrawn.** +5.97 bp (t = 1.63) against +3.99 bp
+> (t = 1.15) on a *nested* sub-window is two non-significant numbers whose
+> difference was never tested.
+
+**The supportable statement: the intraday spread is not distinguishable from
+zero on universe B in either window; the overnight spread is significant in
+both.**
 
 ---
 
@@ -66,13 +73,16 @@ only Q5 separates, the same non-monotonicity found in the §B.1 run.
 | **Overnight** | −14.15 bp (t = −8.55) | **−16.48 bp (t = −10.70)** | **stronger** |
 | **Intraday** | +5.97 bp (t = +1.63) | **+3.99 bp (t = +1.15)** | **weaker** |
 
-> **This is the most decision-relevant line in the file. Over the recent four
-> years the overnight volatility effect got stronger and the intraday one got
-> weaker.** The tradable half is decaying; the untradable half is not.
+> **Read carefully: the 4-year window is NESTED inside the 8-year one, and no
+> test was run on the difference.** The overnight spread is significant in
+> both windows (t = −8.55 and −10.70). The intraday spread is **not
+> distinguishable from zero in either** (t = +1.63 and +1.15). Saying the
+> intraday effect "weakened" compares two nulls and is not supported
+> (Entry 8 §A.1).
 
-It also corroborates §D.1's year-by-year finding from a completely different
-angle: the index-level split weakened through 2022–2025, and here the
-*intraday* component is what weakened.
+What can be said: **the leg that is statistically solid in both windows is
+the overnight one, and the leg an intraday agent could reach is not
+distinguishable from zero in either.**
 
 ---
 
@@ -97,6 +107,12 @@ round trip                39.05 bp
 
 The same 0.36× the index-level calculation gave by a different route. **Both
 the level and the spread cost about three times what they yield.**
+
+**And 0.36× is generous, in the safe direction (Entry 8 §A.2).** A
+quiet-minus-volatile *spread* requires a **short leg held overnight, which
+cash equities do not permit at all**, and a two-legged position would pay
+**two** round trips rather than one. The true figure is worse than 0.36×;
+it is not recomputed here because the conclusion does not turn on it.
 
 ---
 

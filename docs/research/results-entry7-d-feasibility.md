@@ -6,28 +6,72 @@ trials.** Trial count stays at **34**. Research look **L29**.
 
 ---
 
-## Verdict: the intraday drag is real. The overnight gain is 40% survivorship.
+## Verdict: the split holds on a point-in-time series. The cause of the gap is NOT measured.
 
-> **§D.1 was designed to find out how much of 3c's split survives without
-> survivorship bias. The answer splits cleanly in two:**
+> **WITHDRAWN, 2026-09-21, reviewer Entry 8 §B.4.** The original heading read
+> *"the intraday drag is real. The overnight gain is 40% survivorship"*, with
+> an "Inflation" column of +40% / +8% / +76%. **That was an assertion about
+> cause that this measurement does not support**, and it is struck.
 >
-> | | Universe A (today's members) | **NIFTY 100 index (point-in-time)** | Inflation |
-> | --- | --- | --- | --- |
-> | Overnight | +16.78 bp | **+12.01 bp** | **+40%** |
-> | Intraday | −6.94 bp | **−6.42 bp** | **+8%** |
-> | Total/day | +9.84 bp | **+5.59 bp** | **+76%** |
->
-> **The intraday drag is essentially untouched by survivorship — it is a real
-> property of the market. The overnight gain, which carries all of the
-> return, is inflated by 40%.**
+> The comparison is not like-for-like on three axes at once: universe A is
+> **8 years (2018–2025), equal-weighted stocks**; the NIFTY 100 index is
+> **20 years (2005–2025), cap-weighted**. The gap between +16.78 and +12.01
+> mixes **survivorship, period and weighting**, and the year-by-year table
+> below shows the period alone moves the overnight figure from ~+18–20 bp
+> (2020–21) to ~+5 bp (2022, 2025).
 
-That is exactly the asymmetry one should expect: survivorship bias flatters
-long-run *returns*, and the overnight leg is where all the return lives. The
-intraday leg is a *drag*, and a drag is not flattered by dropping the losers.
+**What is actually established:**
 
-**Consequence: 3c's finding that matters to an intraday agent survives the
-check. The finding I was careful not to propose is the one that was partly an
-artefact.**
+> **The index-level split has the same sign and a similar size to universe
+> A's: +12.01 bp overnight and −6.42 bp intraday over 2005–2025, on a series
+> that is point-in-time by construction. How much of universe A's excess is
+> survivorship is not separated from period and weighting.**
+
+### L30 — the like-for-like fix, run 2026-09-21
+
+Index means recomputed on **exactly universe A's 1,546 sessions**
+(2019-10-03 → 2026-01-01), removing the period confound.
+
+| | Universe A (equal-weight stocks) | NIFTY 100 index (cap-weight) | **Gap** |
+| --- | --- | --- | --- |
+| Overnight | +16.78 bp | **+12.87 bp** (t = +7.16) | **+3.91 bp (23%)** |
+| Intraday | −6.94 bp | **−6.73 bp** (t = −2.94) | **−0.21 bp (3%)** |
+
+| | Universe A | NIFTY 50 index | Gap |
+| --- | --- | --- | --- |
+| Overnight | +16.78 bp | +11.35 bp (t = +6.28) | +5.43 bp |
+| Intraday | −6.94 bp | −5.29 bp (t = −2.31) | −1.65 bp |
+
+**The period confound was small.** NIFTY 100 gave +12.01 / −6.42 over
+2005–2025 and **+12.87 / −6.73** over universe A's own window — so the
+original 20-year comparison was not badly misleading in size. But the
+overnight gap is **23%, not the 40% originally claimed**, and the intraday
+gap is **3%**, not 8%.
+
+> **The intraday drag is essentially the same for equal-weighted stocks and
+> the cap-weighted index: −6.94 vs −6.73 bp, a gap of 0.21 bp.** That is the
+> figure 3a's design constraint rests on, and it is now measured
+> like-for-like.
+
+**The remaining +3.91 bp overnight gap is survivorship AND weighting, and
+this cannot separate them** (pre-registered point 3). One observation from
+data already in hand, offered as an observation and not a decomposition:
+
+| Series | Construction | Overnight |
+| --- | --- | --- |
+| NIFTY 100 index | cap-weighted, point-in-time | +12.87 bp |
+| Universe A | equal-weighted, today's NIFTY 100 | +16.78 bp |
+| Universe B | equal-weighted, today's F&O mid-caps | **+19.84 bp** |
+
+Overnight return rises monotonically as the construction tilts smaller.
+**That gradient is what a weighting effect looks like**, and it suggests the
+equal-weight tilt accounts for a meaningful share of the +3.91 bp rather than
+survivorship alone. It is not proof, and no share is claimed.
+
+**What survives and is enough for the design constraint** (§B.7): the
+intraday drift is negative on a point-in-time series at **t = −4.02**
+(NIFTY 100) and **t = −2.81** (NIFTY 50). The direction-symmetry requirement
+for 3a and 3b stands without the withdrawn claim.
 
 ---
 
@@ -51,7 +95,7 @@ decades.
 −4.02) and **not quite** on BANKNIFTY (t = −1.87), which is stated rather
 than rounded up.
 
-### Year by year — and the effect is decaying
+### Year by year — 2025 is the weakest year; no trend test was run
 
 | Split holds (overnight > 0 **and** intraday < 0) | |
 | --- | --- |
@@ -71,8 +115,14 @@ than rounded up.
 | **2025** | **+3.64 / +0.68** ✗ | **+5.24 / −1.41** | **+1.35 / +5.36** ✗ |
 
 **2025 is the weakest year in the series on all three indices**, and the
-split fails outright on two of them. Whatever the mechanism is, it is
-weaker now than over the sample that measured it.
+split fails outright on two of them.
+
+> **Corrected (Entry 8 §B.6).** The original text said *"whatever the
+> mechanism is, it is weaker now than over the sample that measured it"* —
+> i.e. that the effect is decaying. **That rests on one weak year and an
+> untested trend, and is withdrawn.** No trend test was run, and per §B.6
+> none is being added. The supportable statement is only that 2025 is the
+> weakest year in the sample.
 
 ---
 
@@ -107,10 +157,18 @@ Round trip, both legs, including the modelled slippage.
 | ₹3,00,000 | 11.09 bp | 28.75 bp |
 
 **Delivery costs roughly double intraday**, and at ₹5,000 it is nearly four
-times. The ₹20 flat brokerage plus the ₹15.93 depository charge per sell
-dominate small positions — which is why the intraday column is flat at
-16.60 bp until ₹33,000 (the ₹20 cap binds) and the delivery column falls
-steeply with size.
+times. The ₹15.93 depository charge per sell is what dominates small delivery
+positions, which is why that column falls steeply with size.
+
+> **Corrected (Entry 8 §B.8).** The original said the intraday column is flat
+> *"until ₹33,000 (the ₹20 cap binds)"*. **Wrong explanation.** Brokerage is
+> `min(₹20, 0.03% of turnover)`, and those are equal at
+> **₹20 / 0.0003 = ₹66,667 per leg**. Below that the **percentage** binds, so
+> the fee is scale-free and the bp figure is flat — which is why ₹5,000 and
+> ₹33,000 both come to 16.60 bp. **Above ₹66,667 the ₹20 cap takes over**,
+> which is why the bp falls at ₹1,00,000 and ₹3,00,000. The table values were
+> always computed by `costs.leg_cost()` and are unaffected; only the sentence
+> was wrong.
 
 ### The comparison that settles the overnight question
 
@@ -196,6 +254,20 @@ costs 33.05 bp and the effect it would harvest is 12.01 bp.
 
 ## Caveats
 
+- **The survivorship question is not cleanly measured even in the level**
+  (Entry 8 §B.10). The original text said §D.1 measured survivorship in the
+  level but not the quintile spread. After correction 4 that is too generous:
+  the level comparison confounds survivorship with period and weighting, so
+  **neither the level nor the spread has a clean survivorship estimate**.
+  L30 improves the level; the spread remains unaddressed.
+- **§D.1 was not pre-registered** (Entry 8 §B.3). Entry 7 §D asked for a brief
+  pre-registration and I wrote none — the omission is recorded here and in
+  `trials.md`. It is descriptive with no pass rule, so the reviewer did not
+  void it. **BANKNIFTY was also measured beyond the instruction**, which asked
+  for NIFTY 50 and NIFTY 100; harmless, and noted rather than quietly kept.
+- **The cash rates in `costs.py` are unverified** against the broker's current
+  tariff (Entry 8 §B.9). That caveat sits under **every** bp hurdle in this
+  project, including 3a's 16.60 bp.
 - **Index series are survivorship-free but not cost-free**: they are not
   investable without a tracking product, and the bp figures above are
   index-level, not the return of any tradable instrument.

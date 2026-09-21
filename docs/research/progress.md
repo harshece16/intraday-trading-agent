@@ -1,6 +1,6 @@
 # Phase 2 — progress
 
-**IDLE: Entry 7 §B.2, §D.1 and §D.2 complete. Universe B overnight spread PASSES (−14.15bp, t=−8.55, 1.02× of A). §D.1 is the key finding: the intraday drag survives survivorship (−6.94 → −6.42 on the index) but the overnight gain is **40% inflated** (+16.78 → +12.01). Both legs cost ~3× what they yield. NEXT: pre-register 3a and STOP for review. Held-out NOT taken. Updated 2026-09-21 13:45.**
+**STOPPED for review — Entry 11 ACCEPTS 3a: trial 35 stands as a clean FAIL (net −12.09 bp/session, t = −2.71; gross +4.52 bp, t = +1.01; negative in both halves and both sides; MDE 8.92 bp so NOT untestable). §E's wording fix is committed (`d602c00`). **3b is now PRE-REGISTERED and NOT RUN**, with a proposed two-stage split so a cheap measurement (L31) can withdraw it without spending trial 36. Needs reviewer review AND the user's go-ahead before any run. Trials 35. Held-out NOT taken. Updated 2026-09-21 11:15.**
 
 > **Step 2's three survivors are not three results.** The reviewer's Entry 4 §A
 > reads `atr_pct`, `from_high` and `from_low` as one volatility factor, and
@@ -53,15 +53,16 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | Ten-section standalone report | **done** | `report-2026-09-21.md` |
 | Entry 5 §A journal summary | **done — accepted** | `journal-summary-2026-09-21.md` · all legs paper, 0 live orders |
 | 3c §A–C | **done — mechanism HOLDS** | `results-3c-overnight-intraday.md` · overnight +16.78bp, intraday −6.94bp |
-| Entry 7 §B.2 universe B overnight | **done — PASS** | `results-universe-b-overnight.md` · overnight −14.15bp t=−8.55; intraday +5.97bp t=+1.63 (n.s.) |
-| Entry 7 §D.1 index-level split | **done** | `results-entry7-d-feasibility.md` · overnight 40% survivorship-inflated, intraday drag real |
+| Entry 7 §B.2 universe B overnight | **done — PASS** | `results-universe-b-overnight.md` · overnight −14.15bp t=−8.55 significant in both windows; intraday **not distinguishable from zero in either** (§A.1 correction: "decaying" withdrawn) |
+| Entry 7 §D.1 index-level split | **done, corrected** | `results-entry7-d-feasibility.md` · split holds (+12.01 / −6.42); the **40% survivorship claim is withdrawn** (Entry 8 §B.4) — it confounds survivorship, period and weighting. **Was not pre-registered** (§B.3) |
+| L30 like-for-like index fix | **next** | `prereg-L30-index-like-for-like.md` · index means on universe A's own 1,546 sessions |
 | Entry 7 §D.2 cost sheet | **done** | delivery 33.05bp vs intraday 16.60bp at ₹33k; futures unreachable at all three capital levels |
 | Entry 7 §C held-out decision | **recorded — DO NOT SPEND** | reviewer's call: no decision changes, so save 2026 for 3a/3b |
 | Universe B replication (Entry 6 §C.1) | **done — PASS** | `results-universe-b-replication.md` · t = −6.68, but 0.26× cost |
 | 3c pre-registration | **done — §A–C ready to run** | `prereg-3c-overnight-intraday.md` · §D held-out specified but NOT run |
 | 2 — held-out look | **blocked — awaiting reviewer** | Only `atr_pct` qualifies → a single test at α = 0.05. **Not taken.** Entry 4 §F says stop here. |
-| 3a — opening-range breakout | **pre-registered, NOT RUN** | `prereg-3a-opening-range.md` · awaiting reviewer approval (Entry 7 §E) · trial 35 on execution |
-| 3b — intraday momentum | queued | — |
+| 3a — opening-range breakout | **done — FAIL (trial 35)** | `results-3a-opening-range.md` · net −12.09 bp, t = −2.71; gross +4.52 bp, t = +1.01 · amendment `815ba4c` → code `3841124` → pre-flight `9f9ac61` → run `f4f1d3c` |
+| 3b — intraday momentum | **pre-registered, NOT RUN** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
 
@@ -69,7 +70,7 @@ Carried over from Entry 3, after the step-2 block clears: null diagnostic,
 friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
 to the user before committing, and the ten-section standalone report.
 
-Strategy trial count: **34**, unchanged. Research looks: **16** (L1–L16).
+Strategy trial count: **35** (3a, 2026-09-21). Research looks: **16** (L1–L16).
 Replications: 1.
 
 ---
@@ -267,3 +268,5 @@ is not worth the disruption.
 | 09:18 | supplementary null diagnostic: 18/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 09:18 | supplementary null diagnostic: 19/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 09:19 | supplementary null diagnostic: 20/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
+| 2026-09-21 | Loop handed to this session; the other session stopped. Outbox corrections it missed are made. Entry 9 recorded (`ad7b05c`), 3a amendment 3 committed (`815ba4c`), no 3a code. STOPPED for reviewer + user |
+| 2026-09-21 | User confirmed 3a. Code `3841124`, pre-flight `9f9ac61` (303 sessions, 1,139/5,275 removed), single run `f4f1d3c`: **FAIL**, net −12.09 bp, t = −2.71. STOPPED for review |

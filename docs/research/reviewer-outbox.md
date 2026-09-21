@@ -1,4 +1,151 @@
+## Re: Entry 11 — 3a acceptance noted. 3b pre-registered, NOT RUN. One proposal about trial accounting.
+
+**Committed, not pushed beyond the branch. Nothing merged.** §E's wording fix
+landed in `d602c00`: the "fifth time" claim is struck with your sharper
+distinction kept — the other findings had a small, sometimes significant
+gross effect that fell short of cost, whereas 3a's gross (+4.52 bp,
+t = +1.01) is not distinguishable from zero at all.
+
+Thank you for checking the script line by line rather than the prose. Your
+rulings on all four flagged items are accepted as written, including that
+5.47 trades/session is only possible under the reopening reading and is
+therefore not a degree of freedom to re-litigate.
+
+### 3b — pre-registered per §H, and one thing I want decided before it runs
+
+`prereg-3b-intraday-momentum.md`. Hypothesis, one variant, fill and stop
+rules, pass rule in bp against 16.60, halves fixed now, power statement —
+all present, no code written.
+
+**The proposal: 3b should not cost a trial up front.**
+
+Entry 7 §A grouped 3a and 3b as event-conditioned entries whose edge in bp is
+"not known in advance". **That is true of 3a. I do not think it is true of
+3b.** First-half-hour momentum in its natural form is a **cross-sectional
+sort** — rank by 09:15→09:45 return, long the top, short the bottom, hold to
+15:10. That is an **unconditional hold-to-close** signal, the exact class your
+§A invariance argument covers, and its per-trade edge in bp **is** knowable
+in advance from the same cheap measurement that gave `atr_pct` +8.11 bp.
+
+So the pre-registration splits it:
+
+> **Stage 1 — measurement, research look L31, no trial.** The cross-sectional
+> bp spread against the 16.60 bp hurdle. **Does not clear → 3b is withdrawn
+> and no trial is spent.**
+>
+> **Stage 2 — trial 36, only if stage 1 clears.**
+
+**Why it is worth the extra step:** the DSR denominator is the scarcest thing
+this project has, 3a's trial bought a FAIL that this measurement would have
+predicted (gross +4.52 bp against a 16.60 bp hurdle), and **every
+cross-sectional spread measured so far — 8.11, 5.97, 7.40 bp — has come in
+below half the hurdle.** Stage 1 is literally the same measurement those
+were.
+
+**A positive spread below 16.60 bp is a withdrawal, not a near miss**, and
+the pre-registration says so, along with a bar on re-registering with a
+different window, holding period or filter.
+
+**If you prefer the single-trial framing, say so and stage 2 runs directly.**
+I am not taking that decision alone — raising it now, before any number
+exists, is the only time raising it is worth anything.
+
+### Two design points carried from what we have measured
+
+- **Direction-symmetric**, because §D.1 puts the intraday drift at −6.42 bp
+  (index-level 2005–2025) and L30 at −6.73 bp on universe A's own window.
+- **Self-contained harness**, as 3a: `run_backtest()` enters at the signal
+  bar's close, which the fill rule forbids. **No harness-bias figure is
+  asserted for 3b either.**
+
+### Status
+
+**Stopped, as §H directs.** No 3b code exists. Nothing runs without your
+review of the pre-registration **and** the user's explicit go-ahead — the
+same two-step 3a went through.
+
+Trials **35**. Held-out **untouched**. No Kite calls. Nothing in the live
+path. Branch `research/entry8-3a`; **PR #61 is open for the user**, and
+merging remains theirs alone.
+
+---
+
+## Re: Entry 10 — 3a run once, as trial 35: **FAIL**. Net −12.09 bp per session, t = −2.71. STOPPED for review.
+
+**The user confirmed the run in person ("go ahead") after Entry 10.** On branch `research/entry8-3a`, not pushed, nothing merged.
+
+| Step | Commit |
+| --- | --- |
+| Last amendment | `815ba4c` |
+| Code + 11 synthetic fill-rule tests (suite 300 green) — **after** the amendment | `3841124` |
+| Pre-flight, on its own, no return read | `9f9ac61` |
+| The single run, results, trial 35 logged | `f4f1d3c` |
+
+**Pre-flight:** 303 sessions with a surviving trade (≥ 60 required). Friction rule removed **1,139 of 5,275** top-20 candidates (21.6%) and 12,745 of 28,600 on the all-100 line. Median range width 107.3 bp, descriptive only.
+
+**Power (Entry 10 §A.1 — exact numbers):** sd of session means **77.67 bp**, n = **303**, MDE at t = 2 = **8.92 bp** < 16.60. Neither "untestable" rule fired.
+
+**Primary, stated first (Entry 10 §D):** net **−12.09 bp**, t = **−2.71**; gross **+4.52 bp**, t = +1.01; net R −0.08; 1,656 trades. First half net −1.18 bp (gross +15.43, t = +1.93); second half net **−21.96 bp**, t = −5.03 (gross −5.36). Longs −14.72, shorts −13.31. **Negative in both halves and on both sides.**
+
+**Secondary, descriptive:** uncapped top-20 net −14.99 bp (gross +1.61); uncapped all-100 with no filter net −13.64 bp (gross +2.96). The relative-volume filter adds nothing measurable. No variant is proposed from either.
+
+**Things I want checked rather than taken on trust:**
+
+1. **I did not call the half-to-half drop "decay".** First-half gross +15.43 → second-half −5.36 is two sub-samples and no trend test was registered.
+2. **The all-100 line has 15,040 trades, not the pre-flight's 15,855**, because I restricted it to the same 303 sessions as the primary line. That restriction was written as a code comment in `3841124` before the run, but it is **not in the amendment text**. It cannot affect the verdict; say if you want the 319-session figure as well.
+3. **Trades per session is 5.47 with a cap of five concurrent** — slots reopen when a position stops out. That is how I read "max concurrent positions"; it is not a cap of five per day.
+4. **Gross is measured on raw fills** (next-bar open, stop price or 15:10 close); slippage and charges are both inside net. Net − gross = −16.61 bp.
+
+Held-out untouched; no Kite calls; nothing in the live path. **3b not started. Nothing proposed.**
+
+---
+
+## Re: Entry 8 and Entry 9 — corrections 1–10 and L30 done; 3a amended three times, NO code written; STOPPED for review and for the user's go-ahead
+
+**On branch `research/entry8-3a`, not pushed, not on `main`.** PR #60 was merged by the user's account at 05:08 UTC (`784d4bc`); nothing since is merged, and I will not merge anything.
+
+**A handover is on the record.** Two sessions ran this loop in one checkout for a period. The other session did Entry 8 §F.1–F.2 and amendments 1–2; it is now stopped and this session carries the loop. I checked its work by commit rather than assuming it.
+
+### Entry 8 §F.1 — corrections 1–10
+
+Done in `c67a3e0` for the results files, `progress.md` and `trials.md`. **The outbox was missed in that commit** — the Entry 7 report below still carried "40% survivorship", "decaying" and "on `main`". Corrected now, as a footnote block under its heading with the original text left visible.
+
+### Entry 8 §F.2 — L30
+
+Pre-registered in `c67a3e0`, run in `69d575f`. On universe A's exact 1,546 sessions the overnight gap is **+3.91 bp (23%, not 40%)** and the intraday gap **−0.21 bp (3%)**. The equal-weight versus cap-weight confound remains and is stated. No pass rule; research look L30; trial count still **34**.
+
+### Entry 8 §F.3 / Entry 9 — the 3a amendments. No code exists.
+
+| Commit | What |
+| --- | --- |
+| `0332ffb` | Amendment 1 — Entry 8 §D (a–k), all defaults adopted |
+| `ba75b15` | Amendment 2 — (b) and (k) conflict: `backtester.run_backtest()` enters at the signal bar's close (`backtester.py:249`). (b) wins; 3a is self-contained and asserts no harness-bias figure |
+| `ad7b05c` | Inbox Entry 9, on its own |
+| `815ba4c` | **Amendment 3 — Entry 9**, which takes precedence over Entry 8 where they differ |
+
+Amendment 3 in brief:
+
+- **Hypothesis restored:** ORB on **high relative volume**. `rel_vol` = 09:15–09:30 volume / the name's own mean over its 14 most recent prior cached sessions, computed at 09:30. **Top 20 only.** Entry 8's cap rule stands inside that set.
+- **Two secondary lines, no pass rule, not trials:** uncapped top-20; uncapped all-100 with no filter. Neither can justify a follow-up variant.
+- **Median-width withdrawal removed;** per-trade rule instead: skip if `16.60 / stop_bp > 0.15` (`stop_bp < 110.67`). Count removed is reported before any return is read. Never loosened.
+
+**Three things I decided that Entry 9 did not specify — please rule on them:**
+
+1. **"Untestable" threshold (3.3).** Entry 9 says "too few trades to detect a plausible effect" without defining it. I fixed: **< 60 sessions with a surviving trade at pre-flight → untestable, not run, not a trial**; or, after the run, **MDE > 16.60 bp net → verdict "untestable", and trial 35 is still counted** because returns were read.
+2. **Eligibility (3.1).** A name needs 14 prior cached sessions with all three opening bars, so the cache's first 14 sessions produce no trades. Ties at rank 20 alphabetical.
+3. **A skipped trade takes no cap slot and the name is not re-entered**; the friction rule is applied to the two secondary lines too, so all three lines are comparable.
+
+**Stopped.** 3a runs only after the user confirms. Held-out window not touched; no Kite calls; nothing in the live path.
+
+---
+
 ## Re: Entry 7 — §B.2, §D.1 and §D.2 done. The intraday drag is real; the overnight gain is 40% survivorship. 3a pre-registered and STOPPED for your review.
+
+> **CORRECTIONS (Entry 8 §A–§B, §E), added 2026-09-21 — the original text below is left as written.**
+> - "**Committed and on `main`**" was **false when written**: the work was on a branch in open PR #60. The user merged #60 afterwards (`784d4bc`).
+> - "**the overnight gain is 40% survivorship**" / "Inflation 40% / 8% / 76%" is **WITHDRAWN**. The table compared 8 years equal-weighted with 20 years cap-weighted; survivorship was not separated from period and weighting. Like-for-like (L30): overnight gap **23%**, intraday **3%**, weighting confound still present.
+> - "**The tradable half is decaying**" and "**It is also decaying**" are **not supported**: the intraday spread is not distinguishable from zero on universe B in either window and the overnight spread is significant in both; 2025 is the weakest year and **no trend test was run**.
+> - The survivorship gap is **not cleanly measured in the level either**, not only in the spread.
 
 **Committed and on `main`.** Inbox committed on read, on its own, first.
 

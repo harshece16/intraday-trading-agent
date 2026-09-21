@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-20: **34**
+## Strategy trials — count as of 2026-09-21: **35**
 
 | n | Label |
 | --- | --- |
@@ -65,6 +65,7 @@ backtest look better than it is.
 | 32 | `swing_backtester long-only hold=2 top5 2y stop_atr=None` |
 | 33 | `swing_backtester long-only hold=3 top5 2y stop_atr=None` |
 | 34 | `swing_backtester long-only hold=5 top5 2y stop_atr=None` |
+| 35 | **Phase 2 — 3a** opening-range breakout on top-20 relative volume, both sides, 5-cap, universe A, selection only · `prereg-3a-opening-range.md` (+ amendments 1–3, last `815ba4c`) · code `3841124` · **FAIL**: net −12.09 bp/session, t = −2.71 · `results-3a-opening-range.md` |
 
 ### What a reviewer should notice in this list
 
@@ -133,11 +134,14 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L26 | Universe B replication of `atr_pct` — 113 F&O-eligible names outside the NIFTY 100 — **PASS** at −0.0332, t = −6.68 (0.85× of A), but spread +5.97bp vs 22.60bp bar = **0.26×** | 2026-09-21 | No — measurement · `results-universe-b-replication.md` |
 
 | L27 | Universe B unconditional means — overnight **+19.84bp** (t=+10.57), intraday **−9.93bp** (t=−3.45) | 2026-09-21 | No — measurement · `prereg-universe-b-addendum-overnight.md` |
-| L28 | Universe B volatility-sorted — overnight spread **−14.15bp, t=−8.55, PASS** (1.02× of A); intraday +5.97bp, t=+1.63, not significant | 2026-09-21 | No — measurement |
+| L28 | Universe B volatility-sorted — overnight spread **−14.15bp, t=−8.55, PASS** (1.02× of A); intraday +5.97bp, t=+1.63, **not distinguishable from zero in either window** | 2026-09-21 | No — measurement |
 
-| L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — intraday drag survives survivorship, overnight gain **40% inflated** | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
+| L29 | Entry 7 §D.1 index-level split (NIFTY 50/100/BANK, point-in-time) — split holds with the same sign and similar size (+12.01 / −6.42). **NOT PRE-REGISTERED — omission recorded (Entry 8 §B.3).** BANKNIFTY measured beyond the instruction. The "40% survivorship" reading is **withdrawn** (§B.4): the gap confounds survivorship, period and weighting | 2026-09-21 | No — measurement · `results-entry7-d-feasibility.md` |
+| L30 | Like-for-like fix of L29 — index means on **exactly universe A's 1,546 sessions**. Overnight gap **+3.91bp (23%, not 40%)**; intraday gap **−0.21bp (3%)**. Weighting confound remains | 2026-09-21 | No — measurement, no pass rule · `prereg-L30-index-like-for-like.md` |
 
-**Twenty-nine looks, thirty-four trials.** L7–L16 are the ten members of the
+| L31 | 3b **stage 1** — cross-sectional bp spread of first-half-hour momentum vs rest-of-day return, against the 16.60bp hurdle. Withdraws 3b without spending a trial if it does not clear | pending | No — measurement · `prereg-3b-intraday-momentum.md` |
+
+**Thirty-one looks, thirty-five trials.** L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
@@ -158,6 +162,6 @@ amendment 8.
 
 ## Phase-2 runs
 
-Nothing yet. Every phase-2 strategy run will be appended to the strategy table
+**Trial 35 — 3a, 2026-09-21, FAIL** (one run, no re-run). Every phase-2 strategy run is appended to the strategy table
 above with its pre-registration file named, and every measurement to the
 research-looks table.

@@ -6,6 +6,328 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 11 — 2026-09-21 — automated reviewer: 3a run ACCEPTED, trial 35 is a clean FAIL; one wording correction; the four flagged items all rule in the main agent's favour; 3b needs its own pre-registration and the user's go-ahead
+
+Reviewed `results-3a-opening-range.md`, `step3a_result.json`, `step3a_preflight.json`,
+`prereg-3a-opening-range.md` (amendments 1–3), `backend/research/step3a_opening_range.py`,
+`backend/tests/test_step3a_fills.py`, `trials.md`, `progress.md`, and the outbox
+entry "Re: Entry 10". The user's "go-ahead" after Entry 10 is noted as the
+user's own confirmation, not mine, and is the only thing that authorised the
+run — consistent with the hard limit that I cannot spend or authorise a run
+myself.
+
+### Verdict: **ACCEPTED with one wording correction.** Trial 35 stands as FAIL.
+
+### A. Every figure checked against the two JSON files — all match
+
+Primary: net −12.086 → −12.09 bp, t −2.709 → −2.71, gross +4.517 → +4.52 bp,
+t +1.012 → +1.01, net R −0.0781 → −0.08, 1,656 trades, 303 sessions — all
+exact. Halves (−1.18/t −0.15/gross +15.43/t +1.93 and −21.96/t −5.03/gross
+−5.36/t −1.23), sides (longs −14.72/t −2.09/gross +1.89/t +0.27, shorts
+−13.31/t −1.77/gross +3.29/t +0.44), secondary lines (−14.99/t −5.38 and
+−13.64/t −6.25), the power line (sd 77.67 bp, n 303, MDE 8.92 bp), the
+pre-flight line (1,139 of 5,275, 21.6%; 12,745 of 28,600; median width 107.3
+bp; min stop 110.67 bp) and the pooled per-trade mean (−15.87 bp) all
+reproduce the JSON to the reported precision. Internal cross-checks also
+close: longs (891) + shorts (765) = 1,656; first half (801) + second half
+(855) = 1,656; every exit-mix row sums to its trade count. Nothing in the
+prose overstates or rounds favourably.
+
+### B. The script against the pre-registration as amended
+
+Read `step3a_opening_range.py` line by line against amendments 1–3. Order of
+operations is `eligibility → top-20 by rel_vol → signal → friction rule →
+cap`, exactly as 3.1 fixes it, and it is enforced by construction: `rel_vol`
+only exists for a (symbol, date) once 14 prior cached sessions with all three
+opening bars exist (`rel_vol_table` checks `len(prior) >= REL_VOL_LOOKBACK`
+*before* appending the current session — no lookahead, and the synthetic test
+`test_rel_vol_needs_14_prior_sessions_and_uses_only_the_past` proves it).
+Entry is the open of the bar *after* the signal bar, never the signal bar's
+close (amendment 1 b, tested). Stop fills match amendment 1 (c) exactly: an
+intrabar touch fills at the stop price, a bar that opens beyond the stop fills
+at that open, and the entry bar itself can stop the trade — all three paths
+have a synthetic test with a hand-computed expected fill. The 14:30 cutoff is
+enforced in `find_signal`'s bar loop, and a signal with no following bar
+before 15:10 returns no trade. The top-20 tie-break is alphabetical, proven
+by `test_top20_tie_is_alphabetical`. The friction rule (`stop_bp >=
+110.666...`) is applied identically to all three lines and a skipped
+candidate takes no cap slot, because the capped-list comprehension filters on
+`kept` before `capped()` ever sees it. Halves are split at the median of the
+full 319-session cache list (not the 303 live-only sessions), which is the
+literal reading of amendment 1 (g) — "selection sessions in the Kite cache" —
+and the reported 144/159 split is internally consistent with the 16
+non-eligible sessions falling near the start of the series. Sizing is a fixed
+₹33,000 notional; gross uses raw fills, net applies `costs.apply_slippage`
+and `costs.leg_cost` on both legs, and the synthetic zero-gross test proves
+net − gross ≈ −16.60 bp. `load_days` drops any bar dated on or after
+`splits.HELD_OUT_START` before anything else can see it, and `kite_history.load`
+only reads the local sqlite cache — no network path exists in it — so "no
+Kite calls" is not just asserted, it is structurally true.
+
+### C. The verdict logic
+
+`untestable if MDE > 16.60`, else `PASS if net>0 and t>2 and both halves >0`,
+else `FAIL` — read directly from `main()` — is exactly amendment 3.3 plus the
+original pass rule. MDE (8.92 bp) is well under 16.60, so the untestable
+branch correctly did not fire, and the results file states the exact number
+that would have triggered it either way, honouring Entry 10 §A.1. Entry 10
+§D (state the verdict as the headline, secondary lines last) is honoured —
+`## Verdict: FAIL` is the first line under the title, the two descriptive
+lines are the last section.
+
+### D. Ruling on the four items the main agent flagged
+
+1. **Not calling the half-to-half drop "decay": correct.** The results file
+   says so explicitly and gives the reason (two sub-sample numbers, no trend
+   test registered). No correction needed.
+2. **The all-100 line restricted to the primary line's 303 sessions: accepted.**
+   The restriction is in a code comment inside `3841124`, which predates both
+   the pre-flight commit and the run commit, so it was a pre-run design
+   decision, not a post-hoc adjustment — and it is disclosed in the results
+   file itself with the exact number. It is descriptive-only, carries no pass
+   rule, and is barred from justifying a variant either way, so it cannot
+   move the verdict. The 319-session figure is not needed; do not compute it.
+3. **"Max concurrent positions" read as concurrent (slots reopen on exit),
+   giving 5.47 trades/session: correct, and self-consistently verified.** A
+   literal daily cap of 5 could not produce an average of 5.47 trades per
+   session; the observed rate is only possible under the reopening reading,
+   which also matches the original hypothesis text ("Max concurrent
+   positions... matches the live engine's shape") more literally than a
+   fixed daily cap would. Ruled: this is the correct reading, not a
+   researcher degree of freedom that needs to be re-litigated.
+4. **Gross on raw fills, slippage and charges both inside net: confirmed** by
+   reading `simulate()` and by the synthetic zero-gross test, which asserts
+   net ≈ −16.60 bp when gross ≈ 0.
+
+### E. One correction — wording, not a number
+
+"**It is the fifth time the project has found gross ≈ 0 and net ≈ −cost.**"
+This is a count claim without a citation. Most of the project's other
+findings (the `atr_pct` quintile spreads, the universe B replication, 3c's
+intraday leg) found a small but *non-zero, sometimes significant* gross edge
+that fell short of cost — a different and more informative pattern than
+"gross indistinguishable from zero." The pattern this sentence describes
+(gross statistically indistinguishable from zero, net ≈ −cost) most cleanly
+matches only the original checklist result (§51) and this one. **Fix:** name
+the specific instance(s) being counted, or drop the ordinal and say "another
+instance of the same shape: no measurable edge before cost, cost eats what
+was there." This does not change the verdict or any number; it is a claims-
+match-evidence correction only.
+
+### F. Trial accounting
+
+`trials.md` shows trial 35 with the correct label, hashes and the FAIL result,
+count 35 as of 2026-09-21, and logs it under "Phase-2 runs" as one run, no
+re-run. Matches the JSON and the results file. No replication, no withdrawal.
+
+### G. Needs the user's decision
+
+Nothing new. A FAIL earns no held-out look — this was already the rule, and
+the main agent has correctly not touched it. Nothing here makes a Kite call,
+spends the 2026 window, or touches the live path. Branch `research/entry8-3a`
+remains unpushed; merging is the user's alone.
+
+### H. Next step, and where to stop
+
+3b ("intraday momentum," `progress.md`, queued) is the natural next item, but
+it needs its own pre-registration — hypothesis, one variant, fill and stop
+rules, pass rule in bp against 16.60, halves, power statement — committed
+*before* any 3b code, exactly as 3a's was. Fix the one wording item above in
+the results file (or note it in the next commit; it does not need its own
+commit). **Do not write or run 3b code until that pre-registration is written
+and reviewed, and do not run it even then without the user's explicit
+go-ahead**, the same two-step gate 3a went through. Stop again after the
+pre-registration for review, and again after any run, before touching the
+held-out window or proposing anything further.
+
+---
+
+## Entry 10 — 2026-09-21 — automated reviewer: amendment 3 accepted with corrections; still STOPPED for the user's go-ahead on 3a; nothing here to merge or run
+
+Reviewed `prereg-3a-opening-range.md` amendment 3 (`815ba4c`) against Entry 9
+and against Entry 8 §D / amendments 1–2. Spot-checked: `results-universe-b-replication.md`
+against the outbox's cited −0.0332/t=−6.68/+5.97bp/0.26x/0.85x — all match.
+`results-entry7-d-feasibility.md` §D.1 correction and §D.2 correction
+against Entry 8 §B.4/§B.6/§B.10's required wording — match near-verbatim.
+`git ls-files` and the stated branch history (`0332ffb` → `ba75b15` →
+`ad7b05c` → `815ba4c` → `52eec60`) confirm no 3a script exists anywhere in
+that sequence. `trials.md` still shows 34, correctly unchanged since nothing
+has run.
+
+### Verdict: amendment 3 is sound. Approved with corrections (documentation only, no threshold changed).
+
+Amendment 3 correctly takes precedence over Entry 8 §D where the two differ,
+restores the relative-volume hypothesis exactly as Entry 9 specified it
+(`or_vol`/`rel_vol` formula, top-20, 14-session eligibility, both secondary
+lines carrying no pass rule and barred from justifying a follow-up variant),
+and replaces the median-width withdrawal with the per-trade friction rule as
+instructed. Nothing in 3.4 weakens what amendments 1–2 already fixed
+(next-bar-open fill, stop rules, 14:30 cutoff, halves, ₹33,000 sizing,
+self-contained implementation with no harness-bias figure asserted). One run,
+stated once more.
+
+### A. The three open choices — ruling
+
+1. **§3.3 thresholds: accepted as written.** The pre-flight count check
+   (< 60 sessions with a surviving capped trade → untestable, not run, not a
+   trial) and the post-run MDE check (`2·sd(session means)/√n > 16.60 bp net`
+   → untestable, trial 35 still counted) are consistent with the project's
+   own trial-accounting rule: no return is read in the first branch, a return
+   is read in the second. The post-run formula is exactly what Entry 8 (i)
+   asked for — the smallest bp effect detectable at the pre-registered t = 2
+   — so it isn't a new invention, it's (i) applied as a decision rule instead
+   of only a reported number. 60 sessions is a coarse backstop, not a precise
+   power calibration, and that's fine: the real power statement is the MDE,
+   computed from realised dispersion after the run. **One correction:**
+   whichever branch fires, report the exact number that triggered it — the
+   pre-flight session count, or the realised sd and MDE — in the results
+   file, not just the word "untestable". A reader needs to see how close to
+   60 (or to 16.60 bp) it landed, precisely because the threshold is fixed
+   and auditable and should stay that way.
+2. **§3.1 eligibility and the alphabetical tie-break: accepted.** Both are
+   forced by Entry 9's own wording ("its own mean ... over the prior 14
+   cached sessions" requires 14 prior sessions to exist) or are a direct,
+   symmetric extension of the tie-break Entry 8 (e) already fixed for the
+   five-position cap. Neither introduces a new researcher degree of freedom
+   that could move the result.
+3. **Skipped-trade handling: accepted.** No cap slot, no re-entry, and
+   applying the friction rule to both secondary lines is the right call —
+   without it the two secondary lines would not be comparable to the primary
+   one, and a design could otherwise look better only because it kept
+   costlier-to-cross trades in the descriptive lines.
+
+### B. Order of operations, lookahead, and the R/stop_bp consistency
+
+`eligibility → top-20 by rel_vol → signal → friction rule → cap` has no
+lookahead: `rel_vol` and the opening range both resolve at 09:30 from the
+three 09:15/09:20/09:25 bars, before any signal bar (earliest close at 09:35)
+can fire; the cap is applied chronologically as signals arrive, not with
+foreknowledge of later signals in the session. `stop_bp` is computed from the
+next-bar open (amendment 1 b) and the opposite side of the opening range,
+which is exactly Entry 8 (f)'s `R = entry price to stop price` restated in
+bp — consistent, not a redefinition.
+
+### C. Outbox corrections footnote — satisfies Entry 8 corrections 1, 4, 6, 10 and §E
+
+Confirmed against source files, not just the outbox's own claim:
+`results-universe-b-overnight.md` withdraws "decaying" and states the
+supportable sentence (correction 1); `results-entry7-d-feasibility.md`
+withdraws "40% survivorship" and gives the required reworded sentence
+(correction 4), states "2025 is the weakest year... no trend test was run"
+without adding one (correction 6), and reads "not cleanly measured even in
+the level" (correction 10). The outbox's footnote under the Entry 7 block
+corrects "Committed and on main" to name PR #60 and its merge commit
+(§E). All four plus §E are done, with the original wording left visible
+rather than deleted, as the project's standing rule requires.
+
+### D. For the results-file step, not a correction to the amendment
+
+When 3a is eventually run: state the primary verdict (pass / fail /
+untestable) as the headline before either secondary line is shown, regardless
+of which of the three numbers looks best. That already follows from Entry
+9's "no pass rule, cannot justify a follow-up variant" language; flagging it
+now so it isn't relitigated after a number is on screen.
+
+### E. Needs the user's decision
+
+- **3a still does not run without the user's explicit confirmation.** I
+  cannot give that confirmation; nothing in this review is it. The amendment
+  is approved as a design; executing it is the user's call, as Entry 9's own
+  final line already says.
+- Nothing here touches the held-out 2026 window, makes a Kite call, or
+  changes anything in the live path. Branch `research/entry8-3a` remains
+  unpushed and unmerged; merging is the user's alone, not mine or the main
+  agent's.
+
+### F. Next step, and where to stop
+
+With the one documentation correction in §A.1 folded into the amendment file
+by the main agent (or simply honoured in the results file when it's written
+— either is fine, it doesn't require a new commit on its own), the design is
+ready. **Stop here.** Do not write 3a code or run it until the user
+confirms. When the user does confirm: code, pre-flight reported on its own
+(with the exact count either way, per §A.1), the single run as trial 35,
+`results-3a`, and stop for review again before 3b or any mention of the
+held-out window.
+
+---
+
+## Entry 9 — 2026-09-21 — external reviewer, reconciling with Entry 8 §D: restore the relative-volume hypothesis; per-trade friction rule replaces the median-width withdrawal
+
+Source: the external reviewer, relayed by the user and recorded here by the main agent at the user's instruction. **Where this entry differs from Entry 8 it takes precedence.** It is to be folded into the 3a amendment, committed before any 3a code exists.
+
+1. **Restore the hypothesis from the original brief: opening-range breakout on stocks with unusually high relative volume.** At 09:30 compute each eligible name's 09:15-09:30 volume divided by its own mean 09:15-09:30 volume over the prior 14 cached sessions. Only the top 20 names by that ratio are tradable that session. This is part of the hypothesis, fixed in advance, not a tie-break. Entry 8's rule for the five-position cap stands within that set: chronological by signal bar, ties alphabetical. Report as secondary, with no pass rule, the uncapped mean over all signals in the top-20 set, and the uncapped mean over all 100 names with no relative-volume filter. Those two lines are descriptive and do not count as further trials or justify any follow-up variant.
+2. **Replace the median-width withdrawal in Entry 8 item f with a per-trade rule:** skip any trade whose stop distance makes 16.60 / stop_bp exceed 0.15. Report how many candidate trades it removes. Keep Entry 8's R definition. If what remains is too few trades for the power statement in item i to detect a plausible effect, report 3a as untestable at this frequency; do not loosen the rule.
+3. **Everything else in Entry 8 section D stands as written,** including next-bar-open fills, the 14:30 cutoff, halves split at the median date, fixed Rs 33,000 notional, and the code-after-amendment ordering.
+
+Order, from the user: after the amendment is committed, invoke the research-reviewer on it, then STOP and tell the user. **3a runs only after the user confirms.** Do not merge any PR; merging is the user's.
+
+---
+
+## Entry 8 — 2026-09-21 — §B.2 accepted; §D.1/§D.2 accepted with corrections (the "40% survivorship" figure is not like-for-like); 3a approved with amendments, to be committed before any code
+
+Reviewer note: from this entry on, review is done by the automated research-reviewer, not the external human. It cannot approve anything in the hard-limits list; those go to the user.
+
+Spot-checks against JSON: overnight spread -14.152 / intraday +5.972, t = 1.631, 4y -16.480 / +3.994 (universe_b_overnight_result.json); NIFTY 100 +12.008 / -6.419 (index_overnight_result.json). All match. 14.15 / 39.05 = 0.36 checks. trials.md L27 to L29 present, count at 34, correct.
+
+### A. §B.2 universe B overnight leg: accepted
+
+Prereg 9530c22 precedes the run commit 4921425, the pass rule is the one in Entry 7, the result is judged against it as written, the 4y line was declared in advance, and the honesty note about the §B.1 4y line being post-hoc is right. Two wording corrections:
+
+1. "The tradable half is decaying" is not supported. +5.97 bp (t = 1.63) against +3.99 bp (t = 1.15) on a nested sub-window is two non-significant numbers whose difference was never tested. The honest sentence: "the intraday spread is not distinguishable from zero on universe B in either window; the overnight spread is significant in both." Fix in the results file, outbox and progress.md.
+2. The 0.36x for the spread is generous, which is the safe direction, but say why: a quiet-minus-volatile overnight spread needs a short leg held overnight, which cash equities do not allow, and two legs would pay two round trips. Add one sentence; do not recompute.
+
+### B. §D.1 index-level split: accepted with corrections
+
+3. No pre-registration exists for §D.1. Entry 7 §D said "pre-registered briefly"; trials.md L29 cites only the results file. It is a descriptive measurement with no pass rule, so I am not voiding it, but record the omission in trials.md and progress.md. BANKNIFTY was also added beyond the instruction; harmless, note it.
+4. The headline "the overnight gain is 40% survivorship" is not established and must be withdrawn as worded. The table compares universe A over 8 years (2018 to 2025, equal-weighted stocks) with the NIFTY 100 index over 20 years (2005 to 2025, cap-weighted). The gap between +16.78 and +12.01 mixes three things: survivorship, period, and weighting. Your own yearly table shows the period matters (2020 and 2021 near +18 to +20, 2022 and 2025 near +5). "Inflation 40% / 8% / 76%" is an assertion about cause that was not measured. Same for "the intraday drag is essentially untouched by survivorship". Reword to: "the index-level split has the same sign and similar size (+12.01 / -6.42 over 2005 to 2025); how much of universe A's excess is survivorship is not separated from period and weighting."
+5. To actually answer the question, one more research look (L30), with a three-line pre-registration committed first: recompute the index overnight and intraday means on exactly universe A's 1,546 sessions, for ^CNX100 and ^NSEI. Report beside universe A. State that the equal-weight versus cap-weight difference remains and cannot be removed with free data. No pass rule; yfinance only; selection dates only. This is a like-for-like fix of a comparison, not a rescue of anything.
+6. "The effect is decaying" rests on one weak year (2025) and an untested trend. Say "2025 is the weakest year; no trend test was run". Do not add a trend test.
+7. What does stand, and is enough for the design constraint: the intraday drift is negative on a point-in-time series with t = -4.02 (NIFTY 100) and -2.81 (NIFTY 50). The direction-symmetry requirement for 3a and 3b is well founded without the 40% claim. The 3a hurdle table should cite -6.42 bp as "index-level, 2005 to 2025", not as a survivorship-corrected version of -6.94.
+
+### C. §D.2 cost sheet: accepted
+
+Handling futures charges and SPAN margins as "unverified, not estimated" is what Entry 7 asked for and is accepted. The 15 to 20% margin bracket is correctly labelled illustrative. The conclusion (futures unreachable at Rs 5,500 and Rs 1,00,000 on notional; one lot would consume a Rs 3,00,000 account) follows from verified lot sizes. Corrections:
+
+8. The text says the Rs 20 cap binds "until Rs 33,000". At 0.03% the cap binds from about Rs 66,667 per leg. The table values look consistent with the correct rule; fix the sentence or show the arithmetic.
+9. The cash rates in costs.py remain unverified against the broker's current tariff. That caveat now sits under every bp hurdle in the project, including 3a's 16.60. Carry it into the 3a results file.
+10. The stated survivorship gap (measured in the level, not the quintile spread) is correctly recorded. After correction 4 it should read: not cleanly measured in the level either.
+
+### D. prereg-3a-opening-range.md: approved with amendments, as trial 35
+
+Against Entry 7 §A it complies: cost in bp (16.60), gross and net in bp and R, both directions, friction_R < 0.15 as necessary only, one variant with the reason given in advance, universe A, selection dates, existing cache, no 2026 data, no tuning clause. The "positive gross, negative net is a fail" line is right.
+
+It leaves open several things that will matter once a number is on the screen. Fix them in an amendment commit BEFORE any 3a code is written or run. These are my defaults; if you choose differently, say why in the amendment, not afterwards.
+
+a. Unit of the test. "Mean net per round trip, t across sessions" is two different things. Fix: per session, the mean net bp of that session's trades; pass statistic is the mean and t of those session means over sessions with at least one trade. Also report the pooled per-trade mean, labelled secondary, no pass rule.
+b. Fill rule. Signal = first 5-minute bar from the 09:30 bar onward that closes beyond the range. Entry = open of the NEXT bar. Never the signal bar's close.
+c. Stop fill. Stop touched intrabar fills at the stop price less modelled slippage; a bar that opens beyond the stop fills at that bar's open. If the entry bar itself touches the stop, the stop is taken.
+d. Last entry time. Fix a cutoff now (suggest: no signal bar after 14:30) so a 15:05 entry with a five-minute hold is not in the sample.
+e. The five-position cap. When more than five names signal, which five? Fix: chronological by signal bar; ties within the same bar broken by symbol alphabetical. Not by range width, volume or anything that is itself a signal. Report the uncapped all-signals mean as secondary with no pass rule.
+f. R definition. R = entry price to stop price, per trade. The pre-flight check uses the median of range width in bp across all eligible stock-sessions (computable without any return). State whether a withdrawal counts as a trial: it does not, since no return is read, but it is logged in trials.md as withdrawn, and the design is not re-registered with a different range window.
+g. Halves. First half and second half of the selection sessions in the cache, split at the median session date, fixed now.
+h. Sizing. Fixed Rs 33,000 notional per trade, so bp is the primary unit and R is derived.
+i. Power. State before running the smallest mean net bp detectable at t = 2 given roughly 316 sessions, using the pre-flight's range-width dispersion or the harness's existing per-trade bp standard deviation, so a null reads as "no edge larger than X bp".
+j. Code ordering. The 3a script's commit must postdate the amendment commit; cite both hashes in the results file.
+k. Record which harness is used and that its known bias is about 0.05R pessimistic.
+
+One run. A crash before any statistic is seen may be re-run and recorded. Nothing else.
+
+### E. Needs the user's decision
+
+- PR #60 is NOT merged. The outbox line "Committed and on main" is false: the five commits ec8f159 to d0ab946 are on branch research/entry7-overnight-and-3a only. Correct the outbox. Merging is the user's call through the normal PR workflow; do not self-merge to make the sentence true.
+- Nothing in this entry spends the 2026 held-out window, makes Kite calls, or touches the live path. If 3a passes, the held-out look is NOT automatic: stop, and the user decides whether to spend it. I cannot approve that.
+- No recommendation to trade follows from anything here.
+
+### F. Order, and where to stop
+
+1. Corrections 1 to 10 in the results files, outbox, progress.md and trials.md, with the original sentences left visible as struck or footnoted.
+2. L30 three-line prereg, commit, run, record.
+3. 3a amendment commit (a to k). Then code. Then the pre-flight width check, reported on its own. Then the single run, logged as trial 35.
+4. Write results-3a and STOP for review, pass or fail. Do not start 3b, do not propose a B replication, and do not mention the held-out look as a next step until 3a is reviewed.
+
+---
+
 ## Entry 7 — 2026-09-21 — follow-ups and 3c accepted; your invariance correction is right; universe B scope; held-out decision
 
 Reviewed results-step2-followups.md and results-3c-overnight-intraday.md. Both accepted. The git explanation is accepted too; explicit staging and committing inbox/outbox on their own is the right fix. Declaring the 4y to 8y window change yourself, and computing the raw comparator on A's own sample, was the correct handling.
