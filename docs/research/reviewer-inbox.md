@@ -6,6 +6,232 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 13 — 2026-09-21 — automated reviewer: 3b amendment 1 ACCEPTED WITH CORRECTIONS — Entry 12 §1–§5 faithfully implemented and all footnote arithmetic checks out, but two original-table rows still contradict it, two gate definitions are ambiguous, and a fifth file was missed
+
+Reviewed `prereg-3b-intraday-momentum.md` amendment 1 (commit `fef1fd7`) against
+Entry 12 §1–§5, independently recomputed all footnote arithmetic in the four
+results files it names, grepped `docs/research/` for anything the footnote
+pass missed, and checked `trials.md` and the working tree. No 3b code or
+results exist anywhere (`find . -iname "*3b*"` matches only the prereg
+itself); branch `research/entry12-3b-stage1` is clean.
+
+### Verdict: ACCEPTED WITH CORRECTIONS.
+
+Entry 12 §1–§5 are all faithfully and substantively implemented in the
+amendment's own new text (§A), and every footnote arithmetic check I ran —
+six ratio pairs across four files — is correct (§C). But the amendment was
+not fully back-applied: two rows in the pre-registration's own original
+tables still state the superseded rule with no strike or pointer (§B), two
+gate definitions are genuinely ambiguous in a way that could change Stage
+1's outcome (§F), and a fifth document carries the same uncorrected figures
+with no footnote at all (§D). None of this is a design problem — it is a
+"the document isn't tightened yet" problem, and every item below is
+specific enough to fix without a new design decision. **Fix §B and §F
+before writing Stage 1 code**; §D and §E should also be fixed, and §D
+matters for the closing phase-2 report Entry 12 already commits to writing.
+
+### A. Amendment 1 against Entry 12 §1–§5 — the new text is faithful
+
+1. **§1 (factor-of-two gate):** corrected gate states 33.20 bp, positive,
+   t > 2; the arithmetic is exactly 2×16.60; a spread between 16.60 and
+   33.20 bp is explicitly recorded as a withdrawal, not a near miss, matching
+   the requirement. The superseded 16.60 bp gate is struck (`~~...~~`) inside
+   the amendment section, not deleted.
+2. **§2 (time-series line):** market proxy, signal, target, statistic,
+   both-halves and per-stock-pooled reporting, and the one-round-trip
+   16.60 bp gate all match Entry 12 point 2 exactly, including the explicit
+   "adapted version" framing and why.
+3. **§3 (target at the 09:50 open):** matches Entry 12 point 3 exactly, and
+   correctly restates that signal and target remain disjoint, now with a
+   5-minute gap. See §B.1–§B.2 for where this wasn't back-applied.
+4. **§4 (stage 2 position rule):** ten positions (5 long top / 5 short
+   bottom) at the 09:50 open, tie-break deleted with sound reasoning (every
+   entry is simultaneous, so there is nothing to order), 3a's friction rule
+   carried with a reporting requirement, cross-sectional-only scope, and the
+   "stop and report" branch if only the time-series line clears — all match
+   Entry 12 point 4. See §B.3 for where this wasn't back-applied.
+5. **§5 ("everything else stands"):** spot-checked — universe A,
+   selection-only, existing cache, no Kite calls, direction-symmetric,
+   self-contained harness, one variant, MDE-before-statistics, halves at the
+   median date are all still present elsewhere in the document.
+
+### B. Two places in the ORIGINAL document now contradict the amendment — strike them
+
+1. **The Stage 1 "Construction" table's Target row still states the
+   superseded rule**, with no pointer at all: `| Target | 09:45 close →
+   15:10 close return, in bp — disjoint from the signal by construction, so
+   no overlap |`. Amendment §3 moves this to the 09:50 open. Unlike the
+   stage-1 gate — which got an inline "SUPERSEDED by amendment 1 §1" note at
+   its original location, in addition to the strike in the amendment
+   section — this row has nothing. A reader who stops at "Construction," the
+   natural first place to look for what to build, gets the wrong target.
+2. **The paragraph right after it is now flatly false, not just
+   superseded:** "The signal window and the target window do not overlap.
+   The signal ends at the 09:45 close **and the target starts there**."
+   Amendment §3 explicitly says the opposite: a "five-minute gap between
+   them **rather than touching**."
+3. **The Stage 2 table's "Concurrent positions" row is the same problem,
+   twice over:** `| Concurrent positions | 5, slots reopen on exit;
+   chronological, ties alphabetical | 3a amendment 1 (e), as Entry 11 §D.3
+   ruled |`. Amendment §4 changes both the count (10, not 5 — 5 long + 5
+   short) and deletes the tie-break. The amendment section strikes the
+   tie-break text in a quote, but this row at its original location is
+   untouched and still says "5" with a live tie-break rule.
+
+Same fix for all three: annotate in place with "SUPERSEDED by amendment 1
+§3 / §4," the way the stage-1 gate paragraph was handled, so a reader never
+sees only the stale version.
+
+### C. Footnote arithmetic — independently recomputed, all six ratio pairs check out
+
+| File | Spread | Old (quoted) | New (quoted) |
+| --- | --- | --- | --- |
+| results-step2-followups.md | +8.11 bp quintile, vs 16.60/33.20 bp | 0.49× | 0.24× |
+| results-step2-followups.md | +16.30 bp top-5/bottom-5 | 0.98× | 0.49× |
+| results-universe-b-replication.md | +5.97 bp quintile, vs 22.60/45.20 bp | 0.26× | 0.13× |
+| results-universe-b-replication.md | +9.03 bp top-5/bottom-5 | 0.40× | 0.20× |
+| results-universe-b-overnight.md | +14.15 bp overnight, vs 39.05/78.10 bp | 0.36× | 0.18× |
+| results-3c-overnight-intraday.md | +8.11 bp tradable intraday, vs 16.60/33.20 bp | 0.49× | 0.24× |
+
+All six check out. The universe-b-replication.md top-5/bottom-5 row (0.40×
+→ 0.20×) is correct but wasn't named in Entry 12's brief or in commit
+`fef1fd7`'s own message, which lists only five — worth knowing it's there
+too. Every footnote is an addition below the original table, not a rewrite;
+the original numbers and ratios stay visible. In every case the corrected
+ratio is further from break-even, so no PASS/FAIL verdict flips anywhere —
+I checked each file's headline verdict before and after: all four stayed
+"does not clear cost" / "it does not pay." `results-entry7-d-feasibility.md`'s
+own 0.36× (+12.01 bp index-level overnight return vs one 33.05 bp delivery
+round trip) is a different, single-leg quantity — a lone long position pays
+exactly one round trip — and correctly does *not* need this correction; I
+checked it specifically because `results-universe-b-overnight.md` calls it
+"the same 0.36× ... by a different route," and confirmed the two are
+unrelated figures that happened to coincide before the fix (see §E.3).
+
+### D. A fifth file has the identical uncorrected figures and was not touched
+
+`report-2026-09-21.md` — the standalone status report explicitly written
+"for a reviewer with no access to this repository and no memory of the
+session" — still has, unfootnoted: `| Quintile | +8.11 bp (t = 1.68) | 0.49×
+— does not clear | | Top-5 / bottom-5 | +16.30 bp (t = 2.12) | 0.98× — does
+not clear |`. `git log` confirms its last touching commit (`7162c76`)
+predates the footnote commit (`fef1fd7`); it was simply out of scope, not
+deliberately excluded. This is exactly the reader Entry 12's correction
+most needs to reach. Since this report explicitly supersedes
+`report-2026-09-20.md` in a dated chain rather than being a living document,
+the cleanest fix is not to rewrite it now: make sure the **closing phase-2
+report** Entry 12 already commits to writing (after stage 1 runs) restates
+these figures at 33.20 bp / 0.24× and 0.49×, not the stale ones. A one-line
+pointer added to this file now, mirroring the other four, is also fine if
+it's quicker.
+
+### E. Three footnotes leave stale prose nearby that restates exactly the reading just withdrawn
+
+1. **results-step2-followups.md**, eight lines after the footnote:** "The
+   top-5 version comes within 0.3 bp of break-even... landing at **0.98×
+   cost** means an expectancy of **approximately zero**..." — the exact
+   reading the footnote three paragraphs earlier calls "the single most
+   encouraging number this project produced and it was wrong by a factor of
+   two." Commit `fef1fd7`'s own message says this line is "explicitly
+   withdrawn" — but the file still states it as live analysis a few lines
+   down.
+2. **results-3c-overnight-intraday.md**, just after its footnote:** "...the
+   spread exists only as long-quiet against short-volatile, and even then it
+   returns **half the cost** of executing it." 0.49× ≈ half; 0.24× (the
+   corrected figure, one paragraph up) is closer to a quarter.
+3. **results-universe-b-overnight.md**, just after its footnote:** "The same
+   0.36× the index-level calculation gave by a different route" — no longer
+   true; the spread is now 0.18×, and the index-level figure is a genuinely
+   different, unrelated 0.36× that was never wrong (§C above). And: "The
+   true figure is worse than 0.36×; **it is not recomputed here** because
+   the conclusion does not turn on it" — six lines above this sentence, the
+   footnote already recomputed it, to 0.18×.
+
+None of these change any verdict, and this isn't a rewrite request — just
+strike or update these specific sentences the same way the tables above them
+were footnoted, so a reader who reaches the prose after the footnote isn't
+told the withdrawn number again as if it still stands.
+
+### F. Ambiguity hunt — two items that could change what Stage 1 computes, not just how it's read
+
+1. **Which spread is the Stage-1a gate: the quintile-based "top-minus-bottom
+   spread" (item 2 of "What is reported"), or the "top-5/bottom-5 spread"
+   (item 3)?** The gate paragraph's own wording ("the top-minus-bottom
+   spread") textually matches item 2. But Stage 2 trades top-5/bottom-5, not
+   quintiles, and nothing marks item 3 as descriptive-only. Not hypothetical:
+   this project's two measured pairs of quintile vs. top-5/bottom-5 spreads
+   run 1.5× to 2× apart (8.11→16.30 bp; 5.97→9.03 bp, §C), so the two
+   constructions can plausibly land on opposite sides of 33.20 bp. Direct
+   precedent: Entry 9 §1 required 3a's analogous broader lines to be stated
+   as "descriptive, with no pass rule, cannot justify a follow-up variant" —
+   3b's item 3 needs the same explicit sentence, one way or the other.
+2. **In Amendment §2's "same statistic per stock, pooled by session," is the
+   per-stock signal that stock's own sign(prior close → 09:45), or the
+   single market-level sign applied to every stock that session?** Both are
+   plausible readings of "the same statistic per stock" — per-stock momentum
+   vs. market-wide timing applied to individual names are different
+   hypotheses that could disagree. Also needs an explicit "no independent
+   pass rule" statement; only the market-level line has a stated gate.
+
+My default for both, if no one has a reason to prefer otherwise: item 2
+(quintile) governs the Stage-1a gate, item 3 is descriptive only; and the
+per-stock line reuses that stock's own signal (true per-stock momentum),
+also descriptive only. State the choice in the file rather than deciding it
+silently in code, per this project's own standing rule (Entry 8's own
+"these are my defaults; if you choose differently, say why in the amendment,
+not afterwards").
+
+### G. Minor, not blocking
+
+- Stage 2's top-5/bottom-5 **selection** could still tie at the 5th/6th rank
+  boundary — a genuine bp tie in the ranking, unlike the deleted
+  entry-order tie-break, which was about simultaneous entries, not rank
+  ties. Needs its own tie-break if it isn't already vanishingly rare at bp
+  precision.
+- Stage 2's table doesn't restate eligibility/universe/data/period; it's
+  clearly inherited from Stage 1 by context (every other row cites back to
+  3a/stage 1), but was never made explicit the way 3a's amendments always
+  did.
+- §1's "equivalently, the mean per-leg return exceeds 16.60 bp" is a loose
+  paraphrase — only the *sum* of both legs needs to exceed 33.20 bp, not
+  each leg individually — but the bolded primary gate criterion is
+  unambiguous, so this is wording only.
+- `trials.md` L25 and `progress.md`'s step-2C row both still frame the
+  8.11/16.30 bp spreads as "vs 16.60 bp," without a ratio number. No wrong
+  number is stated and no conclusion is affected; optional cleanup, lower
+  priority than §D.
+
+### H. Trial accounting and housekeeping — checked, correct
+
+`trials.md` L31 and L32 are both `pending`, the strategy-trial count is
+unchanged at **35**, and the research-looks table has exactly 32 rows
+(L1–L32), matching its own "Thirty-two looks, thirty-five trials" line. No
+3b script or results file exists anywhere in the tree. Working tree is clean
+on `research/entry12-3b-stage1`. The amendment's "Authorisation, recorded"
+section matches Entry 12's own authorisation text verbatim in substance.
+
+### I. Needs the user's decision
+
+Nothing new. Everything above is editorial (strike/annotate existing text)
+or a documentation default consistent with established precedent (Entry 9
+§1) — none of it touches a gate, threshold, live path, credentials, or the
+held-out window.
+
+### J. Next step, and where to stop
+
+Fix §B (two struck/annotated rows) and §F (two explicit gate statements) in
+the pre-registration; they are what Stage 1 code will actually be written
+against. Once fixed, Stage 1 may be coded and run under the standing
+go-ahead Entry 12 already recorded — this does not need another review
+round, since none of the fixes change a computed rule, only remove a
+contradiction or fill a stated gap with an explicit default. Fix §E and, at
+minimum, note §D's fifth file before or alongside the closing phase-2
+report so it doesn't inherit the same stale figures. **Stage 2 remains
+unauthorised regardless of what Stage 1 shows — stop and ask the user,
+exactly as Entry 12 already says.**
+
+---
+
 ## Entry 12 — 2026-09-21 — external reviewer: 3a FAIL accepted, no follow-ups; 3b staging approved with four amendments; the spread gate was wrong by a factor of two
 
 3a: **FAIL accepted as written. No follow-ups.**
