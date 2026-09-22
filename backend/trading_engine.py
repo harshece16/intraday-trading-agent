@@ -55,6 +55,16 @@ def _parse_hhmm(s: str) -> dtime:
 
 MARKET_OPEN_T = _parse_hhmm(config.MARKET_OPEN)
 MARKET_CLOSE_T = _parse_hhmm(config.MARKET_CLOSE)
+
+# The expired-Kite alert used to repeat on a flat 15-minute throttle for as
+# long as the token stayed dead — 40 identical rows on 2026-09-21, 4 an hour
+# from midnight to 08:00, and ~95% of the entire error channel across the
+# sample. A token dies at 06:00 IST daily and nobody can click Reconnect at
+# 03:00, so the tenth copy carries nothing the first did not. Keep the first
+# alert loud, then double the interval up to a cap; reconnecting resets it so
+# a NEW expiry is loud again. Issue #71.
+TOKEN_ALERT_MIN_INTERVAL = 900          # 15 min — unchanged first gap
+TOKEN_ALERT_MAX_INTERVAL = 4 * 3600     # stop stretching at 4 h
 SQUARE_OFF_T = _parse_hhmm(config.SQUARE_OFF_TIME)
 
 
@@ -106,6 +116,7 @@ class TradingEngine:
         self._last_errors = {}
         self._last_capital_sync = 0.0
         self._last_token_alert = 0.0
+        self._token_alert_interval = TOKEN_ALERT_MIN_INTERVAL
         self._reconciliation_alerted = set()
         self._untracked_kite_positions = set()
         self._last_synced_paper_mode = None
@@ -131,8 +142,13 @@ class TradingEngine:
 
     def reset_kite_executor(self):
         """Drop the cached executor so the next order rebuilds it with
-        whatever access token config now holds."""
+        whatever access token config now holds. Called on a successful
+        reconnect, which is also the moment to make the expired-session
+        alert loud again — a fresh expiry after this is new information,
+        so it must not inherit the stretched interval (issue #71)."""
         self.kite_executor = None
+        self._last_token_alert = 0.0
+        self._token_alert_interval = TOKEN_ALERT_MIN_INTERVAL
 
     def _sync_capital(self):
         """Refreshes RISK['total_capital'] — the real Kite equity balance in
@@ -167,10 +183,11 @@ class TradingEngine:
             # would bury this; it needs its own clear, high-visibility alert since
             # it silently degrades to delayed yfinance data and blocks live orders
             # until reconnected. Throttled to once per 15 min so it doesn't spam.
-            if time.time() - self._last_token_alert > 900:
+            if time.time() - self._last_token_alert > self._token_alert_interval:
                 self._last_token_alert = time.time()
                 self.state.log("error", "Kite session has expired — click Reconnect in the header. Until then, "
                                         "prices fall back to delayed data and live orders will fail.", level="error")
+                self._token_alert_interval = min(self._token_alert_interval * 2, TOKEN_ALERT_MAX_INTERVAL)
             return
         except Exception as exc:
             logger.warning(f"Capital sync with Kite failed: {exc}")
