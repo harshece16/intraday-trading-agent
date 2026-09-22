@@ -145,7 +145,9 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 | L33 | Read-only chase of the 09-18 "9 passes, 0 orders" gap — it was **1 setup re-evaluated 9 times**, blocked by the confidence gate (53/60) and fully logged. Corrects the journal summary's mislabelled "cleared confidence" column and surfaces **19 direction-conflict blocks** | 2026-09-21 | No — read-only journal query, no returns computed · `journal-summary-2026-09-21.md` §3b |
 
-**Thirty-three looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
+| L34 | Universe expansion — does universe B (113 F&O-eligible names outside the NIFTY 100) clear the reward:risk gate more often than universe A? **FAIL**: p_A **93.17%** vs p_B **92.83%**, z = **−2.80**. B's targets sit **+21.4%** further but its stops sit **+26.8%** further, so the ratio is worse — and **B is still worse at zero cost** (95.02% vs 94.85%), so this is geometry, not friction. Proxy **saturates at 93% vs the live 9.6%** — weak evidence about the live intraday gate. Held-out untouched | 2026-09-22 | No — measurement · `prereg-L34-universe-b-rrr-gate.md` / `results-L34-universe-b-rrr-gate.md` |
+
+**Thirty-four looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is
 auditable from this file alone. The held-out confirmation look for the three
 survivors has **not** been taken — see `results-step2-feature-ic.md`
