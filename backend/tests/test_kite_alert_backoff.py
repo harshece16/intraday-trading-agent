@@ -26,6 +26,12 @@ def _engine(monkeypatch):
     monkeypatch.setattr(engine, "_ensure_kite", _raise_token_exception)
     monkeypatch.setattr(data_provider, "mark_kite_token_rejected", lambda: None)
     monkeypatch.setattr(config, "RISK", {**config.RISK, "sync_capital_with_kite": True})
+    # _sync_capital() returns immediately on a falsy KITE_ACCESS_TOKEN. A dev
+    # machine has a .kite_session.json so this is set and the tests pass; CI
+    # has no session file, so without this the engine never reaches the
+    # TokenException path and all four tests saw 0 alerts. Pin it here rather
+    # than inherit whatever the machine happens to have.
+    monkeypatch.setattr(config, "KITE_ACCESS_TOKEN", "test-token-not-a-real-one")
     return engine
 
 
