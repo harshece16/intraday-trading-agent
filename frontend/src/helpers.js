@@ -91,4 +91,5 @@ export const REASON_TEXT = {
 export const KIND_TEXT = {
   scan: "Scan", watchlist: "Watchlist", setup: "Setup forming", trade: "Trade",
   blocked: "Skipped", risk: "Risk", error: "Problem", system: "System",
+  summary: "Session summary",
 };

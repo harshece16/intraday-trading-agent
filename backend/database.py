@@ -563,6 +563,193 @@ def checklist_blocker_stats(hours=24):
     }
 
 
+# Ordering near-misses needs care. Only `rrr` is a continuous quantity, so it
+# is the one required item where "how close did it come" is a real measurement
+# (1.42 against a 1.5 bar is nearly there; 0.1 is not). Every other required
+# item is a boolean — a pattern either formed or it didn't — and inventing a
+# distance for those would be asserting a closeness that was never measured.
+# So rrr-blocked near-misses sort first, by rrr descending; the rest follow,
+# most recent first, and are reported as "no distance to report".
+SESSION_SUMMARY_KIND = "summary"
+SESSION_SUMMARY_PREFIX = "Session summary for "
+_NEAR_MISS_UNRANKED = "boolean gate — no distance to the bar to report"
+
+
+def _min_rrr():
+    """The live reward-to-risk bar, read the same way trading_engine does
+    (config.STRATEGY_PARAMS[config.STRATEGY]) so a strategy switch moves the
+    summary's bar with it. Importing trader_brain here just for DEFAULTS
+    would pull brooks/indicators/market_structure into database.py."""
+    return config.STRATEGY_PARAMS.get(config.STRATEGY, {}).get("min_rrr", 1.5)
+
+
+def session_summary(session_date=None, near_miss_limit=5):
+    """Why a session ended with the trade count it did.
+
+    Answers the question the blocker counts can't: on a day with no trades,
+    which single gate came closest to letting one through, and on which
+    stock. `checklist_blocker_stats()` aggregates a rolling window across
+    every gate at once; this is one IST calendar day, and it names the
+    individual evaluations that were one item short.
+
+    A near-miss is an evaluation where exactly one *required* checklist item
+    failed. `full_passes` counts evaluations where none did — those are the
+    ones that reach the entry path at all, where the confidence gate and the
+    risk caps in trading_engine._try_enter() then apply, so full_passes > 0
+    with entries == 0 points downstream of the checklist, not at it.
+    """
+    ist = ZoneInfo("Asia/Kolkata")
+    day = datetime.now(ist).date() if session_date is None \
+        else datetime.fromisoformat(session_date).date()
+    start = datetime.combine(day, datetime.min.time(), tzinfo=ist).timestamp()
+    end = start + 86400
+
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT symbol, ts, checklist_json FROM checklist_evals WHERE ts >= ? AND ts < ? ORDER BY ts",
+            (start, end),
+        ).fetchall()
+        # Distinct position_id whose *first* leg landed in the window: an exit
+        # of a position opened on an earlier day is not an entry taken today,
+        # and counting legs would double-count every round trip.
+        opened = c.execute(
+            "SELECT COUNT(*) FROM (SELECT position_id FROM trades WHERE position_id IS NOT NULL "
+            "GROUP BY position_id HAVING MIN(ts) >= ? AND MIN(ts) < ?)",
+            (start, end),
+        ).fetchone()[0]
+
+    fail_counts = {}
+    near_misses = {}
+    candidates = []
+    symbols = set()
+    full_passes = 0
+    total_sides = 0
+    for r in rows:
+        try:
+            cl = json.loads(r["checklist_json"])
+        except (TypeError, ValueError):
+            continue
+        for side in ("long", "short"):
+            s = cl.get(side)
+            if not s:
+                continue
+            total_sides += 1
+            symbols.add(r["symbol"])
+            req = [i for i in s.get("items", []) if i.get("required")]
+            failing = [i for i in req if not i.get("ok")]
+            for i in failing:
+                fail_counts[i["key"]] = fail_counts.get(i["key"], 0) + 1
+            if not failing:
+                full_passes += 1
+            elif len(failing) == 1:
+                blocker = failing[0]
+                near_misses[blocker["key"]] = near_misses.get(blocker["key"], 0) + 1
+                rrr = s.get("rrr") if blocker["key"] == "rrr" else None
+                candidates.append({
+                    "symbol": r["symbol"], "side": side, "ts": r["ts"],
+                    "time_ist": datetime.fromtimestamp(r["ts"], ist).strftime("%H:%M"),
+                    "blocker": blocker["key"],
+                    "blocker_label": blocker.get("label"),
+                    "detail": blocker.get("detail"),
+                    "rrr": rrr,
+                    "shortfall": None if rrr is None else round(_min_rrr() - rrr, 2),
+                    "ranked_by": "rrr" if rrr is not None else _NEAR_MISS_UNRANKED,
+                })
+
+    # Collapse to one row per (symbol, side, blocker) before ranking. The
+    # engine re-reads the checklist every tick, so a setup that sits just
+    # under the bar for half an hour produces ~60 near-identical rows —
+    # verified against a real session, where the unfiltered top 5 was the
+    # same DRREDDY long five times over. Keep that symbol-side's best look
+    # (highest rrr; for a boolean gate, its latest) and carry how many
+    # evaluations it held for, which is the genuinely new information: a
+    # setup that hovered at 1.26 for 40 minutes is a different fact from
+    # one that touched it on a single tick.
+    best = {}
+    for n in candidates:
+        key = (n["symbol"], n["side"], n["blocker"])
+        prev = best.get(key)
+        if prev is None:
+            n["occurrences"] = 1
+            best[key] = n
+            continue
+        prev["occurrences"] += 1
+        better = (n["rrr"] > prev["rrr"]) if (n["rrr"] is not None and prev["rrr"] is not None) \
+            else (n["ts"] > prev["ts"])
+        if better:
+            n["occurrences"] = prev["occurrences"]
+            best[key] = n
+    candidates = list(best.values())
+
+    # rrr-blocked first (highest rrr = closest to the bar), then the boolean
+    # gates most-recent-first. -ts as the tiebreaker keeps the sort total.
+    candidates.sort(key=lambda n: (0 if n["rrr"] is not None else 1,
+                                   -(n["rrr"] if n["rrr"] is not None else 0),
+                                   -n["ts"]))
+
+    return {
+        "session_date": day.isoformat(),
+        "evaluations": total_sides,
+        "symbols_evaluated": len(symbols),
+        "full_passes": full_passes,
+        "entries_taken": opened,
+        "required_item_fail_counts": fail_counts,
+        "near_misses_by_lone_blocker": near_misses,
+        "near_misses": candidates[:near_miss_limit],
+        "distinct_near_misses": len(candidates),
+        "min_rrr": _min_rrr(),
+    }
+
+
+def session_summary_logged_on(session_date):
+    """True if the end-of-session summary for this IST date is already in the
+    activity log. The engine's once-a-day guard is in-memory, so without this
+    an evening restart would re-log the same summary; the activity table is
+    the only thing that survives the restart."""
+    with _conn() as c:
+        row = c.execute(
+            "SELECT 1 FROM activity WHERE kind = ? AND message LIKE ? LIMIT 1",
+            (SESSION_SUMMARY_KIND, f"{SESSION_SUMMARY_PREFIX}{session_date}:%"),
+        ).fetchone()
+    return row is not None
+
+
+def session_summary_line(summary):
+    """The one-line rendering trading_engine logs to the activity stream when
+    a session closes. Kept next to session_summary() so the wording and the
+    numbers can't drift apart."""
+    date = summary["session_date"]
+    evals, entries = summary["evaluations"], summary["entries_taken"]
+    if not evals:
+        return f"{SESSION_SUMMARY_PREFIX}{date}: no checklist evaluations ran — the engine saw no active watchlist."
+    if entries:
+        return (f"{SESSION_SUMMARY_PREFIX}{date}: {entries} position(s) opened from {evals:,} checklist "
+                f"evaluations across {summary['symbols_evaluated']} stocks.")
+
+    head = (f"{SESSION_SUMMARY_PREFIX}{date}: no trades. {evals:,} checklist evaluations across "
+            f"{summary['symbols_evaluated']} stocks produced {summary['full_passes']} full pass(es)")
+    near = summary["near_misses"]
+    if not near:
+        counts = summary["required_item_fail_counts"]
+        worst = max(counts, key=counts.get) if counts else None
+        tail = f"; nothing came within one item of passing (most-failed gate: {worst})." if worst \
+            else "; nothing came within one item of passing."
+        return head + tail
+    n = near[0]
+    if n["rrr"] is not None:
+        held = f", held for {n['occurrences']} evaluations" if n.get("occurrences", 1) > 1 else ""
+        closest = (f"{n['symbol']} {n['side']} at {n['time_ist']}, reward-to-risk {n['rrr']:.2f} "
+                   f"against the {summary['min_rrr']:g} bar — short by {n['shortfall']:.2f}{held}")
+    else:
+        closest = (f"{n['symbol']} {n['side']} at {n['time_ist']}, blocked on "
+                   f"{n['blocker']} ({_NEAR_MISS_UNRANKED})")
+    # Count distinct symbol-sides, not raw evaluations: the raw tally counts
+    # the same setup once per 30s tick (595 on a day that was really 30-odd
+    # situations), which reads as far more near-activity than there was.
+    distinct = summary["distinct_near_misses"]
+    return (head + f". {distinct} setup(s) came within one item of passing; "
+                   f"closest was {closest}.")
+
 _BLOCKED_MSG_RE = re.compile(r"^(?P<setup>.+?) signal skipped — (?P<why>.+)$", re.DOTALL)
 # Mirrors the exact f-strings trading_engine._try_enter() / confidence.score_trade()
 # build the message from — greedy .* is deliberate: system_multiplier_reason can itself

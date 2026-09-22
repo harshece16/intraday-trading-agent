@@ -452,6 +452,16 @@ def journal_blocker_stats(hours: float = 24):
     return database.checklist_blocker_stats(hours=hours)
 
 
+@app.get("/api/journal/session-summary")
+def journal_session_summary(session_date: str = None, near_miss_limit: int = 5):
+    """Why a session ended with the trade count it did — one IST calendar day
+    (default today), naming the individual evaluations that were one required
+    checklist item short and, for the reward-to-risk gate, how far short.
+    The engine logs the one-line form of this to the activity stream at the
+    close of every session; this is the full breakdown behind that line."""
+    return database.session_summary(session_date=session_date, near_miss_limit=near_miss_limit)
+
+
 @app.post("/api/mode")
 def set_mode(update: ModeUpdate):
     with state.lock:

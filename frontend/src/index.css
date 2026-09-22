@@ -290,6 +290,7 @@
   .kind.blocked, .kind.risk { color: var(--wait); }
   .kind.error { color: var(--short); }
   .kind.scan, .kind.watchlist { color: var(--focus); }
+  .kind.summary { color: var(--focus); font-weight: 600; }
   .tax { padding: 14px 16px; border-radius: 10px; background: var(--sunken); font-size: 13px; line-height: 1.5; color: var(--ink-2); margin-bottom: 4px; }
   .tax strong { color: var(--ink); }
 
