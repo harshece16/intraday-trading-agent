@@ -96,7 +96,7 @@ STRATEGY_PARAMS = {
         "indicator_miss_size": 0.6,   # size when MACD/RSI don't confirm (Varsity's 300 vs 500 shares)
         "min_pattern_atr": 0.3,       # ignore candles too small to mean anything...
         "max_pattern_atr": 3.0,       # ...or abnormally long (stop too far away)
-        "cost_pct": 0.12,             # round-trip charges + slippage deducted inside the RRR
+        # cost_pct is derived from COSTS in trader_brain.DEFAULTS (issue #74) — don't hardcode it here.
         "rrr_without_level": 2.0,     # target in R when no support/resistance lies beyond
         "use_news": True,
         "news_weight": 2.0,
