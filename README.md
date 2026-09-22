@@ -2829,6 +2829,60 @@ Issue **#71**.
 
 The alert is not suppressed and no threshold about *trading* changed — this is
 purely how often one notice repeats itself.
+### 56. "Why did nothing fire today?" now answers itself at the close
+
+Most sessions end with no trade. That is the system working — the gates are
+there to reject — but until now the log went quiet and left no record of
+*how close* the day came, or to what. Reconstructing it meant querying
+`checklist_evals` by hand the next morning, which in practice nobody did.
+
+The engine now logs a one-line summary to the activity stream on the first
+tick after the close, and `GET /api/journal/session-summary` returns the
+full breakdown behind it. Real output for 21 Sep, from the live journal:
+
+```
+Session summary for 2026-09-21: no trades. 28,300 checklist evaluations
+across 69 stocks produced 0 full pass(es). 60 setup(s) came within one item
+of passing; closest was DRREDDY long at 12:30, reward-to-risk 1.26 against
+the 1.5 bar — short by 0.24, held for 8 evaluations.
+```
+
+Two decisions in this are worth stating, because both could have been
+faked convincingly:
+
+**Only `rrr` gets a distance.** A near-miss is an evaluation where exactly
+one *required* item failed. Ranking them needs a notion of "how close",
+and reward-to-risk is the only required item that is a continuous quantity
+— 1.26 against a 1.5 bar is a real measurement. `pattern`, `sr`, `dow` and
+`volume` are booleans; a pattern either formed or it didn't. Inventing a
+closeness score for those would be asserting a number nothing measured, so
+they sort after the rrr near-misses and report
+`boolean gate — no distance to the bar to report`.
+
+**The raw near-miss count is misleading, so it isn't the headline.** The
+checklist is re-read every tick, so one setup sitting under the bar for
+forty minutes writes ~60 near-identical rows. The first version of this
+reported "595 came within one item" and showed a top-5 that was the same
+DRREDDY long five times over — both true and both useless. Near-misses are
+now collapsed to one row per symbol-side, keeping that setup's *best* look
+and carrying how many evaluations it held for. 595 tick-rows on 21 Sep were
+really 60 distinct setups.
+
+`full_passes` is reported separately and is the diagnostic that matters
+most: a day with `full_passes > 0` and `entries_taken == 0` was stopped
+*downstream* of the checklist — by the confidence gate, the sector cap or
+position sizing in `_try_enter()` — and should be read against §46 and the
+Dimaag Scorecard, not against the checklist at all.
+
+Logged once per day, guarded both in memory and against the activity table,
+so an evening restart doesn't write the same summary twice. 15 tests in
+`backend/tests/test_session_summary.py`; the engine-hook ones drive the real
+`_tick_impl()` with a frozen clock rather than calling the hook directly.
+
+**This reports; it does not loosen.** No threshold moved. A summary saying
+a setup missed by 0.24 is not evidence that the bar should be 1.26 — §48
+already measured what happens when that rule is relaxed, and §51 measured
+what the strategy is worth when it fires.
 
 ## Requirements
 

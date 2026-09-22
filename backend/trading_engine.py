@@ -110,6 +110,7 @@ class TradingEngine:
         self.kite_executor = None
         self._last_day = datetime.now(IST).date()
         self._last_holiday_logged = None
+        self._last_session_summary_date = None
         self.scanner = Scanner(config.SCANNER) if config.SCANNER.get("enabled") else None
         self._scan_thread = None
         self.size_multiplier = 1.0
@@ -999,6 +1000,26 @@ class TradingEngine:
             self._last_holiday_logged = now.date()
             resumes = holidays.next_trading_day(now).strftime("%A, %d %b")
             self.state.log("system", f"Markets are closed today for {holiday}. Trading resumes {resumes}.")
+
+        # End-of-session summary. Fires on the first tick after the close on a
+        # day the market actually traded, so the activity stream carries a
+        # standing answer to "why did nothing fire today" — which gate came
+        # closest, on which stock — instead of that only being recoverable by
+        # querying the journal afterwards. Guarded twice: in memory for the
+        # normal case, and against the activity table so an evening restart
+        # doesn't log the same summary a second time.
+        if (phase == "closed" and not holiday and now.weekday() < 5
+                and now.time() >= MARKET_CLOSE_T
+                and self._last_session_summary_date != now.date()):
+            self._last_session_summary_date = now.date()
+            try:
+                today = now.date().isoformat()
+                if not database.session_summary_logged_on(today):
+                    summary = database.session_summary(session_date=today)
+                    self.state.log(database.SESSION_SUMMARY_KIND,
+                                   database.session_summary_line(summary))
+            except Exception:
+                logger.exception("End-of-session summary failed")
 
         if self._last_premarket_run_date != now.date() and self.scanner:
             # Runs every day, holiday included — it's a read on the last
