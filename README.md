@@ -2763,7 +2763,73 @@ This was already open as **#24** since 17 Sep; #51 duplicates it with fresher
 evidence. 22 tests in `backend/tests/test_kite_session_status.py`, including the exact
 timestamp from the bug report.
 
-### 54. "Why did nothing fire today?" now answers itself at the close
+### 54. A test backend could write into the live journal, and one did
+
+`database.DB_PATH` was hardcoded with no override. `CLAUDE.md` told anyone
+testing to "test your own copy on another port" — which isolates the port and
+not the database, because importing `app` starts a second `TradingEngine` that
+scans, seeds a watchlist and writes activity wherever `DB_PATH` points.
+
+On 22 Sep at 22:37 a test backend did exactly that, writing **119 rows** into
+the production journal: 18 `activity` (ids 7816–7833), one `scans` row (id
+548) and its 100 `scan_rows`. No `checklist_evals` and no trades — the market
+was closed. The rows include a restart notice and a full pre-market scan the
+live engine never performed.
+
+That matters more than the row count suggests. The journal is the evidence
+base for every claim in `docs/research/`, and after the fact these rows are
+indistinguishable from real engine output: same tables, same kinds, same
+wording. The post-mortem written from that journal had to carry a disclaimer.
+
+Two changes, issue **#70**:
+
+- `SAHAB_DB_PATH` overrides the journal path, defaulting to today's path so
+  nothing existing moves. To exercise the app for real: copy the db, set the
+  variable, and point the dashboard at it with `?api=http://127.0.0.1:<port>`.
+- A second engine on the same journal now **refuses to start**, with a message
+  naming the owning pid and saying how to run a second copy properly. The lock
+  is a pid file beside the database; a lock whose pid is dead is treated as
+  stale and taken over, so a crash can't wedge the engine out of its own
+  journal.
+
+Verified by starting two backends against one journal: the first boots, the
+second exits with `EngineAlreadyRunning` naming pid 48612.
+
+One honest gap: the guard only works when both processes run this code. A
+currently-running engine started before this deploy holds no lock, so a new
+instance would not detect it. The first restart after deploying closes that.
+
+### 55. The Kite alert was 95% of the error channel
+
+The expired-session alert was throttled — but on a flat 15-minute interval
+that never backed off. A Kite token dies at 06:00 IST daily, so the engine
+repeated the same line every 15 minutes until someone reconnected, all night
+and all weekend. Nobody can click Reconnect at 03:00.
+
+Measured across the journal:
+
+| Day | `error` rows | kite-expired | share |
+| --- | --- | --- | --- |
+| 15 Sep | 21 | 21 | **100%** |
+| 16 Sep | 22 | 22 | **100%** |
+| 17 Sep | 46 | 42 | 91% |
+| 21 Sep | 40 | 40 | **100%** |
+| 22 Sep | 13 | 12 | 92% |
+
+The `error` channel is where a real fault is supposed to be visible. The only
+two interesting errors in that window — a pandas conversion failure on 17 Sep
+and `Scan failed: NIFTY data unavailable` on 22 Sep — are single rows sitting
+among dozens of copies of a notice the user already acted on.
+
+The first alert still fires immediately; after that the interval doubles to a
+4-hour cap, and **a successful reconnect resets it** so a genuinely new expiry
+is loud again rather than inheriting a 4-hour silence. Over a 06:00→09:15
+expiry that is **3 alerts instead of 14**; over nine hours, 5 instead of 37.
+Issue **#71**.
+
+The alert is not suppressed and no threshold about *trading* changed — this is
+purely how often one notice repeats itself.
+### 56. "Why did nothing fire today?" now answers itself at the close
 
 Most sessions end with no trade. That is the system working — the gates are
 there to reject — but until now the log went quiet and left no record of

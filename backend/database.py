@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import sqlite3
 import threading
@@ -40,7 +41,13 @@ from zoneinfo import ZoneInfo
 import config
 import evaluation
 
-DB_PATH = Path(__file__).parent / "data" / "sahab_journal.db"
+# The journal is the evidence base for everything in docs/research/, so it
+# must be possible to point a throwaway instance somewhere else. Hardcoding
+# this meant "test on another port" isolated the port but not the database,
+# and a second engine wrote 119 rows into the live journal on 2026-09-22.
+# Issue #70.
+_DEFAULT_DB_PATH = Path(__file__).parent / "data" / "sahab_journal.db"
+DB_PATH = Path(os.environ.get("SAHAB_DB_PATH") or _DEFAULT_DB_PATH)
 _local = threading.local()
 
 SCHEMA = """

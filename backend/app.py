@@ -37,6 +37,7 @@ import portfolio_diagnostic
 import research_desk
 import universe
 from state import AppState
+import engine_lock
 from trading_engine import TradingEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -50,10 +51,18 @@ engine = TradingEngine(state)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(engine.run_forever())
-    yield
-    state.running = False
-    task.cancel()
+    # Claim the journal before the engine writes a single row. A second
+    # instance started for testing used to boot happily against the live
+    # database and contaminate it (issue #70); now it refuses to start and
+    # says how to run a second copy properly.
+    engine_lock.acquire(database.DB_PATH)
+    try:
+        task = asyncio.create_task(engine.run_forever())
+        yield
+        state.running = False
+        task.cancel()
+    finally:
+        engine_lock.release(database.DB_PATH)
 
 
 app = FastAPI(title="Trader Sahab", lifespan=lifespan)
