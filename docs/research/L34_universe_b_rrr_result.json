@@ -1,0 +1,73 @@
+{
+  "look": "L34",
+  "prereg_commit": "d879219",
+  "pass_rule": "p_B > p_A AND two-proportion z > 2",
+  "result": "FAIL",
+  "falsification_branch": "3 \u2014 B's raw geometry is wider but its pass fraction is not higher: costs eat the whole gain",
+  "z": -2.8035,
+  "p_A": 0.931702,
+  "p_B": 0.928313,
+  "delta_pp": -0.3388,
+  "sessions": {
+    "n": 1794,
+    "first": "2018-09-24",
+    "last": "2026-01-01",
+    "held_out_untouched": 177
+  },
+  "universe_overlap": 0,
+  "A": {
+    "universe": "A",
+    "round_trip_bp": 16.6,
+    "symbols_used": 97,
+    "candidates_valid": 86869,
+    "candidates_passing": 80936,
+    "pass_fraction": 0.931702,
+    "pass_fraction_zero_cost": 0.950201,
+    "skipped_no_level": 33640,
+    "skipped_stop_wider_than_1.5atr": 167683,
+    "reward_bp_median": 945.9,
+    "risk_bp_median": 215.41,
+    "rrr_min": 0.2675,
+    "rrr_median": 3.985,
+    "rrr_mean": 7.0718,
+    "rrr_p90": 14.797,
+    "long": {
+      "valid": 37542,
+      "pass": 34577,
+      "pass_fraction": 0.921022
+    },
+    "short": {
+      "valid": 49327,
+      "pass": 46359,
+      "pass_fraction": 0.93983
+    }
+  },
+  "B": {
+    "universe": "B",
+    "round_trip_bp": 22.6,
+    "symbols_used": 112,
+    "candidates_valid": 91593,
+    "candidates_passing": 85027,
+    "pass_fraction": 0.928313,
+    "pass_fraction_zero_cost": 0.948511,
+    "skipped_no_level": 33596,
+    "skipped_stop_wider_than_1.5atr": 180233,
+    "reward_bp_median": 1148.55,
+    "risk_bp_median": 273.03,
+    "rrr_min": 0.3074,
+    "rrr_median": 3.811,
+    "rrr_mean": 6.5405,
+    "rrr_p90": 13.5382,
+    "long": {
+      "valid": 41838,
+      "pass": 38522,
+      "pass_fraction": 0.920742
+    },
+    "short": {
+      "valid": 49755,
+      "pass": 46505,
+      "pass_fraction": 0.93468
+    }
+  },
+  "runtime_s": 39.0
+}
