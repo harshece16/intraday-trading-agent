@@ -294,7 +294,7 @@ function MiniChartCard({ s, r, held }) {
           <SidePill side={r.side} />
         </span>
       </div>
-      <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} className="mini-chart" />
+      <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} className="mini-chart" compact />
       <div className="mini-chart-plan">{planLine}</div>
     </div>
   );
@@ -367,12 +367,15 @@ export default function Overview({ state: s }) {
         <div className="section-gap">
           <h2 className="h">Live charts</h2>
           <p className="sub">
-            Real candles, EMA 20/50 and today's checklist plan for each pick — the entry, stop and target lines are
+            Real candles, EMA 20/50 and the checklist's current plan for each pick — the entry, stop and target lines are
             the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
           </p>
           <div className="mini-chart-grid">
             {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}
           </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Latest session shown. Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>.
+          </p>
         </div>
       )}
 
