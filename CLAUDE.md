@@ -12,7 +12,7 @@ ngrok http 8000        # only for the in-app "Connect Kite" login (callback: /ki
 
 - The user usually already has the backend on **8000** and the dashboard on **5500** — check with `lsof -i :8000 -i :5500` and don't kill them. Test your own copy on another port.
 - **A different port does NOT isolate the database.** Importing `app` starts a second engine that scans and writes activity into whatever journal `database.DB_PATH` points at. Copy the db and set `SAHAB_DB_PATH=/path/to/copy.db` (issue #70), then point the dashboard at it with `?api=http://127.0.0.1:<port>`. A second engine on the same journal now refuses to start.
-- Every API route except `/kite/callback` needs the dashboard key (`X-Api-Key` header or `?key=`), stored in `backend/.dashboard_key.json`.
+- Every API route except `/kite/callback` needs the dashboard key in the **`X-Api-Key` header**, stored in `backend/.dashboard_key.json`. `?key=` is refused (401) since #87 — URLs get logged. The WebSocket takes it as its first message: `{"type": "auth", "key": ...}`. Never put the key in a URL or print it.
 - Local Python is **3.9** (no `X | Y` type hints, no `match`); CI runs 3.11.
 
 ## Test
