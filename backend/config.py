@@ -302,6 +302,14 @@ SQUARE_OFF_TIME = "15:15"
 
 POLL_INTERVAL_SECONDS = 30
 
+# Pre-open Kite check (trading_engine._check_preopen_kite): Zerodha ends every
+# session at 06:00 IST, so a trading day that starts without a fresh login runs
+# on delayed data and can't place live orders. From this time until the close,
+# the first tick of a trading day that finds Kite not live raises one
+# error-level alert (browser push). Later than 08:45 still counts: a Mac that
+# slept through the morning alerts on its first tick after waking.
+PREOPEN_KITE_CHECK_TIME = "08:45"
+
 # F&O (options-buying only — see backend/fno_risk.py's docstring for why
 # writing/selling and futures are deliberately out of scope). This is a
 # SEPARATE opt-in from PAPER_MODE_DEFAULT/the dashboard's Live toggle: an

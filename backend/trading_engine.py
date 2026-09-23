@@ -67,6 +67,7 @@ MARKET_CLOSE_T = _parse_hhmm(config.MARKET_CLOSE)
 TOKEN_ALERT_MIN_INTERVAL = 900          # 15 min — unchanged first gap
 TOKEN_ALERT_MAX_INTERVAL = 4 * 3600     # stop stretching at 4 h
 SQUARE_OFF_T = _parse_hhmm(config.SQUARE_OFF_TIME)
+PREOPEN_KITE_CHECK_T = _parse_hhmm(config.PREOPEN_KITE_CHECK_TIME)
 
 
 def next_session_open(now=None) -> str:
@@ -112,6 +113,7 @@ class TradingEngine:
         self._last_day = datetime.now(IST).date()
         self._last_holiday_logged = None
         self._last_session_summary_date = None
+        self._preopen_kite_checked_date = None
         self.scanner = Scanner(config.SCANNER) if config.SCANNER.get("enabled") else None
         self._scan_thread = None
         self.size_multiplier = 1.0
@@ -989,6 +991,40 @@ class TradingEngine:
             except Exception:
                 logger.exception("Tick watchdog check failed")
 
+    def _check_preopen_kite(self, now, holiday):
+        """Once per trading day, from PREOPEN_KITE_CHECK_TIME until the close:
+        if Kite is configured but its session isn't live, raise one
+        error-level alert, which the dashboard pushes to the browser.
+
+        #71's expiry alert only fires once a Kite call has failed and backs
+        off after that; this one is scheduled, so a missing login is loud
+        before the open rather than discovered after it. One live probe a day
+        catches a token revoked from Zerodha's side, which the 06:00 clock
+        can't see. Guarded in memory and against the activity table, like the
+        session summary, so a restart doesn't repeat it."""
+        today = now.date()
+        if (holiday or now.weekday() >= 5 or self._preopen_kite_checked_date == today
+                or not (PREOPEN_KITE_CHECK_T <= now.time() < MARKET_CLOSE_T)):
+            return
+        self._preopen_kite_checked_date = today
+        if not (config.KITE_API_KEY and config.KITE_API_SECRET):
+            return                       # Kite isn't set up at all; nothing to remind about
+        if database.activity_kind_logged_on(database.PREOPEN_KITE_KIND, today.isoformat()):
+            return
+        try:
+            live = bool(data_provider.kite_session_status(probe=True).get("connected"))
+        except Exception as exc:
+            logger.warning(f"Pre-open Kite check could not run: {exc}")
+            live = data_provider.kite_session_live()
+        if live:
+            return
+        when = (f"the market opens at {config.MARKET_OPEN}" if now.time() < MARKET_OPEN_T
+                else "the market is already open")
+        self.state.log(database.PREOPEN_KITE_KIND,
+                       f"Kite isn't logged in and {when}. Zerodha ends every session at 06:00 IST — click "
+                       f"Reconnect in the header now, or the engine runs on delayed data and live orders will fail.",
+                       level="error")
+
     def _tick_impl(self):
         now = datetime.now(IST)
         self._sync_capital()
@@ -1003,6 +1039,7 @@ class TradingEngine:
         holiday = holidays.holiday_name(now)
         self.state.holiday = {"name": holiday, "next_trading_day": holidays.next_trading_day(now).isoformat()} \
             if holiday else None
+        self._check_preopen_kite(now, holiday)
         if holiday and self._last_holiday_logged != now.date():
             self._last_holiday_logged = now.date()
             resumes = holidays.next_trading_day(now).strftime("%A, %d %b")

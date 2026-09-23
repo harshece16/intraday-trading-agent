@@ -811,6 +811,21 @@ def session_summary(session_date=None, near_miss_limit=5):
     }
 
 
+PREOPEN_KITE_KIND = "kite_preopen"
+
+
+def activity_kind_logged_on(kind, session_date):
+    """True if an activity of `kind` was recorded on this IST date, so a
+    once-a-day alert survives a restart (the engine's own guard is in memory)."""
+    ist = ZoneInfo("Asia/Kolkata")
+    day = datetime.fromisoformat(session_date).date()
+    start = datetime.combine(day, datetime.min.time(), tzinfo=ist).timestamp()
+    with _conn() as c:
+        row = c.execute("SELECT 1 FROM activity WHERE kind = ? AND ts >= ? AND ts < ? LIMIT 1",
+                        (kind, start, start + 86400)).fetchone()
+    return row is not None
+
+
 def session_summary_logged_on(session_date):
     """True if the end-of-session summary for this IST date is already in the
     activity log. The engine's once-a-day guard is in-memory, so without this
