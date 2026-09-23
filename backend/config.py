@@ -97,7 +97,7 @@ STRATEGY_PARAMS = {
         "min_pattern_atr": 0.3,       # ignore candles too small to mean anything...
         "max_pattern_atr": 3.0,       # ...or abnormally long (stop too far away)
         # cost_pct is derived from COSTS in trader_brain.DEFAULTS (issue #74) — don't hardcode it here.
-        "rrr_without_level": 2.0,     # target in R when no support/resistance lies beyond
+        # rrr_without_level: None since #40 — no formulaic target when no level lies beyond (see trader_brain.DEFAULTS).
         "use_news": True,
         "news_weight": 2.0,
         "news_veto": -0.5,          # sentiment at/below this blocks new longs
