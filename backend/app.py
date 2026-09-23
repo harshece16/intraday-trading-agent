@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import auth
 import chaywanaprash
 import config
 import data_provider
@@ -90,13 +91,16 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
             return await call_next(request)
-        key = request.headers.get("x-api-key") or request.query_params.get("key")
-        if key != config.DASHBOARD_API_KEY:
-            return JSONResponse({"detail": "Missing or invalid API key."}, status_code=401)
+        # Header only. A ?key= query string is no longer accepted: uvicorn logs
+        # every request line, which put the key in backend.log in plain text (#87).
+        if not auth.key_ok(request.headers.get("x-api-key")):
+            return JSONResponse({"detail": "Missing or invalid API key (send it in the X-Api-Key header)."},
+                                status_code=401)
         return await call_next(request)
 
 
 app.add_middleware(ApiKeyMiddleware)
+auth.install_log_redaction()
 if config.DASHBOARD_API_KEY_IS_NEW:
     logger.warning(f"Dashboard API key generated — enter this into the dashboard once: {config.DASHBOARD_API_KEY}")
 else:
@@ -552,6 +556,19 @@ def kite_login():
     return RedirectResponse(kite.login_url())
 
 
+@app.get("/api/kite/login-url")
+def kite_login_url():
+    """The same step as /kite/login, for the dashboard: it needs the
+    X-Api-Key header, which a popup's navigation can't send, so the dashboard
+    fetches this and then points its popup at the returned URL (#87)."""
+    if not config.KITE_API_KEY:
+        return JSONResponse({"error": "Kite isn't set up yet — set KITE_API_KEY and KITE_API_SECRET and restart."},
+                            status_code=400)
+    from kiteconnect import KiteConnect
+    data_provider.note_kite_login_started()
+    return {"url": KiteConnect(api_key=config.KITE_API_KEY).login_url()}
+
+
 @app.get("/kite/callback")
 def kite_callback(request_token: Optional[str] = None, status: Optional[str] = None):
     """Step 2 — Kite redirects here after login (must match the app's registered Redirect URL)."""
@@ -594,12 +611,12 @@ def kite_callback(request_token: Optional[str] = None, status: Optional[str] = N
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     # BaseHTTPMiddleware (ApiKeyMiddleware, above) never sees websocket-scope
-    # connections, so the key is checked here instead, as a query param
-    # (browsers can't set a custom header on a WebSocket handshake).
-    if websocket.query_params.get("key") != config.DASHBOARD_API_KEY:
-        await websocket.close(code=4401)
-        return
+    # connections, and browsers can't set a header on the handshake. The key
+    # used to ride in ?key=, which uvicorn logged on every connect (#87); now
+    # the socket's first message has to carry it. See auth.py.
     await websocket.accept()
+    if not await auth.authenticate_websocket(websocket):
+        return
     try:
         while True:
             await websocket.send_json(state.snapshot())

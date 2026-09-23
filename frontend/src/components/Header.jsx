@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { API_BASE, API_KEY, apiFetch } from "../api";
+import { apiFetch, openKiteLogin } from "../api";
 import { clock, money, num, tone } from "../format";
 import { sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
@@ -97,7 +97,7 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
           <button
             className={`btn ${k.urgent ? "primary" : ""}`}
             title={k.detail}
-            onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}
+            onClick={openKiteLogin}
           >
             {k.action}
           </button>

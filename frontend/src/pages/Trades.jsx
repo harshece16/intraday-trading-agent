@@ -1,4 +1,4 @@
-import { API_BASE, API_KEY } from "../api";
+import { downloadWithKey } from "../api";
 import { clock, money, num, tone } from "../format";
 import { REASON_TEXT, tradeAction } from "../helpers";
 import SymLink from "../components/SymLink";
@@ -26,9 +26,9 @@ export default function Trades({ state: s }) {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <h2 className="h">Trade journal</h2>
-        <a className="btn" href={`${API_BASE}/api/journal/trades.csv?key=${encodeURIComponent(API_KEY)}`} download>
+        <button className="btn" onClick={() => downloadWithKey("/api/journal/trades.csv", "trader-sahab-trades.csv")}>
           Export full history (CSV)
-        </a>
+        </button>
       </div>
       <p className="sub">Every order today and the reason it was placed. Export includes every trade ever logged
         (paper and live, marked by mode), not just today's — for your own records at filing time.</p>
