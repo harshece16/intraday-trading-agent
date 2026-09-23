@@ -284,7 +284,10 @@ export default function Stock({ state: s }) {
         <span><i className="dash" style={{ borderColor: "var(--ink-2)" }}></i>Plan entry</span>
         <span><i className="dash" style={{ borderColor: "var(--short)" }}></i>Stop</span>
         <span><i className="dash" style={{ borderColor: "var(--long)" }}></i>Target</span>
+        <span><i style={{ background: "var(--long)", opacity: 0.55 }}></i>Supertrend</span>
+        <span><i className="dash" style={{ borderColor: "var(--focus)" }}></i>VWAP</span>
         <span className="muted">— the checklist's trade plan if taken, not a price forecast</span>
+        <span className="muted">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a></span>
       </div>
       <div className="tabs" role="tablist">
         <button className="tab" role="tab" aria-selected={tab === "timing"} onClick={() => setTab("timing")}>Timing read</button>

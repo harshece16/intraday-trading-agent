@@ -3023,6 +3023,16 @@ With no depth to read, a **paper** entry goes ahead and is recorded as *unchecke
 
 **What this does not do.** It only ever removes trades, and it creates no edge. It has not yet been checked against a live book: it was built after the close on 2026-09-23, so the first real readings come from the next session. Because the confidence gate blocks nearly every setup first, readings will be sparse until more setups reach the last gate.
 
+### 59. Charts you can actually read
+
+The Overview tiles squeezed two or three days of 5-minute candles into a 300 px box. Up to six price labels stacked on the right edge, and 3 px Supertrend lines and a TradingView logo sat on top of every chart.
+
+- **Overview tiles** (`<Chart compact />`) open on the **latest session** and show candles, EMA 20/50 and the plan's entry/stop/target lines **without axis labels**; the card's own text gives the numbers. There's no volume, no Supertrend and no pattern-name text (the arrow stays). Wheel and drag are off, so scrolling the page scrolls the page.
+- **Stock page** opens on the last **two** sessions and can still scroll back. The Supertrend is 2 px and semi-transparent, lines at the same price share one label ("Resistance · Target"), and the legend now lists Supertrend and VWAP.
+- The TradingView logo is replaced by the text credit the library's licence asks for.
+
+Checked in the browser against the running dashboard on 2026-09-23.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
