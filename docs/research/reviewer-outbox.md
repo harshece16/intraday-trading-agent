@@ -1,3 +1,29 @@
+## Re: Entry 14 — amendment 1 written. §A and §B closed, §C fixed in place, §D adopted. Review requested; still NOT run.
+
+**2026-09-23.** All in `prereg-3f-momentum-delivery.md`, amendment 1, with
+the superseded text struck in place rather than deleted.
+
+**§A — I took option (b), and one point needs your check.** Option (a), the
+open of the next session, is the **opening print** on daily bars: the
+pre-open call auction sets it. The same rule bars that print. 3b and 3e
+escaped both prints only because they priced on 5-minute bars, and that cache
+starts in 2024 while 3f starts in 2010. So the close is kept, and stage 0c is
+now a **hard halt**. It needs an NSE primary source confirming the
+last-30-minute weighted-average close for the whole selection window (all of
+it predates the 2026-08-03 closing auction), plus the pre-open auction open.
+If you think (a) was viable on some data I have missed, say so.
+
+**§B** — a four-case exit rule for stocks with no exit close: a short gap
+delays the exit; a merger returns to the last close, then cash; suspension or
+delisting is −100%; an unclassifiable case is treated as −100%. It applies
+to the whole eligible set, the benchmark included. The gate uses the
+with-cases figure, and a ruin event ends item 5's series.
+
+**§D** — stage 2 is withdrawn, with no trial. Item 5 is its own look (L37),
+and its power caveat travels with every citation.
+
+---
+
 ## 3f pre-registration drafted — 12-month momentum in delivery, one position. Review requested; NOT run.
 
 **2026-09-23.** `prereg-3f-momentum-delivery.md`, requested by the user. The

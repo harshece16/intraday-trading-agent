@@ -12,8 +12,11 @@ go-ahead to run it**. Writing it is not the go-ahead.
 
 **Numbering.** 3e (PR #77) is pre-registered and not run; it holds research
 look **L35** and trial **38**. 3f therefore takes **the next free numbers at
-the moment it runs** — expected **L36** (stage 1) and **trial 39** (stage 2),
-or L35 / trial 38 if 3e is withdrawn first. The count is read from
+the moment it runs** — ~~expected **L36** (stage 1) and **trial 39** (stage 2),
+or L35 / trial 38 if 3e is withdrawn first.~~ **SUPERSEDED by amendment 1
+§D: two research looks and no trial** — expected **L36** (quintile gate) and
+**L37** (the descriptive one-position report), or L35 / L36 if 3e is
+withdrawn first. The count is read from
 `trials.md` at run time and stated in the results file.
 
 **Nothing here recommends investing or trading real money.** It asks one
@@ -63,8 +66,10 @@ to measure the effect itself, which is what stage 1 is for.
 At ₹5,500, Zerodha's DP charge — **₹15.34 per scrip, per sell, GST
 included, "irrespective of quantity"** (zerodha.com/charges, read 2026-09-23)
 — dominates everything else. Delivery round trip, published tariff (zero
-brokerage, STT 0.1% each side, NSE 0.00307%, stamp 0.015% buy, GST on
-SEBI + exchange), plus the modelled 3 bp/leg slippage:
+brokerage, STT 0.1% each side, NSE 0.00307%, stamp 0.015% buy, GST ~~on
+SEBI + exchange~~ **on the exchange charge only, as `leg_cost()` computes
+it — SEBI charges are outside the GST base in the code; amendment 1 §C.1**),
+plus the modelled 3 bp/leg slippage:
 
 | Positions | Size of each | Charges | + slippage | **Round trip** |
 | --- | --- | --- | --- | --- |
@@ -180,8 +185,9 @@ signal is computed.
   below happen at the session close. Before the 2026-08-03 closing auction,
   NSE's official close was, to this author's understanding, a weighted average
   of the last 30 minutes, which a trader can approximate. **Stage 0 must
-  confirm that from an NSE source and cite it.** If it cannot, report it as an
-  open caveat on tradability.
+  confirm that from an NSE source and cite it.** ~~If it cannot, report it as
+  an open caveat on tradability.~~ **SUPERSEDED by amendment 1 §A: this is
+  now a HARD HALT, structured like 0b.**
 
 ---
 
@@ -202,7 +208,8 @@ account's size.
 | Eligible | Member on the signal date · ≥ 252 sessions of history with ≤ 5% missing · **unadjusted close ≤ ₹5,500** (one share must be affordable — applied at every stage, so stage 2 inherits the same universe) · ≥ 20 eligible stocks, else the month is skipped |
 | Signal date | Close of the **last session** of month *m−1* |
 | **Score** | `r / σ`, where `r` = adjusted close at *t−21* ÷ adjusted close at *t−252* − 1, and `σ` = sd of daily log returns over *t−252 … t−21*, × √252. Ties broken by symbol, alphabetical |
-| **Holding return** | Adjusted **close of the first session of month m → close of the first session of month m+1**. One full session after the signal date: never the signal bar |
+| **Holding return** | Adjusted **close of the first session of month m → close of the first session of month m+1**. One full session after the signal date: never the signal bar. **Tradable only under amendment 1 §A's hard halt; a picked stock with no exit close follows amendment 1 §B** |
+| **Benchmark** | **Equal-weight mean of the holding returns of that month's eligible set** — the same set used for quintile assignment, with amendment 1 §B applied to every member, not only to picked names (amendment 1 §C.2) |
 | Period | Holding months from the stage-0b start (≥ Jan 2010) **through Dec 2025** — the last one ends on the first session of Jan 2026, before `splits.HELD_OUT_START` (2026-01-02). **Nothing on or after 2026-01-02 is loaded past the loader** |
 | Halves | Split at the median holding month, fixed now |
 
@@ -221,7 +228,8 @@ are tested with a plain t across months.
    top-scored eligible stock, net of 56.1 bp on each month it changes: mean
    monthly excess, sd, share of months it changes, worst month, maximum
    drawdown. **No pass rule. It cannot clear stage 1 and cannot justify a
-   variant.**
+   variant.** **Amendment 1 §D: logged as its own research look, and every
+   citation carries its power caveat inline.**
 
 ### Stage-1 gate, fixed before running
 
@@ -244,7 +252,7 @@ is reported as **untestable on this history**, not as a null and not as
 
 ---
 
-## Stage 2 — the strategy (trial 39, only if stage 1 clears)
+## ~~Stage 2 — the strategy (trial 39, only if stage 1 clears)~~ **WITHDRAWN by amendment 1 §D — no trial is spent. The mechanics table below is kept because stage 1 item 5 uses it.**
 
 **A proposal to the reviewer, raised before any number exists:** the power
 table above says the one-position rule **cannot produce a statistical PASS**
@@ -322,6 +330,10 @@ also already seen once on daily data by §52's swing backtest.
   order has ever been placed.
 - **Residual survivorship**: member-months with no price history (at most 5%,
   by stage 0b's gate) are dropped, and they are more likely to be failures.
+- **The ≤ ₹5,500 price filter selects on nominal share price** (amendment 1
+  §C.3), which tracks sector and split history rather than size or
+  liquidity. It is an uncorrected source of non-representativeness in every
+  stage, separate from survivorship.
 
 ---
 
@@ -343,3 +355,118 @@ session enters the score.
 **Stopped here for review.** No 3f code exists. Nothing runs — not even
 stage 0b — without the reviewer's review of this file **and** the user's
 explicit go-ahead.
+
+---
+
+# Amendment 1 — Entry 14 (research-reviewer)
+
+**Committed before any 3f code exists.** Entry 14 accepted the
+pre-registration with corrections: §A and §B are design gaps that must close
+before stage-0 code is written; §C is text; §D answers the outbox's three
+questions. Each is resolved below, **the choice stated in the file rather
+than decided in code**, and the superseded text is struck in place above,
+not deleted.
+
+## §A — the fill price: closing price kept, tradability made a HARD HALT
+
+Entry 14 offered two options: **(a)** fill at the open of the session after
+the signal, or **(b)** keep close-to-close and make stage 0c's
+closing-price check a hard halt.
+
+**Option (b) is adopted, because (a) breaks the same rule it is meant to
+satisfy.** With **daily** bars, a session's open is the result of NSE's
+**pre-open call auction** (09:00–09:08) — the **opening print**, which the
+standing rule ("not the opening print, not the closing auction") bars in the
+same sentence. 3b and 3e avoided both prints only because they priced on
+**5-minute** bars (the 09:50 open, the open of the bar after the signal).
+That cache starts **2024-09-20**; 3f's window starts in **2010**, so a
+mid-session 5-minute price does not exist for most of the sample. Daily data
+offers only the open and the close, and the open is the print the rule
+names first.
+
+**The close is different in the selection window, provided one fact holds.**
+Every holding month in stage 1 ends on the first session of January 2026, so
+**the whole sample predates the 2026-08-03 closing auction**. If NSE's
+official closing price for equities in that period was a **weighted average
+of trades over the last 30 minutes**, it is not a single print. A trader can
+approximate it by executing through that half hour, and the 3 bp/leg
+modelled slippage is the allowance for how far a real fill lands from that
+average (**still unmeasured**).
+
+> **HARD HALT — stage 0c.** 3f proceeds only if an **NSE primary source**
+> (circular, FAQ or market-timings page, cited in the stage-0 output) confirms
+> that the official closing price of cash-market equities was the weighted
+> average of the last 30 minutes' trades **for the whole selection window**.
+> The same source, or another NSE source, must confirm that the daily open
+> is set by the pre-open call auction. This makes the reasoning above
+> sourced, not assumed.
+>
+> **If either cannot be confirmed, 3f STOPS at stage 0.** No look is spent,
+> exactly as for a failed membership reconstruction (0b). 3f is not
+> re-registered with a different fill.
+
+**Stated so it cannot be forgotten later:** the post-2026-08-03 regime
+(closing auction for F&O stocks) does **not** apply to stage 1. It **would**
+apply to any forward paper tracking (see "Held-out"). That tracking would
+need its own fill rule, fixed before it starts.
+
+## §B — a picked stock with no exit price
+
+A rule that exists for selection but not for exit reintroduces survivorship
+at the exit step, and it is biased toward exactly the names momentum picks.
+Fixed now, for **every member of the eligible set** (quintile members, the
+benchmark, and item 5's single position alike), whenever a stock has **no
+adjusted close on its exit date**:
+
+| Case | Realised holding return | Classification source |
+| --- | --- | --- |
+| **(i) Short gap**: missing for ≤ 5 sessions, trading resumes | Exit at the **first close after resumption** — the exit is delayed, not dropped | Price series |
+| **(ii) Merger, amalgamation or scheme** — holders receive shares or cash | Return to the **last available adjusted close**, then **0% (cash)** for the rest of the month | NSE corporate announcement, recorded in the stage-0b membership file's `reason` column |
+| **(iii) Suspension beyond 5 sessions, compulsory or involuntary delisting, insolvency** | **−100%** | Same |
+| **(iv) Cannot be classified** | **Treated as (iii), −100%** | — |
+
+- Case (iv) defaults to the punitive case on purpose: an unclassified
+  disappearance must not be able to flatter the result.
+- **Reported**: the count of each case, which quintile they fell in, and the
+  gate statistic **with and without** cases (ii)–(iv). The **with** figure
+  is the one that gates.
+- **Item 5 (one position):** a case (iii) or (iv) takes the whole account to
+  zero, and the series **ends there**. It is reported as a ruin event, not
+  restarted with fresh capital.
+
+## §C — text, no figure changes
+
+1. **GST base.** The prose said GST is on "SEBI + exchange"; `leg_cost()`
+   computes it on brokerage + exchange only. Corrected in place to match the
+   code. Entry 14 recomputed the table from the code's formula and every
+   figure stands (SEBI charges are ~150× smaller than the exchange charge).
+   The code-versus-tariff difference is already tracked as **#79**.
+2. **Benchmark.** Defined in the stage-1 table: the equal-weight mean of the
+   holding returns of that month's eligible set, with §B applied.
+3. **Nominal-price filter.** Added to "What 3f cannot establish".
+
+## §D — the three outbox answers, adopted
+
+1. **Point-in-time membership stays a hard stop.** Unchanged.
+2. **Stage 2 is withdrawn before running. No trial is spent.** Two
+   conditions from Entry 14, adopted:
+   - **Item 5 is logged as its own research look** in `trials.md` (expected
+     **L37**), separate from the quintile gate (**L36**). It computes a full
+     return series for a specific tradeable configuration, and its audit
+     trail should not rest on "no pass rule" alone. It uses the withdrawn
+     stage-2 mechanics table exactly as written, with §B applied.
+   - **Every citation of item 5**, in a results file, a progress update, a
+     README section or a conversation, **carries the caveat inline**:
+     *"MDE ≈ 130 bp a month; this cannot be distinguished from luck."*
+3. **The held-out window is not requested.** Forward paper tracking stays
+   the **user's decision**, and needs its own fill rule (§A).
+
+## Unchanged
+
+Everything else stands: universe, score, eligibility, dates, halves, the
+stage-1 gate (quintile excess > 56.1 bp a month, t > 2, both halves), the
+untestable branch, the survivorship hard stop and the code boundary.
+
+**Stopped again for review**, as Entry 14 directs, before any stage-0 code is
+written. Nothing runs without the reviewer's review of this amendment **and**
+the user's explicit go-ahead.
