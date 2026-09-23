@@ -647,6 +647,39 @@ def _bar_hhmm(bar_time, ts, ist):
     return start.strftime("%H:%M")
 
 
+COVERAGE_GAP_MIN = 5
+
+
+def _session_coverage(read_ts, day, ist):
+    """Which part of the session the engine actually evaluated, from the
+    checklist reads themselves (not the OS: a sleeping laptop writes nothing,
+    and that absence is the evidence).
+
+    The session runs from MARKET_OPEN to SQUARE_OFF_TIME, since the engine
+    stops reading at square-off. A gap of more than COVERAGE_GAP_MIN minutes
+    between consecutive reads (or before the first / after the last) is
+    counted as uncovered, so a sleeping machine is never mistaken for a quiet
+    market."""
+    def at(hhmm):
+        h, m = (int(x) for x in hhmm.split(":"))
+        return datetime.combine(day, datetime.min.time(), tzinfo=ist).replace(hour=h, minute=m).timestamp()
+    open_ts, close_ts = at(config.MARKET_OPEN), at(config.SQUARE_OFF_TIME)
+    ts = sorted(t for t in read_ts if open_ts <= t <= close_ts)
+    session_min = round((close_ts - open_ts) / 60)
+    hm = lambda t: datetime.fromtimestamp(t, ist).strftime("%H:%M")
+    if not ts:
+        return {"first": None, "last": None, "session_min": session_min, "uncovered_min": session_min,
+                "gaps": [[config.MARKET_OPEN, config.SQUARE_OFF_TIME]]}
+    edges = [open_ts] + ts + [close_ts]
+    gaps, uncovered = [], 0.0
+    for a, b in zip(edges, edges[1:]):
+        if b - a > COVERAGE_GAP_MIN * 60:
+            gaps.append([hm(a), hm(b)])
+            uncovered += b - a
+    return {"first": hm(ts[0]), "last": hm(ts[-1]), "session_min": session_min,
+            "uncovered_min": round(uncovered / 60), "gaps": gaps}
+
+
 def session_summary(session_date=None, near_miss_limit=5):
     """Why a session ended with the trade count it did.
 
@@ -768,6 +801,7 @@ def session_summary(session_date=None, near_miss_limit=5):
         "full_passes_outside_window": len(passes_out - passes_in),
         "full_pass_reads": pass_reads,
         "entry_window": [win_from, win_to],
+        "coverage": _session_coverage([r["ts"] for r in rows], day, ist),
         "entries_taken": opened,
         "required_item_fail_counts": fail_counts,
         "near_misses_by_lone_blocker": near_misses,
@@ -796,17 +830,26 @@ def session_summary_line(summary):
     numbers can't drift apart."""
     date = summary["session_date"]
     evals, entries = summary["evaluations"], summary["entries_taken"]
+    # Said first, before any count: a day the engine only half-saw is not
+    # evidence about the market. On 23 Sep the laptop slept 09:14-10:38 and the
+    # summary read like a quiet day. Silent when the whole session was covered.
+    cov = summary.get("coverage") or {}
+    coverage = ""
+    if evals and cov.get("uncovered_min", 0) > 0:
+        spans = ", ".join(f"{a}–{b}" for a, b in cov["gaps"])
+        coverage = (f" Coverage: engine evaluated {cov['first']}–{cov['last']}; {cov['uncovered_min']} min of the "
+                    f"{config.MARKET_OPEN}–{config.SQUARE_OFF_TIME} session not covered ({spans}).")
     if not evals:
         return f"{SESSION_SUMMARY_PREFIX}{date}: no checklist evaluations ran — the engine saw no active watchlist."
     if entries:
         return (f"{SESSION_SUMMARY_PREFIX}{date}: {entries} position(s) opened from {evals:,} checklist "
-                f"evaluations across {summary['symbols_evaluated']} stocks.")
+                f"evaluations across {summary['symbols_evaluated']} stocks.{coverage}")
 
     # Distinct setups inside the entry window, not raw reads (#82): the engine
     # re-reads a setup every ~38 s, and a pass after the cutoff is never tried.
     out_of_window = summary.get("full_passes_outside_window", 0)
     win = summary.get("entry_window") or ["09:30", "14:30"]
-    head = (f"{SESSION_SUMMARY_PREFIX}{date}: no trades. {evals:,} checklist evaluations across "
+    head = (f"{SESSION_SUMMARY_PREFIX}{date}: no trades.{coverage} {evals:,} checklist evaluations across "
             f"{summary['symbols_evaluated']} stocks produced {summary['full_passes']} setup(s) passing every "
             f"required item inside the {win[0]}–{win[1]} entry window"
             + (f" (plus {out_of_window} outside it, never tried)" if out_of_window else ""))
