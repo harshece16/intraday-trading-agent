@@ -96,7 +96,13 @@ DEFAULTS = {
     # 21 of the baseline's 30 trades.
     "stop_buffer_atr": 0.0,
     "min_stop_atr": 1.0,
-    "rrr_without_level": 2.0,
+    # A target with no level to aim at (#40). None (the default) means there is
+    # none: a setup with no support/resistance beyond the entry fails the R:R
+    # item, as Varsity's checklist has it (the target is the next level). A
+    # number restores the old formulaic target, a GROSS multiple of risk,
+    # which is then judged NET of costs, so 2.0 gross nets well under 2.0.
+    # Kept as a knob only so the before/after backtest can run both arms.
+    "rrr_without_level": None,
     "max_target_atr": 3.0,           # how far out to look for a level that actually clears min_rrr
     "adx_trend": 25,
     "adx_range": 20,
@@ -339,12 +345,16 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         elif beyond:
             target = beyond[0]
             source = f"next {level_word2}"
-        else:
+        elif p["rrr_without_level"] is not None:
             target = price + s * p["rrr_without_level"] * risk
-            source = f"{p['rrr_without_level']:g}R, no level beyond"
-        rrr = _net_rrr(price, stop, target, p["cost_pct"])
-        item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
-             f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")
+            source = f"{p['rrr_without_level']:g}R gross, no level beyond"
+        if target is not None:
+            rrr = _net_rrr(price, stop, target, p["cost_pct"])
+            item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
+                 f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")
+        else:
+            item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", False,
+                 f"No {level_word2} beyond the entry to aim a target at")
     else:
         item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", False, "Needs a stop to measure risk")
 
