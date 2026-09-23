@@ -35,6 +35,13 @@ buying calls/puts once the checklist and a confidence gate both clear.
   cost model, and an evidence pipeline that correctly refused to certify an
   edge for months and has now explained why. The machinery is the asset; the
   strategy it currently runs is not.
+- **Where the research stands (2026-09-23).**
+  - **Phase 2 is closed** with no tradable edge. Friction is 0.398R per trade, and the round trip costs **16.60 bp**.
+  - The live gate now prices that cost correctly. It had been using 12 bp ([§57](#57-the-reward-to-risk-gate-now-prices-the-round-trip-it-actually-pays), #74).
+  - Every entry now passes an order-book **liquidity check** ([§58](#58-a-liquidity-check-before-every-entry--can-we-get-in-and-out-at-the-price-we-assumed)).
+  - One new hypothesis is **pre-registered but not run**: 3e, wide stops and short side only (`docs/research/prereg-3e-wide-structure-short.md`). It needs reviewer review and the owner's go-ahead.
+  - **Phase-3 scoping** (`docs/research/phase3-scoping.md`) checked every Kite segment at ₹5,500 of margin. Only NSE/BSE cash, MCX GOLDPETAL and CDS futures are reachable. No reachable segment has a documented effect that clears its cost.
+  - **Strategy trials: 37.** The 2026 held-out window is still unspent.
 - **Most retail intraday traders lose.** SEBI's own study (Jul 2024) found
   71% of individual intraday cash traders net-lost in FY23, rising to 80%
   above 500 trades/year. A separate SEBI study (Sep 2024) found 93% of
@@ -3132,12 +3139,14 @@ webapp/
 │   ├── seasonality.py           # ★ real, cited calendar effects only — March effect, Budget day — §18
 │   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
 │   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
+│   ├── liquidity.py             # ★ entry-time order-book check: spread, impact of our size, entry AND exit depth; journals every reading — §58
 │   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
 │   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33, §38
 │   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
 │   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
 │   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36
 │   ├── swing_backtester.py      # ★ multi-day long-only holds on daily bars vs an every-stock benchmark, plus daily ranking IC — §37
+│   ├── research/                # ★ phase-2/3 research harnesses (splits, null test, friction, 3a/3b/3c, #74 before/after); no live module imports it — tested
 │   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
 │   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
 │   └── data/nifty100.csv
@@ -3182,9 +3191,10 @@ flowchart TB
         Brain["trader_brain.py\nGrand Checklist — shared by cash & F&O"]
         Risk["risk_manager.py / fno_risk.py\nposition sizing"]
         Conf["confidence.py\nscaled by the Dimaag Scorecard"]
+        Liq["liquidity.py\norder-book check before every entry"]
         News["news_sentiment.py\naggregation + relevance filter"]
         Diag["portfolio_diagnostic.py\nread-only holdings snapshot"]
-        DB[("sahab_journal.db\nSQLite — scans, checklist reads,\ntrades, F&O evaluations")]
+        DB[("sahab_journal.db\nSQLite — scans, checklist reads,\ntrades, F&O evaluations, liquidity checks")]
     end
 
     subgraph External["External services"]
@@ -3198,7 +3208,7 @@ flowchart TB
     SPA <-->|"WebSocket /ws\n?key=... every 3s"| API
     SPA -->|"REST, X-Api-Key header"| API
     API --> Engine
-    Engine --> Scanner --> Brain --> Risk
+    Engine --> Scanner --> Brain --> Risk --> Liq
     Brain --> Conf
     Engine -->|"paper fill, or\nreal order"| Kite
     Scanner --> YF
@@ -3218,7 +3228,7 @@ the WebSocket — there's no separate state store the frontend and backend
 could disagree about. The engine loop is the only writer; the REST API and
 the diagnostic/LLM paths are read-mostly extensions bolted onto the side,
 which is why they can be built, tested, and toggled independently without
-touching the core scan → brain → risk → execute chain. External services
+touching the core scan → brain → risk → liquidity → execute chain. External services
 are all optional except Kite for live data/orders and yfinance for
 backtesting — everything else (Marketaux, Alpha Vantage, Claude) degrades
 to "skip this source" on its own, never blocking a decision.
@@ -3447,6 +3457,8 @@ the form. Two ways around it:
    https://<your-static-domain>` to avoid re-registering a new Redirect URL
    every time you restart the tunnel.
 
+**If the tunnel is down when you log in**, Kite still redirects to it and the page fails to load. The address bar keeps the whole redirect, though. Replace the tunnel host with `http://127.0.0.1:8000` and keep the rest of the URL unchanged (`/kite/callback?...&request_token=...`), then open it. The running backend completes the login the same way. The request token can only be used once and expires within minutes, so do this straight away. (Verified 2026-09-23 with ngrok stopped.)
+
 **Kite sessions expire daily.** Whichever method you used, you'll need to
 redo it each morning before trading live —
 `python generate_access_token.py` doesn't depend on any tunnel still being
@@ -3489,6 +3501,9 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
 ## Known limitations
 
 - Net-negative in every backtest. There's no edge yet, in cash equity or F&O.
+- **Square-off time is later than the broker's (#78, open).** Since the closing auction started on 2026-08-03, Zerodha auto-squares MIS positions in F&O-eligible stocks at **15:12**, and charges ₹50 + GST per auto square-off order. The engine squares off at 15:15. That covers nearly the whole NIFTY 100, so **fix it before trading live**. Paper mode is unaffected.
+- **Slippage is still an assumption** (3 bp per leg), because no real-money order has ever been placed. The charges side of the cost model now matches Zerodha's published tariff to within about 0.03 bp (#79). Measured spreads have been accumulating in `liquidity_checks` since §58, but only for setups that reach the last gate.
+- **Cash equity only, in practice.** At a small account, NFO futures and all but one MCX contract are out of reach on margin, and Kite has no intraday history for expired F&O/MCX/CDS contracts. A non-equity backtest would need a forward-collected cache first (`docs/research/phase3-scoping.md`).
 - F&O confidence currently borrows cash equity's Scorecard rather than
   having its own — untested assumption, not a proof (see "Improving the
   brain" above).
