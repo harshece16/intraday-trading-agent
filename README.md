@@ -2396,9 +2396,10 @@ placed where the economics work". Making the floor the wider of the ATR and
 cost ideas is issue #43, and it would need its own backtest because it
 pushes trade count the opposite way from this section's change.
 
-**Also still open:** `rrr_without_level` is a *gross* 2.0R target measured
-against a *net* bar, so that branch nets 0.62 at the old cost fraction and
-has never once passed (issue #40).
+**Since fixed (§61, #40):** `rrr_without_level` was a *gross* 2.0R target
+measured against a *net* bar. It was later measured to pass occasionally
+(9 full checklist passes), not never, and it has been removed rather than
+converted to net terms.
 
 ### 49. Stops are checked on every tick, not every 30 seconds
 
@@ -3048,6 +3049,21 @@ The dashboard API key gates every route, including the Live toggle. It rode in `
 **Verified on the running backend:** `?key=` → 401 and header → 200. On the WebSocket, first-message auth received state, while a wrong key and the old `?key=` style were closed with 4401. The dashboard stays live and the CSV fetch returns 200. Log lines since the deploy contain the key 0 times. The existing log was scrubbed in place (235 → 0).
 
 **If a dashboard tab was open before this change, reload it.** Until then it keeps reconnecting the old way, which is harmless, just noisy.
+
+### 61. No target, no trade: the formulaic 2R fallback is gone
+
+When no support or resistance lay beyond the entry, the checklist aimed at a **gross** 2.0R target and judged it **net** of costs (#40). A setup with no level to aim at now has **no target and fails the R:R item**, which is Varsity's rule: the target is the next level. `rrr_without_level` defaults to `None`, and a number restores the old gross behaviour. It is kept only so the before/after test can run both arms.
+
+**#40's premise was wrong, and this was measured before deciding.** The issue said the branch could never pass. The journal shows **920** evaluation-sides took it, **186** cleared R:R, and **9** passed the whole checklist. Converting it to net terms, as #40 proposed, would have let it pass *more*, which is a loosening, so it was removed instead.
+
+**Backtested first**, with the same pre-registered harness as §57 (selection only, both halves, held-out never loaded):
+
+| Half | Old (2R gross) | New (no target) |
+| --- | --- | --- |
+| First | 33 trades, −0.354R | 31 trades, −0.360R |
+| Second | 12 trades, +0.032R | 7 trades, +0.089R |
+
+It passes (worse in one half only) and **removes 16% of trades with no measurable change in expectancy**. It creates no edge. Close-of-day "near misses" on this branch are now reported as a boolean gate with no distance to show, not as a close R:R. Trials 38 and 39; `docs/research/results-fix40-no-level-target.md`.
 
 ## Backtest results
 
