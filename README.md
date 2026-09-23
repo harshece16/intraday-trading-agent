@@ -3033,6 +3033,22 @@ The Overview tiles squeezed two or three days of 5-minute candles into a 300 px 
 
 Checked in the browser against the running dashboard on 2026-09-23.
 
+### 60. The dashboard key no longer travels in URLs, and never reaches a log
+
+The dashboard API key gates every route, including the Live toggle. It rode in `?key=` query strings on every WebSocket connect, the "Connect Kite" popup, the trades CSV link and the watchdog's health check. uvicorn logs each request line, so **235 lines of `backend.log` held the key in plain text** (#87).
+
+- **REST** accepts the key only in the `X-Api-Key` header. `?key=` now gets a 401. The comparison is constant-time.
+- **The WebSocket** connects to a bare `/ws`, and its **first message** must be `{"type": "auth", "key": ...}` within 5 seconds, or it's closed with 4401. Browsers can't set a header on the handshake, which is why the key used to go in the URL.
+- **"Connect Kite"** fetches `/api/kite/login-url` with the header, then points its popup at the returned Kite URL. The window opens inside the click, so popup blockers still allow it.
+- **The CSV export** is fetched with the header and saved from a blob.
+- **The watchdog** sends the header.
+- **Defence in depth:** a log filter redacts any `key=` that still reaches a uvicorn log line, for example from a stale bookmark or an old tab.
+- A `?key=` on the *dashboard's own* URL still seeds the browser's stored key, then is removed from the address bar.
+
+**Verified on the running backend:** `?key=` → 401 and header → 200. On the WebSocket, first-message auth received state, while a wrong key and the old `?key=` style were closed with 4401. The dashboard stays live and the CSV fetch returns 200. Log lines since the deploy contain the key 0 times. The existing log was scrubbed in place (235 → 0).
+
+**If a dashboard tab was open before this change, reload it.** Until then it keeps reconnecting the old way, which is harmless, just noisy.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

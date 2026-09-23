@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, API_KEY, apiFetch, apiJson } from "../api";
+import { apiFetch, apiJson, openKiteLogin } from "../api";
 import { clock, dateLabel, money, num, pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
@@ -91,7 +91,7 @@ function KiteSessionAlert({ s }) {
         </div>
         <button
           className="btn primary"
-          onClick={() => window.open(`${API_BASE}/kite/login?key=${encodeURIComponent(API_KEY)}`, "kite-login", "width=480,height=640")}
+          onClick={openKiteLogin}
         >
           {stalled ? "Try again" : "Reconnect"}
         </button>

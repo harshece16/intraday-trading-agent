@@ -75,7 +75,8 @@ responds() {
   local key
   key=$("$PY" -c "import json;print(json.load(open('.dashboard_key.json'))['key'])" 2>/dev/null) || return 1
   [ -n "$key" ] || return 1
-  curl -sf -m 10 -o /dev/null "http://127.0.0.1:$PORT/api/state?key=$key"
+  # Header, not ?key=: uvicorn logs the URL of every request (#87).
+  curl -sf -m 10 -o /dev/null -H "X-Api-Key: $key" "http://127.0.0.1:$PORT/api/state"
 }
 
 # The backend has to outlive this script. `nohup ... &` is not enough under
