@@ -3000,6 +3000,22 @@ The checklist deducted a typed-in **0.12%** round trip inside the reward-to-risk
 
 **What to expect:** about **63% fewer trades**. That is the point: those setups only passed because their cost was understated. **It is not an edge.** Every interval spans zero, and the second half's +0.03R rests on 12 trades. Full write-up: `docs/research/results-fix74-cost-pct.md`, trials 36 and 37.
 
+### 58. A liquidity check before every entry — can we get in *and out* at the price we assumed?
+
+Trader Sahab already works as a pipeline of specialised stages, the layout multi-agent trading posts describe. Selection is `scanner.py`. Noise filtering is the tradability floors, the scanner's side, the risk-on/off filter and the confidence gate. Entry is the Varsity checklist, `recheck_plan()` and sizing. The supervisor is `risk_manager.py`, the daily loss cap, reconciliation and the journal. **The missing stage was liquidity:** the only check was the scanner's ₹50 cr daily turnover floor, which says nothing about the book at the moment of entry.
+
+`liquidity.py` now reads Kite's five-level market depth just before an order and refuses the entry when:
+
+- **the spread is wider than 6 bp.** That limit is twice the cost model's 3 bp-per-leg slippage, **derived** from `config.COSTS` rather than typed in. A market order pays about half the spread, so a wider spread means the 16.60 bp hurdle understates this fill.
+- **filling our size walks the book** further from the mid than that slippage, or five levels can't fill it at all.
+- **either side is thin.** The entry side *or the side we'd exit into* holds less than 3× our quantity across five levels (`config.LIQUIDITY["min_depth_multiple"]`).
+
+With no depth to read, a **paper** entry goes ahead and is recorded as *unchecked*. A **live** entry is refused: no real order on a book nobody looked at.
+
+**Every reading is journaled** (`liquidity_checks`, `GET /api/journal/liquidity-checks`), pass or fail. That is the first *measured* spread and impact data this project has. Slippage has been an assumption from the start, and it is the missing input for per-symbol slippage (#66).
+
+**What this does not do.** It only ever removes trades, and it creates no edge. It has not yet been checked against a live book: it was built after the close on 2026-09-23, so the first real readings come from the next session. Because the confidence gate blocks nearly every setup first, readings will be sparse until more setups reach the last gate.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

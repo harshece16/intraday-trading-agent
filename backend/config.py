@@ -281,6 +281,18 @@ RISK = {
     "trail_after_r": None,
 }
 
+# Liquidity check (liquidity.py): read Kite's five-level book just before an
+# entry, and refuse it when the spread is wider than the cost model allows
+# (2 x COSTS["slippage_pct"], derived rather than set here), when filling our
+# quantity walks the book further than that slippage, or when either the
+# entry or the exit side holds under min_depth_multiple x our quantity.
+# Paper entries go ahead when no depth can be read (recorded as unchecked);
+# live entries do not. Every reading is logged to liquidity_checks.
+LIQUIDITY = {
+    "enabled": True,
+    "min_depth_multiple": 3.0,
+}
+
 # NSE cash market hours (IST)
 MARKET_OPEN = "09:15"
 MARKET_CLOSE = "15:30"
