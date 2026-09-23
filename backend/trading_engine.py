@@ -29,6 +29,7 @@ import fno_instruments
 import fno_risk
 import fundamentals
 import holidays
+import liquidity
 import news_sentiment
 import options_pricing
 from kiteconnect.exceptions import TokenException
@@ -630,6 +631,12 @@ class TradingEngine:
                                  f"position size rounds to 0 shares: at {ltp:,.2f} even one share is more than the "
                                  f"{cap_pct:g}% cap on one position (₹{config.RISK['total_capital'] * cap_pct / 100:,.0f})"
                                  if cap_pct else "position size rounds to 0 shares")
+
+        # Last gate before the order: is the book deep and tight enough to get in
+        # and out at the cost everything above assumed? See liquidity.py.
+        liq_ok, liq_reason, _ = liquidity.check(symbol, side, qty, ltp, self.state.paper_mode)
+        if not liq_ok:
+            return self._blocked(symbol, setup, f"liquidity: {liq_reason}")
 
         if plan:
             bar = (analysis.get("bar_time") or "")[11:16]

@@ -109,6 +109,13 @@ CREATE TABLE IF NOT EXISTS chaywanaprash_reports (
     ts REAL NOT NULL, lookback_hours REAL, llm_used INTEGER,
     narrative TEXT, findings_json TEXT, input_tokens INTEGER, output_tokens INTEGER
 );
+CREATE TABLE IF NOT EXISTS liquidity_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL, symbol TEXT NOT NULL, side TEXT, qty INTEGER, ltp REAL, mode TEXT,
+    status TEXT, ok INTEGER, reason TEXT,
+    spread_bp REAL, impact_bp REAL, entry_depth INTEGER, exit_depth INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_liquidity_symbol_ts ON liquidity_checks(symbol, ts);
 CREATE TABLE IF NOT EXISTS market_breadth_daily (
     session_date TEXT PRIMARY KEY, ts REAL NOT NULL,
     advances INTEGER, declines INTEGER, unchanged INTEGER, total INTEGER,
@@ -412,6 +419,27 @@ def record_chaywanaprash_report(lookback_hours, llm_used, narrative, findings, i
             "VALUES (?,?,?,?,?,?,?)",
             (time.time(), lookback_hours, int(llm_used), narrative, _j(findings), input_tokens, output_tokens),
         )
+
+
+def record_liquidity_check(symbol, side, qty, ltp, mode, result):
+    """One liquidity.check() reading. Written whether it passed, failed or
+    could not be taken, so the table is a sample of real spreads, not only
+    of the entries that went through."""
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO liquidity_checks "
+            "(ts, symbol, side, qty, ltp, mode, status, ok, reason, spread_bp, impact_bp, entry_depth, exit_depth) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (time.time(), symbol, side, qty, ltp, mode, result.get("status"), int(bool(result.get("ok"))),
+             result.get("reason"), result.get("spread_bp"), result.get("impact_bp"),
+             result.get("entry_depth"), result.get("exit_depth")),
+        )
+
+
+def recent_liquidity_checks(limit=100):
+    with _conn() as c:
+        rows = c.execute("SELECT * FROM liquidity_checks ORDER BY ts DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]
 
 
 def record_research_brief(ts, symbol, snapshot, reports, rating, model_ids, tokens, cost_usd):

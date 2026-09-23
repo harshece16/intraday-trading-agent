@@ -444,6 +444,13 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/journal/liquidity-checks")
+def journal_liquidity_checks(limit: int = 100):
+    """Every entry-time order-book reading liquidity.py took: spread, impact
+    of our size, and depth on the entry and exit sides, pass or fail."""
+    return database.recent_liquidity_checks(limit=limit)
+
+
 @app.get("/api/journal/blocked-signals")
 def journal_blocked_signals(hours: float = 24, limit: int = 100):
     """Every checklist-passing signal that still didn't trade, with the
