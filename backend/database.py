@@ -34,7 +34,7 @@ import sqlite3
 import threading
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -140,6 +140,12 @@ def _migrate(conn):
     if "realized_gross" not in cols:
         conn.execute("ALTER TABLE trades ADD COLUMN realized_gross REAL")
         _restate_realized_net_of_charges(conn)
+    # The bar a checklist read was judged on (#82): the entry window is a rule
+    # about the bar's time, and the row's ts is when the read ran, which can be
+    # minutes later (closed bars, or delayed yfinance data).
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(checklist_evals)")}
+    if "bar_time" not in cols:
+        conn.execute("ALTER TABLE checklist_evals ADD COLUMN bar_time TEXT")
 
 
 def _restate_realized_net_of_charges(conn):
@@ -238,12 +244,13 @@ def record_checklist_eval(symbol, ltp, analysis):
     with _conn() as c:
         c.execute(
             "INSERT INTO checklist_evals (ts, symbol, ltp, bull_score, bear_score, entry_threshold, "
-            "long_ok, short_ok, setup, regime, always_in, news_score, checklist_json) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "long_ok, short_ok, setup, regime, always_in, news_score, checklist_json, bar_time) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (time.time(), symbol, ltp, analysis.get("bull_score"), analysis.get("bear_score"),
              analysis.get("entry_threshold"), int(bool(analysis.get("long_ok"))),
              int(bool(analysis.get("short_ok"))), analysis.get("setup"), analysis.get("regime"),
-             analysis.get("always_in"), analysis.get("news_score"), _j(analysis.get("checklist"))),
+             analysis.get("always_in"), analysis.get("news_score"), _j(analysis.get("checklist")),
+             analysis.get("bar_time")),
         )
 
 
@@ -618,6 +625,28 @@ def _min_rrr():
     return config.STRATEGY_PARAMS.get(config.STRATEGY, {}).get("min_rrr", 1.5)
 
 
+def _entry_window():
+    """(no_entry_before, last_entry_time, no_entry_windows) as the live
+    strategy reads them, so the summary applies the same window trader_brain
+    does: a pass is only tried if no_entry_before <= bar < last_entry_time."""
+    p = config.STRATEGY_PARAMS.get(config.STRATEGY, {})
+    return p.get("no_entry_before", "09:30"), p.get("last_entry_time", "14:30"), p.get("no_entry_windows", [])
+
+
+def _bar_hhmm(bar_time, ts, ist):
+    """HH:MM of the bar a read was judged on. Rows written before #82 carry no
+    bar_time; for those, the last finished 5-minute bar at the time of the
+    read (its start, floored to 5 minutes, minus one bar) is the best
+    available estimate. When data was delayed (yfinance) the real bar is
+    earlier than this, so near 14:30 an old read can be placed just outside
+    the window when it was really inside. New rows record the bar itself."""
+    if bar_time and len(str(bar_time)) >= 16:
+        return str(bar_time)[11:16]
+    t = datetime.fromtimestamp(ts, ist)
+    start = t.replace(minute=t.minute - t.minute % 5, second=0, microsecond=0) - timedelta(minutes=5)
+    return start.strftime("%H:%M")
+
+
 def session_summary(session_date=None, near_miss_limit=5):
     """Why a session ended with the trade count it did.
 
@@ -628,10 +657,14 @@ def session_summary(session_date=None, near_miss_limit=5):
     individual evaluations that were one item short.
 
     A near-miss is an evaluation where exactly one *required* checklist item
-    failed. `full_passes` counts evaluations where none did — those are the
-    ones that reach the entry path at all, where the confidence gate and the
-    risk caps in trading_engine._try_enter() then apply, so full_passes > 0
-    with entries == 0 points downstream of the checklist, not at it.
+    failed. `full_passes` counts distinct (symbol, side) setups where none
+    did AND the bar sat inside the entry window: those are the ones that
+    reach the entry path, where the confidence gate and the risk caps in
+    trading_engine._try_enter() then apply, so full_passes > 0 with
+    entries == 0 points downstream of the checklist, not at it. Passes
+    outside the window are never tried and are counted separately
+    (`full_passes_outside_window`); `full_pass_reads` keeps the raw count of
+    evaluations, since the engine re-reads a setup every ~38 s (#82).
     """
     ist = ZoneInfo("Asia/Kolkata")
     day = datetime.now(ist).date() if session_date is None \
@@ -641,7 +674,7 @@ def session_summary(session_date=None, near_miss_limit=5):
 
     with _conn() as c:
         rows = c.execute(
-            "SELECT symbol, ts, checklist_json FROM checklist_evals WHERE ts >= ? AND ts < ? ORDER BY ts",
+            "SELECT symbol, ts, checklist_json, bar_time FROM checklist_evals WHERE ts >= ? AND ts < ? ORDER BY ts",
             (start, end),
         ).fetchall()
         # Distinct position_id whose *first* leg landed in the window: an exit
@@ -657,7 +690,9 @@ def session_summary(session_date=None, near_miss_limit=5):
     near_misses = {}
     candidates = []
     symbols = set()
-    full_passes = 0
+    pass_reads = 0
+    passes_in, passes_out = set(), set()
+    win_from, win_to, win_blocked = _entry_window()
     total_sides = 0
     for r in rows:
         try:
@@ -675,7 +710,10 @@ def session_summary(session_date=None, near_miss_limit=5):
             for i in failing:
                 fail_counts[i["key"]] = fail_counts.get(i["key"], 0) + 1
             if not failing:
-                full_passes += 1
+                pass_reads += 1
+                hhmm = _bar_hhmm(r["bar_time"], r["ts"], ist)
+                in_window = win_from <= hhmm < win_to and not any(a <= hhmm < b for a, b in win_blocked)
+                (passes_in if in_window else passes_out).add((r["symbol"], side))
             elif len(failing) == 1:
                 blocker = failing[0]
                 near_misses[blocker["key"]] = near_misses.get(blocker["key"], 0) + 1
@@ -726,7 +764,10 @@ def session_summary(session_date=None, near_miss_limit=5):
         "session_date": day.isoformat(),
         "evaluations": total_sides,
         "symbols_evaluated": len(symbols),
-        "full_passes": full_passes,
+        "full_passes": len(passes_in),
+        "full_passes_outside_window": len(passes_out - passes_in),
+        "full_pass_reads": pass_reads,
+        "entry_window": [win_from, win_to],
         "entries_taken": opened,
         "required_item_fail_counts": fail_counts,
         "near_misses_by_lone_blocker": near_misses,
@@ -761,8 +802,14 @@ def session_summary_line(summary):
         return (f"{SESSION_SUMMARY_PREFIX}{date}: {entries} position(s) opened from {evals:,} checklist "
                 f"evaluations across {summary['symbols_evaluated']} stocks.")
 
+    # Distinct setups inside the entry window, not raw reads (#82): the engine
+    # re-reads a setup every ~38 s, and a pass after the cutoff is never tried.
+    out_of_window = summary.get("full_passes_outside_window", 0)
+    win = summary.get("entry_window") or ["09:30", "14:30"]
     head = (f"{SESSION_SUMMARY_PREFIX}{date}: no trades. {evals:,} checklist evaluations across "
-            f"{summary['symbols_evaluated']} stocks produced {summary['full_passes']} full pass(es)")
+            f"{summary['symbols_evaluated']} stocks produced {summary['full_passes']} setup(s) passing every "
+            f"required item inside the {win[0]}–{win[1]} entry window"
+            + (f" (plus {out_of_window} outside it, never tried)" if out_of_window else ""))
     near = summary["near_misses"]
     if not near:
         counts = summary["required_item_fail_counts"]
