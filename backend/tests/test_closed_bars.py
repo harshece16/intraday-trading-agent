@@ -164,7 +164,8 @@ def test_entry_goes_in_and_records_the_candle_and_live_reward_to_risk(monkeypatc
     assert entered is True
     assert state.positions["TESTCO"]["quantity"] < 0
     note = state.trades[0]["note"]
-    assert "on the 11:20 candle" in note and "1.68 at the entry price" in note
+    # (2 - 0.166) / (1 + 0.166) at entry 100: the measured round trip (#74), 1.68 under the old 0.12.
+    assert "on the 11:20 candle" in note and "1.57 at the entry price" in note
 
 
 # ---- trader_brain.recheck_plan ---------------------------------------------

@@ -120,13 +120,14 @@ def test_the_default_floor_is_the_one_the_evidence_supports():
 
 
 def test_a_stop_inside_the_cost_floor_is_refused():
-    """TMPV: a 0.050% stop against a 0.12% round trip is 0.41x, so losing at
-    the stop costs over 2R. It lost 4.33R net in 38 seconds."""
+    """TMPV: a 0.050% stop against the measured 0.166% round trip is 0.30x
+    (0.41x under the old hardcoded 0.12%, #74), so losing at the stop costs
+    over 2R. It lost 4.33R net in 38 seconds."""
     price = 301.44
     out = trader_brain.recheck_plan(_plan(price, 0.050), "long", price)
     assert out["ok"] is False
     assert "round trip" in out["reason"]
-    assert "0.4" in out["reason"]
+    assert "0.3" in out["reason"]
 
 
 def test_a_stop_comfortably_past_the_floor_is_allowed():
@@ -212,3 +213,26 @@ def test_zero_costs_do_not_crash_the_cost_item():
     """`--no-costs` runs and any config with cost_pct 0 must not divide by it."""
     out = trader_brain.recheck_plan(_plan(1000.0, 0.05), "long", 1000.0, {"cost_pct": 0.0})
     assert out["ok"] is True, out["reason"]
+
+
+def test_cost_pct_is_derived_from_the_cost_model_not_hardcoded():
+    """Issue #74: the gate's cost_pct was a typed-in 0.12 that sat 28% under
+    the 16.60 bp phase 2 measured. It is now computed from config.COSTS, so
+    it must equal what costs.py charges a real round trip at the cap."""
+    import config
+    import costs
+    notional = config.RISK["total_capital"] * config.RISK["max_position_notional_pct"] / 100
+    assert trader_brain.DEFAULTS["cost_pct"] == round(costs.round_trip_pct(notional, config.COSTS), 4)
+    # config.STRATEGY_PARAMS is merged over DEFAULTS, so a stale copy there would silently win.
+    assert "cost_pct" not in config.STRATEGY_PARAMS["sahab_dimaag"]
+
+
+def test_round_trip_pct_matches_the_measured_phase2_cost():
+    """16.60 bp = 10.60 bp charges + 6.00 bp slippage (results-step2-followups.md),
+    and flat below the Rs 20 brokerage cap, cheaper above it."""
+    import config
+    import costs
+    for notional in (5_000, 33_000, 60_000):
+        assert abs(costs.round_trip_pct(notional, config.COSTS) - 0.1660) < 0.0005
+    assert costs.round_trip_pct(200_000, config.COSTS) < 0.166
+    assert costs.round_trip_pct(0, config.COSTS) == 0.0

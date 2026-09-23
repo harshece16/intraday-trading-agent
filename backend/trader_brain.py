@@ -35,6 +35,8 @@ results over as much data as you can get.
 """
 
 import brooks
+import config
+import costs
 import indicators as ind
 import market_structure as ms
 from candlestick_patterns import detect_patterns
@@ -57,7 +59,12 @@ DEFAULTS = {
     "indicator_miss_size": 0.6,
     "min_pattern_atr": 0.3,
     "max_pattern_atr": 3.0,
-    "cost_pct": 0.12,
+    # Round-trip charges + slippage, as a % of price, deducted inside the R:R.
+    # Derived from config.COSTS at the largest position the notional cap allows
+    # rather than typed in: the hardcoded 0.12 sat 28% under the 16.60 bp that
+    # phase 2 measured, so the gate passed setups that net under min_rrr (#74).
+    "cost_pct": round(costs.round_trip_pct(
+        config.RISK["total_capital"] * config.RISK["max_position_notional_pct"] / 100, config.COSTS), 4),
     # A pattern stop can sit closer to the entry than the round trip costs to
     # make (issue #25). Below 1x, the charges exceed the entire risk the
     # position was sized on, so a stop-out is worse than 2R by construction and

@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-21: **35**
+## Strategy trials — count as of 2026-09-23: **37**
 
 | n | Label |
 | --- | --- |
@@ -66,6 +66,8 @@ backtest look better than it is.
 | 33 | `swing_backtester long-only hold=3 top5 2y stop_atr=None` |
 | 34 | `swing_backtester long-only hold=5 top5 2y stop_atr=None` |
 | 35 | **Phase 2 — 3a** opening-range breakout on top-20 relative volume, both sides, 5-cap, universe A, selection only · `prereg-3a-opening-range.md` (+ amendments 1–3, last `815ba4c`) · code `3841124` · **FAIL**: net −12.09 bp/session, t = −2.71 · `results-3a-opening-range.md` |
+| 36 | **#74 bug-fix pair — baseline** `sahab_dimaag` checklist, cost_pct 0.12, Test A harness, selection only, both halves · code `dbe7514` · first −0.302R (n 71), second −0.207R (n 51) · `results-fix74-cost-pct.md` |
+| 37 | **#74 bug-fix pair — fixed** cost_pct 0.166 (derived from `costs.py`), same harness · **PASS** (worse in first half only): first −0.354R (n 33), second +0.032R (n 12) — no edge, 63% fewer trades · `results-fix74-cost-pct.md` |
 
 ### What a reviewer should notice in this list
 

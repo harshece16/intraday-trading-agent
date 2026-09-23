@@ -2983,6 +2983,23 @@ pattern — explicitly **not** a projected price path, see
 Every clickable item is a real button/div with a visible keyboard focus
 ring. The layout stacks to one column on narrow screens.
 
+### 57. The reward-to-risk gate now prices the round trip it actually pays
+
+The checklist deducted a typed-in **0.12%** round trip inside the reward-to-risk gate and the stop-to-cost floor. Phase 2 measured **16.60 bp** (10.60 bp charges + 6.00 bp slippage), and `costs.py` already charges exactly that on every P&L, so the gate was pricing trades **28% cheaper** than the fills it booked. At the median 42.4 bp stop, a setup that showed 1.5 was really about 1.30 (issue #74).
+
+`cost_pct` is now derived: `costs.round_trip_pct()` at the largest position the notional cap allows, which comes to **0.166%**. It is flat at any position under the ₹20 brokerage cap (about ₹66,667), so the reference size barely matters. The stale copy in `config.STRATEGY_PARAMS` is gone, because it was merged over the default and would have silently won.
+
+**Backtested before shipping**, selection sample only (318 sessions, the 176 held-out sessions never loaded), both halves, with the pass rule committed before the run:
+
+| Half | Arm | Trades | Net R/trade | 95% CI |
+| --- | --- | --- | --- | --- |
+| First | old 0.12 | 71 | −0.302 | [−0.62, +0.02] |
+| First | **new 0.166** | **33** | −0.354 | [−0.84, +0.13] |
+| Second | old 0.12 | 51 | −0.207 | [−0.61, +0.20] |
+| Second | **new 0.166** | **12** | +0.032 | [−0.86, +0.92] |
+
+**What to expect:** about **63% fewer trades**. That is the point: those setups only passed because their cost was understated. **It is not an edge.** Every interval spans zero, and the second half's +0.03R rests on 12 trades. Full write-up: `docs/research/results-fix74-cost-pct.md`, trials 36 and 37.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
