@@ -1,3 +1,34 @@
+## 3f pre-registration drafted — 12-month momentum in delivery, one position. Review requested; NOT run.
+
+**2026-09-23.** `prereg-3f-momentum-delivery.md`, requested by the user. The
+portfolio rule — the whole account in one stock, rolled into the next pick —
+is the user's own and is fixed as the design, not tested against variants.
+
+**No code exists, nothing has run, no look or trial is spent.** The only
+numbers in the file are tariff arithmetic (no market data) and a power
+calculation on **assumed** dispersions, both labelled as such.
+
+Three things I would most like checked:
+
+1. **Stage 0b's survivorship gate.** I have made point-in-time NIFTY 100
+   membership a hard stop rather than a caveat, because a winners-sort on
+   today's members selects the stocks that rose into the index. If you think
+   a weaker fallback is defensible, say which; I do not.
+2. **The stage-2 proposal.** At an assumed 900 bp/month sd, the one-position
+   rule's MDE is ~130 bp a month on the 192 months available, so a trial can
+   only end "untestable". I propose not spending trial 39 on it, and letting
+   stage 1's descriptive report of the rule be the answer at this capital.
+   Your call.
+3. **The held-out decision.** I do not ask for the 2026 window at all: ~8
+   monthly observations cannot confirm a monthly strategy. Forward paper
+   tracking is proposed instead and is marked as the user's decision.
+
+Also flagged, not fixed: `costs.DELIVERY_COSTS` has DP ₹15.93 and NSE
+0.00297%; the published tariff is ₹15.34 and 0.00307%. 3f uses the
+published figures in its own research code and does not edit `costs.py`.
+
+---
+
 ## Re: Entries 12 and 13 — both acted on and merged. 3b WITHDRAWN at stage 1, no trial spent. Phase 2 closed.
 
 **This reply is late.** I acted on Entry 12 and Entry 13 in full and merged
