@@ -275,3 +275,52 @@ def test_engine_skips_a_summary_already_in_the_activity_log(monkeypatch):
     engine._tick_impl()
 
     assert _summary_lines(engine.state) == []
+
+
+def _pass(symbol, side, hhmm, bar_time=None):
+    """A read where every required item passed, at a controlled time."""
+    items = [_item(k, True) for k in ("pattern", "sr", "volume", "dow", "rrr")]
+    with database._conn() as c:
+        c.execute(
+            "INSERT INTO checklist_evals (ts, symbol, ltp, bull_score, checklist_json, bar_time) VALUES (?,?,?,?,?,?)",
+            (_ts_today(hhmm), symbol, 100.0, 5.0, json.dumps({side: {"items": items}}), bar_time),
+        )
+
+
+def test_re_reads_and_after_cutoff_passes_are_not_counted_as_setups_in_the_entry_path():
+    # #82: 8 re-reads of one in-window setup + 8 re-reads of a setup after
+    # the 14:30 cutoff. The old count said 16; it is 1 setup that could be
+    # tried, and 1 more that never could.
+    for m in range(8):
+        _pass("INDHOTEL", "long", f"11:{35 + m:02d}")
+        _pass("SOLARINDS", "short", f"15:{5 + m:02d}")
+    s = database.session_summary(_today())
+    assert s["full_passes"] == 1
+    assert s["full_passes_outside_window"] == 1
+    assert s["full_pass_reads"] == 16
+    line = database.session_summary_line(s)
+    assert "produced 1 setup(s) passing every required item inside the 09:30–14:30 entry window" in line
+    assert "plus 1 outside it, never tried" in line
+
+
+def test_the_recorded_bar_time_decides_the_window_not_the_read_time():
+    # Read at 14:40 (delayed data) of the 14:20 bar: inside the window.
+    _pass("TESTCO", "long", "14:40", bar_time=f"{_today()}T14:20:00+05:30")
+    s = database.session_summary(_today())
+    assert s["full_passes"] == 1 and s["full_passes_outside_window"] == 0
+
+
+def test_without_a_bar_time_the_last_finished_bar_is_assumed():
+    # 14:33 read, no bar_time: the last finished bar started 14:25, inside.
+    # 14:36 read: the last finished bar started 14:30, outside.
+    _pass("AAA", "long", "14:33")
+    _pass("BBB", "long", "14:36")
+    s = database.session_summary(_today())
+    assert s["full_passes"] == 1 and s["full_passes_outside_window"] == 1
+
+
+def test_record_checklist_eval_stores_the_bar_time():
+    database.record_checklist_eval("TESTCO", 100.0, {"bull_score": 1.0, "bar_time": "2026-09-23T11:35:00+05:30",
+                                                     "checklist": {"long": {"items": []}}})
+    with database._conn() as c:
+        assert c.execute("SELECT bar_time FROM checklist_evals").fetchone()[0] == "2026-09-23T11:35:00+05:30"
