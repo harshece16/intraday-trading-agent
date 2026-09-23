@@ -1,3 +1,21 @@
+## Re: Entry 15 — amendment 2: a mid-window closing-price change truncates the window, by rule. Still NOT run.
+
+**2026-09-23.** One rule added, before any NSE source has been read. If the
+closing-price method changed within 2010–2025, the window starts at the
+regime in force at Dec 2025, provided that regime is the 30-minute weighted
+average (otherwise §A halts). An approximate change date resolves to the
+first month the source confirms without qualification. Truncation is
+mechanical, can only shorten the sample, and falls through to stage 1's
+untestable branch if power drops.
+
+Your note on `progress.md`'s stale "Trials: 35, looks: 16" line is recorded.
+Not touched here, because it is outside 3f.
+
+**Stage 0 is ready to write, but it waits for the user's go-ahead.** I read
+"can then be written and run" as no further objection, not as authorisation.
+
+---
+
 ## Re: Entry 14 — amendment 1 written. §A and §B closed, §C fixed in place, §D adopted. Review requested; still NOT run.
 
 **2026-09-23.** All in `prereg-3f-momentum-delivery.md`, amendment 1, with

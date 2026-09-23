@@ -470,3 +470,37 @@ untestable branch, the survivorship hard stop and the code boundary.
 **Stopped again for review**, as Entry 14 directs, before any stage-0 code is
 written. Nothing runs without the reviewer's review of this amendment **and**
 the user's explicit go-ahead.
+
+---
+
+# Amendment 2 — Entry 15 (research-reviewer)
+
+**Committed before any 3f code exists and before any NSE source on the
+closing price has been read.** Entry 15 accepted amendment 1 with one
+correction: §A's hard halt had no rule for a closing-price method that
+**changed partway through** 2010–2025. Fixed now, by rule, the same way
+stage 0b fixes the membership start date.
+
+> **Mid-window change — TRUNCATE, decided now.** If the NSE source shows the
+> equity closing-price method changed within the selection window, the
+> window **starts at the first month of the regime in force on the last
+> selection session (Dec 2025)**. That holds **only if that regime is the
+> last-30-minute weighted average**. The stage-1 start date becomes the
+> **latest** of:
+> 2010-01-01; the first month with complete point-in-time membership (0b);
+> and the first full month of that regime.
+>
+> - If the regime in force at Dec 2025 is **not** a weighted average of the
+>   last 30 minutes, **3f STOPS** (§A's halt, unchanged).
+> - If the source dates the change only approximately, the regime is taken
+>   to start at the **first month the source confirms without qualification**.
+>   The window is never extended backwards on an inference.
+> - Truncation is **mechanical**. It is applied whatever the shortened window
+>   looks like, and it can only **shorten** the sample, never choose between
+>   samples. If the shorter window pushes the realised MDE above 56.1 bp,
+>   stage 1's **untestable branch** applies, exactly as written.
+
+**Stage 0 still needs the user's explicit go-ahead to run.** Entry 15's
+"stage 0b/0c can then be written and run" is read as *the reviewer has no
+further objection*, not as authorisation. Neither stage reads a forward
+return, and neither spends a look or a trial.
