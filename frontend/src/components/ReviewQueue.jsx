@@ -29,6 +29,7 @@ function ShadowText({ sh }) {
   return (
     <span className={sh.net_rs > 0 ? "up" : sh.net_rs < 0 ? "down" : ""}>
       {SHADOW_WORD[sh.status] || sh.status}{when}{at}: {money(sh.net_rs)} ({sh.r > 0 ? "+" : ""}{num(sh.r)}R)
+      {sh.status !== "open" && !sh.final && <span className="muted"> (provisional)</span>}
     </span>
   );
 }
@@ -211,7 +212,8 @@ export default function ReviewQueue({ s }) {
             {money(rq.shadow_summary.net_rs)} ({rq.shadow_summary.r > 0 ? "+" : ""}{num(rq.shadow_summary.r)}R)
           </b>{" "}
           across {rq.shadow_summary.trades} trade{rq.shadow_summary.trades > 1 ? "s" : ""}
-          {rq.shadow_summary.open ? `, ${rq.shadow_summary.open} still open` : ""}. {rq.shadow_summary.basis}
+          {rq.shadow_summary.open ? `, ${rq.shadow_summary.open} still open` : ""}
+          {rq.shadow_summary.provisional ? `, ${rq.shadow_summary.provisional} provisional` : ""}. {rq.shadow_summary.basis}
         </p>
       )}
     </div>

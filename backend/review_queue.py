@@ -101,14 +101,22 @@ def build_card(symbol, side, plan, blocker, ltp, cost_pct, qty, setup=None, conf
 SHADOW_BASIS = ("Hypothetical, not a trade: entered at the price when the card was offered; exits only at "
                 "the stop, the target or the square-off, whichever comes first, checked on the 5-minute bars "
                 "after the offer (the stop is assumed first if one bar touches both); same slippage and "
-                "charges as a real fill. The engine's own early-exit signal is not modelled.")
+                "charges as a real fill. An exit seen only in the latest price or a bar still forming is "
+                "provisional until a completed bar settles it. The engine's own early-exit signal is not modelled.")
 
 
 def _bar_ts(bar):
     return datetime.fromisoformat(bar["time"]).timestamp()
 
 
-def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=None):
+def _interval_seconds(interval):
+    """"5m" -> 300. The bar length, so a bar still forming can be told apart
+    from a completed one."""
+    unit = interval[-1]
+    return int(interval[:-1]) * {"m": 60, "h": 3600, "d": 86400}.get(unit, 60)
+
+
+def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=None, interval=None):
     """What approving `card` the moment it was offered would have done.
 
     Walks the bars that START after the offer (a bar already running at the
@@ -117,7 +125,13 @@ def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=No
     open if it gapped through), or the target. Still open, it is marked to
     `ltp` — or closed at `ltp` if the price is already past the stop or
     target, or the square-off time has passed. P&L is net of the same
-    slippage and charges _execute() applies to a real fill, both legs."""
+    slippage and charges _execute() applies to a real fill, both legs.
+
+    `final` is True only when a COMPLETED bar settled the exit (or the
+    square-off bar has opened). An exit decided from the last price, or from
+    a bar still forming, is provisional and must be re-evaluated: on delayed
+    data the bar that actually settles it can arrive minutes later, and one
+    bar can still go on to touch the stop after touching the target (#102)."""
     now = now or now_ist()
     cfg = costs_cfg or config.COSTS
     s = 1 if card["side"] == "LONG" else -1
@@ -127,23 +141,26 @@ def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=No
     hh, mm = (square_off or config.SQUARE_OFF_TIME).split(":")
     square_ts = datetime(day.year, day.month, day.day, int(hh), int(mm), tzinfo=IST).timestamp()
 
+    bar_len = _interval_seconds(interval or config.CANDLE_INTERVAL)
     exit_price = exit_ts = None
-    status = "open"
+    status, final = "open", False
     for bar in sorted((b for b in bars or [] if _bar_ts(b) > created), key=_bar_ts):
         t = _bar_ts(bar)
         if t > now.timestamp():
             break
+        complete = t + bar_len <= now.timestamp()
         if t >= square_ts:
-            status, exit_price, exit_ts = "squared_off", bar["open"], t
+            # The open is known the moment the square-off bar starts.
+            status, exit_price, exit_ts, final = "squared_off", bar["open"], t, True
             break
         hit_stop = (bar["low"] <= stop) if s > 0 else (bar["high"] >= stop)
         hit_target = (bar["high"] >= target) if s > 0 else (bar["low"] <= target)
         if hit_stop:
             gapped = (bar["open"] - stop) * s < 0
-            status, exit_price, exit_ts = "stopped", bar["open"] if gapped else stop, t
+            status, exit_price, exit_ts, final = "stopped", bar["open"] if gapped else stop, t, complete
             break
         if hit_target:
-            status, exit_price, exit_ts = "target", target, t
+            status, exit_price, exit_ts, final = "target", target, t, complete
             break
 
     mark = ltp if ltp is not None else ((bars or [{}])[-1].get("close") if bars else None)
@@ -156,8 +173,8 @@ def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=No
             status, exit_price, exit_ts = "target", mark, now.timestamp()
 
     price_out = exit_price if exit_price is not None else mark
-    result = {"status": status, "exit_price": exit_price, "exit_ts": exit_ts, "mark_price": mark,
-              "as_of": now.timestamp(), "basis": SHADOW_BASIS}
+    result = {"status": status, "final": final, "exit_price": exit_price, "exit_ts": exit_ts,
+              "mark_price": mark, "as_of": now.timestamp(), "basis": SHADOW_BASIS}
     if price_out is None or not qty:
         result.update({"gross_rs": None, "charges_rs": None, "net_rs": None, "r": None})
         return result
@@ -239,10 +256,12 @@ class ReviewQueue:
 
     def shadow_candidates(self):
         """Today's cards that were NOT approved (an approved card is a real
-        position) and whose hypothetical trade is still open or not yet computed."""
+        position) and whose hypothetical trade isn't settled yet: not computed,
+        still open, or exited provisionally (#102). An outcome saved before the
+        `final` flag existed counts as provisional, so it is re-checked once."""
         with self._lock:
             return [dict(c) for c in self.cards.values()
-                    if c["status"] != "approved" and (c.get("shadow") or {}).get("status", "open") == "open"]
+                    if c["status"] != "approved" and not (c.get("shadow") or {}).get("final", False)]
 
     def set_shadow(self, review_id, shadow):
         with self._lock:
@@ -287,6 +306,7 @@ class ReviewQueue:
             "shadow_summary": {
                 "trades": len(shadows),
                 "open": sum(1 for x in shadows if x["status"] == "open"),
+                "provisional": sum(1 for x in shadows if x["status"] != "open" and not x.get("final")),
                 "net_rs": round(sum(x["net_rs"] for x in shadows), 2),
                 "r": round(sum(x["r"] or 0 for x in shadows), 2),
                 "basis": SHADOW_BASIS,

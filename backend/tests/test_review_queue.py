@@ -313,3 +313,37 @@ def test_engine_saves_the_outcome_for_unapproved_cards_only(engine, monkeypatch)
     [card2] = offer(engine)
     assert engine.approve_review(card2["id"])["status"] == "approved"
     assert all(c["id"] != card2["id"] for c in engine.review_queue.shadow_candidates())
+
+
+# ---- #102: an exit seen only in the last price or a forming bar is provisional ----
+
+def test_delayed_ltp_exit_is_provisional_and_a_later_bar_overrides_it():
+    """The SBIN case: on delayed data the last price was past the target before
+    the bar that settled the trade existed. That exit must not be final."""
+    card = shadow_card(side="SHORT", entry=978.8, stop=980.4, target=978.5, qty=20)
+    early = review_queue.shadow_outcome(card, [], ltp=978.0, now=later("13:58"), costs_cfg=ZERO)
+    assert early["status"] == "target" and early["final"] is False
+
+    settled = review_queue.shadow_outcome(card, [bar("13:50", 978.9, 980.7, 978.4, 978.6)], ltp=979.5,
+                                          now=later("13:58"), costs_cfg=ZERO)
+    assert settled["status"] == "stopped" and settled["final"] is True and settled["exit_price"] == 980.4
+
+
+def test_an_exit_in_a_bar_still_forming_is_provisional_until_the_bar_completes():
+    forming = [bar("13:50", 100, 106.5, 99.5, 106)]
+    assert review_queue.shadow_outcome(shadow_card(), forming, ltp=106, now=later("13:52"),
+                                       costs_cfg=ZERO)["final"] is False
+    assert review_queue.shadow_outcome(shadow_card(), forming, ltp=106, now=later("13:55"),
+                                       costs_cfg=ZERO)["final"] is True
+
+
+def test_provisional_and_legacy_outcomes_stay_candidates_final_ones_do_not(engine):
+    [card] = offer(engine)
+    q = engine.review_queue
+    q.set_shadow(card["id"], {"status": "target", "final": False, "net_rs": -1.0, "r": -0.1})
+    assert [c["id"] for c in q.shadow_candidates()] == [card["id"]]
+    q.set_shadow(card["id"], {"status": "target", "net_rs": -1.0, "r": -0.1})          # saved before #102
+    assert [c["id"] for c in q.shadow_candidates()] == [card["id"]]
+    q.set_shadow(card["id"], {"status": "stopped", "final": True, "net_rs": -2.0, "r": -1.0})
+    assert q.shadow_candidates() == []
+    assert q.snapshot()["shadow_summary"]["provisional"] == 0
