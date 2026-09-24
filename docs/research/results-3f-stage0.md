@@ -48,6 +48,8 @@ between. **Hosting caveat:** the 2019, 2024 and 2025 circulars are on
 and 2019 (e.g. CMTR/15981, CMTR/22748) return 404 at NSE's current circular
 URLs and were **not** retrieved — the continuity claim for 2011–2018 rests on
 the two ends plus the unchanged wording, not on a document from every year.
+**Standing caveat (Entry 16): every later citation of "0c CONFIRMED" carries
+this — 2011–2018 is an inference over eight years, not a citation.**
 
 ### 1.2 The open — a call auction, so barred by the tradability rule
 
@@ -57,9 +59,13 @@ paid-up securities, and InvITs/REITs." SEBI CIR/MRD/DP/21/2010 introduced
 the pre-open call auction for Nifty and Sensex stocks from October 18, 2010,
 and SEBI CIR/MRD/DP/6/2013 extended it to all non-illiquid scrips from April
 1, 2013 — **both read from secondary mirrors, not retrieved from
-sebi.gov.in**, whose DNS fails from this machine. This confirms amendment 1
-§A's reason for keeping the close: the next-session open is a call-auction
-print for the whole window (for Next 50 names only from April 2013).
+sebi.gov.in**, whose DNS fails from this machine. So the next-session open is a
+call-auction print from October 18, 2010 for Nifty 50 names and from April
+1, 2013 for the rest — **not for January–September 2010, the first nine
+months of the sample**, where the open was an ordinary first trade. That
+does not reopen amendment 1 §A: the close is kept as the literature's
+convention regardless, and the auction only adds a second reason for most of
+the window.
 
 ### 1.3 The first change: the closing auction, effective August 3, 2026
 
@@ -83,7 +89,7 @@ the real rebuild). Artefacts in `backend/research/data/`:
 
 | File | What |
 | --- | --- |
-| `nifty100_membership.csv` | the prereg's format — `symbol, from, to, source_in, source_out`: 272 spells over 204 symbols |
+| `nifty100_membership.csv` | the prereg's format — `symbol, from, to, source_in, source_out`: 271 spells over 215 symbols (204 of them members at some month end from 2010-01) |
 | `nifty100_membership_monthly.csv` | the union in force at each month end, 2010-01 → 2026-09 (201 snapshots: 140 of 100 names, 61 of 101 with the Tata Motors DVR) |
 | `nifty100_changes.csv` | all 894 inclusion/exclusion events with the release that announced each |
 | `nifty100_manual_events.csv` | 20 rows transcribed by hand from the one image-only release (August 23, 2021), source noted per row |
@@ -141,7 +147,12 @@ Andhra Bank and Sterlite (32 each), Patni and Syndicate Bank (21), Punj
 Lloyd (18), Corporation Bank (14), ING Vysya (11), RNRL (9), Mindtree (6),
 Moser Baer (3). No member with data starts late.
 
-**What the pass means.** The gate is met, by 0.17 points. But the 4.83% that
+**What the pass means.** The gate is met, by 0.17 points. **Standing caveat
+(Entry 16): every later citation of "0b PASS" carries the first-half
+concentration** — 7.9% of 2010–17 member-months, all failures or absorptions,
+have no price history. If stage 1's first half fails while the second passes,
+this gap is reported alongside as a candidate explanation, and it is not
+grounds to backfill and rerun. But the 4.83% that
 is missing is not random: it is exactly the set of names that left the
 index by failure or absorption, so the residual survivorship the prereg
 accepts ("at most 5%, by stage 0b's gate") is concentrated in the **first

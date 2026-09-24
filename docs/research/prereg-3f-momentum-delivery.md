@@ -504,3 +504,74 @@ stage 0b fixes the membership start date.
 "stage 0b/0c can then be written and run" is read as *the reviewer has no
 further objection*, not as authorisation. Neither stage reads a forward
 return, and neither spends a look or a trial.
+
+---
+
+# Amendment 3 — Entry 16 (research-reviewer) — the 0c vendor check, re-specified after its HALT
+
+**Committed after stage 0 ran and before any stage-1 code exists.** Stage 0
+(`results-3f-stage0.md`) halted on the vendor check as written: 38 of 100
+stocks reached a 0.98 daily-return correlation between yfinance and the Kite
+5-minute cache's last bar. The diagnosis was that the comparator, not the
+data, was wrong — the cache is dividend-adjusted and its last bar is a last
+trade, not the official close. Entry 16 accepted that reading, **rejected
+outright** re-running the same correlation against the NSE bhavcopy at a bar
+chosen now (its result, 93.8%, is already known), and allowed a level test
+only if its tolerance is derived from the study's economics rather than
+from the number already seen.
+
+**Disclosure, so nobody reads the gate below as fixed blind:** stage 0 §4.3
+already reported that yfinance's Close is within **0.5%** of the NSE
+bhavcopy close on **99.4%** of stock-days over 2024-09-20 → 2025-12-31. That
+figure was seen before this amendment was written. The gate below uses a
+tolerance eight times tighter, on a different set of prices (the signal-date
+closes over the whole window, not daily closes over fifteen months), and its
+outcome has **not** been computed at the time of writing.
+
+> **0c vendor check — REPLACED.** The correlation test is withdrawn as
+> mis-specified: a strategy that trades once a month at the close never
+> touches day-to-day noise, so a daily-return correlation measures the
+> wrong thing. In its place, a **level test on exactly the prices 3f uses**:
+>
+> - **Prices tested:** the yfinance unadjusted `Close` of every
+>   point-in-time member on every **signal date** — the last session of
+>   each month from **2009-01 to 2025-12** (2009 closes feed the first
+>   12-month lookbacks) — against NSE's own **official close** for that
+>   session, read from the daily bhavcopy (`cm<DDMMMYYYY>bhav.csv.zip`,
+>   series EQ, column CLOSE), downloaded from `nsearchives.nseindia.com`.
+> - **Tolerance: 6 bp** — the round trip of the **3 bp/leg slippage this
+>   pre-registration already models** (0a table). A vendor error larger
+>   than the friction we allow for would be a larger unknown than the
+>   friction itself. The tolerance is not derived from any observed match
+>   rate.
+> - **Rule:** a signal-date close that differs from the official close by
+>   more than 6 bp, or is absent from yfinance, is **missing** for that date
+>   — amendment 1 §B's cases apply to it exactly as to a delisting. The
+>   0b coverage gate is then re-applied to the **surviving** closes:
+>   **3f proceeds only if ≥ 95% of member-months (2010-01 → 2025-12) have a
+>   signal-date close that exists and matches within 6 bp.** Stage 0 found
+>   95.17% exist; the match condition can only lower that, and if it falls
+>   below 95% **3f STOPS**, by the same halt as 0b. There is no second
+>   tolerance to fall back to.
+> - **Reported alongside, not gated:** the match rate by year, every
+>   mismatch beyond 6 bp with both prices, and the number of stock-months a
+>   mismatch converts from "held" into a §B case.
+>
+> **What this does not verify:** the dividend and split factor that turns
+> `Close` into `Adj Close`. The bhavcopy carries no adjusted series. Stage 1
+> therefore reports each quintile's gross return **with and without the
+> dividend adjustment** so that the adjustment's contribution is visible;
+> a difference in sign between the two is reported as a caveat, not
+> resolved.
+
+**Two standing caveats travel with every later citation of stage 0 (Entry
+16):** "0c CONFIRMED" rests on circulars at 2010, 2019, 2024 and 2025 with
+identical wording — 2011–2018 is an inference, not a citation; "0b PASS"
+carries a first-half concentration — 7.9% of 2010–17 member-months, all
+failures or absorptions, have no price history. If stage 1's first half
+fails while the second passes, that gap is reported as a candidate
+explanation, and it is not grounds to backfill and rerun.
+
+**Stage 1 is still not written.** If the level test clears, stage 1 (L36)
+may be written and stops again for review before it runs — the first step
+that reads a return.
