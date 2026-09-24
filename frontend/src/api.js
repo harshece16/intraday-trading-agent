@@ -70,16 +70,23 @@ export async function apiFetch(path, options = {}) {
  */
 export async function openKiteLogin() {
   const win = window.open("", "kite-login", "width=480,height=640");
+  // The backend opens the ngrok tunnel Kite redirects back through before it
+  // hands over the login URL, which takes a few seconds; say so in the popup.
+  const say = (html) => {
+    try {
+      win.document.body.innerHTML = `<div style="font:15px system-ui;padding:24px;line-height:1.5">${html}</div>`;
+    } catch {
+      /* popup blocked or already navigated */
+    }
+  };
+  say("Opening the secure tunnel for the Kite login…");
   try {
     const res = await apiFetch("/api/kite/login-url");
     const data = await res.json();
     if (data.url && win) win.location.href = data.url;
-    else {
-      win?.close();
-      alert(data.error || "Couldn't start the Kite login.");
-    }
+    else say(`<b>Couldn't start the Kite login.</b><br>${(data.error || "").replace(/</g, "&lt;")}`);
   } catch {
-    win?.close();
+    say("<b>Couldn't reach the backend.</b> Is it running on port 8000?");
   }
 }
 
