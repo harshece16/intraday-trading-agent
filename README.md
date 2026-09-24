@@ -3209,7 +3209,12 @@ Every card you **didn't** approve (rejected, expired, refused, or still pending)
 
 The engine updates every open replay once a minute and stops once it has exited.
 
-**The first real day's numbers already make the card's point.** On 24 Sep the three cards the queue offered (HINDUNILVR, BRITANNIA and SBIN shorts, all failing only reward-to-risk at −0.17 to −0.41 after costs) **all reached their targets, and all three lost money after costs**: −₹19, −₹19 and −₹16, **−₹54 (−1.41R)** in total. A target inside the round trip's cost loses even when it's hit, which is what each card's "can't break even" said. Three trades prove nothing either way. The column exists so the answer accumulates instead of being assumed.
+**The first real day's numbers already make the card's point.** On 24 Sep the queue offered three cards that weren't approved: HINDUNILVR, BRITANNIA and SBIN shorts, all failing only reward-to-risk at −0.17 to −0.41 after costs.
+- **HINDUNILVR and BRITANNIA reached their targets and still lost after costs**: −₹18.80 and −₹18.68. A target inside the round trip's cost loses even when it's hit, which is what each card's "can't break even" said.
+- **SBIN was stopped**, for −₹64.52 (−2.02R). Its first bar after the offer touched both the stop and the target, and the replay assumes the stop first.
+- **Total: −₹102.00 (−2.91R).** Three trades prove nothing either way. The column exists so the answer accumulates instead of being assumed.
+
+> **Corrected.** This paragraph first said all three reached their targets, −₹54 (−1.41R). ~~"−₹19, −₹19 and −₹16, −₹54 (−1.41R)"~~. That figure came from a test run on **delayed** prices. There, SBIN's last price was already past the target before the bar that settled the trade existed, and the replay froze that early exit. The live engine, on real-time bars, books the stop. The early freeze is a real bug on delayed-data sessions, tracked as [#102](https://github.com/harshece16/intraday-trading-agent/issues/102).
 
 ## Backtest results
 
