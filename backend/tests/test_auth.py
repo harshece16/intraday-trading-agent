@@ -97,3 +97,29 @@ def test_install_attaches_the_filter_once():
     auth.install_log_redaction()
     n = sum(isinstance(f, auth.RedactKeyFilter) for f in logging.getLogger("uvicorn.access").filters)
     assert n == 1
+
+
+def test_a_client_that_disconnects_before_authenticating_is_not_closed_again(monkeypatch):
+    # #105: closing an already-gone socket raised RuntimeError and logged a traceback.
+    from starlette.websockets import WebSocketDisconnect
+    _use_key(monkeypatch)
+
+    class Gone(FakeSocket):
+        async def receive_text(self):
+            raise WebSocketDisconnect(code=1001)
+
+        async def close(self, code=1000):
+            raise RuntimeError("Unexpected ASGI message 'websocket.close'")
+
+    ws = Gone()
+    assert _run(auth.authenticate_websocket(ws)) is False     # no exception escapes
+
+
+def test_a_close_that_races_the_client_is_swallowed(monkeypatch):
+    _use_key(monkeypatch)
+
+    class Racy(FakeSocket):
+        async def close(self, code=1000):
+            raise RuntimeError("Unexpected ASGI message 'websocket.close'")
+
+    assert _run(auth.authenticate_websocket(Racy([json.dumps({"type": "auth", "key": "wrong"})]))) is False

@@ -42,15 +42,26 @@ def key_ok(candidate) -> bool:
 
 async def authenticate_websocket(websocket) -> bool:
     """Call after websocket.accept(). Returns True once the first message
-    carries the right key; otherwise closes the socket with 4401."""
+    carries the right key; otherwise closes the socket with 4401.
+
+    A client that disconnects before authenticating (an open tab during a
+    backend restart, a tab closed mid-handshake) is already gone: closing it
+    again made Starlette raise and uvicorn log a traceback (#105). That case
+    returns False without a close."""
+    from starlette.websockets import WebSocketDisconnect
     try:
         raw = await asyncio.wait_for(websocket.receive_text(), timeout=AUTH_TIMEOUT_S)
         msg = json.loads(raw)
         ok = isinstance(msg, dict) and msg.get("type") == "auth" and key_ok(msg.get("key"))
+    except WebSocketDisconnect:
+        return False
     except Exception:
         ok = False
     if not ok:
-        await websocket.close(code=4401)
+        try:
+            await websocket.close(code=4401)
+        except RuntimeError:
+            pass                      # the client closed first; nothing left to close
     return ok
 
 
