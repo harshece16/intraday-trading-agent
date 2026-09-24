@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS manual_reviews (
     id TEXT PRIMARY KEY, created_ts REAL NOT NULL, session_date TEXT NOT NULL,
     symbol TEXT NOT NULL, side TEXT NOT NULL, blocker TEXT, mode TEXT,
     status TEXT NOT NULL, decided_ts REAL, position_id TEXT,
-    outcome_json TEXT, card_json TEXT
+    outcome_json TEXT, card_json TEXT, shadow_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_manual_reviews_date ON manual_reviews(session_date);
 CREATE TABLE IF NOT EXISTS control (
@@ -156,6 +156,10 @@ def _migrate(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(checklist_evals)")}
     if "bar_time" not in cols:
         conn.execute("ALTER TABLE checklist_evals ADD COLUMN bar_time TEXT")
+    # What a review card would have done had it been approved (review_queue.shadow_outcome).
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(manual_reviews)")}
+    if "shadow_json" not in cols:
+        conn.execute("ALTER TABLE manual_reviews ADD COLUMN shadow_json TEXT")
 
 
 def _restate_realized_net_of_charges(conn):
@@ -463,19 +467,25 @@ def update_review(review_id, status, decided_ts, position_id=None, outcome=None,
         )
 
 
+def update_review_shadow(review_id, shadow):
+    with _conn() as c:
+        c.execute("UPDATE manual_reviews SET shadow_json=? WHERE id=?", (_j(shadow), review_id))
+
+
 def reviews_on(session_date):
     """Every card offered on one IST session date, oldest first, as the card
     dicts they were written as (status and outcome current)."""
     with _conn() as c:
         rows = c.execute(
-            "SELECT card_json, status, decided_ts, position_id, outcome_json FROM manual_reviews "
+            "SELECT card_json, status, decided_ts, position_id, outcome_json, shadow_json FROM manual_reviews "
             "WHERE session_date = ? ORDER BY created_ts", (session_date,),
         ).fetchall()
     out = []
     for r in rows:
         card = json.loads(r["card_json"]) if r["card_json"] else {}
         card.update({"status": r["status"], "decided_ts": r["decided_ts"], "position_id": r["position_id"],
-                     "outcome": json.loads(r["outcome_json"]) if r["outcome_json"] else None})
+                     "outcome": json.loads(r["outcome_json"]) if r["outcome_json"] else None,
+                     "shadow": json.loads(r["shadow_json"]) if r["shadow_json"] else None})
         out.append(card)
     return out
 

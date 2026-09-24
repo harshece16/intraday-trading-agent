@@ -144,6 +144,7 @@ class TradingEngine:
         self._entering = set()
         self.review_queue = review_queue.ReviewQueue()
         state.review_queue = self.review_queue
+        self._last_shadow_update = 0.0
         # Set by stop_and_flatten(): the next open-market tick closes anything
         # still open. An entry already past the pause check when the API thread
         # flattened would otherwise survive the kill switch.
@@ -1433,8 +1434,34 @@ class TradingEngine:
             except Exception:
                 logger.exception("Stop watcher sync failed — stops still covered by this poll")
 
+        try:
+            self._update_review_shadows(now)
+        except Exception:
+            logger.exception("Review queue: couldn't update the hypothetical outcomes")
+
         with self.state.lock:
             self.state.last_update_ts = now.timestamp()
+
+    def _update_review_shadows(self, now, min_interval=60):
+        """Once a minute: replay every card of the day that wasn't approved as
+        if it had been, and save the result (review_queue.shadow_outcome). A
+        card's hypothetical trade stops updating once it has exited."""
+        if time.time() - self._last_shadow_update < min_interval:
+            return
+        self._last_shadow_update = time.time()
+        for card in self.review_queue.shadow_candidates():
+            symbol = card["symbol"]
+            bars = self.state.candles.get(symbol)
+            if not bars:
+                try:
+                    bars = data_provider.get_intraday_candles(symbol, interval=config.CANDLE_INTERVAL, period="1d")
+                except Exception:
+                    logger.exception(f"Review queue: no candles for {symbol}'s hypothetical outcome")
+                    continue
+            if not bars:
+                continue
+            outcome = review_queue.shadow_outcome(card, bars, ltp=bars[-1]["close"], now=now)
+            self.review_queue.set_shadow(card["id"], outcome)
 
     async def run_forever(self):
         self.state.running = True
