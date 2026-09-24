@@ -98,3 +98,18 @@ def test_selection_pass_rule_needs_all_four_clauses():
     assert not ss.passes(half, {"net_r": -0.01}, good, {"dsr": 0.97})          # a half
     assert not ss.passes(half, half, {**good, "t": 1.9}, {"dsr": 0.97})        # t
     assert not ss.passes(half, half, {**good, "n": 99}, {"dsr": 0.97})         # count
+
+
+def test_diagnostic_excursions_in_r_use_only_the_bars_the_trade_was_open():
+    from research import search_diagnostics as sd
+    t = {"side": "LONG", "entry_price": 100.0, "risk_per_share": 1.0,
+         "entry_time": "2025-03-03T10:00:00+05:30", "exit_time": "2025-03-03T10:15:00+05:30"}
+    bars = [{"time": "2025-03-03T10:00:00", "high": 150.0, "low": 50.0},      # entry bar: excluded
+            {"time": "2025-03-03T10:05:00", "high": 102.5, "low": 99.5},
+            {"time": "2025-03-03T10:10:00", "high": 101.0, "low": 98.8},
+            {"time": "2025-03-03T10:20:00", "high": 130.0, "low": 90.0}]      # after exit: excluded
+    mfe, mae = sd.excursions(t, bars)
+    assert mfe == 2.5 and abs(mae - (-1.2)) < 1e-9
+    short = {**t, "side": "SHORT"}
+    mfe, mae = sd.excursions(short, bars)
+    assert abs(mfe - 1.2) < 1e-9 and mae == -2.5
