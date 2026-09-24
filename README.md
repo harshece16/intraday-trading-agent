@@ -3078,6 +3078,19 @@ If the tunnel can't open, no login is started, so Kite never redirects into noth
 
 **Verified 2026-09-24, pre-open:** with ngrok not running, a login request brought the tunnel up in 1 s and the public URL reached this backend (401 from the key check). A real login then completed through it at 08:17, and the tunnel stopped itself 5 seconds later.
 
+### 63. The "supporting evidence" engine, tested on the long data: it loses before costs
+
+The stock page's **Supporting evidence / Live read** (ADX regime, swing structure, 15-minute trend, RSI, volume, candle patterns) is the input of the older **confluence** engine (§5). Its only test was 15–55 days of delayed yfinance data in the project's first days. Every deep run since used the checklist. So it was pre-registered and run on the Kite cache (selection sample, 317 sessions, held-out never loaded):
+
+| | Confluence | Checklist (same harness) |
+| --- | --- | --- |
+| Trades | **668** | 38 |
+| Net R per trade | **−0.430** (t = −9.84) | not significant |
+| Before costs | **−0.188R** | — |
+| Net ₹ | **−₹44,875** | ≈ −₹1,700 |
+
+**FAIL on every clause.** The engine loses **before costs**, worse than random entries, and trades 17× as often, so costs multiply the damage. Both halves agree. **The live engine stays on the Varsity checklist.** The evidence read stays on the page as context, but it's measured as a *negative* entry signal. Trial 40; `docs/research/results-confluence-deep.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

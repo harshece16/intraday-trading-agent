@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-23: **39**
+## Strategy trials — count as of 2026-09-24: **40**
 
 | n | Label |
 | --- | --- |
@@ -70,6 +70,7 @@ backtest look better than it is.
 | 37 | **#74 bug-fix pair — fixed** cost_pct 0.166 (derived from `costs.py`), same harness · **PASS** (worse in first half only): first −0.354R (n 33), second +0.032R (n 12) — no edge, 63% fewer trades · `results-fix74-cost-pct.md` |
 | 38 | **#40 bug-fix pair — baseline** `sahab_dimaag` checklist, rrr_without_level 2.0 gross, cost_pct 0.166, Test A harness, selection only, both halves · code `d79eeb9` · first −0.354R (n 33), second +0.032R (n 12) — reproduces trial 37 exactly · `results-fix40-no-level-target.md` |
 | 39 | **#40 bug-fix pair — fixed** no formulaic target when no level lies beyond · **PASS** (worse in first half only): first −0.360R (n 31), second +0.089R (n 7) — no edge, 16% fewer trades · `results-fix40-no-level-target.md` |
+| 40 | **Confluence engine on the deep cache** `entry_mode: confluence`, live params, Test A harness, selection only (317 sessions) · `prereg-confluence-deep.md` · code `08524d1` · **FAIL**: net −0.430R/trade, t = −9.84, n = 668; gross −0.188R (worse than the random-entry null); both halves negative · run at the user's direction without reviewer review · `results-confluence-deep.md` |
 
 ### What a reviewer should notice in this list
 
