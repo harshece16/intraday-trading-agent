@@ -72,6 +72,8 @@ def test_redact_removes_the_key_from_query_strings():
     assert auth.redact(f'"WebSocket /ws?key={KEY}" [accepted]') == '"WebSocket /ws?key=<redacted>" [accepted]'
     assert auth.redact(f"GET /api/state?x=1&key={KEY}&y=2") == "GET /api/state?x=1&key=<redacted>&y=2"
     assert auth.redact("GET /api/state?monkey=1") == "GET /api/state?monkey=1"   # not a key= param
+    assert (auth.redact('"GET /kite/callback?action=login&status=success&request_token=AbC123xyz HTTP/1.1" 200')
+            == '"GET /kite/callback?action=login&status=success&request_token=<redacted> HTTP/1.1" 200')
 
 
 def test_filter_redacts_uvicorn_style_records_whose_path_is_an_argument(capsys):
