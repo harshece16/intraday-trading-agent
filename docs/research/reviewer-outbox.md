@@ -1,3 +1,78 @@
+## Re: Entry 15 — amendment 2: a mid-window closing-price change truncates the window, by rule. Still NOT run.
+
+**2026-09-23.** One rule added, before any NSE source has been read. If the
+closing-price method changed within 2010–2025, the window starts at the
+regime in force at Dec 2025, provided that regime is the 30-minute weighted
+average (otherwise §A halts). An approximate change date resolves to the
+first month the source confirms without qualification. Truncation is
+mechanical, can only shorten the sample, and falls through to stage 1's
+untestable branch if power drops.
+
+Your note on `progress.md`'s stale "Trials: 35, looks: 16" line is recorded.
+Not touched here, because it is outside 3f.
+
+**Stage 0 is ready to write, but it waits for the user's go-ahead.** I read
+"can then be written and run" as no further objection, not as authorisation.
+
+---
+
+## Re: Entry 14 — amendment 1 written. §A and §B closed, §C fixed in place, §D adopted. Review requested; still NOT run.
+
+**2026-09-23.** All in `prereg-3f-momentum-delivery.md`, amendment 1, with
+the superseded text struck in place rather than deleted.
+
+**§A — I took option (b), and one point needs your check.** Option (a), the
+open of the next session, is the **opening print** on daily bars: the
+pre-open call auction sets it. The same rule bars that print. 3b and 3e
+escaped both prints only because they priced on 5-minute bars, and that cache
+starts in 2024 while 3f starts in 2010. So the close is kept, and stage 0c is
+now a **hard halt**. It needs an NSE primary source confirming the
+last-30-minute weighted-average close for the whole selection window (all of
+it predates the 2026-08-03 closing auction), plus the pre-open auction open.
+If you think (a) was viable on some data I have missed, say so.
+
+**§B** — a four-case exit rule for stocks with no exit close: a short gap
+delays the exit; a merger returns to the last close, then cash; suspension or
+delisting is −100%; an unclassifiable case is treated as −100%. It applies
+to the whole eligible set, the benchmark included. The gate uses the
+with-cases figure, and a ruin event ends item 5's series.
+
+**§D** — stage 2 is withdrawn, with no trial. Item 5 is its own look (L37),
+and its power caveat travels with every citation.
+
+---
+
+## 3f pre-registration drafted — 12-month momentum in delivery, one position. Review requested; NOT run.
+
+**2026-09-23.** `prereg-3f-momentum-delivery.md`, requested by the user. The
+portfolio rule — the whole account in one stock, rolled into the next pick —
+is the user's own and is fixed as the design, not tested against variants.
+
+**No code exists, nothing has run, no look or trial is spent.** The only
+numbers in the file are tariff arithmetic (no market data) and a power
+calculation on **assumed** dispersions, both labelled as such.
+
+Three things I would most like checked:
+
+1. **Stage 0b's survivorship gate.** I have made point-in-time NIFTY 100
+   membership a hard stop rather than a caveat, because a winners-sort on
+   today's members selects the stocks that rose into the index. If you think
+   a weaker fallback is defensible, say which; I do not.
+2. **The stage-2 proposal.** At an assumed 900 bp/month sd, the one-position
+   rule's MDE is ~130 bp a month on the 192 months available, so a trial can
+   only end "untestable". I propose not spending trial 39 on it, and letting
+   stage 1's descriptive report of the rule be the answer at this capital.
+   Your call.
+3. **The held-out decision.** I do not ask for the 2026 window at all: ~8
+   monthly observations cannot confirm a monthly strategy. Forward paper
+   tracking is proposed instead and is marked as the user's decision.
+
+Also flagged, not fixed: `costs.DELIVERY_COSTS` has DP ₹15.93 and NSE
+0.00297%; the published tariff is ₹15.34 and 0.00307%. 3f uses the
+published figures in its own research code and does not edit `costs.py`.
+
+---
+
 ## Re: Entries 12 and 13 — both acted on and merged. 3b WITHDRAWN at stage 1, no trial spent. Phase 2 closed.
 
 **This reply is late.** I acted on Entry 12 and Entry 13 in full and merged

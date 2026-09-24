@@ -6,6 +6,259 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 15 — 2026-09-23 — automated reviewer: 3f amendment 1 ACCEPTED WITH ONE CORRECTION — §A's argument for keeping the close is right and the hard halt is real, but it has no rule for a closing-methodology change found mid-window; §B, §C, §D check out
+
+Reviewed `prereg-3f-momentum-delivery.md` amendment 1 (§A–§D, appended, no
+code exists — confirmed by `Glob`/`Grep` for `step3f*`: nothing in the tree)
+against Entry 14, the outbox reply, `costs.py`, `trials.md` and `progress.md`.
+
+### §A — the argument for option (b) is sound, and there is no alternative in this repo's data
+
+The main agent's claim is that on **daily** bars the next session's open is
+itself the **pre-open call-auction print** (09:00–09:08), the exact print the
+standing rule bars, and that this is a different thing from what 3b/3e used.
+That distinction holds up: 3b/3e's "open" is the open of a **5-minute
+continuous-trading bar** (09:50, or "the bar after the signal bar") — a
+genuinely liquid, continuously-traded price captured well after the actual
+market-opening auction — not the day's literal opening print. A raw daily
+`Open` field, by contrast, is the auction's equilibrium price (or the first
+print struck at it). These are not the same thing, and treating them as
+interchangeable would have been the error. I checked whether a third option
+exists in this repo's data for the full 2010–2025 window and it does not:
+the only daily-cadence source is yfinance (open/close only), and the only
+sub-daily source, the Kite 5-minute cache, starts 2024-09-20 — 14 of the
+window's 16 years short. **Option (b) is the only one that exists in this
+repo's data for the stated period, not merely the one that was easiest to
+defend.** Agreed.
+
+**One gap, needs fixing before stage 0c is executed.** The hard halt requires
+an NSE source confirming the 30-minute-VWAP close "for the whole selection
+window," but has no rule for what happens if the source instead shows the
+methodology **changed partway through** 2010–2025 (a different VWAP window,
+or the closing auction phased in for some segment of stocks before
+2026-08-03 — this project has not checked whether that happened, and it is a
+real possibility, not a hypothetical one, since closing-auction mechanisms
+were phased in for other NSE segments in stages over the past decade). As
+written, a partial confirmation reads as "cannot be confirmed for the whole
+window" → full stop. That may be the right rule, but stage 0b already solved
+the analogous problem for membership by fixing the start date **in the file,
+before any signal is computed**, rather than leaving it to be decided once
+the source is in hand ("the later of 2010-01-01 and the first month with
+complete membership"). §A's hard halt needs the same treatment: state now,
+not when the NSE source is read, whether a documented mid-window change (a)
+halts 3f entirely, or (b) truncates the start date to the confirmed regime's
+start — and if (b), that this is decided by the rule, not by whether the
+truncated window still looks favourable. Add one sentence to the hard halt
+before stage 0c runs.
+
+### §B — the four-case exit rule is complete
+
+The 5-session threshold is unambiguous at the boundary (`≤5` vs `beyond 5`,
+no overlap), and a suspension lasting beyond 5 sessions is case (iii) —
+`−100%` — **regardless of whether it later resumes**; the case list reads as
+three independent triggers ("suspension beyond 5 sessions," "compulsory or
+involuntary delisting," "insolvency"), not one trigger requiring all three
+qualifiers, so a stock that resumes trading after 20 sessions does not
+retroactively become case (i). Applying the same rule to the benchmark's
+members, not only picked names, is the right, symmetric choice — an
+asymmetric rule would have let survivorship back in through the benchmark
+side while the gate statistic looked clean. "The with-cases figure gates,"
+stated before any case is observed, leaves no room to pick between the two
+reported figures after the fact. One simplification worth naming, not
+correcting: case (ii)'s merger rule assigns `0%` cash for the remainder of
+the month even when the consideration is shares in an acquirer that is
+itself a universe member — a conservative, stated simplification, not an
+ambiguity.
+
+### §C — all three fixes verified
+
+1. **GST base**, checked against `backend/costs.py::leg_cost` directly:
+   `gst = (brokerage + exchange_txn) * gst_pct / 100` — SEBI is outside the
+   base, matching the corrected prose exactly.
+2. Re-derived the ₹5,500 round-trip figure independently from the published
+   tariff (DP ₹15.34, NSE 0.00307%) rather than trusting Entry 14's number:
+   buy leg ₹6.5297, sell leg ₹21.0447, charges 50.14 bp + 6.0 bp slippage =
+   **56.1 bp**, exact match. The amendment changed no figures, as claimed.
+3. Benchmark definition and the nominal-price-filter caveat are both present
+   and cross-referenced correctly in the stage-1 table and "What 3f cannot
+   establish."
+
+All struck/superseded markers are internally consistent: the numbering
+header, the stage-2 heading, stage-1 item 5, and stage-0c's closing-price
+line all point to the amendment section that actually superseded them, and
+nothing was left half-edited.
+
+### §D — accounting checks out
+
+L36 (quintile gate, gated but still a cross-sectional measurement, not a
+strategy selection) and L37 (item 5, logged separately per Entry 14) follow
+the same precedent as 3b's L31/L32, which were gated research looks, not
+trials. `trials.md`'s actual state (looks through L34, trials through 37)
+is consistent with 3f's "expected L36/L37, or L35/L36 if 3e is withdrawn
+first" — nothing here pre-claims a number, it states what the next free one
+would be, same as 3e's own "expected L35/trial 38" framing. `trials.md` and
+`progress.md` contain no reference to 3f, which is correct — nothing has run.
+Noted, not a defect in this amendment: `progress.md`'s "Trials: 35, Research
+looks: 16" line is stale narrative from 2026-09-21 and predates L17–L34 and
+trials 36–37; it is not the count of record (`trials.md` is) and this
+amendment did not touch it.
+
+### Spot-checks
+
+`leg_cost`'s GST formula (above) and the independently re-derived 56.1 bp
+round-trip figure (above), both against `backend/costs.py` directly, not
+against the document's own arithmetic.
+
+### Next step, and where to stop
+
+Add the one sentence to §A's hard halt (mid-window methodology change: halt
+or truncate, decided now). That is a text fix, not a new look or trial. Then
+stage 0b/0c can be written and run — still no look or trial spent by either,
+since stage 0 reads no forward return. Stop again for review before stage 1
+runs (the quintile gate, L36) — that is the first step that reads a return.
+
+---
+
+## Entry 14 — 2026-09-23 — automated reviewer: 3f pre-registration ACCEPTED WITH CORRECTIONS — the survivorship gate is right, the cost/power arithmetic is right, and the stage-2 proposal is right, but the holding-return fill uses the session close, which the tradability rule bars, and the delisting case in the holding window is unhandled
+
+Reviewed `prereg-3f-momentum-delivery.md` (commit `6a970b3`, no code exists)
+against the standing rules, the three questions in the outbox's top entry,
+and precedent (`prereg-3b-intraday-momentum.md`, `prereg-3e-wide-structure-short.md`,
+`phase3-scoping.md`, `report-phase-2-closing.md`, `trials.md`). Independently
+recomputed the delivery round-trip table and the months-needed/MDE table from
+`backend/costs.py` (`leg_cost`) and `backend/research/splits.py`
+(`required_trades`) by hand, not by running code. Confirmed no `step3f_*` or
+other momentum code exists anywhere in the tree.
+
+### Verdict: ACCEPTED WITH CORRECTIONS. Fix §A before stage 0 code is written; §B–§D are smaller and can go in the same amendment.
+
+### §A — the fill rule for the holding return needs to change or be gated, before any code exists
+
+Stage 1's "Holding return" and stage 2's "Exit"/entry rule both price the
+trade at the **adjusted close of a session** — entry at "close of the first
+session of month m," exit at "close of the first session of month m+1."
+That is the closing print, and the reviewer's standing rule is explicit:
+"not the opening print, **not the closing auction**, fills after the signal
+bar." Two prior pre-registrations already moved off the close for exactly
+this reason — 3b's amendment 1 §3 moved its target from the 09:45 close to
+the 09:50 open specifically because "the target starts there" was false once
+scrutinised, and 3e's stage-2 entry fill is explicitly "open of the bar after
+the signal bar... never the signal bar's own close." 3f is the one design in
+this family that still fills at a close, and the document knows it: stage 0c
+itself flags "to verify, not assumed" that NSE's close (a 30-minute VWAP
+before 2026-08-03, a closing-auction print after) is "something a trader can
+approximate," and its remedy is "**report it as an open caveat on
+tradability**" if it can't be confirmed. A caveat carried silently into a
+"clears 56.1 bp" verdict is the exact failure mode this project's rules exist
+to catch — it is not a caveat, it is whether the number means anything.
+
+Pick one, in the amendment:
+- **(a)** Redefine the entry and exit fills to the **open of the session
+  after** the signal/rebalance date, matching 3b and 3e's precedent, and
+  re-derive the 3 bp/leg slippage assumption at that price point instead of
+  the close; or
+- **(b)** Keep close-to-close (defensible — it's the standard convention in
+  the momentum literature the "why this" section cites), but make stage 0c's
+  closing-price check a **hard halt**, structured exactly like 0b's
+  membership gate: 3f proceeds only if an NSE source positively confirms the
+  historical close is capturable by a retail MOC/closing-limit order, for
+  both the pre- and post-2026-08-03 regimes. If it can't be confirmed, 3f
+  stops at stage 0, the same as a failed membership reconstruction.
+
+Either is fine; leaving it as a prose caveat that gets carried into a pass/fail
+verdict is not.
+
+### §B — the holding period has no rule for a stock that delists or suspends after selection
+
+Stage 0b's ≥95% coverage gate and the "residual survivorship" caveat cover
+**eligibility at selection time** — a stock with no price history doesn't
+become an eligible member and can't be picked. They say nothing about a
+stock that **is** picked (top quintile, or the single top-scored name in
+stage 2) and then is suspended, delisted, or merged before the month-end
+close that prices the exit. Does that trade get dropped from the sample
+(which reintroduces the same survivorship failure mode 0b's hard gate exists
+to prevent — now in the return-realisation step instead of the eligibility
+step, and specifically biased toward the momentum-selected names, which are
+disproportionately likely to be the ones that later fail) or is a specific
+realised return assigned (last traded price before suspension, a punitive
+floor, something else)? Fix this in the same amendment as §A, since it's the
+same class of gap: a rule that exists for the selection side of the trade but
+not the exit side.
+
+### §C — minor, cosmetic, no figure changes
+
+1. The cost-table prose says GST is charged "on SEBI + exchange," but
+   `leg_cost()` computes `gst = (brokerage + exchange_txn) * gst_pct / 100` —
+   SEBI charges are **not** in the GST base. I recomputed the round-trip
+   table (56.1 / 84.0 / 111.9 / 167.7 / 865.0 bp) from the formula the code
+   actually uses, not the prose description, and every figure checks out
+   exactly (SEBI is ~150× smaller than the exchange charge, so this is
+   sub-0.01 bp either way and changes nothing). Fix the sentence to match the
+   code, not the numbers.
+2. "Equal-weight eligible universe," the benchmark subtracted in every gate
+   statistic, never gets the formula treatment the Score row got. State in
+   one line that it's the equal-weight mean of holding returns across that
+   month's eligible set — the same set used for quintile assignment — so a
+   reader doesn't have to infer it.
+3. Add one sentence to "What 3f cannot establish": the ≤₹5,500 unadjusted-
+   price eligibility filter selects on **nominal share price**, which
+   correlates with sector and split history, not market cap or liquidity.
+   It's a real, uncorrected source of non-representativeness in both stages,
+   distinct from the delisting/survivorship caveats already listed there.
+
+### §D — the three outbox questions, answered
+
+1. **Point-in-time NIFTY 100 membership as a hard stop: yes, correctly.** No
+   weaker fallback is defensible. A winners-sort on today's membership
+   selects, by construction, the names that rose into the index — this is
+   not the same failure mode as the quintile-spread survivorship caveats
+   carried elsewhere in this project (those don't bias toward the specific
+   direction being traded); a "buy last year's winners, held in delivery"
+   design does. Keep it as written.
+2. **Dropping trial 39: agreed.** The power table is not close — 900 bp
+   assumed sd against 192 available months gives an MDE of ~130 bp/month,
+   an order of magnitude above any plausible edge, so a trial here can only
+   end "untestable" and would buy nothing but a DSR debit. One correction:
+   when stage 1 runs, log item 5 (the descriptive one-position report) as
+   its own numbered **research look** in `trials.md`, not folded silently
+   into stage 1's look number — it computes a full return series (mean, sd,
+   worst month, drawdown) for a specific tradeable configuration, which is
+   closer to a strategy backtest than a feature measurement, and its
+   auditability shouldn't depend on the "no pass rule" framing alone. And:
+   every future citation of that number — in a results file, a progress
+   update, or a conversation with the user — must repeat the power caveat
+   inline ("MDE ~130 bp/month; this cannot be distinguished from luck"), not
+   just once in the pre-registration. A positive-looking mean/drawdown
+   computed on one stock over a couple of hundred months is exactly the kind
+   of number that gets requoted without its error bars if the caveat isn't
+   attached every time.
+3. **Not spending the held-out window, proposing forward tracking instead:
+   agreed.** ~8 observations at an assumed 300 bp sd gives an MDE around
+   210 bp/month — it cannot confirm a monthly strategy and the project's own
+   rule (spending the held-out look needs the user's decision) is correctly
+   never touched here. Forward paper tracking is correctly marked "needs the
+   user's decision" rather than started — starting a multi-year forward
+   collection commits future resources the main agent can't authorise alone,
+   and I'm not authorising it either; that stays with the user.
+
+### Spot-checks
+
+Recomputed both numeric tables by hand from the cited source functions
+(`leg_cost` on `DELIVERY_COSTS` with the two published figures substituted;
+`required_trades(sd, 56.1)`): the delivery round-trip table and the
+months-needed table (224 / 399 / 2,020 / 3,591) both check out exactly, as
+does the 130 bp / 43 bp MDE pair. No number in the draft is wrong.
+
+### Next step, and where to stop
+
+Amend §A and §B (design decisions, not measurements — no look or trial is
+spent by writing an amendment), fold in §C as text edits, then stop again for
+review before stage 0b (the membership builder) is written. Stage 0b needs
+its own look at what NSE source data is actually available before anything
+downstream is worth reviewing again in detail.
+
+---
+
 ## Entry 13 — 2026-09-21 — automated reviewer: 3b amendment 1 ACCEPTED WITH CORRECTIONS — Entry 12 §1–§5 faithfully implemented and all footnote arithmetic checks out, but two original-table rows still contradict it, two gate definitions are ambiguous, and a fifth file was missed
 
 Reviewed `prereg-3b-intraday-momentum.md` amendment 1 (commit `fef1fd7`) against
