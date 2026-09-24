@@ -140,10 +140,15 @@ def _store(symbol, interval, frm, to, rows):
             (symbol, interval, frm.isoformat(), to.isoformat(), len(rows), time.time()))
 
 
-def download_symbol(symbol, interval="5m", days=730, kite=None, token_for=None, progress=None) -> dict:
+def download_symbol(symbol, interval="5m", days=730, kite=None, token_for=None, progress=None,
+                    refresh=False) -> dict:
     """Fill the cache for one symbol. Returns counts; never raises for a single
     failed window — a two-year pull across 100 stocks should not be lost to one
-    bad response, and the window simply stays unrecorded so a rerun retries it."""
+    bad response, and the window simply stays unrecorded so a rerun retries it.
+
+    `refresh=True` first drops this symbol's cached bars and span records, so
+    the whole history is re-fetched in one run and carries one dividend
+    adjustment (#108). Without it, already-fetched windows are skipped."""
     import data_provider
     kite = kite or data_provider._get_kite()
     token_for = token_for or data_provider._instrument_token
@@ -158,6 +163,10 @@ def download_symbol(symbol, interval="5m", days=730, kite=None, token_for=None, 
     end = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     start = end - timedelta(days=days)
     counts = {"symbol": symbol, "windows": 0, "rows": 0, "skipped": 0, "errors": 0}
+    if refresh:
+        with _conn() as c:
+            c.execute("DELETE FROM candles WHERE symbol=? AND interval=?", (symbol, interval))
+            c.execute("DELETE FROM fetched WHERE symbol=? AND interval=?", (symbol, interval))
 
     for frm, to in _chunks(start, end):
         if _already_fetched(symbol, interval, frm, to):
@@ -178,10 +187,10 @@ def download_symbol(symbol, interval="5m", days=730, kite=None, token_for=None, 
     return counts
 
 
-def download(symbols, interval="5m", days=730, progress=None) -> dict:
+def download(symbols, interval="5m", days=730, progress=None, refresh=False) -> dict:
     total = {"symbols": 0, "windows": 0, "rows": 0, "skipped": 0, "errors": 0}
     for symbol in symbols:
-        c = download_symbol(symbol, interval=interval, days=days, progress=progress)
+        c = download_symbol(symbol, interval=interval, days=days, progress=progress, refresh=refresh)
         total["symbols"] += 1
         for k in ("windows", "rows", "skipped", "errors"):
             total[k] += c[k]
@@ -224,6 +233,20 @@ def available(interval="5m") -> bool:
         return False
 
 
+def fetch_runs(interval="5m") -> list:
+    """The IST dates the cached spans were fetched on, oldest first, with how
+    many spans each. Kite back-adjusts history for dividends AS OF THE FETCH
+    DATE (#108), so spans fetched on different dates can be scaled
+    differently and prices can step where they meet. One run means the whole
+    cache is adjusted consistently, as of that date."""
+    if not DB_PATH.exists():
+        return []
+    rows = _conn().execute(
+        "SELECT date(fetched_at, 'unixepoch', '+330 minutes') d, COUNT(*) n FROM fetched "
+        "WHERE interval=? AND fetched_at IS NOT NULL GROUP BY d ORDER BY d", (interval,)).fetchall()
+    return [{"date": r["d"], "spans": r["n"]} for r in rows]
+
+
 def status(interval="5m") -> dict:
     if not DB_PATH.exists():
         return {"cached": False, "symbols": 0, "candles": 0, "note": "No cache yet — run kite_history.py"}
@@ -242,6 +265,7 @@ def status(interval="5m") -> dict:
         "from": datetime.fromtimestamp(row["lo"]).date().isoformat(),
         "to": datetime.fromtimestamp(row["hi"]).date().isoformat(),
         "db_mb": round(DB_PATH.stat().st_size / 1e6, 1),
+        "fetch_runs": fetch_runs(interval),
     }
 
 
@@ -251,6 +275,9 @@ def main():
     parser.add_argument("--interval", default=config.CANDLE_INTERVAL)
     parser.add_argument("--days", type=int, default=730, help="How far back to fetch (default: 2 years)")
     parser.add_argument("--status", action="store_true", help="Show what's cached and exit")
+    parser.add_argument("--refresh", action="store_true",
+                        help="Drop each symbol's cache and re-fetch it, so every bar carries the same dividend "
+                             "adjustment (Kite adjusts as of the fetch date; issue #108)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -279,7 +306,7 @@ def main():
         if done[0] % 10 == 0:
             print(f"  {done[0]:>5} windows · {symbol} {frm.date()}..{to.date()} · {rows} candles", flush=True)
 
-    total = download(symbols, interval=args.interval, days=args.days, progress=progress)
+    total = download(symbols, interval=args.interval, days=args.days, progress=progress, refresh=args.refresh)
     print(f"\nDone in {time.time() - started:.0f}s: {total['rows']:,} candles over {total['windows']} windows "
           f"({total['skipped']} already cached, {total['errors']} errors).")
     for k, v in status(args.interval).items():
