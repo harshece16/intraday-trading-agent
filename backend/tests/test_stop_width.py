@@ -152,3 +152,17 @@ def test_the_plan_still_reports_a_finite_stop_and_target():
     out = _plan("long", 99.0, 100.5, 100.0, {"stop_buffer_atr": 0.25, "min_stop_atr": 0.5})
     assert out["stop"] is not None and math.isfinite(out["stop"])
     assert out["entry"] == pytest.approx(100.0)
+
+
+def test_min_stop_cost_widen_is_off_by_default_43():
+    assert trader_brain.DEFAULTS["min_stop_cost_widen"] is None
+
+
+def test_the_cost_floor_widens_a_stop_that_one_atr_leaves_under_the_cost_43():
+    # ATR is 1.0 on a 100 stock, so 1 ATR = 1%; a 0.2 ATR here (quiet stock) would be 0.2%.
+    quiet = {"stop_buffer_atr": 0.0, "min_stop_atr": 0.001}          # ATR floor effectively off
+    base = _plan("long", 99.97, 100.05, 100.0, quiet)
+    wide = _plan("long", 99.97, 100.05, 100.0, {**quiet, "min_stop_cost_widen": 3})
+    cost = 100.0 * trader_brain.DEFAULTS["cost_pct"] / 100
+    assert base["entry"] - base["stop"] < 3 * cost
+    assert wide["entry"] - wide["stop"] == pytest.approx(3 * cost, abs=0.01)   # 3 round trips (plan rounds to 2 dp)

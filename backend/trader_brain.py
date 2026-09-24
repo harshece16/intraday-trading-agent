@@ -96,6 +96,11 @@ DEFAULTS = {
     # 21 of the baseline's 30 trades.
     "stop_buffer_atr": 0.0,
     "min_stop_atr": 1.0,
+    # #43: also floor the stop at k round trips, so a quiet stock whose ATR is
+    # under one round trip gets a stop placed where the economics work instead
+    # of being rejected by min_stop_to_cost. None (the default) = off, the
+    # behaviour trials 36-40 measured. Chosen only by prereg-strategy-search.md.
+    "min_stop_cost_widen": None,
     # A target with no level to aim at (#40). None (the default) means there is
     # none: a setup with no support/resistance beyond the entry fails the R:R
     # item, as Varsity's checklist has it (the target is the next level). A
@@ -255,6 +260,8 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         # ...and never closer to the entry than this, so a very small pattern
         # can't produce a stop that costs more than it risks.
         floor_dist = p["min_stop_atr"] * atr_v
+        if p.get("min_stop_cost_widen"):
+            floor_dist = max(floor_dist, p["min_stop_cost_widen"] * price * p["cost_pct"] / 100)
         if abs(price - stop) < floor_dist:
             stop = price - s * floor_dist
         span = max(b["high"] for b in bars) - min(b["low"] for b in bars)
