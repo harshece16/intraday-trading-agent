@@ -104,7 +104,7 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
           </button>
         </div>
         {state?.entries_paused && (
-          <span className="kite-chip kite-chip--warn" title="No new positions will open. Stops, targets and the 15:15 square-off still run. Resume from the Overview page.">
+          <span className="kite-chip kite-chip--warn" title={`No new positions will open. Stops, targets and the ${state?.square_off_time || "15:08"} square-off still run. Resume from the Overview page.`}>
             <span className="dot" aria-hidden="true"></span>
             Entries paused
           </span>

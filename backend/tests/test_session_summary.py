@@ -343,7 +343,7 @@ def _reads(start, end, every_s=38):
 
 
 def test_full_session_coverage_adds_nothing_to_the_line():
-    _reads("09:15", "15:14")
+    _reads("09:15", config.SQUARE_OFF_TIME)
     s = database.session_summary(_today())
     assert s["coverage"]["uncovered_min"] == 0 and s["coverage"]["gaps"] == []
     assert "Coverage" not in database.session_summary_line(s)
@@ -351,11 +351,13 @@ def test_full_session_coverage_adds_nothing_to_the_line():
 
 def test_a_late_start_is_reported_before_the_counts():
     # 23 Sep: the laptop slept until 10:38.
-    _reads("10:38", "15:14")
+    end = config.SQUARE_OFF_TIME
+    _reads("10:38", end)
     s = database.session_summary(_today())
     assert s["coverage"]["uncovered_min"] == 83 and s["coverage"]["gaps"] == [["09:15", "10:38"]]
     line = database.session_summary_line(s)
-    assert "no trades. Coverage: engine evaluated 10:38–15:14; 83 min of the 09:15–15:15 session not covered (09:15–10:38)." in line
+    assert (f"no trades. Coverage: engine evaluated 10:38–{end}; 83 min of the 09:15–{end} session "
+            f"not covered (09:15–10:38).") in line
     assert line.index("Coverage") < line.index("checklist evaluations")
 
 
@@ -370,11 +372,11 @@ def test_a_midday_gap_over_five_minutes_is_reported_and_a_short_one_is_not():
 def test_an_early_stop_is_reported():
     _reads("09:15", "13:00")
     cov = database.session_summary(_today())["coverage"]
-    assert cov["gaps"] == [["13:00", "15:15"]] and cov["last"] == "13:00"
+    assert cov["gaps"] == [["13:00", config.SQUARE_OFF_TIME]] and cov["last"] == "13:00"
 
 
 def test_coverage_is_reported_on_a_day_that_traded_too():
-    _reads("10:00", "15:14")
+    _reads("10:00", config.SQUARE_OFF_TIME)
     _trade("P1", _ts_today("10:30"))
     line = database.session_summary_line(database.session_summary(_today()))
-    assert "1 position(s) opened" in line and "45 min of the 09:15–15:15 session not covered" in line
+    assert "1 position(s) opened" in line and f"45 min of the 09:15–{config.SQUARE_OFF_TIME} session not covered" in line

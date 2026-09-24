@@ -298,7 +298,13 @@ MARKET_OPEN = "09:15"
 MARKET_CLOSE = "15:30"
 # Auto square-off: close all open positions at this time to avoid overnight risk
 # (or an MIS auto square-off penalty from the broker).
-SQUARE_OFF_TIME = "15:15"
+# 15:08, not 15:15 (#78). Since the closing auction started on 2026-08-03,
+# Zerodha auto-squares MIS positions in closing-auction (F&O-eligible) stocks
+# at 15:12 and charges Rs 50 + GST per auto square-off order; continuous
+# trading in them stops at 15:15. Nearly the whole NIFTY 100 is F&O-eligible,
+# so one time for every stock, with room for order latency before 15:12.
+# Non-auction stocks could run to 15:25; one earlier cutoff costs them little.
+SQUARE_OFF_TIME = "15:08"
 
 POLL_INTERVAL_SECONDS = 30
 

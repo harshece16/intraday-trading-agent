@@ -84,9 +84,9 @@ export function tradeAction(t) {
 }
 
 export const REASON_TEXT = {
-  stop_loss: "Stop-loss hit", take_profit: "Target hit", auto_square_off: "15:15 square-off",
+  stop_loss: "Stop-loss hit", take_profit: "Target hit", auto_square_off: "Auto square-off",
   brain_exit: "Exit signal", brain_cover: "Cover signal", signal: "Signal",
-  fno_stop_loss: "F&O stop hit", fno_take_profit: "F&O target hit", fno_auto_square_off: "F&O 15:15 square-off",
+  fno_stop_loss: "F&O stop hit", fno_take_profit: "F&O target hit", fno_auto_square_off: "F&O auto square-off",
 };
 export const KIND_TEXT = {
   scan: "Scan", watchlist: "Watchlist", setup: "Setup forming", trade: "Trade",

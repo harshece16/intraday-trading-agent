@@ -24,7 +24,7 @@ function PlanBox({ s, r, b, pos }) {
         <h3>Holding {Math.abs(pos.quantity)} shares {long ? "long" : "short"}</h3>
         <p>
           Entered at {num(pos.avg_price)}, open P&amp;L <span className={tone(pos.unrealized_pnl)}>{signed(pos.unrealized_pnl, 0)}</span>.
-          {pos.stop_price ? ` Stop ${num(pos.stop_price)}, target ${num(pos.target_price)}.` : ""} Closes at the stop, the target, an exit signal or 15:15.
+          {pos.stop_price ? ` Stop ${num(pos.stop_price)}, target ${num(pos.target_price)}.` : ""} Closes at the stop, the target, an exit signal or {s?.square_off_time || "15:08"}.
         </p>
         {lv}
       </div>
