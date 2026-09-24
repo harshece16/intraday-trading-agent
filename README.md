@@ -3216,6 +3216,33 @@ The engine updates every open replay once a minute and stops once it has exited.
 
 > **Corrected.** This paragraph first said all three reached their targets, −₹54 (−1.41R). ~~"−₹19, −₹19 and −₹16, −₹54 (−1.41R)"~~. That figure came from a test run on **delayed** prices. There, SBIN's last price was already past the target before the bar that settled the trade existed, and the replay froze that early exit. The live engine, on real-time bars, books the stop. The early freeze is a real bug on delayed-data sessions, tracked as [#102](https://github.com/harshece16/intraday-trading-agent/issues/102). **Fixed:** an exit seen only in the latest price, or in a bar still forming, is now shown as **(provisional)** and re-checked every minute. Only a completed bar, or the square-off bar's open, makes it final.
 
+### 69. A 76-configuration strategy search, the Varsity checklist included: nothing passes, and the entries are zero before costs
+
+At the owner's request (2026-09-24) the project searched for a profitable rule set, including dropping the Varsity checklist altogether:
+- #43's cost-based stop floor,
+- the checklist on 15m and 60m bars,
+- three non-checklist families: trend pullback, range mean reversion, and VWAP breakout on volume.
+
+Each family ran on 5m, 15m and 60m bars, with 1.5 and 3 ATR stops, a 2R target or hold to close, and both sides or short only. **76 configurations**, all **pre-registered before the run** (`docs/research/prereg-strategy-search.md`), every one a counted trial (**41–116**), searched on the selection sample only.
+
+To pass, a configuration had to show net R > 0 with t > 2, positive in both halves, a **Deflated Sharpe ≥ 0.95 at 116 trials**, and at least 100 trades. The best would then get **one** look at the 2026 held-out window.
+
+**Result: 0 of 76 passed, and not one had positive net R.** The best lost −0.06R per trade. **The held-out window stays unspent, and nothing was deployed**, exactly as pre-registered.
+
+**Why, measured** (`docs/research/results-search-diagnostics.md`): at signal prices, before slippage and charges, **every entry rule sits between −0.05R and +0.04R**, which is zero. That holds for the checklist and all three families on every timeframe. The whole loss is friction:
+- slow 60m trades barely move (median best excursion 0.2R), so their small friction (0.07R) is the loss;
+- fast 5m trades move more, but pay 0.2–0.3R of friction.
+
+Stops, targets and timeframes only change the size of that bill. They can't create an edge the entries don't have.
+
+**What this means for the rules.** Tuning parameters further on the same price-and-volume bars would be curve-fitting, and isn't proposed. A next round has to bring **new information**, not a new combination of the same indicators:
+
+- **Order-book data** from the liquidity check (§58): the only data this project collects that no backtest has used. It's accumulating in `liquidity_checks`, and it needs weeks of rows before a measurement means anything.
+- **Event-driven entries** on NSE filings and results days, which the news pipeline already ingests. That needs an event study (a measurement, not a trial) before any rule.
+- **The unspent held-out window**, kept for whichever of those produces a candidate that passes selection.
+
+**The live engine stays on the Varsity checklist, in paper mode.** No rule change here was earned. Trials now stand at **116**.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
