@@ -1,0 +1,895 @@
+index,effective,action,symbol,name,file,layout
+N100,,EXCL,APOLLOTYRE,Apollo Tyres Ltd.,ind_prs09092009.txt,table
+N100,,EXCL,CHENNPETRO,Chennai Petroleum Corporation Ltd.,ind_prs09092009.txt,table
+N100,,EXCL,NATIONALUM,National Aluminium Co. Ltd.,ind_prs09092009.txt,table
+N100,,EXCL,RAYMOND,Raymond Ltd.,ind_prs09092009.txt,table
+N100,,EXCL,TATACOMM,Tata Communications Ltd.,ind_prs09092009.txt,table
+N100,,EXCL,VIJAYABANK,Vijaya Bank,ind_prs09092009.txt,table
+N100,,EXCL,WOCKPHARMA,Wockhardt Ltd.,ind_prs09092009.txt,table
+N100,,INCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs09092009.txt,table
+N100,,INCL,CGPOWER,Crompton Greaves Ltd.,ind_prs09092009.txt,table
+N100,,INCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs09092009.txt,table
+N100,,INCL,EMBDL,Indiabulls Real Estate Ltd.,ind_prs09092009.txt,table
+N100,,INCL,FEDERALBNK,Federal Bank Ltd.,ind_prs09092009.txt,table
+N100,,INCL,UPL,United Phosphorous Ltd.,ind_prs09092009.txt,table
+N100,,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs09092009.txt,table
+N50,,EXCL,NATIONALUM,National Aluminium Co. Ltd.,ind_prs09092009.txt,table
+N50,,EXCL,TATACOMM,Tata Communications Ltd.,ind_prs09092009.txt,table
+N50,,INCL,IDFC,Infrastructure Development Finance Co. Ltd.,ind_prs09092009.txt,table
+N50,,INCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,APOLLOTYRE,Apollo Tyres Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,CHENNPETRO,Chennai Petroleum Corporation Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,IDFC,Infrastructure Development Finance Co. Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,RAYMOND,Raymond Ltd.,ind_prs09092009.txt,table
+NN50,,EXCL,VIJAYABANK,Vijaya Bank,ind_prs09092009.txt,table
+NN50,,EXCL,WOCKPHARMA,Wockhardt Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,CGPOWER,Crompton Greaves Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,EMBDL,Indiabulls Real Estate Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,FEDERALBNK,Federal Bank Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,UPL,United Phosphorous Ltd.,ind_prs09092009.txt,table
+NN50,,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs09092009.txt,table
+N100,2009-01-12,EXCL,SATYAMCOMP,Satyam Computer Services Ltd.,ind_prs07012009.txt,table
+N100,2009-01-12,INCL,GLENMARK,Glenmark Pharmaceuticals Ltd,ind_prs07012009.txt,table
+N50,2009-01-12,EXCL,SATYAMCOMP,Satyam Computer Services Ltd.,ind_prs07012009.txt,table
+N50,2009-01-12,INCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs07012009.txt,table
+NN50,2009-01-12,EXCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs07012009.txt,table
+NN50,2009-01-12,INCL,GLENMARK,Glenmark Pharmaceuticals Ltd.,ind_prs07012009.txt,table
+N100,2009-03-27,EXCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,EXCL,NIRMA,Nirma Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,EXCL,SANOFI,Aventis Pharma Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,INCL,ADANIENT,Adani Enterprises Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,INCL,GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,INCL,MRPL,Mangalore Refinery & Petrochemicals Ltd.,ind_prs10022009.txt,table
+N100,2009-03-27,INCL,VEDL,Sesa Goa Ltd.,ind_prs10022009.txt,table
+N50,2009-03-27,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs10022009.txt,table
+N50,2009-03-27,INCL,AXISBANK,Axis Bank Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,EXCL,AXISBANK,Axis Bank Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,EXCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,EXCL,NIRMA,Nirma Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,EXCL,SANOFI,Aventis Pharma Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,INCL,ADANIENT,Adani Enterprises Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,INCL,GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,INCL,MRPL,Mangalore Refinery & Petrochemicals Ltd.,ind_prs10022009.txt,table
+NN50,2009-03-27,INCL,VEDL,Sesa Goa Ltd.,ind_prs10022009.txt,table
+N100,2009-06-17,EXCL,RPL,Reliance Petroleum Ltd.,ind_prs19052009.txt,table
+N100,2009-06-17,INCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs19052009.txt,table
+N50,2009-06-17,EXCL,RPL,Reliance Petroleum Ltd.,ind_prs19052009.txt,table
+N50,2009-06-17,INCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs19052009.txt,table
+NN50,2009-06-17,EXCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs19052009.txt,table
+NN50,2009-06-17,INCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs19052009.txt,table
+N100,2009-10-20,EXCL,APOLLOTYRE,Apollo Tyres Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,CHENNPETRO,Chennai Petroleum Corporation Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,NATIONALUM,National Aluminium Co. Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,RAYMOND,Raymond Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,TATACOMM,Tata Communications Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,VIJAYABANK,Vijaya Bank,ind_prs04092009.txt,table
+N100,2009-10-20,EXCL,WOCKPHARMA,Wockhardt Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,CGPOWER,Crompton Greaves Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,EMBDL,Indiabulls Real Estate Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,FEDERALBNK,Federal Bank Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,UPL,United Phosphorous Ltd.,ind_prs04092009.txt,table
+N100,2009-10-20,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs04092009.txt,table
+N50,2009-10-20,EXCL,NATIONALUM,National Aluminium Co. Ltd.,ind_prs04092009.txt,table
+N50,2009-10-20,EXCL,TATACOMM,Tata Communications Ltd.,ind_prs04092009.txt,table
+N50,2009-10-20,INCL,IDFC,Infrastructure Development Finance Co. Ltd.,ind_prs04092009.txt,table
+N50,2009-10-20,INCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,APOLLOTYRE,Apollo Tyres Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,CHENNPETRO,Chennai Petroleum Corporation Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,IDFC,Infrastructure Development Finance Co. Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,RAYMOND,Raymond Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,VIJAYABANK,Vijaya Bank,ind_prs04092009.txt,table
+NN50,2009-10-20,EXCL,WOCKPHARMA,Wockhardt Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,CGPOWER,Crompton Greaves Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,EMBDL,Indiabulls Real Estate Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,FEDERALBNK,Federal Bank Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,UPL,United Phosphorous Ltd.,ind_prs04092009.txt,table
+NN50,2009-10-20,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs04092009.txt,table
+N100,2010-04-08,EXCL,GRASIM,Grasim Industries Ltd.,ind_prs24022010.txt,table
+N100,2010-04-08,EXCL,MOSERBAER,Moser Baer India Ltd.,ind_prs24022010.txt,table
+N100,2010-04-08,INCL,PUNJLLOYD,Punj Lloyd Ltd.,ind_prs24022010.txt,table
+N100,2010-04-08,INCL,TORNTPOWER,Torrent Power Ltd.,ind_prs24022010.txt,table
+N50,2010-04-08,EXCL,GRASIM,Grasim Industries Ltd.,ind_prs24022010.txt,table
+N50,2010-04-08,INCL,KOTAKBANK,Kotak Mahindra Bank Ltd.,ind_prs24022010.txt,table
+NN50,2010-04-08,EXCL,KOTAKBANK,Kotak Mahindra Bank Ltd.,ind_prs24022010.txt,table
+NN50,2010-04-08,EXCL,MOSERBAER,Moser Baer India Ltd.,ind_prs24022010.txt,table
+NN50,2010-04-08,INCL,PUNJLLOYD,Punj Lloyd Ltd.,ind_prs24022010.txt,table
+NN50,2010-04-08,INCL,TORNTPOWER,Torrent Power Ltd.,ind_prs24022010.txt,table
+N100,2010-10-01,EXCL,ABB,ABB Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,EXCL,IDEA,Idea Cellular Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,EXCL,TTML,Tata Teleservices (Maharashtra) Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,EXCL,UNITECH,Unitech Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,INCL,GRASIM,Grasim Industries Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,INCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,INCL,SHRIRAMFIN,Shriram Transport Finance Co. Ltd.,ind_prs18082010.txt,table
+N100,2010-10-01,INCL,YESBANK,Yes Bank Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,EXCL,ABB,ABB Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,EXCL,IDEA,Idea Cellular Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,EXCL,UNITECH,Unitech Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,INCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,INCL,DRREDDY,Dr. Reddy's Laboratories Ltd.,ind_prs18082010.txt,table
+N50,2010-10-01,INCL,VEDL,Sesa Goa Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,EXCL,BAJAJ-AUTO,Bajaj Auto Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,EXCL,DRREDDY,Dr. Reddy's Laboratories Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,EXCL,TTML,Tata Teleservices (Maharashtra) Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,EXCL,VEDL,Sesa Goa Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,INCL,GRASIM,Grasim Industries Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,INCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,INCL,SHRIRAMFIN,Shriram Transport Finance Co. Ltd.,ind_prs18082010.txt,table
+NN50,2010-10-01,INCL,YESBANK,Yes Bank Ltd.,ind_prs18082010.txt,table
+N100,2010-10-07,EXCL,RNRL,Reliance Natural Resources Ltd.,ind_prs01102010.txt,table
+N100,2010-10-07,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs01102010.txt,table
+N100,2010-10-07,INCL,EXIDEIND,Exide Industries Ltd.,ind_prs01102010.txt,table
+N100,2010-10-07,INCL,TATACHEM,Tata Chemicals Ltd.,ind_prs01102010.txt,table
+NN50,2010-10-07,EXCL,RNRL,Reliance Natural Resources Ltd.,ind_prs01102010.txt,table
+NN50,2010-10-07,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs01102010.txt,table
+NN50,2010-10-07,INCL,EXIDEIND,Exide Industries Ltd.,ind_prs01102010.txt,table
+NN50,2010-10-07,INCL,TATACHEM,Tata Chemicals Ltd.,ind_prs01102010.txt,table
+N100,2011-03-25,EXCL,CORPBANK,Corporation Bank,ind_prs10022011.txt,table
+N100,2011-03-25,EXCL,MRPL,Mangalore Refinery & Petrochemicals Ltd.,ind_prs10022011.txt,table
+N100,2011-03-25,EXCL,SUZLON,Suzlon Energy Ltd.,ind_prs10022011.txt,table
+N100,2011-03-25,INCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs10022011.txt,table
+N100,2011-03-25,INCL,TITAN,Titan Industries Ltd.,ind_prs10022011.txt,table
+N100,2011-03-25,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs10022011.txt,table
+N50,2011-03-25,EXCL,SUZLON,Suzlon Energy Ltd.,ind_prs10022011.txt,table
+N50,2011-03-25,INCL,GRASIM,Grasim Industries Ltd.,ind_prs10022011.txt,table
+NN50,2011-03-25,EXCL,CORPBANK,Corporation Bank,ind_prs10022011.txt,table
+NN50,2011-03-25,EXCL,GRASIM,Grasim Industries Ltd.,ind_prs10022011.txt,table
+NN50,2011-03-25,EXCL,MRPL,Mangalore Refinery & Petrochemicals Ltd.,ind_prs10022011.txt,table
+NN50,2011-03-25,INCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs10022011.txt,table
+NN50,2011-03-25,INCL,TITAN,Titan Industries Ltd.,ind_prs10022011.txt,table
+NN50,2011-03-25,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs10022011.txt,table
+N100,2011-04-21,EXCL,EMBDL,Indiabulls Real Estate Limited,ind_prs19042011.txt,table
+N100,2011-04-21,INCL,COALINDIA,Coal India Limited,ind_prs19042011.txt,table
+NN50,2011-04-21,EXCL,EMBDL,Indiabulls Real Estate Limited,ind_prs19042011.txt,table
+NN50,2011-04-21,INCL,COALINDIA,Coal India Limited,ind_prs19042011.txt,table
+N100,2011-10-10,EXCL,PATNI,Patni Computer Systems Ltd.,ind_prs25082011.txt,table
+N100,2011-10-10,EXCL,PUNJLLOYD,Punj Lloyd Ltd.,ind_prs25082011.txt,table
+N100,2011-10-10,EXCL,SYNDIBANK,Syndicate Bank,ind_prs25082011.txt,table
+N100,2011-10-10,INCL,BOSCHLTD,Bosch Ltd.,ind_prs25082011.txt,table
+N100,2011-10-10,INCL,DABUR,Dabur India Ltd.,ind_prs25082011.txt,table
+N100,2011-10-10,INCL,IDEA,Idea Cellular Ltd.,ind_prs25082011.txt,table
+N50,2011-10-10,EXCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs25082011.txt,table
+N50,2011-10-10,INCL,COALINDIA,Coal India Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,EXCL,COALINDIA,Coal India Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,EXCL,PATNI,Patni Computer Systems Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,EXCL,PUNJLLOYD,Punj Lloyd Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,EXCL,SYNDIBANK,Syndicate Bank,ind_prs25082011.txt,table
+NN50,2011-10-10,INCL,BOSCHLTD,Bosch Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,INCL,DABUR,Dabur India Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,INCL,IDEA,Idea Cellular Ltd.,ind_prs25082011.txt,table
+NN50,2011-10-10,INCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs25082011.txt,table
+N100,2012-04-27,EXCL,HDIL,Housing Development and Infrastructure Ltd.,ind_prs14032012.txt,table
+N100,2012-04-27,EXCL,IFCI,IFCI Ltd.,ind_prs14032012.txt,table
+N100,2012-04-27,EXCL,IOB,Indian Overseas Bank,ind_prs14032012.txt,table
+N100,2012-04-27,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs14032012.txt,table
+N100,2012-04-27,INCL,GSKCONS,GlaxoSmithkline Consumer Healthcare Ltd.,ind_prs14032012.txt,table
+N100,2012-04-27,INCL,PETRONET,Petronet LNG Ltd.,ind_prs14032012.txt,table
+N50,2012-04-27,EXCL,RCOM,Reliance Communications Ltd.,ind_prs14032012.txt,table
+N50,2012-04-27,EXCL,RPOWER,Reliance Power Ltd.,ind_prs14032012.txt,table
+N50,2012-04-27,INCL,ASIANPAINT,Asian Paints Ltd.,ind_prs14032012.txt,table
+N50,2012-04-27,INCL,BANKBARODA,Bank of Baroda,ind_prs14032012.txt,table
+NN50,2012-04-27,EXCL,ASIANPAINT,Asian Paints Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,EXCL,BANKBARODA,Bank of Baroda,ind_prs14032012.txt,table
+NN50,2012-04-27,EXCL,HDIL,Housing Development and Infrastructure Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,EXCL,IFCI,IFCI Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,EXCL,IOB,Indian Overseas Bank,ind_prs14032012.txt,table
+NN50,2012-04-27,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,INCL,GSKCONS,GlaxoSmithkline Consumer Healthcare Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,INCL,PETRONET,Petronet LNG Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,INCL,RCOM,Reliance Communications Ltd.,ind_prs14032012.txt,table
+NN50,2012-04-27,INCL,RPOWER,Reliance Power Ltd.,ind_prs14032012.txt,table
+N100,2012-09-28,EXCL,ANDHRABANK,Andhra Bank,ind_prs16082012.txt,table
+N100,2012-09-28,EXCL,BEL,Bharat Electronics Ltd.,ind_prs16082012.txt,table
+N100,2012-09-28,EXCL,STER,Sterlite Industries (India) Ltd.,ind_prs16082012.txt,table
+N100,2012-09-28,INCL,APOLLOHOSP,Apollo Hospitals Enterprises Ltd.,ind_prs16082012.txt,table
+N100,2012-09-28,INCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs16082012.txt,table
+N100,2012-09-28,INCL,GODREJCP,Godrej Consumer Products Ltd.,ind_prs16082012.txt,table
+N50,2012-09-28,EXCL,SAIL,Steel Authority of India Ltd.,ind_prs16082012.txt,table
+N50,2012-09-28,EXCL,STER,Sterlite Industries (India) Ltd.,ind_prs16082012.txt,table
+N50,2012-09-28,INCL,LUPIN,Lupin Ltd.,ind_prs16082012.txt,table
+N50,2012-09-28,INCL,ULTRACEMCO,UltraTech Cement Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,EXCL,ANDHRABANK,Andhra Bank,ind_prs16082012.txt,table
+NN50,2012-09-28,EXCL,BEL,Bharat Electronics Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,EXCL,LUPIN,Lupin Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,EXCL,ULTRACEMCO,UltraTech Cement Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,INCL,APOLLOHOSP,Apollo Hospitals Enterprises Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,INCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,INCL,GODREJCP,Godrej Consumer Products Ltd.,ind_prs16082012.txt,table
+NN50,2012-09-28,INCL,SAIL,Steel Authority of India Ltd.,ind_prs16082012.txt,table
+N100,2013-04-01,EXCL,BIOCON,Biocon Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,EXCL,GMRAIRPORT,GMR Infrastructure Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,EXCL,TORNTPOWER,Torrent Power Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,EXCL,WIPRO,Wipro Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,INCL,BAJAJFINSV,Bajaj Finserv Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,INCL,NMDC,NMDC Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,INCL,TATACONSUM,Tata Global Beverages Ltd.,ind_prs13022013.txt,table
+N100,2013-04-01,INCL,UBL,United Breweries Ltd.,ind_prs13022013.txt,table
+N50,2013-04-01,EXCL,SIEMENS,Siemens Ltd.,ind_prs13022013.txt,table
+N50,2013-04-01,EXCL,WIPRO,Wipro Ltd.,ind_prs13022013.txt,table
+N50,2013-04-01,INCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs13022013.txt,table
+N50,2013-04-01,INCL,NMDC,NMDC Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,EXCL,BIOCON,Biocon Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,EXCL,GMRAIRPORT,GMR Infrastructure Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,EXCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,EXCL,TORNTPOWER,Torrent Power Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,INCL,BAJAJFINSV,Bajaj Finserv Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,INCL,SIEMENS,Siemens Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,INCL,TATACONSUM,Tata Global Beverages Ltd.,ind_prs13022013.txt,table
+NN50,2013-04-01,INCL,UBL,United Breweries Ltd.,ind_prs13022013.txt,table
+N100,2013-09-27,EXCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs27082013.txt,table
+N100,2013-09-27,EXCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs27082013.txt,table
+N100,2013-09-27,EXCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs27082013.txt,table
+N100,2013-09-27,INCL,M&MFIN,Mahindra & Mahindra Financial Services Ltd.,ind_prs27082013.txt,table
+N100,2013-09-27,INCL,OIL,Oil India Ltd.,ind_prs27082013.txt,table
+N100,2013-09-27,INCL,WIPRO,Wipro Ltd.,ind_prs27082013.txt,table
+N50,2013-09-27,EXCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs27082013.txt,table
+N50,2013-09-27,INCL,WIPRO,Wipro Ltd.,ind_prs27082013.txt,table
+NN50,2013-09-27,EXCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs27082013.txt,table
+NN50,2013-09-27,EXCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs27082013.txt,table
+NN50,2013-09-27,INCL,M&MFIN,Mahindra & Mahindra Financial Services Ltd. M&MFIN,ind_prs27082013.txt,table
+NN50,2013-09-27,INCL,OIL,Oil India Ltd.,ind_prs27082013.txt,table
+N100,2014-03-28,EXCL,IDBI,IDBI Bank Ltd.,ind_prs27022014.txt,table
+N100,2014-03-28,EXCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs27022014.txt,table
+N100,2014-03-28,INCL,INDUSTOWER,Bharti Infratel Ltd.,ind_prs27022014.txt,table
+N100,2014-03-28,INCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs27022014.txt,table
+N50,2014-03-28,EXCL,JPASSOCIAT,Jaiprakash Associates Ltd.,ind_prs27022014.txt,table
+N50,2014-03-28,EXCL,RANBAXY,Ranbaxy Laboratories Ltd.,ind_prs27022014.txt,table
+N50,2014-03-28,INCL,TECHM,Tech Mahindra Ltd.,ind_prs27022014.txt,table
+N50,2014-03-28,INCL,UNITDSPR,United Spirits Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,EXCL,IDBI,IDBI Bank Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,EXCL,TECHM,Tech Mahindra Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,EXCL,UNITDSPR,United Spirits Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,INCL,INDUSTOWER,Bharti Infratel Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,INCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs27022014.txt,table
+NN50,2014-03-28,INCL,RANBAXY,Ranbaxy Laboratories Ltd.,ind_prs27022014.txt,table
+N100,2014-09-19,EXCL,MPHASIS,MphasiS Ltd.,ind_prs20082014.txt,table
+N100,2014-09-19,EXCL,UNITDSPR,United Spirits Ltd.,ind_prs20082014.txt,table
+N100,2014-09-19,INCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs20082014.txt,table
+N100,2014-09-19,INCL,MOTHERSON,Motherson Sumi Systems Ltd.,ind_prs20082014.txt,table
+N50,2014-09-19,EXCL,UNITDSPR,United Spirits Ltd.,ind_prs20082014.txt,table
+N50,2014-09-19,INCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs20082014.txt,table
+NN50,2014-09-19,EXCL,MPHASIS,MphasiS Ltd.,ind_prs20082014.txt,table
+NN50,2014-09-19,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs20082014.txt,table
+NN50,2014-09-19,INCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs20082014.txt,table
+NN50,2014-09-19,INCL,MOTHERSON,Motherson Sumi Systems Ltd.,ind_prs20082014.txt,table
+N100,2014-11-28,EXCL,RANBAXY,Ranbaxy Laboratories Ltd.,ind_prs18112014.txt,table
+N100,2014-11-28,INCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs18112014.txt,table
+NN50,2014-11-28,EXCL,RANBAXY,Ranbaxy Laboratories Ltd.,ind_prs18112014.txt,table
+NN50,2014-11-28,INCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs18112014.txt,table
+N100,2015-02-02,EXCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs21012015.txt,table
+N100,2015-02-02,INCL,EICHERMOT,Eicher Motors Ltd.,ind_prs21012015.txt,table
+NN50,2015-02-02,EXCL,INGVYSYABK,ING Vysya Bank Ltd.,ind_prs21012015.txt,table
+NN50,2015-02-02,INCL,EICHERMOT,Eicher Motors Ltd.,ind_prs21012015.txt,table
+N100,2015-03-27,EXCL,DLF,DLF Ltd.,ind_prs20022015.txt,table
+N100,2015-03-27,EXCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs20022015.txt,table
+N100,2015-03-27,INCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs20022015.txt,table
+N100,2015-03-27,INCL,UNITDSPR,United Spirits Ltd.,ind_prs20022015.txt,table
+N50,2015-03-27,EXCL,DLF,DLF Ltd.,ind_prs20022015.txt,table
+N50,2015-03-27,EXCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs20022015.txt,table
+N50,2015-03-27,INCL,IDEA,Idea Cellular Ltd.,ind_prs20022015.txt,table
+N50,2015-03-27,INCL,YESBANK,Yes Bank Ltd.,ind_prs20022015.txt,table
+NN50,2015-03-27,EXCL,IDEA,Idea Cellular Ltd.,ind_prs20022015.txt,table
+NN50,2015-03-27,EXCL,YESBANK,Yes Bank Ltd.,ind_prs20022015.txt,table
+NN50,2015-03-27,INCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs20022015.txt,table
+NN50,2015-03-27,INCL,UNITDSPR,United Spirits Ltd.,ind_prs20022015.txt,table
+N100,2015-05-29,EXCL,ADANIENT,Adani Enterprises Ltd.,ind_prs29042015.txt,table
+N100,2015-05-29,EXCL,IDFC,IDFC Ltd.,ind_prs29042015.txt,table
+N100,2015-05-29,INCL,BRITANNIA,Britannia Industries Ltd.,ind_prs29042015.txt,table
+N100,2015-05-29,INCL,MRF,MRF Ltd.,ind_prs29042015.txt,table
+N50,2015-05-29,EXCL,IDFC,IDFC Ltd.,ind_prs29042015.txt,table
+N50,2015-05-29,INCL,BOSCHLTD,Bosch Ltd.,ind_prs29042015.txt,table
+NN50,2015-05-29,EXCL,ADANIENT,Adani Enterprises Ltd.,ind_prs29042015.txt,table
+NN50,2015-05-29,EXCL,BOSCHLTD,Bosch Ltd.,ind_prs29042015.txt,table
+NN50,2015-05-29,INCL,BRITANNIA,Britannia Industries Ltd.,ind_prs29042015.txt,table
+NN50,2015-05-29,INCL,MRF,MRF Ltd.,ind_prs29042015.txt,table
+N100,2015-09-28,EXCL,CGPOWER,Crompton Greaves Ltd.,ind_prs24082015.txt,table
+N100,2015-09-28,EXCL,RPOWER,Reliance Power Ltd.,ind_prs12082015.txt,table
+N100,2015-09-28,EXCL,UNIONBANK,Union Bank of India,ind_prs12082015.txt,table
+N100,2015-09-28,INCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs24082015.txt,table
+N100,2015-09-28,INCL,MARICO,Marico Ltd.,ind_prs12082015.txt,table
+N100,2015-09-28,INCL,SUNDARMFIN,Sundaram Finance Ltd.,ind_prs12082015.txt,table
+N50,2015-09-28,EXCL,NMDC,NMDC Ltd.,ind_prs12082015.txt,table
+N50,2015-09-28,INCL,ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,ind_prs12082015.txt,table
+NN50,2015-09-28,EXCL,ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,ind_prs12082015.txt,table
+NN50,2015-09-28,EXCL,CGPOWER,Crompton Greaves Ltd.,ind_prs24082015.txt,table
+NN50,2015-09-28,EXCL,RPOWER,Reliance Power Ltd.,ind_prs12082015.txt,table
+NN50,2015-09-28,EXCL,UNIONBANK,Union Bank of India,ind_prs12082015.txt,table
+NN50,2015-09-28,INCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs24082015.txt,table
+NN50,2015-09-28,INCL,MARICO,Marico Ltd.,ind_prs12082015.txt,table
+NN50,2015-09-28,INCL,NMDC,NMDC Ltd.,ind_prs12082015.txt,table
+NN50,2015-09-28,INCL,SUNDARMFIN,Sundaram Finance Ltd.,ind_prs12082015.txt,table
+N100,2015-10-19,EXCL,ABIRLANUVO,Aditya Birla Nuvo Ltd.,ind_prs18092015.txt,table
+N100,2015-10-19,INCL,IOC,Indian Oil Corporation Ltd.,ind_prs18092015.txt,table
+NN50,2015-10-19,EXCL,ABIRLANUVO,Aditya Birla Nuvo Ltd.,ind_prs18092015.txt,table
+NN50,2015-10-19,INCL,IOC,Indian Oil Corporation Ltd.,ind_prs18092015.txt,table
+N100,2016-04-01,EXCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,BANKINDIA,Bank of India,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,CANBK,Canara Bank,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,EXIDEIND,Exide Industries Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,FEDERALBNK,Federal Bank Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,M&MFIN,Mahindra & Mahindra Financial Services Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,MRF,MRF Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,PETRONET,Petronet LNG Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,SUNDARMFIN,Sundaram Finance Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,TATACHEM,Tata Chemicals Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,EXCL,TATACONSUM,Tata Global Beverages Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,ABB,ABB India Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,BAJFINANCE,Bajaj Finance Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,BEL,Bharat Electronics Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,CASTROLIND,Castrol India Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,DLF,DLF Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,EMAMILTD,Emami Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,NHPC,NHPC Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,PGHH,Procter & Gamble Hygiene & Health Care Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,PIDILITIND,Pidilite Industries Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,SHREECEM,Shree Cement Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,TATAMTRDVR,Tata Motors Ltd. (DVR) *,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs22022016_2.txt,table
+N100,2016-04-01,INCL,ZYDUSLIFE,Cadila Healthcare Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,EXCL,CAIRN,Cairn India Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,EXCL,PNB,Punjab National Bank,ind_prs22022016_2.txt,table
+N50,2016-04-01,EXCL,VEDL,Vedanta Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,INCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,INCL,EICHERMOT,Eicher Motors Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,INCL,INDUSTOWER,Bharti Infratel Ltd.,ind_prs22022016_2.txt,table
+N50,2016-04-01,INCL,TATAMTRDVR,Tata Motors Ltd. (DVR) *,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,BANKINDIA,Bank of India,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,CANBK,Canara Bank,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,EICHERMOT,Eicher Motors Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,EXIDEIND,Exide Industries Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,FEDERALBNK,Federal Bank Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,INDUSTOWER,Bharti Infratel Limited,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,M&MFIN,Mahindra & Mahindra Financial Services Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,MRF,MRF Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,PETRONET,Petronet LNG Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,RELCAPITAL,Reliance Capital Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,RELINFRA,Reliance Infrastructure Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,SUNDARMFIN,Sundaram Finance Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,TATACHEM,Tata Chemicals Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,EXCL,TATACONSUM,Tata Global Beverages Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,ABB,ABB India Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,BAJFINANCE,Bajaj Finance Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,BEL,Bharat Electronics Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,CAIRN,Cairn India Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,CASTROLIND,Castrol India Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,DLF,DLF Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,EMAMILTD,Emami Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,NHPC,NHPC Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,PGHH,Procter & Gamble Hygiene & Health Care Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,PIDILITIND,Pidilite Industries Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,PNB,Punjab National Bank,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,SHREECEM,Shree Cement Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,VEDL,Vedanta Limited,ind_prs22022016_2.txt,table
+NN50,2016-04-01,INCL,ZYDUSLIFE,Cadila Healthcare Ltd.,ind_prs22022016_2.txt,table
+N100,2016-09-30,EXCL,RCOM,Reliance Communications Ltd.,ind_prs12082016.txt,table
+N100,2016-09-30,EXCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs12082016.txt,table
+N100,2016-09-30,INCL,INDIGO,InterGlobe Aviation Ltd.,ind_prs12082016.txt,table
+N100,2016-09-30,INCL,PEL,Piramal Enterprises Ltd.,ind_prs12082016.txt,table
+NN50,2016-09-30,EXCL,RCOM,Reliance Communications Ltd.,ind_prs12082016.txt,table
+NN50,2016-09-30,EXCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs12082016.txt,table
+NN50,2016-09-30,INCL,INDIGO,InterGlobe Aviation Ltd.,ind_prs12082016.txt,table
+NN50,2016-09-30,INCL,PEL,Piramal Enterprises Ltd.,ind_prs12082016.txt,table
+N100,2016-11-15,EXCL,CAIRN,Cairn India Ltd.,ind_prs17102016.txt,table
+N100,2016-11-15,INCL,HAVELLS,Havells India Ltd.,ind_prs17102016.txt,table
+NN50,2016-11-15,EXCL,CAIRN,Cairn India Ltd.,ind_prs17102016.txt,table
+NN50,2016-11-15,INCL,HAVELLS,Havells India Ltd.,ind_prs17102016.txt,table
+N100,2017-03-31,EXCL,APOLLOHOSP,Apollo Hospitals Enterprises Ltd.,ind_prs16022017.txt,table
+N100,2017-03-31,EXCL,BHARATFORG,Bharat Forge Ltd.,ind_prs16022017.txt,table
+N100,2017-03-31,EXCL,CASTROLIND,Castrol India Ltd.,ind_prs16022017.txt,table
+N100,2017-03-31,INCL,ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,ind_prs16022017.txt,table
+N100,2017-03-31,INCL,PETRONET,Petronet LNG Ltd.,ind_prs16022017.txt,table
+N100,2017-03-31,INCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs16022017.txt,table
+N50,2017-03-31,EXCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs16022017.txt,table
+N50,2017-03-31,EXCL,IDEA,Idea Cellular Ltd.,ind_prs16022017.txt,table
+N50,2017-03-31,INCL,IOC,Indian Oil Corporation Ltd.,ind_prs16022017.txt,table
+N50,2017-03-31,INCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,EXCL,APOLLOHOSP,Apollo Hospitals Enterprises Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,EXCL,BHARATFORG,Bharat Forge Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,EXCL,CASTROLIND,Castrol India Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,EXCL,IOC,Indian Oil Corporation Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,EXCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,INCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,INCL,ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,INCL,IDEA,Idea Cellular Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,INCL,PETRONET,Petronet LNG Ltd.,ind_prs16022017.txt,table
+NN50,2017-03-31,INCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs16022017.txt,table
+N100,2017-05-26,EXCL,GRASIM,Grasim Industries Ltd.,ind_prs27042017.txt,table
+N100,2017-05-26,INCL,SUNTV,Sun TV Network Ltd.,ind_prs27042017.txt,table
+N50,2017-05-26,EXCL,GRASIM,Grasim Industries Ltd.,ind_prs27042017.txt,table
+N50,2017-05-26,INCL,VEDL,Vedanta Ltd.,ind_prs27042017.txt,table
+NN50,2017-05-26,EXCL,VEDL,Vedanta Ltd.,ind_prs27042017.txt,table
+NN50,2017-05-26,INCL,SUNTV,Sun TV Network Ltd.,ind_prs27042017.txt,table
+N100,2017-09-29,EXCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs28082017.txt,table
+N100,2017-09-29,EXCL,UBL,United Breweries Ltd.,ind_prs28082017.txt,table
+N100,2017-09-29,INCL,DMART,Avenue Supermarts Ltd.,ind_prs28082017.txt,table
+N100,2017-09-29,INCL,MRF,MRF Ltd.,ind_prs28082017.txt,table
+N50,2017-09-29,EXCL,ACC,ACC Ltd.,ind_prs28082017.txt,table
+N50,2017-09-29,EXCL,BANKBARODA,Bank of Baroda,ind_prs28082017.txt,table
+N50,2017-09-29,EXCL,TATAMTRDVR,Tata Motors Ltd DVR,ind_prs28082017.txt,table
+N50,2017-09-29,EXCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs28082017.txt,table
+N50,2017-09-29,INCL,BAJFINANCE,Bajaj Finance Ltd.,ind_prs28082017.txt,table
+N50,2017-09-29,INCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs28082017.txt,table
+N50,2017-09-29,INCL,UPL,UPL Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,EXCL,BAJFINANCE,Bajaj Finance Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,EXCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,EXCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,EXCL,UBL,United Breweries Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,EXCL,UPL,UPL Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,INCL,ACC,ACC Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,INCL,BANKBARODA,Bank of Baroda,ind_prs28082017.txt,table
+NN50,2017-09-29,INCL,DMART,Avenue Supermarts Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,INCL,MRF,MRF Ltd.,ind_prs28082017.txt,table
+NN50,2017-09-29,INCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs28082017.txt,table
+N100,2018-04-02,EXCL,GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,EXCL,GLENMARK,Glenmark Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,EXCL,GSKCONS,GlaxoSmithkline Consumer Healthcare Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,EXCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,EXCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,INCL,ABCAPITAL,Aditya Birla Capital Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,INCL,GICRE,General Insurance Corporation of India,ind_prs21022018.txt,table
+N100,2018-04-02,INCL,GRASIM,Grasim Industries Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,INCL,LTF,L&T Finance Holdings Ltd.,ind_prs21022018.txt,table
+N100,2018-04-02,INCL,SBILIFE,SBI Life Insurance Company Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,EXCL,AMBUJACEM,Ambuja Cements Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,EXCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,EXCL,BOSCHLTD,Bosch Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,INCL,BAJAJFINSV,Bajaj Finserv Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,INCL,GRASIM,Grasim Industries Ltd.,ind_prs21022018.txt,table
+N50,2018-04-02,INCL,TITAN,Titan Company Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,BAJAJFINSV,Bajaj Finserv Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,GLENMARK,Glenmark Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,GSKCONS,GlaxoSmithkline Consumer Healthcare Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,TITAN,Titan Company Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,EXCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,ABCAPITAL,Aditya Birla Capital Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,AMBUJACEM,Ambuja Cements Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,BOSCHLTD,Bosch Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,GICRE,General Insurance Corporation of India,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,LTF,L&T Finance Holdings Ltd.,ind_prs21022018.txt,table
+NN50,2018-04-02,INCL,SBILIFE,SBI Life Insurance Company Ltd.,ind_prs21022018.txt,table
+N100,2018-09-28,EXCL,CUMMINSIND,Cummins India Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,EXCL,EMAMILTD,Emami Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,EXCL,PFC,Power Finance Corporation Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,EXCL,PNB,Punjab National Bank,ind_prs28082018.txt,table
+N100,2018-09-28,EXCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,INCL,BANDHANBNK,Bandhan Bank Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,INCL,BIOCON,Biocon Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,INCL,HDFCLIFE,HDFC Standard Life Insurance Company Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,INCL,ICICIGI,ICICI Lombard General Insurance Company Ltd.,ind_prs28082018.txt,table
+N100,2018-09-28,INCL,NIACL,The New India Assurance Company Ltd.,ind_prs28082018.txt,table
+N50,2018-09-28,EXCL,LUPIN,Lupin Ltd.,ind_prs28082018.txt,table
+N50,2018-09-28,INCL,JSWSTEEL,JSW Steel Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,CUMMINSIND,Cummins India Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,EMAMILTD,Emami Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,JSWSTEEL,JSW Steel Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,PFC,Power Finance Corporation Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,PNB,Punjab National Bank,ind_prs28082018.txt,table
+NN50,2018-09-28,EXCL,RECLTD,Rural Electrification Corporation Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,BANDHANBNK,Bandhan Bank Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,BIOCON,Biocon Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,HDFCLIFE,HDFC Standard Life Insurance Company Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,ICICIGI,ICICI Lombard General Insurance Company Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,LUPIN,Lupin Ltd.,ind_prs28082018.txt,table
+NN50,2018-09-28,INCL,NIACL,The New India Assurance Company Ltd.,ind_prs28082018.txt,table
+N100,2019-03-29,EXCL,ABCAPITAL,Aditya Birla Capital Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,EXCL,BEL,Bharat Electronics Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,EXCL,LICHSGFIN,LIC Housing Finance Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,EXCL,OIL,Oil India Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,EXCL,SUNTV,Sun TV Network Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,INCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,INCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,INCL,PAGEIND,Page Industries Ltd.,ind_prs25022019.txt,table
+N100,2019-03-29,INCL,UBL,United Breweries Ltd.,ind_prs25022019.txt,table
+N50,2019-03-29,EXCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs25022019.txt,table
+N50,2019-03-29,INCL,BRITANNIA,Britannia Industries Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,ABCAPITAL,Aditya Birla Capital Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,BEL,Bharat Electronics Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,BRITANNIA,Britannia Industries Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,LICHSGFIN,LIC Housing Finance Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,OIL,Oil India Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,EXCL,SUNTV,Sun TV Network Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,PAGEIND,Page Industries Ltd.,ind_prs25022019.txt,table
+NN50,2019-03-29,INCL,UBL,United Breweries Ltd.,ind_prs25022019.txt,table
+N100,2019-09-27,EXCL,ABB,ABB India Ltd.*,ind_prs28082019.txt,table
+N100,2019-09-27,EXCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,EXCL,MRF,MRF Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,EXCL,SAIL,Steel Authority of India Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,INCL,BERGEPAINT,Berger Paints India Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,INCL,NESTLEIND,Nestle India Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,INCL,PFC,Power Finance Corporation Ltd.,ind_prs28082019.txt,table
+N100,2019-09-27,INCL,PNB,Punjab National Bank,ind_prs28082019.txt,table
+N50,2019-09-27,EXCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs28082019.txt,table
+N50,2019-09-27,INCL,NESTLEIND,Nestle India Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,EXCL,ABB,ABB India Ltd.*,ind_prs28082019.txt,table
+NN50,2019-09-27,EXCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,EXCL,MRF,MRF Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,EXCL,SAIL,Steel Authority of India Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,INCL,BERGEPAINT,Berger Paints India Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,INCL,PFC,Power Finance Corporation Ltd.,ind_prs28082019.txt,table
+NN50,2019-09-27,INCL,PNB,Punjab National Bank,ind_prs28082019.txt,table
+NN50,2019-09-27,INCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs28082019.txt,table
+N100,2020-03-19,EXCL,YESBANK,Yes Bank Ltd.,ind_prs16032020.txt,table
+N100,2020-03-19,INCL,ADANIENSOL,Adani Transmission Ltd.,ind_prs16032020.txt,table
+N50,2020-03-19,EXCL,YESBANK,Yes Bank Ltd.,ind_prs16032020.txt,table
+N50,2020-03-19,INCL,SHREECEM,Shree Cement Ltd.,ind_prs16032020.txt,table
+NN50,2020-03-19,EXCL,SHREECEM,Shree Cement Ltd.,ind_prs16032020.txt,table
+NN50,2020-03-19,INCL,ADANIENSOL,Adani Transmission Ltd.,ind_prs16032020.txt,table
+N100,2020-06-26,EXCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,EXCL,IDEA,Vodafone Idea Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,EXCL,LTF,L&T Finance Holdings Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,EXCL,NIACL,The New India Assurance Company Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,EXCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,EXCL,TATAMTRDVR,Tata Motors Ltd DVR,ind_prs10062020.txt,table
+N100,2020-06-26,INCL,ABBOTINDIA,Abbott India Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,INCL,IGL,Indraprastha Gas Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,INCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,INCL,NAUKRI,Info Edge (India) Ltd.,ind_prs10062020.txt,table
+N100,2020-06-26,INCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,EXCL,ASHOKLEY,Ashok Leyland Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,EXCL,IDEA,Vodafone Idea Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,EXCL,LTF,L&T Finance Holdings Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,EXCL,NIACL,The New India Assurance Company Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,EXCL,SAMMAANCAP,Indiabulls Housing Finance Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,INCL,ABBOTINDIA,Abbott India Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,INCL,IGL,Indraprastha Gas Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,INCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,INCL,NAUKRI,Info Edge (India) Ltd.,ind_prs10062020.txt,table
+NN50,2020-06-26,INCL,TORNTPHARM,Torrent Pharmaceuticals Ltd.,ind_prs10062020.txt,table
+N100,2020-07-31,EXCL,VEDL,Vedanta Ltd.,ind_prs02072020_1.txt,table
+N100,2020-07-31,INCL,SBICARD,SBI Cards and Payment Services Ltd.,ind_prs02072020_1.txt,table
+N50,2020-07-31,EXCL,VEDL,Vedanta Ltd.,ind_prs02072020_1.txt,table
+N50,2020-07-31,INCL,HDFCLIFE,HDFC Life Insurance Company Ltd.,ind_prs02072020_1.txt,table
+NN50,2020-07-31,EXCL,HDFCLIFE,HDFC Life Insurance Company Ltd.,ind_prs02072020_1.txt,table
+NN50,2020-07-31,INCL,SBICARD,SBI Cards and Payment Services Ltd.,ind_prs02072020_1.txt,table
+N100,2020-09-25,EXCL,NHPC,NHPC Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,EXCL,PAGEIND,Page Industries Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,EXCL,SHRIRAMFIN,Shriram Transport Finance Co. Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,INCL,ADANIGREEN,Adani Green Energy Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,INCL,ALKEM,Alkem Laboratories Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,INCL,LTM,Larsen & Toubro Infotech Ltd.,ind_prs20082020.txt,table
+N100,2020-09-25,INCL,TATACONSUM,Tata Consumer Products Ltd.,ind_prs20082020.txt,table
+N50,2020-09-25,EXCL,INDUSTOWER,Bharti Infratel Ltd.,ind_prs20082020.txt,table
+N50,2020-09-25,EXCL,ZEEL,Zee Entertainment Enterprises Ltd.,ind_prs20082020.txt,table
+N50,2020-09-25,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs20082020.txt,table
+N50,2020-09-25,INCL,SBILIFE,SBI Life Insurance Company Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,EXCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,EXCL,NHPC,NHPC Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,EXCL,PAGEIND,Page Industries Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,EXCL,SBILIFE,SBI Life Insurance Company Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,EXCL,SHRIRAMFIN,Shriram Transport Finance Co. Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,INCL,ADANIGREEN,Adani Green Energy Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,INCL,ALKEM,Alkem Laboratories Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,INCL,INDUSTOWER,Bharti Infratel Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,INCL,LTM,Larsen & Toubro Infotech Ltd.,ind_prs20082020.txt,table
+NN50,2020-09-25,INCL,TATACONSUM,Tata Consumer Products Ltd.,ind_prs20082020.txt,table
+N100,2021-03-31,EXCL,BANKBARODA,Bank of Baroda,ind_prs23022021.txt,table
+N100,2021-03-31,EXCL,CONCOR,Container Corporation of India Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,EXCL,GICRE,General Insurance Corporation of India,ind_prs23022021.txt,table
+N100,2021-03-31,EXCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,EXCL,OFSS,Oracle Financial Services Software Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,EXCL,PFC,Power Finance Corporation Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,ADANIENT,Adani Enterprises Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,JUBLFOOD,Jubilant Foodworks Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,MRF,MRF Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,VEDL,Vedanta Ltd.,ind_prs23022021.txt,table
+N100,2021-03-31,INCL,YESBANK,Yes Bank Ltd.,ind_prs23022021.txt,table
+N50,2021-03-31,EXCL,GAIL,GAIL (India) Ltd.,ind_prs23022021.txt,table
+N50,2021-03-31,INCL,TATACONSUM,Tata Consumer Products Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,BANKBARODA,Bank of Baroda,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,CONCOR,Container Corporation of India Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,GICRE,General Insurance Corporation of India,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,OFSS,Oracle Financial Services Software Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,PFC,Power Finance Corporation Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,EXCL,TATACONSUM,Tata Consumer Products Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,ADANIENT,Adani Enterprises Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,GAIL,GAIL (India) Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,JUBLFOOD,Jubilant Foodworks Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,MRF,MRF Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,VEDL,Vedanta Ltd.,ind_prs23022021.txt,table
+NN50,2021-03-31,INCL,YESBANK,Yes Bank Ltd.,ind_prs23022021.txt,table
+N100,2021-06-30,EXCL,MOTHERSON,Motherson Sumi Systems Ltd.,ind_prs15062021.txt,table
+N100,2021-06-30,INCL,GLAND,Gland Pharma Ltd.,ind_prs15062021.txt,table
+NN50,2021-06-30,EXCL,MOTHERSON,Motherson Sumi Systems Ltd.,ind_prs15062021.txt,table
+NN50,2021-06-30,INCL,GLAND,Gland Pharma Ltd.,ind_prs15062021.txt,table
+N100,2021-09-30,EXCL,ABBOTINDIA,Abbott India Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,EXCL,ALKEM,Alkem Laboratories Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,EXCL,MRF,MRF Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,EXCL,PETRONET,Petronet LNG Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,EXCL,UBL,United Breweries Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,INCL,BANKBARODA,Bank of Baroda,ind_prs23082021.txt,manual
+N100,2021-09-30,INCL,CHOLAFIN,Cholamandalam Investment and Fin. Co. Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,INCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,INCL,PIIND,PI Industries Ltd.,ind_prs23082021.txt,manual
+N100,2021-09-30,INCL,SAIL,Steel Authority of India Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,EXCL,ABBOTINDIA,Abbott India Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,EXCL,ALKEM,Alkem Laboratories Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,EXCL,MRF,MRF Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,EXCL,PETRONET,Petronet LNG Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,EXCL,UBL,United Breweries Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,INCL,BANKBARODA,Bank of Baroda,ind_prs23082021.txt,manual
+NN50,2021-09-30,INCL,CHOLAFIN,Cholamandalam Investment and Fin. Co. Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,INCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,INCL,PIIND,PI Industries Ltd.,ind_prs23082021.txt,manual
+NN50,2021-09-30,INCL,SAIL,Steel Authority of India Ltd.,ind_prs23082021.txt,manual
+N100,2022-03-31,EXCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,EXCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,EXCL,IGL,Indraprastha Gas Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,EXCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,EXCL,YESBANK,Yes Bank Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,INCL,ETERNAL,Zomato Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,INCL,MINDTREE,MindTree Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,INCL,NYKAA,FSN E-Commerce Ventures Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,INCL,PAYTM,One 97 Communications Ltd.,ind_prs24022022_1.txt,table
+N100,2022-03-31,INCL,SRF,SRF Ltd.,ind_prs24022022_1.txt,table
+N50,2022-03-31,EXCL,IOC,Indian Oil Corporation Ltd.,ind_prs24022022_1.txt,table
+N50,2022-03-31,INCL,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,AUROPHARMA,Aurobindo Pharma Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,HINDPETRO,Hindustan Petroleum Corporation Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,IGL,Indraprastha Gas Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,EXCL,YESBANK,Yes Bank Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,ETERNAL,Zomato Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,IOC,Indian Oil Corporation Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,MINDTREE,MindTree Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,NYKAA,FSN E-Commerce Ventures Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,PAYTM,One 97 Communications Ltd.,ind_prs24022022_1.txt,table
+NN50,2022-03-31,INCL,SRF,SRF Ltd.,ind_prs24022022_1.txt,table
+N100,2022-08-08,EXCL,NMDC,NMDC Ltd.,ind_prs11072022.txt,table
+N100,2022-08-08,EXCL,PEL,Piramal Enterprises Ltd.,ind_prs11072022.txt,table
+N100,2022-08-08,INCL,LICI,Life Insurance Corporation of India,ind_prs11072022.txt,table
+N100,2022-08-08,INCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs11072022.txt,table
+NN50,2022-08-08,EXCL,NMDC,NMDC Ltd.,ind_prs11072022.txt,table
+NN50,2022-08-08,EXCL,PEL,Piramal Enterprises Ltd.,ind_prs11072022.txt,table
+NN50,2022-08-08,INCL,LICI,Life Insurance Corporation of India,ind_prs11072022.txt,table
+NN50,2022-08-08,INCL,TATAPOWER,Tata Power Co. Ltd.,ind_prs11072022.txt,table
+N100,2022-09-30,EXCL,JUBLFOOD,Jubilant Foodworks Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,EXCL,LUPIN,Lupin Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,EXCL,MINDTREE,MindTree Ltd.*,ind_prs01092022.txt,table
+N100,2022-09-30,EXCL,PNB,Punjab National Bank,ind_prs01092022.txt,table
+N100,2022-09-30,EXCL,SAIL,Steel Authority of India Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,EXCL,ZYDUSLIFE,Zydus Lifesciences Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,ATGL,Adani Total Gas Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,BEL,Bharat Electronics Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,HAL,Hindustan Aeronautics Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,IRCTC,Indian Railway Catering and Tourism Corporation Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,MOTHERSON,Samvardhana Motherson International Ltd.,ind_prs01092022.txt,table
+N100,2022-09-30,INCL,MPHASIS,MphasiS Ltd.,ind_prs01092022.txt,table
+N50,2022-09-30,EXCL,SHREECEM,Shree Cement Ltd.,ind_prs01092022.txt,table
+N50,2022-09-30,INCL,ADANIENT,Adani Enterprises Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,ADANIENT,Adani Enterprises Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,JUBLFOOD,Jubilant Foodworks Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,LUPIN,Lupin Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,MINDTREE,MindTree Ltd.*,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,PNB,Punjab National Bank,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,SAIL,Steel Authority of India Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,EXCL,ZYDUSLIFE,Zydus Lifesciences Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,ATGL,Adani Total Gas Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,BEL,Bharat Electronics Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,HAL,Hindustan Aeronautics Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,IRCTC,Indian Railway Catering and Tourism Corporation Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,MOTHERSON,Samvardhana Motherson International Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,MPHASIS,MphasiS Ltd.,ind_prs01092022.txt,table
+NN50,2022-09-30,INCL,SHREECEM,Shree Cement Ltd.,ind_prs01092022.txt,table
+N100,2023-03-31,EXCL,BANDHANBNK,Bandhan Bank Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,EXCL,BIOCON,Biocon Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,EXCL,GLAND,Gland Pharma Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,EXCL,MPHASIS,MphasiS Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,EXCL,PAYTM,One 97 Communications Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,INCL,ABB,ABB India Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,INCL,AWL,Adani Wilmar Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,INCL,CANBK,Canara Bank,ind_prs17022023_1.txt,table
+N100,2023-03-31,INCL,PAGEIND,Page Industries Ltd.,ind_prs17022023_1.txt,table
+N100,2023-03-31,INCL,VBL,Varun Beverages Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,EXCL,BANDHANBNK,Bandhan Bank Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,EXCL,BIOCON,Biocon Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,EXCL,GLAND,Gland Pharma Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,EXCL,MPHASIS,MphasiS Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,EXCL,PAYTM,One 97 Communications Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,INCL,ABB,ABB India Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,INCL,AWL,Adani Wilmar Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,INCL,CANBK,Canara Bank,ind_prs17022023_1.txt,table
+NN50,2023-03-31,INCL,PAGEIND,Page Industries Ltd.,ind_prs17022023_1.txt,table
+NN50,2023-03-31,INCL,VBL,Varun Beverages Ltd.,ind_prs17022023_1.txt,table
+N100,2023-07-13,EXCL,HDFC,Housing Development Finance Corporation Ltd.,ind_prs04072023.txt,table
+N100,2023-07-13,INCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs04072023.txt,table
+N50,2023-07-13,EXCL,HDFC,Housing Development Finance Corporation Ltd.,ind_prs04072023.txt,table
+N50,2023-07-13,INCL,LTM,LTIMindtree Ltd.,ind_prs04072023.txt,table
+NN50,2023-07-13,EXCL,LTM,LTIMindtree Ltd.*,ind_prs04072023.txt,table
+NN50,2023-07-13,INCL,JINDALSTEL,Jindal Steel & Power Ltd.,ind_prs04072023.txt,table
+N100,2023-09-29,EXCL,ACC,ACC Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,EXCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,EXCL,INDUSTOWER,Indus Towers Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,EXCL,NYKAA,FSN E-Commerce Ventures Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,EXCL,PAGEIND,Page Industries Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,PNB,Punjab National Bank,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,SHRIRAMFIN,Shriram Finance Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,TATAMTRDVR,Tata Motors Ltd. DVR,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,TRENT,Trent Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,TVSMOTOR,TVS Motor Company Ltd.,ind_prs17082023.txt,table
+N100,2023-09-29,INCL,ZYDUSLIFE,Zydus Lifesciences Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,EXCL,ACC,ACC Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,EXCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,EXCL,INDUSTOWER,Indus Towers Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,EXCL,NYKAA,FSN E-Commerce Ventures Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,EXCL,PAGEIND,Page Industries Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,INCL,PNB,Punjab National Bank,ind_prs17082023.txt,table
+NN50,2023-09-29,INCL,SHRIRAMFIN,Shriram Finance Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,INCL,TRENT,Trent Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,INCL,TVSMOTOR,TVS Motor Company Ltd.,ind_prs17082023.txt,table
+NN50,2023-09-29,INCL,ZYDUSLIFE,Zydus Lifesciences Ltd.,ind_prs17082023.txt,table
+N100,2024-03-28,EXCL,AWL,Adani Wilmar Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,EXCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,EXCL,PGHH,Procter & Gamble Hygiene & Health Care Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,EXCL,PIIND,PI Industries Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,EXCL,UPL,UPL Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,INCL,ADANIPOWER,Adani Power Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,INCL,IRFC,Indian Railway Finance Corporation Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,INCL,JIOFIN,Jio Financial Services Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,INCL,PFC,Power Finance Corporation Ltd.,ind_prs28022024.txt,table
+N100,2024-03-28,INCL,RECLTD,REC Ltd.,ind_prs28022024.txt,table
+N50,2024-03-28,EXCL,UPL,UPL Ltd.,ind_prs28022024.txt,table
+N50,2024-03-28,INCL,SHRIRAMFIN,Shriram Finance Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,EXCL,AWL,Adani Wilmar Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,EXCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,EXCL,PGHH,Procter & Gamble Hygiene & Health Care Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,EXCL,PIIND,PI Industries Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,EXCL,SHRIRAMFIN,Shriram Finance Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,INCL,ADANIPOWER,Adani Power Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,INCL,IRFC,Indian Railway Finance Corporation Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,INCL,JIOFIN,Jio Financial Services Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,INCL,PFC,Power Finance Corporation Ltd.,ind_prs28022024.txt,table
+NN50,2024-03-28,INCL,RECLTD,REC Ltd.,ind_prs28022024.txt,table
+N100,2024-08-30,EXCL,TATAMTRDVR,TATAMTRDVR,ind_prs23082024_1.txt,prose
+N100,2024-09-30,EXCL,BERGEPAINT,Berger Paints India Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,EXCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,EXCL,MARICO,Marico Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,EXCL,SBICARD,SBI Cards and Payment Services Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,EXCL,SRF,SRF Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,INCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,INCL,JSWENERGY,JSW Energy Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,INCL,LODHA,Macrotech Developers Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,INCL,NHPC,NHPC Ltd.,ind_prs23082024.txt,table
+N100,2024-09-30,INCL,UNIONBANK,Union Bank of India,ind_prs23082024.txt,table
+N50,2024-09-30,EXCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs23082024.txt,table
+N50,2024-09-30,EXCL,LTM,LTIMindtree Ltd.,ind_prs23082024.txt,table
+N50,2024-09-30,INCL,BEL,Bharat Electronics Ltd.,ind_prs23082024.txt,table
+N50,2024-09-30,INCL,TRENT,Trent Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,BEL,Bharat Electronics Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,BERGEPAINT,Berger Paints India Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,COLPAL,Colgate Palmolive (India) Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,MARICO,Marico Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,SBICARD,SBI Cards and Payment Services Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,SRF,SRF Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,EXCL,TRENT,Trent Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,DIVISLAB,Divi's Laboratories Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,JSWENERGY,JSW Energy Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,LODHA,Macrotech Developers Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,LTM,LTIMindtree Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,NHPC,NHPC Ltd.,ind_prs23082024.txt,table
+NN50,2024-09-30,INCL,UNIONBANK,Union Bank of India,ind_prs23082024.txt,table
+N100,2025-03-28,EXCL,ATGL,Adani Total Gas Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,EXCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,EXCL,IRCTC,Indian Railway Catering and Tourism Corporation Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,EXCL,NHPC,NHPC Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,EXCL,UNIONBANK,Union Bank of India,ind_prs21022025.txt,table
+N100,2025-03-28,INCL,BAJAJHFL,Bajaj Housing Finance Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,INCL,CGPOWER,CG Power and Industrial Solutions Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,INCL,HYUNDAI,Hyundai Motor India Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,INCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs21022025.txt,table
+N100,2025-03-28,INCL,SWIGGY,Swiggy Ltd.,ind_prs21022025.txt,table
+N50,2025-03-28,EXCL,BPCL,Bharat Petroleum Corporation Ltd.,ind_prs21022025.txt,table
+N50,2025-03-28,EXCL,BRITANNIA,Britannia Industries Ltd.,ind_prs21022025.txt,table
+N50,2025-03-28,INCL,ETERNAL,Zomato Ltd.,ind_prs21022025.txt,table
+N50,2025-03-28,INCL,JIOFIN,Jio Financial Services Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,ATGL,Adani Total Gas Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,BHEL,Bharat Heavy Electricals Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,ETERNAL,Zomato Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,IRCTC,Indian Railway Catering and Tourism Corporation Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,JIOFIN,Jio Financial Services Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,NHPC,NHPC Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,EXCL,UNIONBANK,Union Bank of India,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,BAJAJHFL,Bajaj Housing Finance Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,BPCL,Bharat Petroleum Corporation Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,BRITANNIA,Britannia Industries Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,CGPOWER,CG Power and Industrial Solutions Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,HYUNDAI,Hyundai Motor India Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs21022025.txt,table
+NN50,2025-03-28,INCL,SWIGGY,Swiggy Ltd.,ind_prs21022025.txt,table
+N100,2025-09-30,EXCL,DABUR,Dabur India Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,EXCL,HEROMOTOCO,Hero MotoCorp Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,EXCL,ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,EXCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,EXCL,SWIGGY,Swiggy Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,INCL,ENRIN,Siemens Energy India Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,INCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,INCL,MAXHEALTH,Max Healthcare Institute Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,INCL,MAZDOCK,Mazagoan Dock Shipbuilders Ltd.,ind_prs22082025.txt,table
+N100,2025-09-30,INCL,SOLARINDS,Solar Industries India Ltd.,ind_prs22082025.txt,table
+N50,2025-09-30,EXCL,HEROMOTOCO,Hero MotoCorp Ltd.,ind_prs22082025.txt,table
+N50,2025-09-30,EXCL,INDUSINDBK,IndusInd Bank Ltd.,ind_prs22082025.txt,table
+N50,2025-09-30,INCL,INDIGO,InterGlobe Aviation Ltd.,ind_prs22082025.txt,table
+N50,2025-09-30,INCL,MAXHEALTH,Max Healthcare Institute Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,EXCL,DABUR,Dabur India Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,EXCL,ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,EXCL,INDIGO,InterGlobe Aviation Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,EXCL,SWIGGY,Swiggy Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,INCL,ENRIN,Siemens Energy India Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,INCL,HINDZINC,Hindustan Zinc Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,INCL,MAZDOCK,Mazagoan Dock Shipbuilders Ltd.,ind_prs22082025.txt,table
+NN50,2025-09-30,INCL,SOLARINDS,Solar Industries India Ltd.,ind_prs22082025.txt,table
+N100,2026-03-30,EXCL,BAJAJHFL,Bajaj Housing Finance Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,EXCL,HAVELLS,Havells India Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,EXCL,ICICIGI,ICICI Lombard General Insurance Company Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,EXCL,JSWENERGY,JSW Energy Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,EXCL,LICI,Life Insurance Corporation of India,ind_prs23022026.txt,table
+N100,2026-03-30,EXCL,NAUKRI,Info Edge (India) Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,CUMMINSIND,Cummins India Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,TATACAP,Tata Capital Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,TMCV,Tata Motors Ltd.,ind_prs23022026.txt,table
+N100,2026-03-30,INCL,UNIONBANK,Union Bank of India,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,BAJAJHFL,Bajaj Housing Finance Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,HAVELLS,Havells India Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,ICICIGI,ICICI Lombard General Insurance Company Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,JSWENERGY,JSW Energy Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,LICI,Life Insurance Corporation of India,ind_prs23022026.txt,table
+NN50,2026-03-30,EXCL,NAUKRI,Info Edge (India) Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,CUMMINSIND,Cummins India Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,HDFCAMC,HDFC Asset Management Company Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,MUTHOOTFIN,Muthoot Finance Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,TATACAP,Tata Capital Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,TMCV,Tata Motors Ltd.,ind_prs23022026.txt,table
+NN50,2026-03-30,INCL,UNIONBANK,Union Bank of India,ind_prs23022026.txt,table
+N100,2026-09-30,EXCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,EXCL,LODHA,Lodha Developers Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,EXCL,RECLTD,REC Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,EXCL,SHREECEM,Shree Cement Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,EXCL,UNITDSPR,United Spirits Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,INCL,BSE,BSE Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,INCL,IDEA,Vodafone Idea Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,INCL,POLYCAB,Polycab India Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,INCL,POWERINDIA,Hitachi Energy India Ltd.,ind_prs10082026.txt,table
+N100,2026-09-30,INCL,VAML,Vedanta Aluminium Metal Ltd.,ind_prs10082026.txt,table
+N50,2026-09-30,EXCL,WIPRO,Wipro Ltd.,ind_prs10082026.txt,table
+N50,2026-09-30,INCL,BSE,BSE Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,EXCL,INDHOTEL,Indian Hotels Co. Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,EXCL,LODHA,Lodha Developers Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,EXCL,RECLTD,REC Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,EXCL,SHREECEM,Shree Cement Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,EXCL,UNITDSPR,United Spirits Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,INCL,IDEA,Vodafone Idea Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,INCL,POLYCAB,Polycab India Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,INCL,POWERINDIA,Hitachi Energy India Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,INCL,VAML,Vedanta Aluminium Metal Ltd.,ind_prs10082026.txt,table
+NN50,2026-09-30,INCL,WIPRO,Wipro Ltd.,ind_prs10082026.txt,table

@@ -1,3 +1,123 @@
+## Re: Entry 17 — amendment 4 written with the five pre-commitments, run once: **FAIL, 93.41%. 3f is closed at stage 0.** Brought back for review as the closure.
+
+**2026-09-24.** Branch `research/3f-stage0`, PR #107. Amendment 4 and its
+code were committed (`287062b`) before the run; `results-3f-stage0.md` §7
+has the result; the prereg carries a closure note.
+
+**The five pre-commitments:** (1) 98.80% and its provenance are disclosed
+in the amendment text; (2) 6 bp unchanged; (3) the faulted-date rule (> 10%
+of the cross-section and ≥ 5 stocks) was fixed in the text and applied over
+the whole run — it caught **2015-11-30 (47/96)** and, as a consequence of
+being a return test, **2015-12-31 (46/95)**; (4) aliases by rule from
+`symbolchange.csv` chains and ISIN — 64 and 195 entries, no hand entries;
+(5) all of it is in `step3f_stage0_checks.py`.
+
+**Disclosed:** the first two attempts crashed in the bhavcopy parser (a
+two-digit year in older files; 73 saved 404 pages under `.zip` names)
+before any gate number existed; both were parser fixes, committed, and the
+third attempt ran to completion. The mismatch bucket (129, median gap a
+factor of 2) shows the recovery formula's assumption that the old
+bhavcopy's ex-date `PREVCLOSE` is adjusted does not hold for bonuses; it is
+reported, not fixed.
+
+**Result: 17,992 of 19,261 match — 93.41%. FAIL.** Composition: 940 absent
+(the 20 delisted/merged names, counted against the gate by the amendment's
+own rule), 200 on the two faulted dates, 129 mismatches. On the comparable
+months the vendors agree 98.2%; the gate fails on the survivorship residual
+0b had already measured, which the two-ended return definition made larger
+than the 0.17-point budget 0b's 95.17% had left. I have not backfilled,
+re-derived, or re-run. Per Entry 17, 3f halts at stage 0 permanently.
+
+**What survives for later use:** the membership rebuild and its tests, the
+0c citations with Entry 16's caveats, the bhavcopy tooling, and the finding
+about the Kite cache (issue #108). Nothing else was started.
+
+---
+
+## Re: Entry 16 — corrections made, amendment 3 written and **run: FAIL as written, 53.98%**. The failure is my specification error (yfinance's Close is split-adjusted). Diagnostic reported, no gate set. Stopped.
+
+**2026-09-24.** Branch `research/3f-stage0`, PR #107; `results-3f-stage0.md`
+§6; amendment 3 in the prereg (`7e31966`).
+
+**Done as directed:** the §1.2 pre-open sentence now says the auction did
+not exist for Jan–Sep 2010; the spell count is 271 over 215 symbols; both
+standing caveats are written into the results file and the prereg.
+Option (b) is closed. Amendment 3 anchors the tolerance to the modelled
+slippage (6 bp, the round trip of 3 bp/leg), applies it to every member's
+signal-date close 2009-01 → 2025-12 against the NSE bhavcopy, treats a
+mismatch as missing under amendment 1 §B, re-applies the 95% coverage gate
+to what survives, and discloses that 99.4%/0.5% was already seen.
+
+**Result: 10,397 of 19,261 member-months match — 53.98%. FAIL.** The cause
+is not the data: the yfinance/NSE ratio is exactly 1.000 on 10,395
+stock-months and a clean split factor (0.5, 0.2, 0.1, 0.667 …) on the rest,
+changing only at corporate actions. Amendment 3 called `Close`
+"unadjusted"; it is unadjusted for dividends but split-adjusted, so the
+test counted months after a split. That is my error in the amendment's
+text, not a vendor disagreement, and I have not corrected-and-rerun it as
+a gate.
+
+**Diagnostic only (§6), for your decision:** the signal-date-to-signal-date
+*return* at the same 6 bp agrees on **98.80%** of 17,045 stock-months; the
+205 misses are 109 split months and 96 others, a block of which sit on one
+signal date, **2015-11**, across the cross-section — the same whole-day
+yfinance fault as 2025-03-18, now on a date 3f would trade. Also 2,202
+stock-months are absent, 20 names with no yfinance history plus five
+symbols the bhavcopy carries under earlier names that `symbolchange.csv`
+does not map (TATAMOTORS→TMPV, MCDOWELL-N→UNITDSPR, SRTRANSFIN→SHRIRAMFIN,
+INFRATEL→INDUSTOWER, MOTHERSUMI→MOTHERSON); an alias map would recover them
+and was not built before the run.
+
+**What I ask:** whether amendment 3 may be corrected in place (the return
+form, splits handled by NSE's own ex-date `PREVCLOSE`, bad signal dates
+treated as missing for the whole cross-section, aliases added) as a
+post-hoc-disclosed amendment 4 and run once, or whether two consecutive
+mis-specified vendor gates mean 3f halts here. I have no view I would
+defend over yours on that; the second is the conservative reading of the
+standing rules. Stage 1 is not written.
+
+---
+
+## Re: Entry 15 — 3f stage 0 run. 0c source CONFIRMED, 0b PASS (95.17%), 0c vendor check **HALT as pre-registered** (38 of 100 stocks ≥ 0.98). Stopped before stage 1.
+
+**2026-09-24.** `results-3f-stage0.md`, branch `research/3f-stage0`. No look,
+no trial: stage 0 reads no forward return.
+
+**0c source — confirmed from NSE-hosted documents**, quoted verbatim:
+"The closing price is last half an hour value weighted average price"
+(NSE/CMTR/61813 §3.4, 2024; identical in CMTR/40962, 2019, and CMTR/67774,
+2025) and "last half an hour weighted average value" (Fact Book 2010 §6).
+The first change is the closing auction from 2026-08-03 (SEBI Jan 16, 2026;
+NSE/CMTR/73362), outside the window — amendment 2's truncation is not
+triggered. Caveats stated: circulars for 2011–2018 were not retrievable
+(404), so continuity rests on both ends plus unchanged wording; the pre-open
+SEBI circulars were read from mirrors.
+
+**0b — rebuilt from 547 NSE Indices press releases**, walked backwards from
+today's lists; both the Nifty 50 and Next 50 chains are consistent at every
+step back to 2009-01-12, so the start date is **2010-01** by the rule. Code
+and CSVs are in `backend/research/`. Coverage **95.17%** of member-months
+have a yfinance adjusted close — a pass by 0.17 points, and **every missing
+month is a delisted or merged name** (HDFC alone is 162 months): 92.1% in
+2010–17 vs 98.2% in 2018–25. Reported for your call (§3, §5.2).
+
+**0c vendor — HALT.** The pre-registered comparator, the Kite 5-minute
+cache's last bar, turns out to be (1) dividend-adjusted and (2) a last
+trade, not the official close; the median correlation of 0.977 is what a
+0.14% daily close-vs-last-trade gap produces. Against the primary source
+(NSE bhavcopy, 318 sessions downloaded), yfinance's Close **is** the
+official close on 99.4% of stock-days, but the same 0.98/95% bar still
+fails there (93.8% after excluding split days) because of one bad yfinance
+row on 2025-03-18 across many stocks and two demergers. I have **not**
+substituted a passing check; §5 lists three options and I run none without
+an amendment.
+
+**A finding outside 3f (§4.4):** the live 5-minute cache is
+dividend-adjusted history mixed with unadjusted live bars. Offered to the
+user as an issue.
+
+---
+
 ## Re: Entry 15 — amendment 2: a mid-window closing-price change truncates the window, by rule. Still NOT run.
 
 **2026-09-23.** One rule added, before any NSE source has been read. If the
