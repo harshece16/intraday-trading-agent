@@ -6,6 +6,128 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 18 — 2026-09-24 — automated reviewer: amendment 4 ACCEPTED — all five pre-commitments were honoured, the run was genuine, and the closure is correctly stated. 3f stays closed at stage 0.
+
+Reviewed `results-3f-stage0.md` §7 (and §6 for context), the "Amendment 4" and
+"Closure" sections of `prereg-3f-momentum-delivery.md`, `backend/research/step3f_stage0_checks.py`
+(`bhav_aliases`, `extract_bhavcopies`, `level_test_returns`, `amendment4_main`),
+and the `progress.md`/`trials.md` rows, against Entry 17's five pre-commitments.
+No Bash/git-log access in this session, so commit ordering rests on the disclosed
+hashes and internal consistency rather than an independent `git log` check —
+noted, not treated as a defect, since nothing below is inconsistent with the
+account given.
+
+### The five pre-commitments — all met
+
+1. **98.80% disclosed with provenance.** Amendment 4's text (prereg, "Disclosure")
+   states the figure, that it was computed on the 17,045-stock-month pre-alias
+   subset, and explicitly that the number actually reported would not be the
+   same and had not yet been seen. It wasn't: 93.41% is far below 98.80%, and
+   the gap is explained (absent months, which the return definition counts
+   against the gate, ate the whole 0.17-point budget 0b's 95.17% had left, then
+   more). The hedge ("likely to clear") turned out wrong — good evidence this
+   wasn't written to guarantee a pass.
+2. **6 bp tolerance unchanged.** `level_test_returns(..., tolerance=0.0006, ...)`
+   matches the amendment text exactly; nothing re-derives it from 98.80% or 95%.
+3. **Faulted-date rule fixed before the run, applied over the whole run.** Code:
+   `bad_frac=0.10, bad_min=5`, `faulted = ... if n and bad/n > bad_frac and bad >= bad_min`
+   — verbatim "> 10% ... and >= 5 stocks." The `by_date` loop runs over every row
+   in the 2010–2025 output, not a check at two known dates, so "applied over the
+   whole run" is verified from the code, not just asserted in prose. **On the
+   December fault: this is a correct, mechanical consequence of a return-based
+   test, not a defect.** A bad yfinance close at 2015-11-30 enters two return
+   computations — as the exit price of the Oct→Nov return (d1 = 2015-11-30) and
+   as the entry price of the Nov→Dec return (d1 = 2015-12-31, d0 = 2015-11-30) —
+   so one bad price point corrupts two adjacent observations by construction.
+   The results file states this plainly ("a bad close at t−1 shows as a mismatch
+   at t") rather than dropping it or re-explaining it away. Correct.
+4. **Aliases by rule.** `bhav_aliases()` builds the alias map purely from
+   `symbolchange.csv` chain-following (transitive `nxt` dict) and ISIN lookup
+   against `EQUITY_L.csv`; no hardcoded symbol pairs anywhere in the function or
+   in `amendment4_main`. The five previously-known gaps (TATAMOTORS→TMPV etc.)
+   are not special-cased in the code — they either fall out of the general rule
+   or don't, and the text doesn't claim otherwise.
+5. **Committed code.** `level_test_returns`, `bhav_aliases`, `extract_bhavcopies`,
+   `amendment4_main` are all in `step3f_stage0_checks.py`, closing the gap Entry
+   17 flagged in amendment 3 (the 98.80% diagnostic had no backing code; this
+   one does, end to end, including the bisection recovery).
+
+### The two disclosed crashes — genuine pre-number bug fixes, not re-specification
+
+The two-digit-year `strptime` fallback (`%d-%b-%Y` then `%d-%b-%y`) and the
+non-zip-file skip in `extract_bhavcopies` (`zipfile.is_zipfile` check, `skipped`
+list) are both format/parsing robustness fixes, unrelated to the tolerance, the
+price definition, or the pass bar. Both crashed with no output produced, which
+is exactly the "bug that crashed before any statistic was seen" exception the
+standing rules allow for a same-hypothesis re-run. Neither is a parameter
+adjustment. Accepted.
+
+### The composition of 93.41% — arithmetic checks out, diagnosis is sound and not used to rescue
+
+Spot-checked: 940 + 200 + 129 = 1,269; 19,261 − 1,269 = 17,992 = the reported
+match count. 19,261 − 940 = 18,321; 17,992 / 18,321 = 98.20%, matching the
+"vendors agree 98.2% on comparable months" line exactly. The 129-mismatch
+bucket's "median gap a factor of exactly 2" is correctly attributed to the
+recovery formula's assumption (NSE's ex-date `PREVCLOSE` is exchange-adjusted)
+holding for splits but not for bonuses on the older bhavcopy format — reported
+as a limitation of the data, not patched to pass. No fifth amendment was
+proposed to fix it, consistent with Entry 17's "no amendment 5."
+
+One wording nit, not a numbers problem: §7's sentence "the two-ended return
+definition alone cost more than that [0.17-point budget]" over-attributes to
+just the two-ended requirement — by itself that only adds 9 stock-months (940
+vs 0b's 931, 0.05 points), well under the 0.17-point budget. It's the combined
+machinery (two-ended requirement + faulted dates + mismatches, 338 stock-months
+beyond 0b's residual) that blows the budget. The breakdown table right above it
+is correct and lets a careful reader verify this regardless, so this is a
+clarity nit, not a finding — no correction needed to the closure.
+
+One implementation ambiguity worth naming for the record, immaterial to the
+verdict: the faulted-date test's denominator (`by_date`) only counts rows with
+status `match` or `mismatch`, excluding `absent` and `unrecovered_split` rows
+from "that date's comparable members." The amendment text doesn't pin down
+whether an unrecovered split should count as a comparable failure for
+date-fault purposes. Reasonable either way, and 93.41% clears or fails the 95%
+gate by a wide enough margin (200 faulted stock-months) that this choice
+doesn't change the outcome.
+
+### Closure — correctly stated
+
+The prereg's "Closure" section and `results-3f-stage0.md` §7 agree: amendment 4
+FAILed its own pre-committed gate (93.41% < 95%), there is no amendment 5 under
+Entry 17, and 3f is closed at stage 0 permanently — not re-registered with a
+fourth vendor specification. No look and no trial were spent (stage 1 was never
+written), and the 2026 held-out window is untouched — all confirmed against
+`trials.md` (no new L-number, no new trial number added for 3f) and
+`progress.md` line 68 (already updated per Entry 17's "smaller correction," and
+line 274/276 record both the pre-registered HALT and the amendment 4 FAIL
+correctly). Issue #108 (the Kite cache's dividend-adjustment finding, §4.4) is
+properly filed in `BUG_LOG.md` with evidence, as CLAUDE.md requires for a
+confirmed bug outside the research path. The "what survives" list in the
+outbox (membership rebuild + tests, 0c citations with Entry 16's caveats,
+bhavcopy tooling, issue #108) is accurate and doesn't overstate: none of it is
+a claim about momentum, only about reusable infrastructure and one live-cache
+defect found along the way. Nothing in the results file or the closure claims
+or implies anything about whether 12-month momentum works — correctly scoped
+to "the data gate could not be cleared," not to the hypothesis itself.
+
+### Needs the user's decision
+
+Nothing here does. No held-out spend, no live-path change, no credentials, no
+new Kite download, no new paid data source (bhavcopy downloads are NSE-public,
+already the established pattern from earlier stages).
+
+### Next step, and where to stop
+
+Nothing further on 3f — it is closed, permanently, at stage 0. The membership
+rebuild, the 0c citations (with their standing caveats) and the bhavcopy
+tooling are available to a future pre-registration; issue #108 is open and
+independent of 3f. No further review is needed on this thread unless the main
+agent proposes reopening it, which the standing rules and Entry 17 both already
+bar.
+
+---
+
 ## Entry 17 — 2026-09-24 — automated reviewer: Entry 16's corrections ACCEPTED; amendment 3's FAIL was handled correctly and its diagnosis is sound; a disclosed amendment 4 MAY be written, once, as the last correction this gate gets — with five pre-commitments below, none of them optional
 
 Reviewed `results-3f-stage0.md` §6 and the Entry-16-directed fixes to §1.2/§2

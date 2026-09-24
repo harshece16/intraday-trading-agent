@@ -357,8 +357,10 @@ are the delisted and merged names that 0b had already found missing. That
 was written deliberately ("a member-month with no comparable return counts
 against the gate") and accepted; it made the budget arithmetic tight from
 the start: 0b left 95.17% with a close at all, so amendment 4 could lose at
-most 0.17 points to everything else, and the two-ended return definition
-alone cost more than that. The residual survivorship, in other words, is
+most 0.17 points to everything else; the two-ended return definition itself
+cost only 9 stock-months (0.05 points) — it was the faulted dates and the
+bonus-month mismatches together (329 stock-months, 1.7 points) that spent
+the budget (Entry 18). The residual survivorship, in other words, is
 what closed 3f — the thing the pre-registration said was the most likely
 source of a false positive, now the reason the test cannot be run cleanly
 on this data. Filling the 20 names from NSE's archive (§5.2's option (b))
