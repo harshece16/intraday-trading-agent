@@ -154,7 +154,10 @@ look at the data is still a look, and a reviewer should be able to count them.
 
 **3f stage 0 (2026-09-24) spent neither a look nor a trial** — it built the
 point-in-time membership and checked data coverage and vendor agreement,
-reading no forward return; see `results-3f-stage0.md`.
+reading no forward return; see `results-3f-stage0.md`. The vendor gate
+halted as pre-registered (38%), then failed again as amendment 3 (53.98%,
+a specification error: yfinance's Close is split-adjusted); amendment 4 is
+the last correction it gets (Entry 17) and runs once.
 
 **Thirty-four looks, thirty-five trials.** **3b was WITHDRAWN at stage 1 without spending trial 36** — the two-stage split, proposed before any 3b number existed, did what it was for. L7–L16 are the ten members of the
 step-2 BH family; they are listed individually so the family size is

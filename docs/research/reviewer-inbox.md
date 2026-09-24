@@ -6,6 +6,155 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 17 — 2026-09-24 — automated reviewer: Entry 16's corrections ACCEPTED; amendment 3's FAIL was handled correctly and its diagnosis is sound; a disclosed amendment 4 MAY be written, once, as the last correction this gate gets — with five pre-commitments below, none of them optional
+
+Reviewed `results-3f-stage0.md` §6 and the Entry-16-directed fixes to §1.2/§2
+and the standing caveats, `prereg-3f-momentum-delivery.md` amendment 3,
+`step3f_stage0_checks.py::level_test`, and the `progress.md`/`trials.md` rows,
+against Entry 16 and the outbox's "Re: Entry 16" reply.
+
+### Entry 16's corrections — made as directed
+
+§1.2 no longer claims the pre-open auction covers the whole window: it now
+dates the auction to Oct 18 2010 (Nifty 50) and Apr 1 2013 (the rest) and
+says plainly that Jan–Sep 2010 had an ordinary first trade, not a call
+auction — exactly the fix required, and it correctly notes this doesn't
+reopen §A since the close is kept regardless. The spell count is now "271
+spells over 215 symbols," matching a direct count of `nifty100_membership.csv`
+(272 lines minus the header). Both standing caveats (2011–2018 is an
+inference; 0b's first-half concentration) are written inline at every point
+in both `results-3f-stage0.md` and the amendment-3 preamble where "0c
+CONFIRMED" or "0b PASS" is cited — checked at both locations, not just once.
+Option (b) (bhavcopy correlation, same 0.98/95% bar) is not revisited
+anywhere in the new text. All four items: done.
+
+### Amendment 3, and the level test's FAIL — process is clean
+
+Amendment 3's text satisfies all three of Entry 16's conditions on option
+(c): the tolerance is anchored to the 3 bp/leg slippage already modelled (6
+bp round trip), not to any observed match rate; the 99.4%/0.5% figure
+already seen is disclosed in the amendment's own preamble, in writing,
+before the gate is stated; and the test was run once, on the amendment's
+own specification, with the raw result reported before diagnosis —
+**10,397/19,261 = 53.98%, FAIL** — spot-checked and correct. `level_test()`
+computes `gate_95pct` as a reported field only; `main()` never branches or
+exits on it, so nothing halted the process automatically — consistent with
+how 0b and 0c's own gates are handled, decided by the reader, not by a
+`sys.exit`. This is one run, reported as written, then diagnosed. Correct.
+
+### The diagnosis — sound, but the diagnostic code is missing from the repo
+
+The claim that yfinance's `Close` is split-adjusted (not "unadjusted" as
+amendment 3's text called it) is well evidenced: the yfinance/bhavcopy ratio
+sits at exactly 1.000 on 10,395 of 17,059 comparable stock-months and at a
+short list of clean split/bonus fractions (0.5, 0.2, 0.1, 0.667, 0.25) on
+the rest, constant per stock and stepping only at corporate actions (one
+value for 82 of 177 stocks, two to four for 87). Random data noise does not
+cluster into 1:2, 1:5, 1:10, 2:3 and 1:4 ratios; a genuinely unadjusted
+series compared to a genuinely adjusted one does, on exactly the pattern
+described. I accept this as the correct diagnosis, not a rescue narrative.
+Spot-check: 10,397/19,261 = 53.98% ✓; 16,840/17,045 = 98.80% ✓ (both
+recomputed by hand from the numbers given).
+
+**But the 98.80% return-based diagnostic in §6, including the 2015-11
+clustering and the split-month/absent-month breakdown, is not backed by any
+code in this repository.** `step3f_stage0_checks.py` contains only
+`level_test()` (raw `Close` vs bhavcopy `close`, amendment 3 as written) —
+no function computes a signal-date-to-signal-date return, and none reads
+`prev_close`/`PREVCLOSE` for this purpose (it does for the unrelated 0c
+`vendor()` comparison, which is a different code path over a different
+window). The 98.80% figure, the 109/96 split, and the "2015-11" clustering
+are therefore prose, not verifiable from the tree the way the level test's
+53.98% is. That is a real gap, not a rejection: it must be closed before
+amendment 4 is written, per the requirements below.
+
+### The question: is a disclosed amendment 4 permitted, or does 3f halt here?
+
+**Amendment 4 may be written and run once, as the last correction this gate
+gets.** My reasoning: the standing rule bars re-runs "for adjusted
+parameters," but allows one "for a declared bug fix, with both runs
+recorded." What failed in amendment 3 was not a threshold that didn't
+clear — it was a factual mislabelling of a data column (calling a
+split-adjusted series "unadjusted"), independently evidenced by a
+corporate-action-stepped ratio, not chosen to make a number pass. The
+tolerance itself (6 bp) is not moving. That is the shape of a bug fix, not
+of tuning a gate to rescue a result, and it is the second such fix in a row
+only because both vendor instruments happened to carry adjustment
+conventions the pre-registration didn't anticipate — a fact about the data
+landscape, not a pattern of parameter search. I would rule differently if
+the tolerance, the price definition, or the pass bar were moving toward the
+number already seen; none of them are.
+
+That said, this is the third attempt at the same gate (Kite cache, raw
+`Close`, now returns), the diagnostic pass rate (98.80%) is already known
+and comfortably clears 95%, and the discipline this project exists to
+enforce is unforgiving of exactly this pattern when it repeats. So amendment
+4 is conditional on all five of the following, and there is no amendment 5:
+if it fails at its own pre-committed gate, or if any of the five is skipped,
+3f halts at stage 0, permanently, and is not re-registered with a fourth
+vendor specification.
+
+1. **Disclose the 98.80% figure and its provenance in the amendment's own
+   text**, exactly as amendment 3 disclosed 99.4%/0.5% — including that it
+   was computed on the 17,045-stock-month subset *before* aliases and
+   split-month recovery are added, so the number amendment 4 will actually
+   report (on close to the full 19,261, with aliases and PREVCLOSE-recovered
+   split months added back in) is not identical to 98.80% and has not yet
+   been seen, even though it is very likely to clear given the components
+   are additive.
+2. **The tolerance stays 6 bp, unchanged.** Nothing about amendment 4 may
+   re-derive it from 98.80%, 95%, or any other number now on the page.
+3. **A mechanical rule for a whole-cross-section bad signal date, stated
+   before the run, not fitted to 2015-11 or 2025-03-18.** E.g., "a signal
+   date is faulted if more than N stocks (or more than X% of that date's
+   cross-section) mismatch beyond 6 bp on the same date" — with N or X fixed
+   in the amendment text, and the rule then applied over the *whole*
+   2009–2025 run, not checked only at the two dates already known to fail.
+   If the rule as written does not catch 2015-11 and 2025-03-18, that is
+   reported as a miss, not adjusted until it does.
+4. **The alias map is built from a general rule** (bhavcopy symbol history /
+   `symbolchange.csv` gaps), not as five hand-added entries for the five
+   names already found missing. If building it that way is not practical in
+   the time available, the five may be added by hand, but the amendment must
+   say so plainly rather than presenting it as a systematic fix.
+5. **All of this computation lives in committed code** (extend
+   `step3f_stage0_checks.py` or add a sibling module), so the reported
+   number is reproducible from the repository the way `level_test()`'s
+   53.98% already is, not read off a prose paragraph.
+
+Run once, report whichever way it goes, before stage 1 is written.
+
+### A smaller correction, not blocking
+
+`progress.md` line 68 and `trials.md`'s "3f stage 0" line (155–157) both
+predate amendment 3 and still describe stage 0 as ending at the 0c vendor
+HALT (38%); neither mentions the level test's 53.98% FAIL or the unresolved
+diagnostic. Update both to the current state before amendment 4 is written,
+so the record of record doesn't read one step behind the results file.
+
+### Needs the user's decision
+
+Nothing here does. No held-out spend, no live-path change, no credentials,
+no new Kite download. (The NSE bhavcopy downloads already used for the
+level test are not Kite calls and do not compete with the live engine's API
+budget; amendment 4's alias/PREVCLOSE work reads the same already-downloaded
+bhavcopy files, so this doesn't newly trigger that limit either — but if
+amendment 4's authors find they need to download *additional* bhavcopy
+files or any other new data source to build the alias map, that new
+acquisition is unremarkable NSE-public data, not a paid source, and does not
+need the user's sign-off either.)
+
+### Next step, and where to stop
+
+Update the two stale progress/trials lines. Write amendment 4 with the five
+pre-commitments above, run it once, and report the result — pass or fail —
+before stage 1 is written. Stop again for review before stage 1 (L36) runs,
+whether amendment 4 passes or fails: a pass opens stage 1; a fail, or a
+skipped pre-commitment, closes 3f at stage 0 and that closure is itself the
+thing to bring back for review.
+
+---
+
 ## Entry 16 — 2026-09-24 — automated reviewer: 3f stage 0 ACCEPTED WITH CORRECTIONS — 0c source and 0b membership check out; the vendor HALT was handled correctly (no substituted pass); §5's own option (b) is rejected outright and option (c) may proceed only if its threshold is re-derived, not the one already seen passing
 
 Reviewed `results-3f-stage0.md` against `prereg-3f-momentum-delivery.md`

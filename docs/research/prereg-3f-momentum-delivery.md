@@ -575,3 +575,88 @@ explanation, and it is not grounds to backfill and rerun.
 **Stage 1 is still not written.** If the level test clears, stage 1 (L36)
 may be written and stops again for review before it runs — the first step
 that reads a return.
+
+---
+
+# Amendment 4 — Entry 17 (research-reviewer) — the vendor gate, corrected once, as the last correction it gets
+
+**Committed before its run; no stage-1 code exists.** Amendment 3's level
+test **failed as written (53.98%)** because its text called yfinance's
+`Close` "unadjusted"; that column is unadjusted for dividends but adjusted
+for splits and bonuses, so the test counted months after a split
+(`results-3f-stage0.md` §6). Entry 17 accepted the diagnosis and permits one
+disclosed correction under five pre-commitments, **with no amendment 5: if
+this run fails its own gate, or any pre-commitment below is skipped, 3f
+halts at stage 0 permanently and is not re-registered with a fourth vendor
+specification.**
+
+**Disclosure (pre-commitment 1).** Before this amendment was written, a
+diagnostic computed the signal-date-to-signal-date return, yfinance vs NSE
+official close, at 6 bp, on the **17,045 stock-months** that were comparable
+under amendment 3's extraction: **98.80% agreed**; the 205 that did not were
+109 months containing a split or bonus and 96 others, a block of them on the
+2015-11 signal date. That figure was seen. It was computed **before** the
+alias fix and the split-month recovery below, on a subset that excluded
+2,202 stock-months, so the number this amendment reports is not the same
+number and has not been seen — though, the components being additive, it is
+likely to clear. The reviewer knows this; it is written here so no later
+reader mistakes the gate for one fixed blind.
+
+> **0c vendor gate — corrected form.**
+>
+> - **Quantity compared:** the return from one signal date to the next
+>   (the last NSE session of month t−1 to that of month t), yfinance `Close`
+>   vs NSE's official close from the bhavcopy, for every point-in-time member
+>   on the month-t signal date, 2010-01 → 2025-12. A stock-month **matches**
+>   if |(1 + r_yfinance) / (1 + r_NSE) − 1| ≤ **6 bp**.
+> - **Tolerance: 6 bp, unchanged from amendment 3** (pre-commitment 2) — the
+>   round trip of the modelled 3 bp/leg slippage. Nothing here re-derives it.
+> - **Split and bonus months (recovered from NSE's own data):** a month in
+>   which the yfinance/NSE close ratio at t differs from that at t−1 by more
+>   than 6 bp contains a corporate action. The ex-date is found by bisection
+>   over that month's sessions, downloading NSE's daily bhavcopy for each
+>   probe (the ratio is constant on either side of the ex-date). On the
+>   ex-date NSE's `PREVCLOSE` is the exchange's own adjusted previous close,
+>   so NSE's return for the month is `close(t) / close(ex) × close(ex) /
+>   prevclose(ex) × close(ex−1) / close(t−1)`, entirely from NSE. A month
+>   with more than one ratio step, or whose ex-date file cannot be
+>   retrieved, is **unrecovered and counts as a mismatch**.
+> - **Whole-cross-section bad signal date (pre-commitment 3), fixed now, not
+>   fitted:** after split recovery, a signal date on which **more than 10% of
+>   that date's comparable members, and at least 5 stocks, mismatch** is a
+>   **faulted date**. Every close on a faulted date is missing for every
+>   member: no positions are entered on it, and positions due to exit on it
+>   exit at the next non-faulted signal date's close (amendment 1 §B's
+>   short-gap case). The rule is applied over the whole 2009-01 → 2025-12 run;
+>   whether it catches 2015-11 is **reported**, and if it does not, that is a
+>   miss on record, not a reason to change 10% or 5.
+> - **Symbol aliases (pre-commitment 4), by rule:** a bhavcopy row belongs
+>   to a current symbol if its symbol is anywhere in that symbol's chain in
+>   NSE's `symbolchange.csv` (followed transitively), **or** its ISIN (present
+>   in bhavcopies from 2011) equals the symbol's ISIN in NSE's `EQUITY_L.csv`.
+>   No hand entries. Disclosed: amendment 3's run stored only rows whose
+>   symbol was already the current one, which is why its 2,202 "absent"
+>   stock-months included names the bhavcopy carried under an earlier symbol;
+>   the extraction is redone from the same downloaded files under this rule.
+> - **Gate:** counting every member-month 2010-01 → 2025-12, **3f proceeds
+>   only if ≥ 95% have a signal-date close that exists on both sides, is not
+>   on a faulted date, and matches within 6 bp** (a recovered split month
+>   that matches counts as a match). A member-month with no comparable
+>   return — either close absent on either side, at t or t−1 — counts
+>   against the gate. Below 95%, **3f STOPS, permanently.**
+> - **Committed code (pre-commitment 5):** the extraction, the alias rule,
+>   the bisection, the faulted-date rule and the gate are
+>   `backend/research/step3f_stage0_checks.py` (`level_test_returns` and its
+>   helpers); the reported number is reproducible from the repository and
+>   the downloaded bhavcopies.
+> - **Reported alongside, not gated:** match rate by year; the list of
+>   faulted dates; the split months recovered and unrecovered; every
+>   mismatch with both returns.
+
+**What this still does not verify:** yfinance's dividend adjustment (`Adj
+Close` / `Close`). Stage 1 reports each quintile's gross return with and
+without it, as amendment 3 already requires.
+
+**One run.** Stage 1 (L36) stops for review before it runs whichever way
+this goes; a fail here is the closure of 3f, brought back for review as
+such.

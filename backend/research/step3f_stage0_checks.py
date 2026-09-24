@@ -247,5 +247,269 @@ def main():
             print(" missing:", {s: m["months"] for s, m in v["symbols_missing"].items()})
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and not os.environ.get("STAGE0_AMENDMENT4"):
     main()
+
+
+# ---------------------------------------------------------------------------
+# Amendment 4 — the vendor gate in its corrected form: signal-date-to-signal-date
+# returns, aliases by rule, split months recovered from NSE's own ex-date PREVCLOSE,
+# and a mechanical whole-cross-section bad-date rule. Everything below is the
+# committed form of what the amendment text says; see the prereg for the rules.
+# ---------------------------------------------------------------------------
+
+import datetime
+import io
+import subprocess
+import time
+import zipfile
+
+BHAV_DIR_DEFAULT = None
+
+
+def bhav_aliases(symbols, equity_l_csv, symbolchange_csv):
+    """Pre-commitment 4: (alias symbol -> current symbol, ISIN -> current symbol), by rule.
+    A row belongs to a current symbol if its symbol is anywhere in that symbol's
+    symbolchange.csv chain (transitively) or its ISIN is the symbol's ISIN in EQUITY_L."""
+    nxt = {}
+    for line in open(symbolchange_csv, errors="ignore"):
+        p = [x.strip() for x in line.rsplit(",", 3)]  # company name may contain commas
+        if len(p) == 4 and p[1] and p[2] and p[1] != "SM_KEY_SYMBOL":
+            nxt[p[1]] = p[2]
+    alias = {s: s for s in symbols}
+    changed = True
+    while changed:  # follow old -> new edges until every old symbol whose chain ends in a current symbol is mapped
+        changed = False
+        for old, new in nxt.items():
+            if new in alias and old not in alias:
+                alias[old] = alias[new]
+                changed = True
+    isin = {}
+    for r in csv.DictReader(open(equity_l_csv)):
+        r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+        col = next(k for k in r if "ISIN" in k.upper())
+        if r["SYMBOL"] in symbols and r[col]:
+            isin[r[col]] = r["SYMBOL"]
+    return alias, isin
+
+
+def parse_bhavcopy(path):
+    """Rows (symbol, series, date, close, last, prev_close, isin) from either NSE format."""
+    z = zipfile.ZipFile(path)
+    with z.open(z.namelist()[0]) as fh:
+        rows = list(csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8", errors="ignore")))
+    out = []
+    for r in rows:
+        r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+        if "TckrSymb" in r:  # July 2024 onward
+            out.append((r["TckrSymb"], r["SctySrs"], r["TradDt"], float(r["ClsPric"] or 0), float(r["LastPric"] or 0),
+                        float(r["PrvsClsgPric"] or 0), r.get("ISIN", "")))
+        elif "SYMBOL" in r:
+            d = datetime.datetime.strptime(r["TIMESTAMP"], "%d-%b-%Y").date().isoformat()
+            out.append((r["SYMBOL"], r["SERIES"], d, float(r["CLOSE"] or 0), float(r["LAST"] or 0),
+                        float(r["PREVCLOSE"] or 0), r.get("ISIN", "")))
+    return out
+
+
+def fetch_bhavcopy(date, cache_dir, sleep=0.4):
+    """Download one session's bhavcopy into cache_dir (either NSE format); None if not a session."""
+    d = datetime.date.fromisoformat(date)
+    os.makedirs(cache_dir, exist_ok=True)
+    if d >= datetime.date(2024, 7, 8):
+        tag = d.strftime("%Y%m%d")
+        url = f"https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{tag}_F_0000.csv.zip"
+    else:
+        tag = d.strftime("%d%b%Y").upper()
+        url = f"https://nsearchives.nseindia.com/content/historical/EQUITIES/{d.year}/{d.strftime('%b').upper()}/cm{tag}bhav.csv.zip"
+    path = os.path.join(cache_dir, f"{tag}.zip")
+    if os.path.exists(path) and os.path.getsize(path) > 5000:
+        return path
+    code = subprocess.run(["curl", "-s", "-A", "Mozilla/5.0", "-w", "%{http_code}", "-o", path, url],
+                          capture_output=True, text=True).stdout.strip()
+    time.sleep(sleep)
+    if code != "200":
+        if os.path.exists(path):
+            os.remove(path)
+        return None
+    return path
+
+
+def extract_bhavcopies(zip_dirs, out_db, alias, isin):
+    """Store every EQ row that belongs to a current symbol under the alias/ISIN rule,
+    keyed by the CURRENT symbol. Rebuilds out_db from scratch."""
+    if os.path.exists(out_db):
+        os.remove(out_db)
+    db = sqlite3.connect(out_db)
+    db.execute("create table bhav(symbol text, date text, close real, last real, prev_close real, src_symbol text, primary key(symbol, date))")
+    n = 0
+    for zd in zip_dirs:
+        for f in sorted(os.listdir(zd)):
+            if not f.endswith(".zip"):
+                continue
+            try:
+                rows = parse_bhavcopy(os.path.join(zd, f))
+            except Exception:
+                continue
+            for sym, series, d, close, last, pc, isin_no in rows:
+                if series != "EQ" or not close:
+                    continue
+                cur = alias.get(sym) or isin.get(isin_no)
+                if cur:
+                    db.execute("insert or replace into bhav values (?,?,?,?,?,?)", (cur, d, close, last, pc, sym))
+                    n += 1
+    db.commit()
+    return n
+
+
+def level_test_returns(yf_db, bhav_db, membership_csv, cache_dir, tolerance=0.0006, bad_frac=0.10, bad_min=5,
+                       start=START, end=END, fetch=fetch_bhavcopy):
+    """Amendment 4's gate. Returns the report dict; the split-month bisection downloads
+    NSE's daily bhavcopy for each probe through `fetch`."""
+    mem = collections.defaultdict(list)
+    for r in csv.DictReader(open(membership_csv)):
+        if start <= r["month"] <= end:
+            mem[r["month"]].append(r["symbol"])
+    yf = _series(yf_db, "select symbol, date, close from daily where date >= '2008-12-01'")
+    yf_dates = sorted({d for s in yf for d in yf[s]})
+    nse = collections.defaultdict(dict)
+    nse_pc = collections.defaultdict(dict)
+    for s, d, c, pc in bhav_db.execute("select symbol, date, close, prev_close from bhav"):
+        if c:
+            nse[s][d] = c
+            nse_pc[s][d] = pc
+    nse_dates = sorted({d for s in nse for d in nse[s]})
+    signal = {}  # month -> last NSE session of that month that we hold
+    for d in nse_dates:
+        signal[d[:7]] = max(signal.get(d[:7], ""), d)
+    months = sorted(m for m in signal if "2009-12" <= m <= end)
+
+    def ratio(s, d):
+        y, n = yf[s].get(d), nse[s].get(d)
+        return y / n if y and n else None
+
+    def nse_return_with_split(s, d0, d1):
+        """Bisect for the ex-date inside (d0, d1]; return (nse_return, ex_date) or (None, reason)."""
+        r0, r1 = ratio(s, d0), ratio(s, d1)
+        sessions = [d for d in yf_dates if d0 < d <= d1]
+        lo, hi = d0, d1
+        probes = 0
+        while True:
+            between = [d for d in sessions if lo < d < hi]
+            if not between:
+                break
+            mid = between[len(between) // 2]
+            if mid not in nse[s]:
+                path = fetch(mid, cache_dir)
+                if path is None:
+                    return None, "probe not retrievable"
+                found = False
+                for sym, series, dd, close, last, pc, isin_no in parse_bhavcopy(path):
+                    if series == "EQ" and close and (sym == s or sym in ALIAS_OF.get(s, ())):
+                        nse[s][dd] = close
+                        nse_pc[s][dd] = pc
+                        found = True
+                if not found:
+                    return None, "stock absent on probe day"
+            probes += 1
+            rm = ratio(s, mid)
+            if rm is None:
+                return None, "no yfinance close on probe day"
+            if abs(rm / r0 - 1) <= tolerance:
+                lo = mid
+            elif abs(rm / r1 - 1) <= tolerance:
+                hi = mid
+            else:
+                return None, "more than one ratio step in the month"
+        ex = hi
+        pc = nse_pc[s].get(ex)
+        if not pc or lo not in nse[s]:
+            return None, "no PREVCLOSE on the ex-date"
+        ret = (nse[s][d1] / nse[s][ex]) * (nse[s][ex] / pc) * (nse[s][lo] / nse[s][d0]) - 1
+        return ret, ex
+
+    rows = []
+    for i, mo in enumerate(months):
+        if mo < start:
+            continue
+        d1, d0 = signal[mo], signal[months[i - 1]]
+        for s in mem[mo]:
+            y0, y1, n0, n1 = yf[s].get(d0), yf[s].get(d1), nse[s].get(d0), nse[s].get(d1)
+            row = {"month": mo, "symbol": s, "d0": d0, "d1": d1}
+            if not (y0 and y1 and n0 and n1):
+                row.update(status="absent", which=[k for k, v in (("yf_t-1", y0), ("yf_t", y1), ("nse_t-1", n0), ("nse_t", n1)) if not v])
+                rows.append(row)
+                continue
+            ry = y1 / y0 - 1
+            rn = n1 / n0 - 1
+            split = abs((y1 / n1) / (y0 / n0) - 1) > tolerance
+            if split:
+                rn2, ex = nse_return_with_split(s, d0, d1)
+                if rn2 is None:
+                    row.update(status="unrecovered_split", reason=ex, r_yf=round(ry, 5), r_nse_raw=round(rn, 5))
+                    rows.append(row)
+                    continue
+                rn = rn2
+                row["ex_date"] = ex
+            gap = abs((1 + ry) / (1 + rn) - 1)
+            row.update(status="match" if gap <= tolerance else "mismatch", r_yf=round(ry, 5), r_nse=round(rn, 5),
+                       gap_bp=round(gap * 1e4, 2), split=split)
+            rows.append(row)
+    # pre-commitment 3: the faulted-date rule, over the whole run
+    by_date = collections.defaultdict(lambda: [0, 0])
+    for r in rows:
+        if r["status"] in ("match", "mismatch"):
+            by_date[r["d1"]][1] += 1
+            by_date[r["d1"]][0] += r["status"] == "mismatch"
+    faulted = sorted(d for d, (bad, n) in by_date.items() if n and bad / n > bad_frac and bad >= bad_min)
+    for r in rows:
+        if r["d1"] in faulted:
+            r["status"] = "faulted_date"
+    total = len(rows)
+    ok = sum(1 for r in rows if r["status"] == "match")
+    by_year = collections.defaultdict(lambda: [0, 0])
+    for r in rows:
+        by_year[r["month"][:4]][1] += 1
+        by_year[r["month"][:4]][0] += r["status"] == "match"
+    return {
+        "tolerance_bp": tolerance * 1e4, "bad_date_rule": f"> {bad_frac:.0%} of the date's comparable members and >= {bad_min} stocks",
+        "member_months": total, "match": ok, "pct_match": round(100 * ok / total, 2), "gate_95pct": ok / total >= 0.95,
+        "status_counts": dict(collections.Counter(r["status"] for r in rows)),
+        "by_year": {y: f"{a}/{b} ({100 * a / b:.1f}%)" for y, (a, b) in sorted(by_year.items())},
+        "faulted_dates": {d: f"{by_date[d][0]}/{by_date[d][1]} mismatched" for d in faulted},
+        "catches_2015_11": any(d.startswith("2015-11") for d in faulted),
+        "split_months": sum(1 for r in rows if r.get("split")),
+        "split_recovered": sum(1 for r in rows if r.get("ex_date")),
+        "unrecovered_reasons": dict(collections.Counter(r.get("reason") for r in rows if r["status"] == "unrecovered_split")),
+        "absent_by_symbol": dict(collections.Counter(r["symbol"] for r in rows if r["status"] == "absent").most_common(15)),
+        "mismatches": [r for r in rows if r["status"] in ("mismatch", "unrecovered_split")],
+        "rows": rows,
+    }
+
+
+ALIAS_OF = collections.defaultdict(set)
+
+
+def amendment4_main():
+    ap = argparse.ArgumentParser(description="Amendment 4: extract bhavcopies under the alias rule and run the return-based vendor gate once.")
+    ap.add_argument("--yf", required=True)
+    ap.add_argument("--zip-dirs", nargs="+", required=True, help="directories of downloaded bhavcopy zips")
+    ap.add_argument("--cache-dir", required=True, help="where bisection probes are downloaded")
+    ap.add_argument("--refs", required=True, help="directory with EQUITY_L.csv and symbolchange.csv")
+    ap.add_argument("--symbols", required=True, help="text file of current symbols")
+    ap.add_argument("--membership", default=os.path.join(HERE, "data", "nifty100_membership_monthly.csv"))
+    ap.add_argument("--bhav-out", required=True, help="sqlite the extraction writes")
+    ap.add_argument("--out", required=True)
+    a = ap.parse_args()
+    symbols = set(open(a.symbols).read().split())
+    alias, isin = bhav_aliases(symbols, os.path.join(a.refs, "EQUITY_L.csv"), os.path.join(a.refs, "symbolchange.csv"))
+    for old, cur in alias.items():
+        ALIAS_OF[cur].add(old)
+    n = extract_bhavcopies(a.zip_dirs, a.bhav_out, alias, isin)
+    print("rows stored under current symbols:", n, "| alias entries:", len(alias) - len(symbols), "| ISIN entries:", len(isin), flush=True)
+    res = level_test_returns(sqlite3.connect(a.yf), sqlite3.connect(a.bhav_out), a.membership, a.cache_dir)
+    json.dump(res, open(a.out, "w"), indent=1)
+    print(json.dumps({k: v for k, v in res.items() if k not in ("mismatches", "rows")}, indent=1))
+
+
+if __name__ == "__main__" and os.environ.get("STAGE0_AMENDMENT4"):
+    amendment4_main()

@@ -65,7 +65,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | 3b — intraday momentum | **WITHDRAWN at stage 1, no trial** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
-| **3f — stage 0 feasibility** | **done — 0c source CONFIRMED, 0b PASS 95.17%, 0c vendor HALT (38%)** | `results-3f-stage0.md` · membership rebuilt from 547 NSE press releases, consistent to 2009-01-12 · **stopped for reviewer**; stage 1 not written |
+| **3f — stage 0 feasibility** | **0c source CONFIRMED, 0b PASS 95.17%; 0c vendor gate open: HALT as pre-registered (38%), amendment 3 level test FAIL (53.98%, a specification error), amendment 4 (Entry 17: the last correction) pending its single run** | `results-3f-stage0.md` · membership rebuilt from 547 NSE press releases, consistent to 2009-01-12 · stage 1 not written |
 
 Carried over from Entry 3, after the step-2 block clears: null diagnostic,
 friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
