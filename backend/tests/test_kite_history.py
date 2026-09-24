@@ -300,3 +300,40 @@ def test_source_yfinance_ignores_the_cache_even_when_filled(monkeypatch):
                         lambda tickers, period, interval: called.append(1) or {"TESTCO.NS": [{"time": "x"}]})
     backtester._intraday_source(Args("yfinance"), ["TESTCO"])
     assert called, "--source yfinance must not quietly read the Kite cache"
+
+
+# ---- #108: dividend adjustment is as of the fetch date --------------------
+
+def test_one_fetch_run_is_reported_as_one_run():
+    _download(FakeKite())
+    runs = kite_history.fetch_runs()
+    assert len(runs) == 1 and runs[0]["spans"] > 0
+    assert kite_history.status()["fetch_runs"] == runs
+
+
+def test_spans_fetched_on_different_days_are_reported_as_separate_runs():
+    _download(FakeKite())
+    with kite_history._conn() as c:     # pretend the oldest span came from an earlier run
+        c.execute("UPDATE fetched SET fetched_at = fetched_at - 5 * 86400 "
+                  "WHERE from_date = (SELECT MIN(from_date) FROM fetched)")
+    assert len(kite_history.fetch_runs()) == 2
+
+
+def test_refresh_drops_the_old_bars_and_refetches_every_window():
+    first = FakeKite()
+    _download(first)
+    with kite_history._conn() as c:
+        c.execute("UPDATE fetched SET fetched_at = fetched_at - 5 * 86400")
+        c.execute("UPDATE candles SET close = 42.0")         # stale, differently-adjusted prices
+    again = FakeKite()
+    kite_history.download_symbol("TESTCO", days=180, kite=again, token_for=lambda s: 12345, refresh=True)
+    assert len(again.calls) == len(first.calls)                # nothing skipped
+    assert len(kite_history.fetch_runs()) == 1                 # one consistent run again
+    assert all(b["close"] == 100.5 for b in kite_history.load("TESTCO"))
+
+
+def test_without_refresh_already_fetched_windows_are_still_skipped():
+    _download(FakeKite())
+    again = FakeKite()
+    _download(again)
+    assert again.calls == []

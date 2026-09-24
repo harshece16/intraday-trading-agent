@@ -487,6 +487,14 @@ def _intraday_source(args, symbols):
             st = kite_history.status(args.interval)
             print(f"Intraday from the Kite cache: {len(cached)} symbols, {st['sessions']} sessions "
                   f"({st['from']} to {st['to']}).")
+            runs = st.get("fetch_runs") or []
+            if len(runs) > 1:
+                # #108: Kite back-adjusts for dividends as of the fetch date, so
+                # spans fetched on different days can be scaled differently.
+                print(f"WARNING: the cache was filled in {len(runs)} runs ({', '.join(r['date'] for r in runs)}). "
+                      "Kite adjusts history for dividends as of each fetch, so prices can step where spans from "
+                      "different runs meet (issue #108). Re-fetch the whole cache in one run "
+                      "(python kite_history.py --days 730 --refresh) before trusting results across those dates.")
             return cached
         if want == "kite":
             raise SystemExit("--source kite, but none of these symbols are in the cache.")
