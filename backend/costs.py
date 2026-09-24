@@ -17,7 +17,10 @@ def leg_cost(side: str, price: float, qty: int, costs_cfg: dict) -> float:
     """Total brokerage + statutory charges for one executed order (one leg
     of a trade — the entry or the exit)."""
     turnover = price * qty
-    brokerage = min(costs_cfg["brokerage_per_order"], turnover * costs_cfg["brokerage_pct"] / 100)
+    # Options are a flat Rs 20 per executed order whatever the premium; equity,
+    # futures, commodity and currency are 0.03% capped at Rs 20.
+    brokerage = costs_cfg["brokerage_flat"] if "brokerage_flat" in costs_cfg else \
+        min(costs_cfg["brokerage_per_order"], turnover * costs_cfg["brokerage_pct"] / 100)
     # Intraday STT is sell-side only; delivery STT applies to both legs, so
     # stt_pct_buy / dp_charge_per_sell default to 0 and leave intraday
     # configs (config.COSTS) computing exactly what they always did.
@@ -63,6 +66,20 @@ DELIVERY_COSTS = {
     "stamp_duty_pct_buy": 0.015, "gst_pct": 18.0,
     # zerodha.com/charges, 2026-09-23: "Rs 15.34 per scrip", GST included (#79).
     "slippage_pct": 0.03, "dp_charge_per_sell": 15.34,
+}
+
+
+# NSE index/stock options, bought and sold (not exercised) — zerodha.com/charges,
+# read 2026-09-23 (#35). Every percentage is of the PREMIUM traded: STT
+# "0.15% on sell side (on premium)", NSE transaction "0.03553% (on premium)",
+# stamp "0.003% ... on buy side", SEBI Rs 10/crore, IPFT Rs 0.01/crore, GST 18%
+# on brokerage + SEBI + transaction charges. Slippage is not modelled: option
+# spreads vary too much by strike and expiry for one figure to mean anything.
+FNO_OPTION_COSTS = {
+    "brokerage_flat": 20.0, "brokerage_per_order": 20.0, "brokerage_pct": 0.0,
+    "stt_pct_sell": 0.15, "exchange_txn_pct": 0.03553, "sebi_charges_pct": 0.0001,
+    "ipft_pct": 0.0000001, "stamp_duty_pct_buy": 0.003, "gst_pct": 18.0,
+    "slippage_pct": 0.0,
 }
 
 
