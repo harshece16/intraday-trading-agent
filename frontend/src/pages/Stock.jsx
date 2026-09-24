@@ -133,6 +133,10 @@ function TimingTab({ r, a }) {
         <Tip k="rsi">RSI</Tip> {num(b.rsi, 0)}{b.volume_ratio != null ? `, volume ${num(b.volume_ratio, 1)}× average` : ""}.
         {patterns.length ? ` Candle patterns: ${joinWords(patterns)}.` : ""}
       </p>
+      <p className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>
+        Context, not a signal: trading on this read (the confluence engine) was measured on 317 sessions and lost
+        before costs, −0.43R per trade over 668 trades (trial 40, README §63).
+      </p>
       <div className="cases">
         <CaseBar title="Case for buying" value={b.bull_score} thr={b.entry_threshold} color="var(--long)" items={b.reasons || []} emptyText="Nothing bullish yet." />
         <CaseBar title="Case for shorting" value={b.bear_score} thr={b.entry_threshold} color="var(--short)" items={b.bear_reasons || []} emptyText="Nothing bearish yet." />
