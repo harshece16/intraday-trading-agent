@@ -90,8 +90,11 @@ def test_intraday_leg_cost_unchanged_by_delivery_keys():
     turnover = 1000 * 10
     brokerage = min(c["brokerage_per_order"], turnover * c["brokerage_pct"] / 100)
     exch = turnover * c["exchange_txn_pct"] / 100
-    expected_buy = brokerage + exch + turnover * c["sebi_charges_pct"] / 100 \
-        + turnover * c["stamp_duty_pct_buy"] / 100 + (brokerage + exch) * c["gst_pct"] / 100
+    sebi = turnover * c["sebi_charges_pct"] / 100
+    ipft = turnover * c.get("ipft_pct", 0.0) / 100
+    # GST base per Zerodha's published tariff: brokerage + SEBI + transaction charges (+ IPFT), #79
+    expected_buy = brokerage + exch + sebi + ipft \
+        + turnover * c["stamp_duty_pct_buy"] / 100 + (brokerage + exch + sebi + ipft) * c["gst_pct"] / 100
     assert abs(leg_cost("BUY", 1000, 10, c) - expected_buy) < 1e-9
 
 

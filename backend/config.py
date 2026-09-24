@@ -354,10 +354,12 @@ COSTS = {
     "brokerage_per_order": 20.0,     # flat fee per executed order (buy or sell)...
     "brokerage_pct": 0.03,           # ...or this % of order value, whichever is lower
     "stt_pct_sell": 0.025,           # securities transaction tax, sell side only (intraday equity)
-    "exchange_txn_pct": 0.00297,     # NSE transaction charges, both sides
-    "sebi_charges_pct": 0.0001,      # both sides
+    # Rates below re-checked against zerodha.com/charges on 2026-09-23 (#79).
+    "exchange_txn_pct": 0.00307,     # NSE transaction charges, both sides (BSE is 0.00375)
+    "sebi_charges_pct": 0.0001,      # both sides (Rs 10/crore)
+    "ipft_pct": 0.0000001,           # NSE Investor Protection Fund Trust, Rs 0.01/crore, both sides
     "stamp_duty_pct_buy": 0.003,     # buy side only
-    "gst_pct": 18.0,                 # on (brokerage + exchange transaction charges)
+    "gst_pct": 18.0,                 # on (brokerage + SEBI charges + transaction charges + IPFT)
     # Estimated slippage per leg between the price a signal fires at and the
     # actual fill — market orders on 5-min bars won't fill at the exact
     # close. This is a rough estimate, not measured; real slippage depends
