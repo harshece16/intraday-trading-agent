@@ -45,7 +45,8 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 class _Position:
-    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost", "stop", "target", "risk_ps", "entry_time")
+    __slots__ = ("quantity", "avg_price", "entry_atr", "entry_cost", "stop", "target", "risk_ps", "entry_time",
+                 "raw_entry")
 
     def __init__(self):
         self.quantity = 0
@@ -56,6 +57,7 @@ class _Position:
         self.target = None
         self.risk_ps = None
         self.entry_time = None
+        self.raw_entry = None      # the pre-slippage signal price, so friction can be split (#53)
 
 
 def _to_ist(iso_time: str) -> datetime:
@@ -65,6 +67,7 @@ def _to_ist(iso_time: str) -> datetime:
 
 def _open_position(pos, side, raw_price, qty, atr_val, costs_cfg, risk, stop=None, target=None, entry_time=None):
     pos.entry_time = entry_time
+    pos.raw_entry = raw_price
     fill_price = apply_slippage(side, raw_price, costs_cfg)
     pos.quantity = qty if side == "BUY" else -qty
     pos.avg_price = fill_price
@@ -81,7 +84,12 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
     side_sign = 1 if pos.quantity > 0 else -1
     qty = abs(pos.quantity)
 
+    # gross_pnl is AFTER slippage (both fills are slipped) and before charges.
+    # The pre-slippage figure is kept so reports can show friction whole —
+    # slippage and charges — rather than charges alone (#53).
     gross_pnl = (fill_price - pos.avg_price) * qty * side_sign
+    raw_entry = pos.raw_entry if pos.raw_entry is not None else pos.avg_price
+    pre_slippage_pnl = (raw_exit_price - raw_entry) * qty * side_sign
     exit_cost = leg_cost(exit_side, fill_price, qty, costs_cfg)
     total_cost = pos.entry_cost + exit_cost
     net_pnl = gross_pnl - total_cost
@@ -91,6 +99,7 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
         "symbol": symbol, "exit_time": ts.isoformat(), "side": "LONG" if side_sign > 0 else "SHORT",
         "qty": qty, "entry_price": pos.avg_price, "exit_price": fill_price,
         "gross_pnl": gross_pnl, "cost": total_cost, "pnl": net_pnl, "reason": reason,
+        "pre_slippage_pnl": pre_slippage_pnl, "slippage": pre_slippage_pnl - gross_pnl,
         "r": net_pnl / (pos.risk_ps * qty) if pos.risk_ps else None,
         # Recorded so post-hoc diagnostics (max favorable excursion, how
         # long a trade lived, whether price later reached target) can use
@@ -99,7 +108,7 @@ def _close_position(pos, raw_exit_price, risk, trades, symbol, ts, reason, costs
         "stop": pos.stop, "target": pos.target, "risk_per_share": pos.risk_ps,
     })
     pos.quantity, pos.avg_price, pos.entry_atr, pos.entry_cost = 0, 0.0, None, 0.0
-    pos.stop = pos.target = pos.risk_ps = pos.entry_time = None
+    pos.stop = pos.target = pos.risk_ps = pos.entry_time = pos.raw_entry = None
     risk.open_positions_count = max(0, risk.open_positions_count - 1)
     return net_pnl
 
@@ -262,7 +271,7 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
     return trades, equity_curve
 
 
-def report(trades, equity_curve, starting_capital, costs_enabled, n_trials=1):
+def report(trades, equity_curve, starting_capital, costs_enabled, n_trials=1, data_source=None):
     if not trades:
         print("\nNo trades were generated — try a longer --days window, a different")
         print("strategy, or check that the symbols/interval returned data at all.")
@@ -294,10 +303,19 @@ def report(trades, equity_curve, starting_capital, costs_enabled, n_trials=1):
     print(f"Profit factor:     {(gross_profit / gross_loss) if gross_loss else float('inf'):.2f}")
     print(f"{'-'*50}")
     if costs_enabled:
-        print(f"Gross P&L:         {total_gross_pnl:.2f}  (before costs/slippage)")
-        print(f"Costs + slippage:  {total_costs:.2f}  (avg {total_costs / len(trades):.2f}/trade, "
-              f"{total_costs / total_gross_pnl * 100:.1f}% of gross profit)" if total_gross_pnl > 0
-              else f"Costs + slippage:  {total_costs:.2f}  (avg {total_costs / len(trades):.2f}/trade)")
+        # Friction is slippage AND charges. "Gross" used to be printed as
+        # "before costs/slippage" while it was already after slippage, so the
+        # friction line showed charges only and understated it (#53: 0.254R
+        # reported, 0.398R real).
+        slippage = sum(t.get("slippage", 0.0) for t in trades)
+        pre_friction = sum(t.get("pre_slippage_pnl", t["gross_pnl"]) for t in trades)
+        friction = slippage + total_costs
+        print(f"Pre-friction P&L:  {pre_friction:.2f}  (signal prices, before slippage and charges)")
+        print(f"Slippage:          {slippage:.2f}  (avg {slippage / len(trades):.2f}/trade)")
+        print(f"Charges:           {total_costs:.2f}  (avg {total_costs / len(trades):.2f}/trade)")
+        print(f"Total friction:    {friction:.2f}" + (f"  ({friction / pre_friction * 100:.1f}% of pre-friction profit)"
+                                                       if pre_friction > 0 else ""))
+        print(f"Gross P&L:         {total_gross_pnl:.2f}  (after slippage, before charges)")
     print(f"Net P&L:           {total_pnl:.2f}  ({total_pnl / starting_capital * 100:.2f}% of starting capital)")
     print(f"Max drawdown:      {max_dd:.2f}  ({max_dd_pct:.2f}%)")
     print(f"Exit reasons:      {_count_reasons(trades)}")
@@ -331,8 +349,18 @@ def report(trades, equity_curve, starting_capital, costs_enabled, n_trials=1):
     if not costs_enabled:
         print("NOTE: run with costs disabled (--no-costs) — this is a frictionless,")
         print("unrealistic number. Drop --no-costs to see the number that matters.")
-    print("Reminder: this is a small, recent, delayed-data sample from yfinance —")
-    print("treat it as a sanity check on the strategy's logic, not proof of an edge.")
+    # Describe the sample this run actually used (#48). The old line always
+    # said "a small, recent, delayed-data sample from yfinance", including on
+    # 495 sessions of Kite cache, which told the reader to discount a
+    # well-powered result.
+    days = sorted({(t.get("entry_time") or t["exit_time"])[:10] for t in trades})
+    source = f" from {data_source}" if data_source else ""
+    if len(days) < 60:
+        print(f"Reminder: {len(days)} trading session(s){source} ({days[0]} to {days[-1]}) is a small sample —")
+        print("treat it as a sanity check on the strategy's logic, not proof of an edge.")
+    else:
+        print(f"Sample: trades on {len(days)} sessions{source} ({days[0]} to {days[-1]}). Large enough to measure;")
+        print("judge it by net R's t-statistic and both halves, and it is still not proof of an edge.")
 
 
 def _count_reasons(trades):
@@ -455,6 +483,7 @@ def _intraday_source(args, symbols):
     if want != "yfinance" and have:
         cached = kite_history.load_batch(symbols, interval=args.interval, days=args.days)
         if cached:
+            args.data_source = "the Kite 5-minute cache"
             st = kite_history.status(args.interval)
             print(f"Intraday from the Kite cache: {len(cached)} symbols, {st['sessions']} sessions "
                   f"({st['from']} to {st['to']}).")
@@ -464,6 +493,7 @@ def _intraday_source(args, symbols):
     if want != "yfinance":
         print("Kite history cache is empty — falling back to yfinance (~60 days). "
               "Run kite_history.py to go deeper.")
+    args.data_source = "yfinance (delayed, ~60 days)"
     tickers = [scanner.yf_ticker(s) for s in symbols]
     return {t[:-3]: c for t, c in scanner.download_batch(tickers, f"{args.days}d", args.interval).items() if c}
 
@@ -555,7 +585,8 @@ def main():
                                              args.interval, args.days, costs_cfg,
                                              preloaded=preloaded, allowed_by_day=picks)
         n_trials = evaluation.log_trial(trial_label)
-        report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs, n_trials=n_trials)
+        report(trades, equity_curve, args.capital, costs_enabled=not args.no_costs, n_trials=n_trials,
+               data_source=getattr(args, "data_source", None))
 
 
 if __name__ == "__main__":
