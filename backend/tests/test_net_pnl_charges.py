@@ -244,3 +244,23 @@ def test_a_real_round_trip_through_the_engine_is_journalled_net():
     # what the header and the daily loss limit read
     assert st.realized_pnl_today == pytest.approx(exit_["realized"])
     assert engine.risk.daily_realized_pnl == pytest.approx(exit_["realized"])
+
+
+def test_tariff_matches_zerodhas_published_rates_79():
+    """#79: rates re-checked against zerodha.com/charges on 2026-09-23."""
+    import config
+    import costs
+    assert config.COSTS["exchange_txn_pct"] == 0.00307
+    assert costs.DELIVERY_COSTS["exchange_txn_pct"] == 0.00307
+    assert costs.DELIVERY_COSTS["dp_charge_per_sell"] == 15.34
+
+
+def test_gst_is_charged_on_sebi_and_ipft_too_79():
+    """Zerodha: GST is 18% on brokerage + SEBI charges + transaction charges;
+    IPFT is charged plus GST."""
+    import costs
+    cfg = {"brokerage_per_order": 0.0, "brokerage_pct": 0.0, "stt_pct_sell": 0.0, "exchange_txn_pct": 0.0,
+           "sebi_charges_pct": 0.0001, "ipft_pct": 0.0000001, "stamp_duty_pct_buy": 0.0, "gst_pct": 18.0}
+    turnover = 1e7                                   # Rs 1 crore
+    sebi, ipft = turnover * 0.0001 / 100, turnover * 0.0000001 / 100
+    assert abs(costs.leg_cost("SELL", turnover, 1, cfg) - (sebi + ipft) * 1.18) < 1e-9
