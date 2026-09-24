@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import auth
+import kite_tunnel
 import chaywanaprash
 import config
 import data_provider
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI):
         state.running = False
         task.cancel()
     finally:
+        kite_tunnel.stop()        # never leave an ngrok this backend started running after it
         engine_lock.release(database.DB_PATH)
 
 
@@ -548,6 +550,10 @@ def kite_login():
             "restart the backend before connecting.</p>",
             status_code=400,
         )
+    if kite_tunnel.enabled():
+        tunnel = kite_tunnel.ensure_up()
+        if not tunnel["ok"]:
+            return HTMLResponse(f"<h3>Couldn't open the Kite login tunnel</h3><p>{tunnel['error']}</p>", status_code=503)
     from kiteconnect import KiteConnect
     kite = KiteConnect(api_key=config.KITE_API_KEY)
     # Mark the start of the round trip. If Zerodha never redirects back,
@@ -564,9 +570,17 @@ def kite_login_url():
     if not config.KITE_API_KEY:
         return JSONResponse({"error": "Kite isn't set up yet — set KITE_API_KEY and KITE_API_SECRET and restart."},
                             status_code=400)
+    # Kite will redirect to the ngrok domain registered as the Redirect URL,
+    # so the tunnel has to be up before the user is sent to log in.
+    tunnel = kite_tunnel.ensure_up() if kite_tunnel.enabled() else {"ok": True, "started": False, "error": None}
+    if not tunnel["ok"]:
+        return JSONResponse({"error": f"Couldn't open the Kite login tunnel ({tunnel['error']}). Kite would redirect "
+                                      f"to {config.KITE_REDIRECT_URL} and find nothing there, so the login wasn't "
+                                      f"started. Run `ngrok http 8000 --url {kite_tunnel.public_url()}` and try again."},
+                            status_code=503)
     from kiteconnect import KiteConnect
     data_provider.note_kite_login_started()
-    return {"url": KiteConnect(api_key=config.KITE_API_KEY).login_url()}
+    return {"url": KiteConnect(api_key=config.KITE_API_KEY).login_url(), "tunnel_started": tunnel["started"]}
 
 
 @app.get("/kite/callback")
@@ -575,6 +589,9 @@ def kite_callback(request_token: Optional[str] = None, status: Optional[str] = N
     # Reaching this route at all is the proof the round trip closed, whatever
     # the outcome — record it before any early return.
     data_provider.note_kite_callback()
+    # The round trip is over, whatever the outcome: take the tunnel down once
+    # this response has gone back out through it.
+    kite_tunnel.stop_soon()
     if status != "success" or not request_token:
         return HTMLResponse(
             "<h3>Kite login didn't complete</h3><p>Close this tab and try again from the dashboard.</p>",

@@ -369,7 +369,25 @@ KITE_SESSION_GENERATED_AT = _session.get("generated_at")
 # (developers.kite.trade) so Kite knows where to send the user back to
 # after login. Override with BACKEND_BASE_URL if not running on localhost:8000.
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "http://127.0.0.1:8000")
-KITE_REDIRECT_URL = f"{BACKEND_BASE_URL}/kite/callback"
+
+# The Kite login tunnel (kite_tunnel.py). Kite only accepts an HTTPS Redirect
+# URL, so the one registered at developers.kite.trade is this ngrok static
+# domain. The backend starts ngrok on it when a login starts and stops it once
+# the callback arrives (or after max_seconds), so nobody has to remember to
+# run ngrok before clicking Reconnect. Set NGROK_DOMAIN to change it, or
+# "enabled": False to manage the tunnel by hand.
+KITE_TUNNEL = {
+    "enabled": True,
+    "domain": os.environ.get("NGROK_DOMAIN", "ambiguity-patchy-untold.ngrok-free.dev"),
+    "backend_port": 8000,
+    "api_port": 4040,          # ngrok's local agent API, used to see when the tunnel is up
+    "start_timeout_s": 15,
+    "max_seconds": 600,
+}
+# What to register as the Redirect URL at developers.kite.trade, and what the
+# dashboard shows as the redirect: the tunnel's HTTPS URL when it's on.
+KITE_REDIRECT_URL = (f"https://{KITE_TUNNEL['domain']}/kite/callback" if KITE_TUNNEL["enabled"] and KITE_TUNNEL["domain"]
+                     else f"{BACKEND_BASE_URL}/kite/callback")
 
 # CORS — was wide open ("*"), flagged by a multi-expert review since this API carries
 # real trading control behind an X-Api-Key/?key= param, and a wildcard plus a key that
