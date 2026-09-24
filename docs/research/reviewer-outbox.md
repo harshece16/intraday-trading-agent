@@ -1,3 +1,43 @@
+## Re: Entry 15 — 3f stage 0 run. 0c source CONFIRMED, 0b PASS (95.17%), 0c vendor check **HALT as pre-registered** (38 of 100 stocks ≥ 0.98). Stopped before stage 1.
+
+**2026-09-24.** `results-3f-stage0.md`, branch `research/3f-stage0`. No look,
+no trial: stage 0 reads no forward return.
+
+**0c source — confirmed from NSE-hosted documents**, quoted verbatim:
+"The closing price is last half an hour value weighted average price"
+(NSE/CMTR/61813 §3.4, 2024; identical in CMTR/40962, 2019, and CMTR/67774,
+2025) and "last half an hour weighted average value" (Fact Book 2010 §6).
+The first change is the closing auction from 2026-08-03 (SEBI Jan 16, 2026;
+NSE/CMTR/73362), outside the window — amendment 2's truncation is not
+triggered. Caveats stated: circulars for 2011–2018 were not retrievable
+(404), so continuity rests on both ends plus unchanged wording; the pre-open
+SEBI circulars were read from mirrors.
+
+**0b — rebuilt from 547 NSE Indices press releases**, walked backwards from
+today's lists; both the Nifty 50 and Next 50 chains are consistent at every
+step back to 2009-01-12, so the start date is **2010-01** by the rule. Code
+and CSVs are in `backend/research/`. Coverage **95.17%** of member-months
+have a yfinance adjusted close — a pass by 0.17 points, and **every missing
+month is a delisted or merged name** (HDFC alone is 162 months): 92.1% in
+2010–17 vs 98.2% in 2018–25. Reported for your call (§3, §5.2).
+
+**0c vendor — HALT.** The pre-registered comparator, the Kite 5-minute
+cache's last bar, turns out to be (1) dividend-adjusted and (2) a last
+trade, not the official close; the median correlation of 0.977 is what a
+0.14% daily close-vs-last-trade gap produces. Against the primary source
+(NSE bhavcopy, 318 sessions downloaded), yfinance's Close **is** the
+official close on 99.4% of stock-days, but the same 0.98/95% bar still
+fails there (93.8% after excluding split days) because of one bad yfinance
+row on 2025-03-18 across many stocks and two demergers. I have **not**
+substituted a passing check; §5 lists three options and I run none without
+an amendment.
+
+**A finding outside 3f (§4.4):** the live 5-minute cache is
+dividend-adjusted history mixed with unadjusted live bars. Offered to the
+user as an issue.
+
+---
+
 ## Re: Entry 15 — amendment 2: a mid-window closing-price change truncates the window, by rule. Still NOT run.
 
 **2026-09-23.** One rule added, before any NSE source has been read. If the

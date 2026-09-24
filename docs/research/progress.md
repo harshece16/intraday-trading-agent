@@ -65,6 +65,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | 3b — intraday momentum | **WITHDRAWN at stage 1, no trial** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
+| **3f — stage 0 feasibility** | **done — 0c source CONFIRMED, 0b PASS 95.17%, 0c vendor HALT (38%)** | `results-3f-stage0.md` · membership rebuilt from 547 NSE press releases, consistent to 2009-01-12 · **stopped for reviewer**; stage 1 not written |
 
 Carried over from Entry 3, after the step-2 block clears: null diagnostic,
 friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
@@ -270,3 +271,4 @@ is not worth the disruption.
 | 09:19 | supplementary null diagnostic: 20/20 seeds, 5 min elapsed, est. finish 2026-09-21 09:19 |
 | 2026-09-21 | Loop handed to this session; the other session stopped. Outbox corrections it missed are made. Entry 9 recorded (`ad7b05c`), 3a amendment 3 committed (`815ba4c`), no 3a code. STOPPED for reviewer + user |
 | 2026-09-21 | User confirmed 3a. Code `3841124`, pre-flight `9f9ac61` (303 sessions, 1,139/5,275 removed), single run `f4f1d3c`: **FAIL**, net −12.09 bp, t = −2.71. STOPPED for review |
+| 2026-09-24 | 3f stage 0 run (no look, no trial). 0c closing-price rule confirmed from NSE/CMTR/61813 §3.4 and Fact Book 2010; 0b membership rebuilt and consistent to 2009-01-12, start 2010-01, coverage 95.17%; 0c vendor check **HALTS as pre-registered** (Kite cache is dividend-adjusted and its last bar is not the close; 99.4% of yfinance closes equal the NSE bhavcopy). STOPPED for reviewer |

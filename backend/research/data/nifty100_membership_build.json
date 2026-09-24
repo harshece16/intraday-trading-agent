@@ -1,0 +1,307 @@
+{
+ "today": "2026-09-24",
+ "start": "2010-01",
+ "months": 201,
+ "first_month": "2010-01",
+ "last_month": "2026-09",
+ "sizes": {
+  "100": 140,
+  "101": 61
+ },
+ "distinct_symbols": 204,
+ "n50_consistent_back_to": "2009-01-12",
+ "nn50_consistent_back_to": "2009-01-12",
+ "n50_first_bad": null,
+ "nn50_first_bad": null,
+ "n100_sections_checked": 51,
+ "n100_mismatches": [
+  {
+   "date": "2017-09-29",
+   "explicit_incl": [
+    "DMART",
+    "MRF"
+   ],
+   "explicit_excl": [
+    "DIVISLAB",
+    "UBL"
+   ],
+   "derived_incl": [
+    "DMART",
+    "MRF"
+   ],
+   "derived_excl": [
+    "DIVISLAB",
+    "TATAMTRDVR",
+    "UBL"
+   ]
+  },
+  {
+   "date": "2020-06-26",
+   "explicit_incl": [
+    "ABBOTINDIA",
+    "IGL",
+    "MUTHOOTFIN",
+    "NAUKRI",
+    "TORNTPHARM"
+   ],
+   "explicit_excl": [
+    "ASHOKLEY",
+    "IDEA",
+    "LTF",
+    "NIACL",
+    "SAMMAANCAP",
+    "TATAMTRDVR"
+   ],
+   "derived_incl": [
+    "ABBOTINDIA",
+    "IGL",
+    "MUTHOOTFIN",
+    "NAUKRI",
+    "TORNTPHARM"
+   ],
+   "derived_excl": [
+    "ASHOKLEY",
+    "IDEA",
+    "LTF",
+    "NIACL",
+    "SAMMAANCAP"
+   ]
+  },
+  {
+   "date": "2023-09-29",
+   "explicit_incl": [
+    "PNB",
+    "SHRIRAMFIN",
+    "TATAMTRDVR",
+    "TRENT",
+    "TVSMOTOR",
+    "ZYDUSLIFE"
+   ],
+   "explicit_excl": [
+    "ACC",
+    "HDFCAMC",
+    "INDUSTOWER",
+    "NYKAA",
+    "PAGEIND"
+   ],
+   "derived_incl": [
+    "PNB",
+    "SHRIRAMFIN",
+    "TRENT",
+    "TVSMOTOR",
+    "ZYDUSLIFE"
+   ],
+   "derived_excl": [
+    "ACC",
+    "HDFCAMC",
+    "INDUSTOWER",
+    "NYKAA",
+    "PAGEIND"
+   ]
+  },
+  {
+   "date": "2024-08-30",
+   "explicit_incl": [],
+   "explicit_excl": [
+    "TATAMTRDVR"
+   ],
+   "derived_incl": [],
+   "derived_excl": []
+  }
+ ],
+ "dedupe_log": [
+  [
+   "voided",
+   "N50",
+   "YESBANK",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N50",
+   "SHREECEM",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "ASHOKLEY",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "SAMMAANCAP",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "LTF",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "SHREECEM",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "IDEA",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "ADANIENSOL",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "IDBI",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "NAUKRI",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "LTM",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "NN50",
+   "TORNTPHARM",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "ASHOKLEY",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "SAMMAANCAP",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "LTF",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "IDEA",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "YESBANK",
+   "EXCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "ADANIENSOL",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "IDBI",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "NAUKRI",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "LTM",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "voided",
+   "N100",
+   "TORNTPHARM",
+   "INCL",
+   "2020-03-27",
+   "ind_prs18022020.txt"
+  ],
+  [
+   "superseded",
+   "N100",
+   "GLENMARK",
+   "INCL",
+   "2009-01-12",
+   "ind_prs07012009.txt",
+   "2009-01-12",
+   "ind_prs07012009.txt"
+  ]
+ ],
+ "events": 894,
+ "layouts": {
+  "table": 873,
+  "prose": 1,
+  "manual": 20
+ },
+ "unresolved_names": []
+}
