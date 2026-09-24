@@ -26,7 +26,9 @@ import re
 import config
 
 AUTH_TIMEOUT_S = 5.0
-_KEY_IN_URL = re.compile(r"([?&]key=)[^&\s\"']+")
+# The dashboard key, and Kite's one-time request_token, which Kite puts in the
+# /kite/callback URL: single-use and short-lived, but still a credential.
+_KEY_IN_URL = re.compile(r"([?&](?:key|request_token)=)[^&\s\"']+")
 
 
 def key_ok(candidate) -> bool:

@@ -3065,6 +3065,19 @@ When no support or resistance lay beyond the entry, the checklist aimed at a **g
 
 It passes (worse in one half only) and **removes 16% of trades with no measurable change in expectancy**. It creates no edge. Close-of-day "near misses" on this branch are now reported as a boolean gate with no distance to show, not as a close R:R. Trials 38 and 39; `docs/research/results-fix40-no-level-target.md`.
 
+### 62. "Connect Kite" works without starting ngrok first
+
+Kite only accepts an HTTPS Redirect URL, so the registered one is an ngrok static domain, and the in-app login only worked if someone had run `ngrok http 8000` beforehand. Every morning nobody had, Kite redirected to **ERR_NGROK_3200 ... is offline** and the login was lost.
+
+The backend now owns that tunnel (`kite_tunnel.py`):
+1. Clicking **Reconnect** starts ngrok on the registered domain and waits until ngrok's local API reports the tunnel (about 1 s).
+2. Only then does it send the popup to Kite.
+3. It stops the tunnel a few seconds after `/kite/callback`, once the "connected" page has gone back out through it. There is also a 10-minute backstop, and it stops on shutdown.
+
+If the tunnel can't open, no login is started, so Kite never redirects into nothing. The dashboard shows the HTTPS redirect URL actually registered at Kite again, not `127.0.0.1`. Kite's one-time `request_token` is now redacted from the request log, as the dashboard key is (§60).
+
+**Verified 2026-09-24, pre-open:** with ngrok not running, a login request brought the tunnel up in 1 s and the public URL reached this backend (401 from the key check). A real login then completed through it at 08:17, and the tunnel stopped itself 5 seconds later.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
@@ -3486,18 +3499,15 @@ the form. Two ways around it:
    the redirect. Register *any* real, resolving `https://` URL as the
    Redirect URL just to satisfy the form — it never needs to actually
    respond. This is the recommended daily routine (see below).
-2. **In-app "Connect Kite" button, needs a real tunnel** — install `ngrok`
-   (`brew install ngrok`), get a free authtoken from
-   [dashboard.ngrok.com](https://dashboard.ngrok.com), `ngrok config
-   add-authtoken <token>`, then `ngrok http 8000`. Register the printed
-   `https://....ngrok-free.dev/kite/callback` as the Redirect URL. This
-   exposes the *whole* backend while the tunnel runs — the dashboard API key
-   (above) is what makes that safe, but still stop the tunnel once the login
-   completes; you don't need it running again until you change it.
-   ngrok's free tier now includes one permanent static domain per account
-   (Gateway → Domains in its dashboard) — use `ngrok http 8000 --url
-   https://<your-static-domain>` to avoid re-registering a new Redirect URL
-   every time you restart the tunnel.
+2. **In-app "Connect Kite" button (the backend runs the tunnel for you)**.
+   One-time setup:
+   - `brew install ngrok`.
+   - Get a free authtoken from [dashboard.ngrok.com](https://dashboard.ngrok.com), then run `ngrok config add-authtoken <token>`.
+   - Claim the one free static domain (Gateway → Domains).
+   - Register `https://<your-static-domain>/kite/callback` as the Redirect URL at developers.kite.trade.
+   - Set `config.KITE_TUNNEL["domain"]`, or the `NGROK_DOMAIN` env var. This repo defaults to `ambiguity-patchy-untold.ngrok-free.dev`.
+
+   After that, **don't start ngrok yourself.** Clicking Reconnect makes the backend start ngrok on that domain and wait until the tunnel is up. Then it sends you to Kite, and **stops the tunnel a few seconds after the callback**. It also stops after 10 minutes if the login is abandoned, and when the backend shuts down. The backend is reachable from the internet only for the minute or so a login takes, and every route except `/kite/callback` still needs the dashboard key. An ngrok you started by hand is reused and left running.
 
 **If the tunnel is down when you log in**, Kite still redirects to it and the page fails to load. The address bar keeps the whole redirect, though. Replace the tunnel host with `http://127.0.0.1:8000` and keep the rest of the URL unchanged (`/kite/callback?...&request_token=...`), then open it. The running backend completes the login the same way. The request token can only be used once and expires within minutes, so do this straight away. (Verified 2026-09-23 with ngrok stopped.)
 
