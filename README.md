@@ -113,8 +113,8 @@ X" and when trading resumes instead of treating it as an ordinary closed day.
 | **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
 | **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept |
-| **Deep read** | The top 15 get a full Sahab's Dimaag analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
-| **Active watchlist** | Top 6 by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
+| **Deep read** | The top 25 (`SCANNER["deep_analysis"]`) get a full Sahab's Dimaag analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
+| **Active watchlist** | Top 25 (`SCANNER["active_count"]`, raised from 6 in §25) by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
 
 ### 3. The Rule Book — how the sources connect
 
