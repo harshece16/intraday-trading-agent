@@ -19,6 +19,20 @@ async function post(path, body) {
 
 const pct0 = (x) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 
+// What the card would have done had it been approved (review_queue.shadow_outcome).
+const SHADOW_WORD = { open: "Open", stopped: "Stopped", target: "Target hit", squared_off: "Squared off" };
+
+function ShadowText({ sh }) {
+  if (!sh || sh.net_rs == null) return <span className="muted">—</span>;
+  const when = sh.exit_ts ? ` ${clock(sh.exit_ts)}` : "";
+  const at = sh.status === "open" ? ` at ${num(sh.mark_price)}` : ` @ ${num(sh.exit_price)}`;
+  return (
+    <span className={sh.net_rs > 0 ? "up" : sh.net_rs < 0 ? "down" : ""}>
+      {SHADOW_WORD[sh.status] || sh.status}{when}{at}: {money(sh.net_rs)} ({sh.r > 0 ? "+" : ""}{num(sh.r)}R)
+    </span>
+  );
+}
+
 // Display only: the backend is the authority on expiry and refuses a late
 // approval whatever this shows.
 function useNow() {
@@ -102,6 +116,11 @@ function PendingCard({ c, live }) {
       <p className="muted" style={{ margin: "8px 0 0", fontSize: 12.5 }}>
         {c.verdict} Measured on {c.reference_source}.
       </p>
+      {c.shadow && (
+        <p className="detail" style={{ margin: "6px 0 0" }}>
+          If you'd approved it when it was offered: <ShadowText sh={c.shadow} />
+        </p>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
         <button className="btn primary" disabled={busy} onClick={approve}>{busy ? "…" : live ? "Approve — real order" : "Approve (paper)"}</button>
         <button className="btn" disabled={busy} onClick={reject}>Reject</button>
@@ -129,6 +148,7 @@ function DecidedRow({ c }) {
       <td className={c.status === "approved" ? "up" : c.status === "refused" || c.status === "failed" ? "down" : "muted"}>
         {STATUS_TEXT[c.status] || c.status}
       </td>
+      <td>{c.status === "approved" ? <span className="muted">real trade</span> : <ShadowText sh={c.shadow} />}</td>
       <td className="detail">{detail}</td>
     </tr>
   );
@@ -179,10 +199,20 @@ export default function ReviewQueue({ s }) {
       {decided.length > 0 && (
         <div className="table-wrap" style={{ marginTop: 12 }}>
           <table className="datatable">
-            <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th></th></tr></thead>
+            <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th>If approved</th><th></th></tr></thead>
             <tbody>{decided.map((c) => <DecidedRow key={c.id} c={c} />)}</tbody>
           </table>
         </div>
+      )}
+      {rq.shadow_summary?.trades > 0 && (
+        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+          If every card today that wasn't approved had been:{" "}
+          <b className={rq.shadow_summary.net_rs > 0 ? "up" : rq.shadow_summary.net_rs < 0 ? "down" : ""}>
+            {money(rq.shadow_summary.net_rs)} ({rq.shadow_summary.r > 0 ? "+" : ""}{num(rq.shadow_summary.r)}R)
+          </b>{" "}
+          across {rq.shadow_summary.trades} trade{rq.shadow_summary.trades > 1 ? "s" : ""}
+          {rq.shadow_summary.open ? `, ${rq.shadow_summary.open} still open` : ""}. {rq.shadow_summary.basis}
+        </p>
       )}
     </div>
   );

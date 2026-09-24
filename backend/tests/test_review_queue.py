@@ -226,3 +226,90 @@ def test_trader_brain_signal_runs_end_to_end_on_a_session_of_bars():
     for windows in ([], [["10:00", "11:00"]]):
         signal, st = trader_brain.trader_brain_signal(bars, no_entry_windows=windows)
         assert st and "checklist" in st
+
+
+# ---- hypothetical outcome ("what if it had been approved") -----------------
+
+from datetime import timedelta  # noqa: E402
+
+OFFER = datetime(2026, 9, 24, 13, 45, 10, tzinfo=IST)
+
+
+def shadow_card(side="LONG", entry=100.0, stop=98.0, target=106.0, qty=10):
+    return {"side": side, "entry": entry, "stop": stop, "target": target, "qty": qty,
+            "created_ts": OFFER.timestamp()}
+
+
+def bar(hhmm, o, h, low, c):
+    h_, m_ = map(int, hhmm.split(":"))
+    t = datetime(2026, 9, 24, h_, m_, tzinfo=IST)
+    return {"time": t.isoformat(), "open": o, "high": h, "low": low, "close": c}
+
+
+def later(hhmm):
+    h_, m_ = map(int, hhmm.split(":"))
+    return datetime(2026, 9, 24, h_, m_, 30, tzinfo=IST)
+
+
+import costs  # noqa: E402
+ZERO = costs.ZERO_COSTS   # nothing charged: every figure below is exact
+
+
+def test_long_hits_target_and_books_the_gain():
+    bars = [bar("13:50", 100, 101, 99.5, 100.5), bar("13:55", 100.5, 106.5, 100.4, 106)]
+    out = review_queue.shadow_outcome(shadow_card(), bars, ltp=106, now=later("14:00"), costs_cfg=ZERO)
+    assert out["status"] == "target" and out["exit_price"] == 106.0
+    assert out["net_rs"] == 60.0 and out["r"] == 3.0
+
+
+def test_short_is_stopped_and_a_gap_fills_at_the_open():
+    card = shadow_card(side="SHORT", entry=100.0, stop=102.0, target=94.0)
+    bars = [bar("13:50", 100, 101, 99, 100.8), bar("13:55", 103, 104, 102.5, 103.5)]
+    out = review_queue.shadow_outcome(card, bars, ltp=103.5, now=later("14:00"), costs_cfg=ZERO)
+    assert out["status"] == "stopped" and out["exit_price"] == 103   # gapped over 102
+    assert out["net_rs"] == -30.0 and out["r"] == -1.5
+
+
+def test_stop_is_assumed_first_when_one_bar_touches_both():
+    bars = [bar("13:50", 100, 107, 97, 101)]
+    out = review_queue.shadow_outcome(shadow_card(), bars, ltp=101, now=later("13:55"), costs_cfg=ZERO)
+    assert out["status"] == "stopped" and out["exit_price"] == 98.0
+
+
+def test_bars_that_started_before_the_offer_are_ignored():
+    # The 13:45 bar was already running at 13:45:10; its low of 97 is from before the offer.
+    bars = [bar("13:45", 100, 100.2, 97, 100), bar("13:50", 100, 101, 99.5, 100.6)]
+    out = review_queue.shadow_outcome(shadow_card(), bars, ltp=100.6, now=later("13:52"), costs_cfg=ZERO)
+    assert out["status"] == "open" and out["mark_price"] == 100.6
+    assert out["net_rs"] == 6.0
+
+
+def test_squared_off_at_the_square_off_bars_open():
+    bars = [bar("13:50", 100, 101, 99.5, 100.5), bar("15:10", 101, 102, 100.5, 101.5), bar("15:15", 101.8, 102, 101, 101.2)]
+    out = review_queue.shadow_outcome(shadow_card(), bars, ltp=101.2, now=later("15:20"),
+                                      costs_cfg=ZERO, square_off="15:15")
+    assert out["status"] == "squared_off" and out["exit_price"] == 101.8
+
+
+def test_real_costs_make_a_flat_trade_negative():
+    bars = [bar("13:50", 100, 100.5, 99.5, 100.0)]
+    out = review_queue.shadow_outcome(shadow_card(), bars, ltp=100.0, now=later("13:55"))
+    assert out["status"] == "open" and out["gross_rs"] < 0 and out["net_rs"] < out["gross_rs"]
+
+
+def test_engine_saves_the_outcome_for_unapproved_cards_only(engine, monkeypatch):
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
+    monkeypatch.setattr(database, "new_position_id", lambda: "pos-manual")
+    [card] = offer(engine)
+    engine.state.candles[SYMBOL] = [bar("10:25", 100, 106.5, 99.9, 106)]
+    engine._update_review_shadows(later("10:30"), min_interval=0)
+    [row] = database.reviews_on("2026-09-24")
+    assert row["shadow"]["status"] == "target"                      # saved to the journal
+    assert engine.review_queue.snapshot()["shadow_summary"]["trades"] == 1
+
+    # An approved card is a real position, not a hypothetical one.
+    engine.review_queue.cards.clear(); engine.review_queue._seen.clear()
+    engine.state.strategy_state.clear()
+    [card2] = offer(engine)
+    assert engine.approve_review(card2["id"])["status"] == "approved"
+    assert all(c["id"] != card2["id"] for c in engine.review_queue.shadow_candidates())

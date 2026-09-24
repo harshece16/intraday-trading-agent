@@ -3195,6 +3195,22 @@ towards refusing a trade. The review queue reads the same count.
 `tests/test_state_rehydration.py` include one that runs the full
 `trader_brain_signal()` on today's bars.
 
+### 68. The review queue now shows what approving would have done, and saves it
+
+Every card you **didn't** approve (rejected, expired, refused, or still pending) is now replayed as if you had approved it the moment it was offered. The result appears in a new **If approved** column, on the pending card itself, and in a footer with the day's hypothetical total. It's saved to the journal (`manual_reviews.shadow_json`), so it builds into a record over the weeks. An approved card isn't replayed: it's a real paper position, and its P&L is in the trade log.
+
+**The replay, stated so it can't be read as more than it is** (`review_queue.shadow_outcome`):
+- Entry at the price when the card was offered, with the card's size, stop and target.
+- It walks the 5-minute bars that **start after the offer**. A bar already running at the offer contains prices from before it, so it's skipped.
+- It exits at the first of: the square-off time (that bar's open), the stop (the stop price, or the bar's open if it gapped through), or the target. If one bar touches both the stop and the target, the stop is assumed first.
+- While still open, it's marked to the latest price and closed there if that price is already past the stop or target.
+- Slippage and charges are the same as a real fill, on both legs.
+- The engine's own early-exit signal isn't modelled.
+
+The engine updates every open replay once a minute and stops once it has exited.
+
+**The first real day's numbers already make the card's point.** On 24 Sep the three cards the queue offered (HINDUNILVR, BRITANNIA and SBIN shorts, all failing only reward-to-risk at −0.17 to −0.41 after costs) **all reached their targets, and all three lost money after costs**: −₹19, −₹19 and −₹16, **−₹54 (−1.41R)** in total. A target inside the round trip's cost loses even when it's hit, which is what each card's "can't break even" said. Three trades prove nothing either way. The column exists so the answer accumulates instead of being assumed.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

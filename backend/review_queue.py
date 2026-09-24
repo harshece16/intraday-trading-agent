@@ -25,6 +25,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import config
+import costs
 import database
 import trader_brain
 
@@ -97,6 +98,81 @@ def build_card(symbol, side, plan, blocker, ltp, cost_pct, qty, setup=None, conf
     }
 
 
+SHADOW_BASIS = ("Hypothetical, not a trade: entered at the price when the card was offered; exits only at "
+                "the stop, the target or the square-off, whichever comes first, checked on the 5-minute bars "
+                "after the offer (the stop is assumed first if one bar touches both); same slippage and "
+                "charges as a real fill. The engine's own early-exit signal is not modelled.")
+
+
+def _bar_ts(bar):
+    return datetime.fromisoformat(bar["time"]).timestamp()
+
+
+def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=None):
+    """What approving `card` the moment it was offered would have done.
+
+    Walks the bars that START after the offer (a bar already running at the
+    offer holds prices from before it) and exits at the first of: the
+    square-off time (at that bar's open), the stop (at the stop, or the bar's
+    open if it gapped through), or the target. Still open, it is marked to
+    `ltp` — or closed at `ltp` if the price is already past the stop or
+    target, or the square-off time has passed. P&L is net of the same
+    slippage and charges _execute() applies to a real fill, both legs."""
+    now = now or now_ist()
+    cfg = costs_cfg or config.COSTS
+    s = 1 if card["side"] == "LONG" else -1
+    entry, stop, target, qty = card["entry"], card["stop"], card["target"], card["qty"]
+    created = card["created_ts"]
+    day = datetime.fromtimestamp(created, IST).date()
+    hh, mm = (square_off or config.SQUARE_OFF_TIME).split(":")
+    square_ts = datetime(day.year, day.month, day.day, int(hh), int(mm), tzinfo=IST).timestamp()
+
+    exit_price = exit_ts = None
+    status = "open"
+    for bar in sorted((b for b in bars or [] if _bar_ts(b) > created), key=_bar_ts):
+        t = _bar_ts(bar)
+        if t > now.timestamp():
+            break
+        if t >= square_ts:
+            status, exit_price, exit_ts = "squared_off", bar["open"], t
+            break
+        hit_stop = (bar["low"] <= stop) if s > 0 else (bar["high"] >= stop)
+        hit_target = (bar["high"] >= target) if s > 0 else (bar["low"] <= target)
+        if hit_stop:
+            gapped = (bar["open"] - stop) * s < 0
+            status, exit_price, exit_ts = "stopped", bar["open"] if gapped else stop, t
+            break
+        if hit_target:
+            status, exit_price, exit_ts = "target", target, t
+            break
+
+    mark = ltp if ltp is not None else ((bars or [{}])[-1].get("close") if bars else None)
+    if status == "open" and mark is not None:
+        if now.timestamp() >= square_ts:
+            status, exit_price, exit_ts = "squared_off", mark, now.timestamp()
+        elif (mark - stop) * s <= 0:
+            status, exit_price, exit_ts = "stopped", mark, now.timestamp()
+        elif (mark - target) * s >= 0:
+            status, exit_price, exit_ts = "target", mark, now.timestamp()
+
+    price_out = exit_price if exit_price is not None else mark
+    result = {"status": status, "exit_price": exit_price, "exit_ts": exit_ts, "mark_price": mark,
+              "as_of": now.timestamp(), "basis": SHADOW_BASIS}
+    if price_out is None or not qty:
+        result.update({"gross_rs": None, "charges_rs": None, "net_rs": None, "r": None})
+        return result
+    open_side, close_side = ("BUY", "SELL") if s > 0 else ("SELL", "BUY")
+    fill_in = costs.apply_slippage(open_side, entry, cfg)
+    fill_out = costs.apply_slippage(close_side, price_out, cfg)
+    charges = costs.leg_cost(open_side, fill_in, qty, cfg) + costs.leg_cost(close_side, fill_out, qty, cfg)
+    gross = (fill_out - fill_in) * qty * s
+    net = gross - charges
+    risk = abs(entry - stop) * qty
+    result.update({"gross_rs": round(gross, 2), "charges_rs": round(charges, 2), "net_rs": round(net, 2),
+                   "r": round(net / risk, 2) if risk else None})
+    return result
+
+
 class ReviewQueue:
     """Today's cards, in memory and in the `manual_reviews` table. One card
     per stock, side and session: the same rule as max_entries_per_day, so a
@@ -161,6 +237,21 @@ class ReviewQueue:
                                outcome=outcome, card=snapshot)
         return snapshot
 
+    def shadow_candidates(self):
+        """Today's cards that were NOT approved (an approved card is a real
+        position) and whose hypothetical trade is still open or not yet computed."""
+        with self._lock:
+            return [dict(c) for c in self.cards.values()
+                    if c["status"] != "approved" and (c.get("shadow") or {}).get("status", "open") == "open"]
+
+    def set_shadow(self, review_id, shadow):
+        with self._lock:
+            card = self.cards.get(review_id)
+            if card is None:
+                return
+            card["shadow"] = shadow
+        database.update_review_shadow(review_id, shadow)
+
     def expire_due(self, now=None):
         now = now or now_ist().timestamp()
         with self._lock:
@@ -184,9 +275,20 @@ class ReviewQueue:
         pending = sorted((c for c in cards if c["status"] == "pending"), key=lambda c: -c["created_ts"])
         decided = sorted((c for c in cards if c["status"] != "pending"),
                          key=lambda c: -(c.get("decided_ts") or c["created_ts"]))
+        shadows = [c["shadow"] for c in cards
+                   if c["status"] != "approved" and (c.get("shadow") or {}).get("net_rs") is not None]
         return {
             "enabled": self.enabled(),
             "expiry_seconds": config.REVIEW_QUEUE["expiry_seconds"],
             "server_ts": now_ist().timestamp(),
             "cards": (pending + decided)[:limit],
+            # "If every card today that wasn't approved had been": the day's
+            # hypothetical total, so the queue's value is visible, not assumed.
+            "shadow_summary": {
+                "trades": len(shadows),
+                "open": sum(1 for x in shadows if x["status"] == "open"),
+                "net_rs": round(sum(x["net_rs"] for x in shadows), 2),
+                "r": round(sum(x["r"] or 0 for x in shadows), 2),
+                "basis": SHADOW_BASIS,
+            },
         }
