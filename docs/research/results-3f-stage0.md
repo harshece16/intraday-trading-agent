@@ -1,4 +1,4 @@
-# 3f stage 0 — feasibility. 0c source: CONFIRMED. 0b membership: PASS (95.17%). 0c vendor check: **HALT as pre-registered** (38% of stocks ≥ 0.98); **amendment 3's level test also FAILS as written (53.98%)** — §6. No look, no trial.
+# 3f stage 0 — feasibility. 0c source: CONFIRMED. 0b membership: PASS (95.17%). 0c vendor check: **HALT as pre-registered** (38% of stocks ≥ 0.98); **amendment 3's level test also FAILS as written (53.98%)** — §6; **amendment 4, the last correction, FAILS at 93.41% — 3f is CLOSED at stage 0** — §7. No look, no trial.
 
 **2026-09-24.** Pre-registration: `prereg-3f-momentum-delivery.md` with
 amendments 1 and 2. Stage 0 reads no forward return; nothing here is a look
@@ -320,3 +320,55 @@ whole cross-section, not stock by stock.
 
 I have not set a gate on these numbers. They were seen; any rule built on
 them is post hoc and must say so.
+
+## 7 — Amendment 4: **FAIL, 93.41% — 3f closes at stage 0**
+
+Run once, after amendment 4 and its code were committed (`287062b`), with
+the five pre-commitments of Entry 17. Code: `step3f_stage0_checks.py`,
+`amendment4_main` → `level_test_returns`; output `amendment4.json` (not
+committed; reproducible from the downloaded bhavcopies).
+
+**Two things happened before any number was produced, disclosed here:** the
+first attempt crashed in the bhavcopy parser on a two-digit year some older
+NSE files carry (`13-Jul-20`), and the extraction step had been silently
+skipping such files; the second attempt crashed on 73 saved 404 pages that
+an earlier fetch had left under `.zip` names. Both were parser fixes (`%y`
+accepted; non-zip files skipped and counted) made and committed with no
+gate figure seen. The third attempt ran to completion.
+
+| | stock-months | |
+| --- | --- | --- |
+| member-months 2010-01 → 2025-12 | 19,261 | |
+| **match** within 6 bp (incl. 222 recovered split months) | **17,992** | **93.41%** |
+| absent — no close on one side at t or t−1 | 940 | the 20 names with no yfinance history (§3), now 4.9% rather than 4.8% because a month needs both ends |
+| faulted date (rule: > 10% of the cross-section and ≥ 5 stocks) | 200 | **2015-11-30 (47 of 96 mismatched) and 2015-12-31 (46 of 95)** — the rule caught 2015-11, and its December neighbour because a bad close at t−1 shows as a mismatch at t |
+| mismatch | 129 | median gap 100% — a factor of exactly 2; these are bonus months where the old bhavcopy's `PREVCLOSE` on the ex-date is **not** adjusted, so the recovery formula, which assumed it was, returned the raw ratio |
+
+**Gate: 93.41% < 95% → FAIL.** Under Entry 17 there is no amendment 5:
+**3f halts at stage 0, permanently, and is not re-registered with a fourth
+vendor specification.**
+
+**What the number is made of, so the closure is understood and not
+relitigated.** The vendor agreement on the months that *could* be compared
+is 17,992 / 18,321 = 98.2%, and 200 of the 329 non-matches are two faulted
+dates from one bad yfinance day. The gate fails because amendment 4 counted
+every member-month with no comparable return against it — and 940 of those
+are the delisted and merged names that 0b had already found missing. That
+was written deliberately ("a member-month with no comparable return counts
+against the gate") and accepted; it made the budget arithmetic tight from
+the start: 0b left 95.17% with a close at all, so amendment 4 could lose at
+most 0.17 points to everything else, and the two-ended return definition
+alone cost more than that. The residual survivorship, in other words, is
+what closed 3f — the thing the pre-registration said was the most likely
+source of a false positive, now the reason the test cannot be run cleanly
+on this data. Filling the 20 names from NSE's archive (§5.2's option (b))
+would change the arithmetic, and Entry 16 was explicit that a backfill
+motivated by a failing number is the rescue pattern this process exists to
+refuse. It is not done.
+
+**Also recorded:** 222 split/bonus months were detected and every one
+bisected to an ex-date with 336 daily-bhavcopy probes; 64 alias symbols and
+195 ISINs came from the rule, no hand entries; 93,308 EQ rows stored under
+current symbols from 522 files, 73 non-zip leftovers skipped.
+
+Looks spent: none. Trials spent: none. Stage 1 was never written.

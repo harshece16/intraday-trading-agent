@@ -660,3 +660,15 @@ without it, as amendment 3 already requires.
 **One run.** Stage 1 (L36) stops for review before it runs whichever way
 this goes; a fail here is the closure of 3f, brought back for review as
 such.
+
+---
+
+# Closure — 2026-09-24
+
+**Amendment 4 ran once and failed its own gate: 93.41% against 95%**
+(`results-3f-stage0.md` §7). Under Entry 17 there is no further correction.
+**3f is closed at stage 0.** No look and no trial were spent; stage 1 was
+never written; the 2026 held-out window is untouched. The point-in-time
+membership (`backend/research/data/nifty100_membership*.csv`) and the 0c
+closing-price citations stand on their own and may be reused by a later
+pre-registration, with the standing caveats of Entry 16.

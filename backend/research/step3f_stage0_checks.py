@@ -305,7 +305,11 @@ def parse_bhavcopy(path):
             out.append((r["TckrSymb"], r["SctySrs"], r["TradDt"], float(r["ClsPric"] or 0), float(r["LastPric"] or 0),
                         float(r["PrvsClsgPric"] or 0), r.get("ISIN", "")))
         elif "SYMBOL" in r:
-            d = datetime.datetime.strptime(r["TIMESTAMP"], "%d-%b-%Y").date().isoformat()
+            ts = r["TIMESTAMP"]
+            try:  # some older files carry a two-digit year ("13-Jul-20")
+                d = datetime.datetime.strptime(ts, "%d-%b-%Y").date().isoformat()
+            except ValueError:
+                d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
             out.append((r["SYMBOL"], r["SERIES"], d, float(r["CLOSE"] or 0), float(r["LAST"] or 0),
                         float(r["PREVCLOSE"] or 0), r.get("ISIN", "")))
     return out
@@ -342,14 +346,15 @@ def extract_bhavcopies(zip_dirs, out_db, alias, isin):
     db = sqlite3.connect(out_db)
     db.execute("create table bhav(symbol text, date text, close real, last real, prev_close real, src_symbol text, primary key(symbol, date))")
     n = 0
+    skipped = []
     for zd in zip_dirs:
         for f in sorted(os.listdir(zd)):
             if not f.endswith(".zip"):
                 continue
-            try:
-                rows = parse_bhavcopy(os.path.join(zd, f))
-            except Exception:
+            if not zipfile.is_zipfile(os.path.join(zd, f)):
+                skipped.append(f)  # a 404 page saved under the .zip name by an earlier fetch — not data
                 continue
+            rows = parse_bhavcopy(os.path.join(zd, f))
             for sym, series, d, close, last, pc, isin_no in rows:
                 if series != "EQ" or not close:
                     continue
@@ -358,7 +363,7 @@ def extract_bhavcopies(zip_dirs, out_db, alias, isin):
                     db.execute("insert or replace into bhav values (?,?,?,?,?,?)", (cur, d, close, last, pc, sym))
                     n += 1
     db.commit()
-    return n
+    return n, skipped
 
 
 def level_test_returns(yf_db, bhav_db, membership_csv, cache_dir, tolerance=0.0006, bad_frac=0.10, bad_min=5,
@@ -504,7 +509,8 @@ def amendment4_main():
     alias, isin = bhav_aliases(symbols, os.path.join(a.refs, "EQUITY_L.csv"), os.path.join(a.refs, "symbolchange.csv"))
     for old, cur in alias.items():
         ALIAS_OF[cur].add(old)
-    n = extract_bhavcopies(a.zip_dirs, a.bhav_out, alias, isin)
+    n, skipped = extract_bhavcopies(a.zip_dirs, a.bhav_out, alias, isin)
+    print("non-zip files skipped:", len(skipped), skipped[:5])
     print("rows stored under current symbols:", n, "| alias entries:", len(alias) - len(symbols), "| ISIN entries:", len(isin), flush=True)
     res = level_test_returns(sqlite3.connect(a.yf), sqlite3.connect(a.bhav_out), a.membership, a.cache_dir)
     json.dump(res, open(a.out, "w"), indent=1)

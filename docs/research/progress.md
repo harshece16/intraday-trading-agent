@@ -65,7 +65,7 @@ The 2026 window is therefore reserved for a hypothesis whose confirmation
 | 3b — intraday momentum | **WITHDRAWN at stage 1, no trial** | `prereg-3b-intraday-momentum.md` · stage 1 = research look L31 (no trial); stage 2 = trial 36 only if stage 1 clears 16.60 bp |
 | 3c — overnight vs intraday split | queued | Entry 4 §E — must include the volatility-sorted decomposition, and declare step 2 as its motivation |
 | 3d — post-earnings drift | **skipped** | `5ba1d93` · `skipped-3d-earnings-drift.md` |
-| **3f — stage 0 feasibility** | **0c source CONFIRMED, 0b PASS 95.17%; 0c vendor gate open: HALT as pre-registered (38%), amendment 3 level test FAIL (53.98%, a specification error), amendment 4 (Entry 17: the last correction) pending its single run** | `results-3f-stage0.md` · membership rebuilt from 547 NSE press releases, consistent to 2009-01-12 · stage 1 not written |
+| **3f — stage 0 feasibility** | **CLOSED at stage 0 — amendment 4 FAIL 93.41% (0c source CONFIRMED, 0b PASS 95.17%, vendor gate: HALT 38% → amendment 3 FAIL 53.98% → amendment 4 FAIL 93.41%, no amendment 5)** | `results-3f-stage0.md` · membership rebuilt from 547 NSE press releases, consistent to 2009-01-12 · stage 1 not written |
 
 Carried over from Entry 3, after the step-2 block clears: null diagnostic,
 friction decomposition from `testA_trades.json`, the README §51/§52 diff shown
@@ -273,3 +273,4 @@ is not worth the disruption.
 | 2026-09-21 | User confirmed 3a. Code `3841124`, pre-flight `9f9ac61` (303 sessions, 1,139/5,275 removed), single run `f4f1d3c`: **FAIL**, net −12.09 bp, t = −2.71. STOPPED for review |
 | 2026-09-24 | 3f stage 0 run (no look, no trial). 0c closing-price rule confirmed from NSE/CMTR/61813 §3.4 and Fact Book 2010; 0b membership rebuilt and consistent to 2009-01-12, start 2010-01, coverage 95.17%; 0c vendor check **HALTS as pre-registered** (Kite cache is dividend-adjusted and its last bar is not the close; 99.4% of yfinance closes equal the NSE bhavcopy). STOPPED for reviewer |
 | 2026-09-24 | Entry 16 corrections made; amendment 3 (level test, 6 bp on signal-date closes) written then run: **FAIL as written, 53.98%** — a specification error (yfinance Close is split-adjusted, not unadjusted). Diagnostic only: signal-date-to-signal-date returns agree within 6 bp on 98.80%. No gate set on seen numbers. STOPPED for reviewer |
+| 2026-09-24 | Amendment 4 (Entry 17's five pre-commitments) run once: **FAIL, 93.41%** — 940 absent (delisted names), 200 on two faulted dates (2015-11-30, 2015-12-31), 129 mismatches; vendors agree 98.2% on comparable months. **3f CLOSED at stage 0.** No look, no trial, held-out untouched. Issue #108 filed for the dividend-adjusted Kite cache. STOPPED for reviewer |

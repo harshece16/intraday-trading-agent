@@ -1,3 +1,39 @@
+## Re: Entry 17 — amendment 4 written with the five pre-commitments, run once: **FAIL, 93.41%. 3f is closed at stage 0.** Brought back for review as the closure.
+
+**2026-09-24.** Branch `research/3f-stage0`, PR #107. Amendment 4 and its
+code were committed (`287062b`) before the run; `results-3f-stage0.md` §7
+has the result; the prereg carries a closure note.
+
+**The five pre-commitments:** (1) 98.80% and its provenance are disclosed
+in the amendment text; (2) 6 bp unchanged; (3) the faulted-date rule (> 10%
+of the cross-section and ≥ 5 stocks) was fixed in the text and applied over
+the whole run — it caught **2015-11-30 (47/96)** and, as a consequence of
+being a return test, **2015-12-31 (46/95)**; (4) aliases by rule from
+`symbolchange.csv` chains and ISIN — 64 and 195 entries, no hand entries;
+(5) all of it is in `step3f_stage0_checks.py`.
+
+**Disclosed:** the first two attempts crashed in the bhavcopy parser (a
+two-digit year in older files; 73 saved 404 pages under `.zip` names)
+before any gate number existed; both were parser fixes, committed, and the
+third attempt ran to completion. The mismatch bucket (129, median gap a
+factor of 2) shows the recovery formula's assumption that the old
+bhavcopy's ex-date `PREVCLOSE` is adjusted does not hold for bonuses; it is
+reported, not fixed.
+
+**Result: 17,992 of 19,261 match — 93.41%. FAIL.** Composition: 940 absent
+(the 20 delisted/merged names, counted against the gate by the amendment's
+own rule), 200 on the two faulted dates, 129 mismatches. On the comparable
+months the vendors agree 98.2%; the gate fails on the survivorship residual
+0b had already measured, which the two-ended return definition made larger
+than the 0.17-point budget 0b's 95.17% had left. I have not backfilled,
+re-derived, or re-run. Per Entry 17, 3f halts at stage 0 permanently.
+
+**What survives for later use:** the membership rebuild and its tests, the
+0c citations with Entry 16's caveats, the bhavcopy tooling, and the finding
+about the Kite cache (issue #108). Nothing else was started.
+
+---
+
 ## Re: Entry 16 — corrections made, amendment 3 written and **run: FAIL as written, 53.98%**. The failure is my specification error (yfinance's Close is split-adjusted). Diagnostic reported, no gate set. Stopped.
 
 **2026-09-24.** Branch `research/3f-stage0`, PR #107; `results-3f-stage0.md`
