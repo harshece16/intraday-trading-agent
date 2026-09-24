@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-24: **40**
+## Strategy trials — count as of 2026-09-25: **116**
 
 | n | Label |
 | --- | --- |
@@ -71,6 +71,82 @@ backtest look better than it is.
 | 38 | **#40 bug-fix pair — baseline** `sahab_dimaag` checklist, rrr_without_level 2.0 gross, cost_pct 0.166, Test A harness, selection only, both halves · code `d79eeb9` · first −0.354R (n 33), second +0.032R (n 12) — reproduces trial 37 exactly · `results-fix40-no-level-target.md` |
 | 39 | **#40 bug-fix pair — fixed** no formulaic target when no level lies beyond · **PASS** (worse in first half only): first −0.360R (n 31), second +0.089R (n 7) — no edge, 16% fewer trades · `results-fix40-no-level-target.md` |
 | 40 | **Confluence engine on the deep cache** `entry_mode: confluence`, live params, Test A harness, selection only (317 sessions) · `prereg-confluence-deep.md` · code `08524d1` · **FAIL**: net −0.430R/trade, t = −9.84, n = 668; gross −0.188R (worse than the random-entry null); both halves negative · run at the user's direction without reviewer review · `results-confluence-deep.md` |
+| 41 | **Strategy search** `A-ck43-k2` · net -0.343R (n 1388) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 42 | **Strategy search** `A-ck43-k3` · net -0.244R (n 900) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 43 | **Strategy search** `B-ck-15m` · net -0.332R (n 1670) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 44 | **Strategy search** `B-ck-60m` · net -0.182R (n 992) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 45 | **Strategy search** `C-PB-5m-s1.5-2R-both` · net -0.444R (n 3218) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 46 | **Strategy search** `C-PB-5m-s1.5-2R-short` · net -0.475R (n 3057) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 47 | **Strategy search** `C-PB-5m-s1.5-hold-both` · net -0.376R (n 2144) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 48 | **Strategy search** `C-PB-5m-s1.5-hold-short` · net -0.432R (n 2111) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 49 | **Strategy search** `C-PB-5m-s3.0-2R-both` · net -0.173R (n 1437) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 50 | **Strategy search** `C-PB-5m-s3.0-2R-short` · net -0.195R (n 1429) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 51 | **Strategy search** `C-PB-5m-s3.0-hold-both` · net -0.170R (n 1332) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 52 | **Strategy search** `C-PB-5m-s3.0-hold-short` · net -0.173R (n 1329) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 53 | **Strategy search** `C-PB-15m-s1.5-2R-both` · net -0.265R (n 2051) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 54 | **Strategy search** `C-PB-15m-s1.5-2R-short` · net -0.259R (n 1833) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 55 | **Strategy search** `C-PB-15m-s1.5-hold-both` · net -0.244R (n 1688) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 56 | **Strategy search** `C-PB-15m-s1.5-hold-short` · net -0.237R (n 1558) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 57 | **Strategy search** `C-PB-15m-s3.0-2R-both` · net -0.155R (n 1261) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 58 | **Strategy search** `C-PB-15m-s3.0-2R-short` · net -0.139R (n 1195) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 59 | **Strategy search** `C-PB-15m-s3.0-hold-both` · net -0.164R (n 1221) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 60 | **Strategy search** `C-PB-15m-s3.0-hold-short` · net -0.138R (n 1161) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 61 | **Strategy search** `C-PB-60m-s1.5-2R-both` · net -0.149R (n 1046) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 62 | **Strategy search** `C-PB-60m-s1.5-2R-short` · net -0.146R (n 944) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 63 | **Strategy search** `C-PB-60m-s1.5-hold-both` · net -0.150R (n 1031) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 64 | **Strategy search** `C-PB-60m-s1.5-hold-short` · net -0.146R (n 940) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 65 | **Strategy search** `C-PB-60m-s3.0-2R-both` · net -0.083R (n 915) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 66 | **Strategy search** `C-PB-60m-s3.0-2R-short` · net -0.077R (n 877) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 67 | **Strategy search** `C-PB-60m-s3.0-hold-both` · net -0.085R (n 914) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 68 | **Strategy search** `C-PB-60m-s3.0-hold-short` · net -0.077R (n 877) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 69 | **Strategy search** `C-MR-5m-s1.5-2R-both` · net -0.647R (n 2962) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 70 | **Strategy search** `C-MR-5m-s1.5-2R-short` · net -0.616R (n 1472) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 71 | **Strategy search** `C-MR-5m-s1.5-hold-both` · net -0.637R (n 2883) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 72 | **Strategy search** `C-MR-5m-s1.5-hold-short` · net -0.610R (n 1460) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 73 | **Strategy search** `C-MR-5m-s3.0-2R-both` · net -0.344R (n 2198) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 74 | **Strategy search** `C-MR-5m-s3.0-2R-short` · net -0.341R (n 1272) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 75 | **Strategy search** `C-MR-5m-s3.0-hold-both` · net -0.343R (n 2198) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 76 | **Strategy search** `C-MR-5m-s3.0-hold-short` · net -0.340R (n 1272) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 77 | **Strategy search** `C-MR-15m-s1.5-2R-both` · net -0.380R (n 1361) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 78 | **Strategy search** `C-MR-15m-s1.5-2R-short` · net -0.370R (n 617) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 79 | **Strategy search** `C-MR-15m-s1.5-hold-both` · net -0.381R (n 1361) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 80 | **Strategy search** `C-MR-15m-s1.5-hold-short` · net -0.371R (n 617) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 81 | **Strategy search** `C-MR-15m-s3.0-2R-both` · net -0.208R (n 1215) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 82 | **Strategy search** `C-MR-15m-s3.0-2R-short` · net -0.214R (n 598) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 83 | **Strategy search** `C-MR-15m-s3.0-hold-both` · net -0.208R (n 1215) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 84 | **Strategy search** `C-MR-15m-s3.0-hold-short` · net -0.214R (n 598) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 85 | **Strategy search** `C-MR-60m-s1.5-2R-both` · net -0.189R (n 226) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 86 | **Strategy search** `C-MR-60m-s1.5-2R-short` · net -0.127R (n 97) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 87 | **Strategy search** `C-MR-60m-s1.5-hold-both` · net -0.189R (n 226) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 88 | **Strategy search** `C-MR-60m-s1.5-hold-short` · net -0.127R (n 97) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 89 | **Strategy search** `C-MR-60m-s3.0-2R-both` · net -0.092R (n 224) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 90 | **Strategy search** `C-MR-60m-s3.0-2R-short` · net -0.062R (n 97) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 91 | **Strategy search** `C-MR-60m-s3.0-hold-both` · net -0.092R (n 224) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 92 | **Strategy search** `C-MR-60m-s3.0-hold-short` · net -0.062R (n 97) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 93 | **Strategy search** `C-VB-5m-s1.5-2R-both` · net -0.589R (n 2949) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 94 | **Strategy search** `C-VB-5m-s1.5-2R-short` · net -0.606R (n 1841) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 95 | **Strategy search** `C-VB-5m-s1.5-hold-both` · net -0.573R (n 2164) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 96 | **Strategy search** `C-VB-5m-s1.5-hold-short` · net -0.612R (n 1573) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 97 | **Strategy search** `C-VB-5m-s3.0-2R-both` · net -0.216R (n 1394) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 98 | **Strategy search** `C-VB-5m-s3.0-2R-short` · net -0.253R (n 1159) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 99 | **Strategy search** `C-VB-5m-s3.0-hold-both` · net -0.221R (n 1287) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 100 | **Strategy search** `C-VB-5m-s3.0-hold-short` · net -0.275R (n 1110) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 101 | **Strategy search** `C-VB-15m-s1.5-2R-both` · net -0.283R (n 1706) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 102 | **Strategy search** `C-VB-15m-s1.5-2R-short` · net -0.231R (n 1121) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 103 | **Strategy search** `C-VB-15m-s1.5-hold-both` · net -0.276R (n 1494) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 104 | **Strategy search** `C-VB-15m-s1.5-hold-short` · net -0.225R (n 1038) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 105 | **Strategy search** `C-VB-15m-s3.0-2R-both` · net -0.155R (n 1164) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 106 | **Strategy search** `C-VB-15m-s3.0-2R-short` · net -0.116R (n 897) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 107 | **Strategy search** `C-VB-15m-s3.0-hold-both` · net -0.152R (n 1139) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 108 | **Strategy search** `C-VB-15m-s3.0-hold-short` · net -0.117R (n 887) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 109 | **Strategy search** `C-VB-60m-s1.5-2R-both` · net -0.136R (n 904) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 110 | **Strategy search** `C-VB-60m-s1.5-2R-short` · net -0.131R (n 614) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 111 | **Strategy search** `C-VB-60m-s1.5-hold-both` · net -0.143R (n 896) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 112 | **Strategy search** `C-VB-60m-s1.5-hold-short` · net -0.124R (n 612) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 113 | **Strategy search** `C-VB-60m-s3.0-2R-both` · net -0.079R (n 848) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 114 | **Strategy search** `C-VB-60m-s3.0-2R-short` · net -0.074R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 115 | **Strategy search** `C-VB-60m-s3.0-hold-both` · net -0.080R (n 848) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 116 | **Strategy search** `C-VB-60m-s3.0-hold-short` · net -0.075R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 
 ### What a reviewer should notice in this list
 
