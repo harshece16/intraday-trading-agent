@@ -3214,7 +3214,7 @@ The engine updates every open replay once a minute and stops once it has exited.
 - **SBIN was stopped**, for −₹64.52 (−2.02R). Its first bar after the offer touched both the stop and the target, and the replay assumes the stop first.
 - **Total: −₹102.00 (−2.91R).** Three trades prove nothing either way. The column exists so the answer accumulates instead of being assumed.
 
-> **Corrected.** This paragraph first said all three reached their targets, −₹54 (−1.41R). ~~"−₹19, −₹19 and −₹16, −₹54 (−1.41R)"~~. That figure came from a test run on **delayed** prices. There, SBIN's last price was already past the target before the bar that settled the trade existed, and the replay froze that early exit. The live engine, on real-time bars, books the stop. The early freeze is a real bug on delayed-data sessions, tracked as [#102](https://github.com/harshece16/intraday-trading-agent/issues/102).
+> **Corrected.** This paragraph first said all three reached their targets, −₹54 (−1.41R). ~~"−₹19, −₹19 and −₹16, −₹54 (−1.41R)"~~. That figure came from a test run on **delayed** prices. There, SBIN's last price was already past the target before the bar that settled the trade existed, and the replay froze that early exit. The live engine, on real-time bars, books the stop. The early freeze is a real bug on delayed-data sessions, tracked as [#102](https://github.com/harshece16/intraday-trading-agent/issues/102). **Fixed:** an exit seen only in the latest price, or in a bar still forming, is now shown as **(provisional)** and re-checked every minute. Only a completed bar, or the square-off bar's open, makes it final.
 
 ## Backtest results
 
