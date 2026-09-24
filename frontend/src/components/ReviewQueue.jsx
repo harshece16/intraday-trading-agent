@@ -155,13 +155,12 @@ function DecidedRow({ c }) {
   );
 }
 
-export default function ReviewQueue({ s }) {
+// Shared by the full card and the compact switch in Overview's trading
+// control panel, so turning the queue on always shows the same warning.
+function useReviewQueueToggle(s) {
   const rq = s.review_queue;
-  const [busy, setBusy] = useState(false);
-  if (!rq) return null;
   const live = !s.paper_mode;
-  const pending = rq.cards.filter((c) => c.status === "pending");
-  const decided = rq.cards.filter((c) => c.status !== "pending");
+  const [busy, setBusy] = useState(false);
 
   async function toggle() {
     if (!rq.enabled) {
@@ -179,6 +178,25 @@ export default function ReviewQueue({ s }) {
     await post("/api/review-queue/enable", { enabled: !rq.enabled });
     setBusy(false);
   }
+  return { rq, busy, toggle };
+}
+
+export function ReviewQueueToggle({ s }) {
+  const { rq, busy, toggle } = useReviewQueueToggle(s);
+  if (!rq) return null;
+  return <button className="btn" disabled={busy} onClick={toggle}>{busy ? "…" : rq.enabled ? "Turn off" : "Turn on"}</button>;
+}
+
+/* hideWhenIdle: render nothing until there is a card to decide or a decision
+   to review, so an idle queue doesn't take a whole panel on Overview. Its
+   on/off switch lives in the trading control panel instead. */
+export default function ReviewQueue({ s, hideWhenIdle = false }) {
+  const { rq, busy, toggle } = useReviewQueueToggle(s);
+  if (!rq) return null;
+  const live = !s.paper_mode;
+  const pending = rq.cards.filter((c) => c.status === "pending");
+  const decided = rq.cards.filter((c) => c.status !== "pending");
+  if (hideWhenIdle && !pending.length && !decided.length) return null;
 
   return (
     <div className="cardbox" style={{ marginBottom: 20 }}>

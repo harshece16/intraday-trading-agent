@@ -120,14 +120,29 @@ function ChecklistView({ r, b }) {
   );
 }
 
-function TimingTab({ r, a }) {
-  if (!a) return <p className="empty">No timing read yet. It runs on the scanner's top 15 and on every tracked stock while the market is open.</p>;
+const NO_READ = "No timing read yet. It runs on the scanner's top 15 and on every tracked stock while the market is open.";
+
+// The call and the rules behind it: the rule book first, then each rule checked.
+function ChecklistTab({ r, a }) {
+  if (!a) return <p className="empty">{NO_READ}</p>;
+  const b = a.b;
+  return (
+    <>
+      <RuleBook r={r} b={b} />
+      {b.entry_mode === "checklist"
+        ? <div className="section-gap-sm"><ChecklistView r={r} b={b} /></div>
+        : <p className="empty">This stock is read on the scoring model, not the checklist. See Evidence.</p>}
+    </>
+  );
+}
+
+// The scored case for each side, and the indicator read behind it.
+function EvidenceTab({ a }) {
+  if (!a) return <p className="empty">{NO_READ}</p>;
   const b = a.b;
   const patterns = (b.patterns || []).map((p) => p.name);
   return (
     <>
-      {b.entry_mode === "checklist" && <ChecklistView r={r} b={b} />}
-      {b.entry_mode === "checklist" && <h3 className="sub-title">Supporting evidence</h3>}
       <p className="lede">
         {a.live ? "Live read." : "From the last scan."} The stock is {b.regime} (<Tip k="adx">ADX</Tip> {num(b.adx, 0)}), its swing structure is {b.structure}, and the 15-minute trend is {b.htf_trend}.{" "}
         <Tip k="rsi">RSI</Tip> {num(b.rsi, 0)}{b.volume_ratio != null ? `, volume ${num(b.volume_ratio, 1)}× average` : ""}.
@@ -231,7 +246,7 @@ function NewsTab({ s, symbol, news }) {
 export default function Stock({ state: s }) {
   const { symbol } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("timing");
+  const [tab, setTab] = useState("checklist");
   const [news, setNews] = useState(null);
 
   useEffect(() => {
@@ -275,28 +290,29 @@ export default function Stock({ state: s }) {
           {r && <small className={tone(r.chg_pct)}>{pct(r.chg_pct)} {s.market_status === "open" ? "today" : "last session"}</small>}
         </div>
       </div>
+      {/* Verdict, then the chart, then the evidence one tab at a time. */}
       <div id="stk-plan"><PlanBox s={s} r={r} b={b} pos={pos} /></div>
-      <RuleBook r={r} b={b} />
       <Chart symbol={symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} />
       <div className="chart-legend">
         <span><i style={{ background: "var(--focus)" }}></i><Tip k="ema20">EMA 20</Tip></span>
         <span><i style={{ background: "var(--book)" }}></i><Tip k="ema50">EMA 50</Tip></span>
-        <span><i className="dash" style={{ borderColor: "var(--ink-2)" }}></i>Plan entry</span>
+        <span><i className="dash" style={{ borderColor: "var(--focus)" }}></i>VWAP</span>
+        <span><i style={{ background: "var(--long)", opacity: 0.55 }}></i>Supertrend</span>
+        <span><i className="dash" style={{ borderColor: "var(--ink-2)" }}></i>Entry</span>
         <span><i className="dash" style={{ borderColor: "var(--short)" }}></i>Stop</span>
         <span><i className="dash" style={{ borderColor: "var(--long)" }}></i>Target</span>
-        <span><i style={{ background: "var(--long)", opacity: 0.55 }}></i>Supertrend</span>
-        <span><i className="dash" style={{ borderColor: "var(--focus)" }}></i>VWAP</span>
-        <span className="muted">— the checklist's trade plan if taken, not a price forecast</span>
-        <span className="muted">Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a></span>
+        <span className="legend-note muted"><Tip explain="Entry, stop and target are the checklist's trade plan if taken — the same numbers a real order would use — not a price forecast.">Plan lines, not a forecast</Tip> · Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a></span>
       </div>
       <div className="tabs" role="tablist">
-        <button className="tab" role="tab" aria-selected={tab === "timing"} onClick={() => setTab("timing")}>Timing read</button>
+        <button className="tab" role="tab" aria-selected={tab === "checklist"} onClick={() => setTab("checklist")}>Checklist</button>
+        <button className="tab" role="tab" aria-selected={tab === "evidence"} onClick={() => setTab("evidence")}>Evidence</button>
         <button className="tab" role="tab" aria-selected={tab === "scan"} onClick={() => setTab("scan")}>Why it ranks</button>
         <button className="tab" role="tab" aria-selected={tab === "news"} onClick={() => setTab("news")}>News{news && !news.error ? <span className="n">{news.count}</span> : null}</button>
         <button className="tab" role="tab" aria-selected={tab === "research"} onClick={() => setTab("research")}>Research desk</button>
       </div>
       <div className="tab-content">
-        {tab === "timing" && <TimingTab r={r} a={a} />}
+        {tab === "checklist" && <ChecklistTab r={r} a={a} />}
+        {tab === "evidence" && <EvidenceTab a={a} />}
         {tab === "scan" && <ScanTab r={r} totalRows={scanRows(s).length || 100} />}
         {tab === "news" && <NewsTab s={s} symbol={symbol} news={news} />}
         {tab === "research" && <ResearchDesk symbol={symbol} watchlist={s.watchlist} />}

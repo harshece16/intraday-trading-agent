@@ -8,13 +8,14 @@ import { SidePill, StatusPill } from "../components/Pill";
 import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import Chart from "../components/Chart";
-import ReviewQueue from "../components/ReviewQueue";
+import ReviewQueue, { ReviewQueueToggle } from "../components/ReviewQueue";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 
 const ONBOARD_KEY = "sahab_onboarding_dismissed";
 
 function OnboardingBanner({ s }) {
+  const [showSteps, setShowSteps] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch (e) { return false; }
   });
@@ -33,19 +34,23 @@ function OnboardingBanner({ s }) {
     setDismissed(true);
   }
 
+  // One line until asked: the steps matter once, the space matters every day.
   return (
-    <div className="cardbox" style={{ marginBottom: 20, borderColor: "var(--wait)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h2 className="h" style={{ fontSize: 16 }}>First time here? Three things before you start</h2>
-          <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.9 }}>
-            <li><b>Connect Kite</b> — click "Connect Kite" in the header, top right. Real prices, holdings and orders all need this; nothing trades without it.</li>
-            <li><b>Confirm you're in Paper mode</b> — check the Paper/Live toggle in the header (top right). Paper is the safe default and simulates everything; Live places real orders.</li>
-            <li><b>Read the Dimaag Scorecard on the Journal page</b> before ever considering Live — it shows, honestly, whether this system has actually proven a real edge yet.</li>
-          </ol>
-        </div>
-        <button className="btn" onClick={dismiss}>Dismiss</button>
+    <div className="attention">
+      <div className="attention-row">
+        <span><b>First time here?</b> <span className="muted">Three things to do before you start.</span></span>
+        <span className="attention-actions">
+          <button className="btn" aria-expanded={showSteps} onClick={() => setShowSteps((v) => !v)}>{showSteps ? "Hide steps" : "Show steps"}</button>
+          <button className="btn" onClick={dismiss}>Dismiss</button>
+        </span>
       </div>
+      {showSteps && (
+        <ol className="attention-steps">
+          <li><b>Connect Kite</b> — open the Paper ▾ menu at the top right and choose Connect Kite. Real prices, holdings and orders all need this; nothing trades without it.</li>
+          <li><b>Confirm you're in Paper mode</b> — the same button says Paper or Live. Paper is the safe default and simulates everything; Live places real orders.</li>
+          <li><b>Read the Dimaag Scorecard on the Journal page</b> before ever considering Live — it shows, honestly, whether this system has actually proven a real edge yet.</li>
+        </ol>
+      )}
     </div>
   );
 }
@@ -197,12 +202,12 @@ function AutonomyCard({ s }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h2 className="h" style={{ fontSize: 16 }}>
-            {live ? "Trading is live — running automatically" : "Autonomous trading is off (paper mode)"}
+            {live ? "Trading control — live, running automatically" : "Trading control — paper mode"}
           </h2>
           <div className="detail" style={{ marginTop: 2 }}>
             {live
               ? "The engine is placing real orders on its own rules, unattended. No action needed from you."
-              : "Simulated orders only. Flip this on and the engine takes it from there — no per-trade confirmation, ever, once it's live."}
+              : "Simulated orders only. Going live hands the engine real orders with no per-trade confirmation."}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -224,6 +229,17 @@ function AutonomyCard({ s }) {
           New entries are paused. Open positions still have their stops, targets and the 15:15 square-off.
         </p>
       )}
+      {/* The detail below is reference, not a daily read: one summary line,
+          with the full account, alert and scorecard detail a click away. */}
+      <details className="more-panel">
+        <summary>
+          <span className="more-summary">
+            {usingPaperFigure ? "Paper capital" : "Capital"} {capital != null ? `₹${num(capital, 0)}` : "—"} · F&amp;O {fno ? (fno.enabled ? "on" : "off") : "…"}
+            {" · "}Phone alerts {!telegram ? "…" : !telegram.configured ? "not set up" : telegram.enabled ? "on" : "off"}
+            {scorecard && <>{" · "}Proven edge <StatusPill status={scorecard.some((r) => r.status === "fail") ? "fail" : scorecard.every((r) => r.status === "pass") ? "pass" : "pending"} /></>}
+          </span>
+          <span className="more-toggle">Account &amp; alerts</span>
+        </summary>
       <div className="rb-row" style={{ marginTop: 12 }}>
         <div className="rb-chip">
           <b>{usingPaperFigure ? "Paper capital (simulated)" : "Real capital"}</b>
@@ -246,7 +262,13 @@ function AutonomyCard({ s }) {
             <button className="btn" onClick={testTelegram}>Send test</button>
           </div>
         )}
-        <div className="rb-chip"><b>Browser alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
+        <div className="rb-chip"><b>Browser alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — turn on from the Paper/Live menu, top right") : "Not supported in this browser"}</span></div>
+        {s.review_queue && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="rb-chip"><b>Review queue</b><span>{s.review_queue.enabled ? "On — near-misses wait for your approval" : "Off"}</span></div>
+            <ReviewQueueToggle s={s} />
+          </div>
+        )}
         {scorecard && (
           <div className="rb-chip">
             <b>Proven edge (Dimaag Scorecard)</b>
@@ -267,6 +289,7 @@ function AutonomyCard({ s }) {
           up so simulated trades actually get sized. Going live snaps sizing back to the real balance immediately.
         </p>
       )}
+      </details>
       {live && capital != null && capital < 2000 && (
         <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
           At ₹{capital.toLocaleString("en-IN")}, the 1% risk model sizes most stocks to 0 shares — expect few or no
@@ -367,6 +390,7 @@ function MiniChartCard({ s, r, held }) {
 export default function Overview({ state: s }) {
   const [scanning, setScanning] = useState(false);
   const [scanLabel, setScanLabel] = useState("Scan now");
+  const [view, setView] = useState("cards");
 
   async function triggerScan() {
     setScanning(true);
@@ -394,10 +418,10 @@ export default function Overview({ state: s }) {
 
   return (
     <>
+      {/* Only what needs you right now sits above the headline. */}
       <KiteSessionAlert s={s} />
+      <ReviewQueue s={s} hideWhenIdle />
       <OnboardingBanner s={s} />
-      <AutonomyCard s={s} />
-      <ReviewQueue s={s} />
       <section className="hero">
         <h1>{copy.lead}</h1>
         <p>{copy.rest}</p>
@@ -420,28 +444,33 @@ export default function Overview({ state: s }) {
         </div>
       </section>
 
-      <h2 className="h">Today's picks</h2>
-      <p className="sub">The stocks Trader Sahab is actively watching for an entry, ranked by scan score. <a className="more" href="/screener">See the full ranked list →</a></p>
-      {picks.length ? (
+      <AutonomyCard s={s} />
+
+      <div className="section-head">
+        <div>
+          <h2 className="h">Today's picks</h2>
+          <p className="sub">Stocks Trader Sahab is watching for an entry, by scan score. <a className="more" href="/screener">Full ranked list →</a></p>
+        </div>
+        {picks.length > 0 && (
+          <div className="segmented view-toggle" role="group" aria-label="Show picks as">
+            <button aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards</button>
+            <button aria-pressed={view === "charts"} onClick={() => setView("charts")}>Charts</button>
+          </div>
+        )}
+      </div>
+      {!picks.length ? (
+        <p className="empty">The scan hasn't found a stock that passes every filter yet.</p>
+      ) : view === "cards" ? (
         <div className="grid3">{picks.map((r) => <PickCard key={r.symbol} s={s} r={r} held={held} />)}</div>
       ) : (
-        <p className="empty">The scan hasn't found a stock that passes every filter yet.</p>
-      )}
-
-      {picks.length > 0 && (
-        <div className="section-gap">
-          <h2 className="h">Live charts</h2>
-          <p className="sub">
-            Real candles, EMA 20/50 and the checklist's current plan for each pick — the entry, stop and target lines are
-            the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
-          </p>
+        <>
           <div className="mini-chart-grid">
             {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Latest session shown. Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>.
+            Entry, stop and target lines are the checklist's plan, not a forecast. Latest session shown. Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>.
           </p>
-        </div>
+        </>
       )}
 
       <div className="section-gap grid2">
