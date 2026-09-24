@@ -128,6 +128,13 @@ CREATE TABLE IF NOT EXISTS research_briefs (
     model_ids TEXT, tokens INTEGER, cost_usd REAL
 );
 CREATE INDEX IF NOT EXISTS idx_research_briefs_symbol_ts ON research_briefs(symbol, ts);
+CREATE TABLE IF NOT EXISTS manual_reviews (
+    id TEXT PRIMARY KEY, created_ts REAL NOT NULL, session_date TEXT NOT NULL,
+    symbol TEXT NOT NULL, side TEXT NOT NULL, blocker TEXT, mode TEXT,
+    status TEXT NOT NULL, decided_ts REAL, position_id TEXT,
+    outcome_json TEXT, card_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_manual_reviews_date ON manual_reviews(session_date);
 """
 
 
@@ -426,6 +433,48 @@ def record_chaywanaprash_report(lookback_hours, llm_used, narrative, findings, i
             "VALUES (?,?,?,?,?,?,?)",
             (time.time(), lookback_hours, int(llm_used), narrative, _j(findings), input_tokens, output_tokens),
         )
+
+
+def record_review(card):
+    """A manual-review card, written the moment it is offered — so the table
+    holds every setup put in front of the user, not only the approved ones.
+    That is what lets a later analysis ask whether the user's approvals beat
+    the gates they overrode."""
+    with _conn() as c:
+        c.execute(
+            "INSERT OR REPLACE INTO manual_reviews "
+            "(id, created_ts, session_date, symbol, side, blocker, mode, status, decided_ts, position_id, "
+            " outcome_json, card_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (card["id"], card["created_ts"], card["session_date"], card["symbol"], card["side"],
+             (card.get("blocker") or {}).get("key"), card.get("mode"), card["status"], card.get("decided_ts"),
+             card.get("position_id"), _j(card.get("outcome")), _j(card)),
+        )
+
+
+def update_review(review_id, status, decided_ts, position_id=None, outcome=None, card=None):
+    with _conn() as c:
+        c.execute(
+            "UPDATE manual_reviews SET status=?, decided_ts=?, position_id=?, outcome_json=?, "
+            "card_json=COALESCE(?, card_json) WHERE id=?",
+            (status, decided_ts, position_id, _j(outcome), _j(card), review_id),
+        )
+
+
+def reviews_on(session_date):
+    """Every card offered on one IST session date, oldest first, as the card
+    dicts they were written as (status and outcome current)."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT card_json, status, decided_ts, position_id, outcome_json FROM manual_reviews "
+            "WHERE session_date = ? ORDER BY created_ts", (session_date,),
+        ).fetchall()
+    out = []
+    for r in rows:
+        card = json.loads(r["card_json"]) if r["card_json"] else {}
+        card.update({"status": r["status"], "decided_ts": r["decided_ts"], "position_id": r["position_id"],
+                     "outcome": json.loads(r["outcome_json"]) if r["outcome_json"] else None})
+        out.append(card)
+    return out
 
 
 def record_liquidity_check(symbol, side, qty, ltp, mode, result):
