@@ -3116,6 +3116,85 @@ A card is offered only if it could actually be taken. No other rule may block it
 
 **Verified** on a copy of the journal on a separate port (the live engine untouched): toggle on, a card rendered with its countdown, one approval refused because the stock wasn't tracked yet, and one approved in paper, which opened a short with the card's stop and target and journaled it. While verifying, the running engine caught a regression the unit tests missed: a refactor of the entry-window rule dropped a variable the signal still used. It was fixed before commit and now has a test that runs the full signal. `review_queue.py`, `TradingEngine.approve_review()`, `tests/test_review_queue.py`.
 
+### 65. A kill switch, a pause, and a real gate in front of Live
+
+An autonomous agent needs an owner who can stop it. There were only two ways
+to do that mid-session, and both were bad. **Paper** stopped new real orders
+but left open positions alone. **Killing the process** left open positions
+with no stops at all. Going live was a browser `confirm()` and nothing else:
+the backend switched on a dead Kite session, where every order fails, and
+after the daily loss limit was already hit.
+
+- **Pause entries** (Overview → Autonomous Trading card). No new positions
+  open, in cash or F&O. Stops, targets, trailing and the 15:15 square-off
+  keep running. The pause is saved in the journal (`control` table), so a
+  restart doesn't quietly resume trading. The header shows an amber
+  **Entries paused** chip while it's on. `POST /api/control/pause {"paused": true|false}`.
+- **Stop & close all**: the kill switch. It pauses entries, closes every
+  cash and F&O position at market, then switches to Paper. Positions close
+  *before* the mode flips, so a live position gets a real closing order. If
+  any close fails, it **stays live**, says which symbols are still open, and
+  tells you to close them in Kite. The engine needs live mode to keep
+  retrying, and you need to see the failure. On the next tick it also
+  closes any entry that was already mid-flight when the switch was pulled.
+  `POST /api/control/stop`.
+- **Go live is checked on the server.** `POST /api/mode` returns **409** with
+  the reasons if the Kite session isn't usable (checked with one real Kite
+  call), today's loss limit is hit, or Kite holds positions the engine
+  isn't tracking. The dashboard shows the reasons. `GET /api/control/live-readiness`
+  gives the same checks without the Kite call.
+- **Bug fixed on the way ([#98](https://github.com/harshece16/intraday-trading-agent/issues/98)).**
+  The 15:15 square-off called `_execute()` directly and skipped the exit
+  claim. A stop firing on the tick thread at the same moment could send a
+  second closing order and flip the position. It now goes through
+  `_exit_position()` like every other exit.
+
+Tests: `backend/tests/test_kill_switch.py` (9).
+
+### 66. Phone alerts over Telegram, sent by the backend
+
+Browser alerts (§17) only fire while a dashboard tab is open, which is exactly
+when you don't need them. The backend now sends the lines worth acting on to
+Telegram itself, laptop lid shut or not.
+
+**What reaches your phone:** every fill; every error; every risk event (loss
+limit, square-off, kill switch, pause); review-queue cards waiting for your
+decision (§64: they expire in 5 minutes); warn-level system events such as a
+switch to Live; and the end-of-session summary. Each message starts with
+`[LIVE]` or `[PAPER]`. Scans, watchlist changes and blocked signals stay on
+the dashboard. The same line within 30 minutes is sent once, with at most 20
+messages a minute. Sending runs on its own thread and never slows the engine.
+
+**Setup (about 2 minutes):**
+
+1. In Telegram, message **@BotFather**, send `/newbot`, and copy the bot token.
+2. Send your new bot any message. Then open
+   `https://api.telegram.org/bot<token>/getUpdates` in a browser and copy
+   `"chat":{"id": …}`.
+3. Create `backend/.telegram.json` (gitignored, like the Kite session):
+   `{"bot_token": "<token>", "chat_id": "<id>"}`. Or set
+   `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`.
+4. Restart the backend. On Overview → Autonomous Trading, click **Send test**.
+
+Turn it off and on from the same card; the setting survives restarts. The bot
+token is part of Telegram's URL, so a failed send logs only the status code,
+never the URL. Messages go to Telegram's servers, so they hold your
+symbols, fills and P&L. The bot only sends; it takes no commands.
+`telegram_alerts.py`, `tests/test_telegram_alerts.py`.
+
+### 67. A restart no longer forgets which stocks were already traded today (#22)
+
+The one-entry-per-stock-per-day rule ("no revenge trades") counted entries in
+memory, so restarting mid-session reset every count to zero. On 17 Sep, a
+restart after MAZDOCK was shorted and stopped out would have let the engine
+short it again the same day. On startup the engine now rebuilds each stock's
+count from today's journal: one entry per position, counted from its first
+leg. A legacy fill with no position ID counts on its own, so any error leans
+towards refusing a trade. The review queue reads the same count.
+`AppState._rehydrate_entry_counts()`; the tests in
+`tests/test_state_rehydration.py` include one that runs the full
+`trader_brain_signal()` on today's bars.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 import config
 import data_provider
 import database
+import telegram_alerts
 
 ACTIVITY_LIMIT = 300
 IST = ZoneInfo("Asia/Kolkata")
@@ -38,6 +39,9 @@ class AppState:
     def __init__(self, watchlist, paper_mode: bool):
         self.lock = threading.RLock()
         self.paper_mode = paper_mode
+        # The dashboard's pause: exits and stops keep running, new entries
+        # don't. The engine loads the persisted value (database control table).
+        self.entries_paused = False
         self.running = False
         self.market_status = "unknown"  # "open" | "closed" | "unknown"
         self.holiday = None  # {"name": str, "next_trading_day": "YYYY-MM-DD"} on an NSE holiday, else None
@@ -101,6 +105,25 @@ class AppState:
             return
         self.trades = list(reversed(todays_trades))  # newest first, matching record_trade()'s insert(0, ...)
         self.realized_pnl_today = sum(t["realized"] for t in self.trades if t.get("realized"))
+        self._rehydrate_entry_counts(todays_trades)
+
+    def _rehydrate_entry_counts(self, todays_trades):
+        """Issue #22: the one-entry-per-stock-per-day count lives in
+        strategy_state, which a restart emptied, so a stock already traded
+        (and maybe stopped out) today could be entered again. Rebuild it from
+        today's journal: one entry per position, counted from its first leg.
+        A legacy fill with no position_id counts on its own, so the error is
+        towards refusing a trade, never allowing an extra one."""
+        today = datetime.now(IST).date().isoformat()
+        seen, counts = set(), {}
+        for t in todays_trades:  # oldest first
+            key = t.get("position_id") or t["id"]
+            if key in seen:
+                continue
+            seen.add(key)
+            counts[t["symbol"]] = counts.get(t["symbol"], 0) + 1
+        for symbol, n in counts.items():
+            self.strategy_state[symbol] = {"entries_today": n, "entry_day": today}
 
     def set_watchlist(self, symbols):
         with self.lock:
@@ -117,6 +140,10 @@ class AppState:
             self.activity.insert(0, {"ts": ts, "kind": kind, "symbol": symbol, "message": message, "level": level})
             del self.activity[ACTIVITY_LIMIT:]
         database.record_activity(kind, message, symbol=symbol, level=level, ts=ts)
+        try:
+            telegram_alerts.notify(kind, message, symbol=symbol, level=level, paper_mode=self.paper_mode)
+        except Exception:
+            pass  # a phone alert must never break the activity log
 
     def snapshot(self):
         """Return a plain-dict snapshot safe to JSON-serialize for the API/WebSocket."""
@@ -137,6 +164,7 @@ class AppState:
 
             return {
                 "paper_mode": self.paper_mode,
+                "entries_paused": self.entries_paused,
                 "running": self.running,
                 "market_status": self.market_status,
                 "holiday": self.holiday,

@@ -21,11 +21,16 @@ import pytest
 
 import data_provider
 import database
+import telegram_alerts
 
 
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
     monkeypatch.setattr(data_provider, "_kite_rejected_token", None)
+    # A real backend/.telegram.json must never turn the test suite into
+    # messages on the owner's phone.
+    monkeypatch.setattr(telegram_alerts, "_token", "")
+    monkeypatch.setattr(telegram_alerts, "_chat_id", "")
     monkeypatch.setattr(database, "DB_PATH", tmp_path / "test_journal.db")
     database._local.conn = None
     yield

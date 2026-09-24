@@ -25,6 +25,7 @@ import confidence
 import costs
 import data_provider
 import database
+import telegram_alerts
 import fno_instruments
 import fno_risk
 import fundamentals
@@ -143,6 +144,18 @@ class TradingEngine:
         self._entering = set()
         self.review_queue = review_queue.ReviewQueue()
         state.review_queue = self.review_queue
+        # Set by stop_and_flatten(): the next open-market tick closes anything
+        # still open. An entry already past the pause check when the API thread
+        # flattened would otherwise survive the kill switch.
+        self._reflatten_pending = False
+        try:
+            state.entries_paused = bool(database.get_control("entries_paused", False))
+        except Exception:
+            logger.exception("Couldn't read the persisted entry pause — starting unpaused")
+        try:
+            telegram_alerts.enabled = bool(database.get_control("telegram_enabled", True))
+        except Exception:
+            logger.exception("Couldn't read the Telegram alert setting — leaving it on")
         self.stop_watcher = None
 
     def _ensure_kite(self):
@@ -444,18 +457,96 @@ class TradingEngine:
                        symbol=symbol, level="trade")
         return realized
 
-    def _square_off_all(self):
+    def _square_off_all(self, reason="auto_square_off"):
+        """Close every cash position. Goes through _exit_position() like every
+        other exit, so a stop firing on the tick thread during the square-off
+        can't send a second closing order and flip the position. Returns the
+        symbols it closed."""
+        closed = []
         for symbol, pos in list(self.state.positions.items()):
             if pos["quantity"] == 0:
                 continue
-            side = "SELL" if pos["quantity"] > 0 else "BUY"
             try:
                 price = data_provider.get_ltp(symbol)
             except Exception:
                 price = pos["avg_price"]
-            self._execute(symbol, side, abs(pos["quantity"]), price, reason="auto_square_off",
-                         position_id=pos.get("position_id"), initial_risk=pos.get("initial_risk"))
-        self.risk.open_positions_count = 0
+            if self._exit_position(symbol, price, reason=reason):
+                closed.append(symbol)
+        return closed
+
+    def set_entries_paused(self, paused: bool, source="dashboard"):
+        """Stop (or resume) opening new positions. Open positions keep their
+        stops, targets and the 15:15 square-off either way. Persisted, so a
+        restart doesn't quietly resume trading after the owner paused it."""
+        with self.state.lock:
+            self.state.entries_paused = bool(paused)
+        try:
+            database.set_control("entries_paused", bool(paused))
+        except Exception:
+            logger.exception("Couldn't persist the entry pause — it holds until the next restart only")
+        self.state.log("risk" if paused else "system",
+                       f"New entries {'paused' if paused else 'resumed'} via the {source}",
+                       level="warn" if paused else "info")
+
+    def stop_and_flatten(self):
+        """The kill switch: pause entries, close every cash and F&O position
+        at market, then return to Paper. Positions close while still in the
+        current mode, so a live position gets a real closing order before the
+        mode flips."""
+        self.set_entries_paused(True, source="kill switch")
+        self.state.log("risk", "Kill switch — closing every open position now", level="warn")
+        closed, failed = [], []
+        for symbol in [s for s, p in list(self.state.positions.items()) if p["quantity"]]:
+            try:
+                closed += self._square_off_all_one(symbol)
+            except Exception as exc:
+                logger.exception(f"Kill switch couldn't close {symbol}")
+                failed.append({"symbol": symbol, "error": str(exc)})
+        for underlying in list(self.state.fno_positions.keys()):
+            try:
+                self._close_fno(underlying, "kill_switch")
+                closed.append(underlying)
+            except Exception as exc:
+                logger.exception(f"Kill switch couldn't close F&O {underlying}")
+                failed.append({"symbol": underlying, "error": str(exc)})
+        self._reflatten_pending = True
+        was_live = not self.state.paper_mode
+        if not failed:
+            with self.state.lock:
+                self.state.paper_mode = True
+            if was_live:
+                self.state.log("system", "Mode switched to PAPER by the kill switch", level="warn")
+        else:
+            # Leave live mode on: the engine needs it to keep retrying real
+            # closing orders, and the owner has to see the failure.
+            self.state.log("error", "Kill switch could not close: " +
+                           ", ".join(f["symbol"] for f in failed) + " — still LIVE, close these in Kite",
+                           level="error")
+        return {"closed": closed, "failed": failed, "paper_mode": self.state.paper_mode}
+
+    def live_readiness(self, probe=False):
+        """What must be true before real orders are allowed to start. The
+        dashboard's confirm() was the only gate: it would go live on a dead
+        Kite session (every order then fails) or after today's loss limit was
+        already hit. `probe` spends one Kite call to confirm the session."""
+        blockers = []
+        kite = data_provider.kite_session_status(probe=probe)
+        if not kite.get("connected"):
+            blockers.append(f"Kite isn't usable: {kite.get('reason') or kite.get('state')}")
+        if self.risk.daily_loss_limit_hit():
+            blockers.append("Today's daily loss limit is already hit — live trading can start next session")
+        if self._untracked_kite_positions:
+            blockers.append("Kite holds positions the engine isn't tracking ("
+                            + ", ".join(sorted(self._untracked_kite_positions)) + ") — resolve them in Kite first")
+        return {"ready": not blockers, "blockers": blockers, "entries_paused": self.state.entries_paused}
+
+    def _square_off_all_one(self, symbol):
+        pos = self.state.positions.get(symbol) or {}
+        try:
+            price = data_provider.get_ltp(symbol)
+        except Exception:
+            price = pos.get("avg_price")
+        return [symbol] if self._exit_position(symbol, price, reason="kill_switch") else []
 
     def _claim_exit(self, symbol) -> bool:
         """Claim the right to close `symbol`, so exactly one thread sends the
@@ -560,6 +651,8 @@ class TradingEngine:
         stops a new entry, or None. _try_enter() and approve_review() both
         call this, so a manual approval can't slip past a risk limit the
         engine itself would have applied."""
+        if self.state.entries_paused:
+            return "new entries are paused from the dashboard"
         if symbol in self._untracked_kite_positions:
             return ("Kite shows an untracked open position in this symbol (see the reconciliation "
                     "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
@@ -955,6 +1048,8 @@ class TradingEngine:
         cfg = config.FNO
         if underlying in self.state.fno_positions:
             return  # one open contract per underlying at a time
+        if self.state.entries_paused:
+            return
         if self.risk.daily_loss_limit_hit() or self.risk.open_positions_count >= config.RISK["max_open_positions"]:
             return
         scorecard = database.journal_summary().get("scorecard", [])
@@ -1323,6 +1418,12 @@ class TradingEngine:
                 self._process_fno()
             except Exception:
                 logger.exception("F&O processing failed")
+            if self._reflatten_pending:
+                # Catches an entry that was already past the pause check when
+                # the kill switch flattened from the API thread.
+                self._reflatten_pending = False
+                if self._square_off_all(reason="kill_switch"):
+                    self.state.log("risk", "Kill switch — closed a position opened during the stop", level="warn")
             # Keep the tick stream subscribed to exactly what we hold, so a
             # position opened this cycle is under tick-by-tick stop watch
             # within a second of its order going in.

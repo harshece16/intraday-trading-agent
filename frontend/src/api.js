@@ -109,6 +109,50 @@ export async function apiJson(path, options) {
   return res.json();
 }
 
+async function postJson(path, body) {
+  const res = await apiFetch(path, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = data.detail || {};
+    const err = new Error(d.message || (typeof d === "string" ? d : `Request failed (${res.status})`));
+    err.blockers = d.blockers || [];
+    throw err;
+  }
+  return data;
+}
+
+/** Paper/Live. Going live can be refused by the backend (409) with the reasons in err.blockers. */
+export function setTradingMode(paperMode) {
+  return postJson("/api/mode", { paper_mode: paperMode });
+}
+
+export function setEntriesPaused(paused) {
+  return postJson("/api/control/pause", { paused });
+}
+
+/** Kill switch: pause entries, close every position at market, back to Paper. */
+export function stopAndCloseAll() {
+  return postJson("/api/control/stop");
+}
+
+export function setTelegramEnabled(enabled) {
+  return postJson("/api/alerts/telegram/enable", { enabled });
+}
+
+export function sendTelegramTest() {
+  return postJson("/api/alerts/telegram/test");
+}
+
+/** Shows why a switch to live was refused. Returns true if it was a refusal. */
+export function explainRefusal(err) {
+  if (!err?.blockers?.length) return false;
+  alert(`${err.message}:\n\n• ${err.blockers.join("\n• ")}`);
+  return true;
+}
+
 /** Live app state over the WebSocket, with automatic reconnect. */
 export function useAppState() {
   const [state, setState] = useState(null);
