@@ -25,6 +25,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 import auth
 import kite_tunnel
+import telegram_alerts
 import chaywanaprash
 import config
 import data_provider
@@ -529,12 +530,65 @@ def journal_session_summary(session_date: str = None, near_miss_limit: int = 5):
 
 @app.post("/api/mode")
 def set_mode(update: ModeUpdate):
+    if not update.paper_mode and state.paper_mode:
+        readiness = engine.live_readiness(probe=True)
+        if not readiness["ready"]:
+            state.log("risk", "Live mode refused: " + "; ".join(readiness["blockers"]), level="warn")
+            raise HTTPException(status_code=409, detail={"message": "Can't go live yet",
+                                                         "blockers": readiness["blockers"]})
     with state.lock:
         state.paper_mode = update.paper_mode
     mode = "PAPER" if update.paper_mode else "LIVE"
     logger.warning(f"Mode switched to {mode} via dashboard")
     state.log("system", f"Mode switched to {mode} via dashboard", level="warn")
     return {"paper_mode": state.paper_mode}
+
+
+@app.get("/api/control/live-readiness")
+def live_readiness():
+    """What would block a switch to live right now (no Kite call spent)."""
+    return engine.live_readiness(probe=False)
+
+
+class PauseUpdate(BaseModel):
+    paused: bool
+
+
+@app.post("/api/control/pause")
+def set_entries_paused(update: PauseUpdate):
+    """Stop or resume new entries. Exits, stops and the 15:15 square-off keep running."""
+    engine.set_entries_paused(update.paused)
+    return {"entries_paused": state.entries_paused}
+
+
+@app.post("/api/control/stop")
+def kill_switch():
+    """Pause entries, close every position at market, return to Paper."""
+    return engine.stop_and_flatten()
+
+
+@app.get("/api/alerts/telegram")
+def telegram_status():
+    return telegram_alerts.status()
+
+
+class TelegramUpdate(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/alerts/telegram/enable")
+def set_telegram_enabled(update: TelegramUpdate):
+    telegram_alerts.enabled = update.enabled
+    database.set_control("telegram_enabled", update.enabled)
+    state.log("system", f"Telegram phone alerts {'on' if update.enabled else 'off'} via the dashboard")
+    return telegram_alerts.status()
+
+
+@app.post("/api/alerts/telegram/test")
+def telegram_test():
+    """Send one message now, so setup problems show up here and not at 15:15."""
+    mode = "PAPER" if state.paper_mode else "LIVE"
+    return telegram_alerts.send_now(f"[{mode}] Trader Sahab test alert — phone alerts are working.")
 
 
 class WatchlistUpdate(BaseModel):

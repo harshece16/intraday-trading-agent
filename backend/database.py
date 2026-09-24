@@ -135,6 +135,9 @@ CREATE TABLE IF NOT EXISTS manual_reviews (
     outcome_json TEXT, card_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_manual_reviews_date ON manual_reviews(session_date);
+CREATE TABLE IF NOT EXISTS control (
+    key TEXT PRIMARY KEY, value TEXT, ts REAL NOT NULL
+);
 """
 
 
@@ -873,6 +876,21 @@ def activity_kind_logged_on(kind, session_date):
         row = c.execute("SELECT 1 FROM activity WHERE kind = ? AND ts >= ? AND ts < ? LIMIT 1",
                         (kind, start, start + 86400)).fetchone()
     return row is not None
+
+
+def get_control(key, default=None):
+    """A dashboard control that must survive a restart (the entry pause).
+    Kept in the journal because it is the one store every engine instance
+    already points at, and tests already isolate it."""
+    with _conn() as c:
+        row = c.execute("SELECT value FROM control WHERE key = ?", (key,)).fetchone()
+    return json.loads(row["value"]) if row else default
+
+
+def set_control(key, value):
+    with _conn() as c:
+        c.execute("INSERT OR REPLACE INTO control (key, value, ts) VALUES (?, ?, ?)",
+                  (key, json.dumps(value), time.time()))
 
 
 def session_summary_logged_on(session_date):

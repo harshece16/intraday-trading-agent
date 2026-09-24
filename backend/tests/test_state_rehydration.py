@@ -109,3 +109,65 @@ def test_first_tick_after_restart_does_not_re_zero_the_loss_counter(monkeypatch)
 
     assert engine.risk.daily_realized_pnl == -30.0
     assert state.realized_pnl_today == -30.0
+
+
+# ---- issue #22: the per-stock entry count survives a restart -------------
+
+
+def _fill(trade_id, position_id, ts, symbol, side, realized=None):
+    database.record_trade({
+        "id": trade_id, "position_id": position_id, "ts": ts, "symbol": symbol, "side": side,
+        "quantity": 10, "price": 100.0, "mode": "paper", "reason": "test", "note": None,
+        "realized": realized, "charges": 1.0, "initial_risk": 1.0, "r_multiple": None,
+    })
+
+
+def test_a_stock_traded_today_is_still_counted_after_a_restart():
+    """MAZDOCK, 17 Sep: shorted, stopped out, and a restart would have let the
+    engine short it again the same day."""
+    _fill("m1", "posM", _today_ts(0.2), "MAZDOCK", "SELL")
+    _fill("m2", "posM", _today_ts(0.3), "MAZDOCK", "BUY", realized=-120.0)
+
+    state = AppState(watchlist=["MAZDOCK", "TCS"], paper_mode=True)
+
+    today = datetime.now(IST).date().isoformat()
+    assert state.strategy_state["MAZDOCK"] == {"entries_today": 1, "entry_day": today}
+    assert not state.strategy_state.get("TCS")
+
+
+def test_two_positions_in_one_stock_count_twice():
+    _fill("a1", "posA", _today_ts(0.1), "BEL", "BUY")
+    _fill("a2", "posA", _today_ts(0.2), "BEL", "SELL", realized=10.0)
+    _fill("b1", "posB", _today_ts(0.3), "BEL", "BUY")
+    assert AppState(watchlist=[], paper_mode=True).strategy_state["BEL"]["entries_today"] == 2
+
+
+def test_yesterdays_entries_dont_count():
+    start = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    _fill("y1", "posY", start - 3600 * 5, "INFY", "BUY")
+    assert not AppState(watchlist=["INFY"], paper_mode=True).strategy_state.get("INFY")
+
+
+def test_the_brain_carries_the_restored_count_forward():
+    """End to end through trader_brain_signal(): given the restored state and
+    a session of today's bars, the count it returns is still 1, not reset to
+    0, so max_entries_per_day keeps refusing a second entry."""
+    import math
+    from datetime import timedelta
+    import trader_brain
+    _fill("r1", "posR", _today_ts(0.2), "RELIANCE", "BUY")
+    state = AppState(watchlist=["RELIANCE"], paper_mode=True)
+
+    today = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0)
+    start = today - timedelta(days=1)
+    bars = []
+    for i in range(150):
+        t = start + timedelta(minutes=5 * (i % 75)) + timedelta(days=i // 75)
+        c = 100 + 3 * math.sin(i / 9) + i * 0.02
+        bars.append({"time": t.isoformat(), "open": c - 0.2, "high": c + 0.6, "low": c - 0.6, "close": c,
+                     "volume": 1000 + (i % 7) * 150})
+    assert bars[-1]["time"][:10] == today.date().isoformat()
+
+    signal, st = trader_brain.trader_brain_signal(bars, prev_state=state.strategy_state["RELIANCE"])
+    assert st["entries_today"] == 1
+    assert signal not in ("BUY", "SHORT")

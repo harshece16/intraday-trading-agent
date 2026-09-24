@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiFetch, apiJson, openKiteLogin } from "../api";
+import { apiFetch, apiJson, explainRefusal, openKiteLogin, sendTelegramTest, setEntriesPaused, setTelegramEnabled, setTradingMode, stopAndCloseAll } from "../api";
 import { clock, dateLabel, money, num, pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
@@ -11,12 +11,6 @@ import Chart from "../components/Chart";
 import ReviewQueue from "../components/ReviewQueue";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
-async function setMode(paperMode) {
-  await apiFetch(`/api/mode`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paper_mode: paperMode }),
-  });
-}
 
 const ONBOARD_KEY = "sahab_onboarding_dismissed";
 
@@ -117,10 +111,12 @@ function AutonomyCard({ s }) {
   const [fno, setFno] = useState(null);
   const [scorecard, setScorecard] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [telegram, setTelegram] = useState(null);
 
   useEffect(() => {
     let stopped = false;
     function load() {
+      apiJson("/api/alerts/telegram").then((d) => !stopped && setTelegram(d)).catch(() => {});
       apiJson("/api/fno/status").then((d) => !stopped && setFno(d)).catch(() => {});
       apiJson("/api/journal/summary").then((d) => !stopped && setScorecard(d.scorecard)).catch(() => {});
     }
@@ -147,13 +143,52 @@ function AutonomyCard({ s }) {
       `Go live now?`;
     if (!confirm(msg)) return;
     setBusy(true);
-    try { await setMode(false); } catch (e) {}
+    try {
+      await setTradingMode(false);
+    } catch (e) {
+      if (!explainRefusal(e)) alert(`Couldn't go live: ${e.message}`);
+    }
     setBusy(false);
   }
 
   async function goPaper() {
     setBusy(true);
-    try { await setMode(true); } catch (e) {}
+    try { await setTradingMode(true); } catch (e) { alert(`Couldn't switch to Paper: ${e.message}`); }
+    setBusy(false);
+  }
+
+  async function toggleTelegram() {
+    try { setTelegram(await setTelegramEnabled(!telegram.enabled)); } catch (e) { alert(`Couldn't change phone alerts: ${e.message}`); }
+  }
+
+  async function testTelegram() {
+    const r = await sendTelegramTest().catch((e) => ({ ok: false, error: e.message }));
+    alert(r.ok ? "Test alert sent — check Telegram." : `Telegram test failed: ${r.error}`);
+  }
+
+  async function togglePause() {
+    setBusy(true);
+    try { await setEntriesPaused(!s.entries_paused); } catch (e) { alert(`Couldn't change the pause: ${e.message}`); }
+    setBusy(false);
+  }
+
+  const openCount = Object.values(s.positions || {}).filter((p) => p.quantity).length + Object.keys(s.fno_positions || {}).length;
+
+  async function killSwitch() {
+    const msg =
+      `Stop trading and close everything?\n\n` +
+      `This pauses new entries, closes all ${openCount} open position${openCount === 1 ? "" : "s"} at market ` +
+      `${live ? "with real orders on Zerodha" : "(paper fills)"}, and switches to Paper.`;
+    if (!confirm(msg)) return;
+    setBusy(true);
+    try {
+      const r = await stopAndCloseAll();
+      if (r.failed?.length) {
+        alert(`Couldn't close: ${r.failed.map((f) => `${f.symbol} (${f.error})`).join(", ")}.\n\nStill LIVE — close these in Kite now.`);
+      }
+    } catch (e) {
+      alert(`Kill switch failed: ${e.message}. Close positions in Kite directly.`);
+    }
     setBusy(false);
   }
 
@@ -170,10 +205,25 @@ function AutonomyCard({ s }) {
               : "Simulated orders only. Flip this on and the engine takes it from there — no per-trade confirmation, ever, once it's live."}
           </div>
         </div>
-        <button className={`btn ${live ? "" : "primary"}`} disabled={busy} onClick={live ? goPaper : goLive}>
-          {busy ? "…" : live ? "Switch to Paper" : "Go live"}
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" disabled={busy} onClick={togglePause}
+            title="Stop opening new positions. Stops, targets and the 15:15 square-off keep running.">
+            {s.entries_paused ? "Resume entries" : "Pause entries"}
+          </button>
+          <button className="btn danger" disabled={busy} onClick={killSwitch}
+            title="Pause entries, close every open position at market, switch to Paper">
+            Stop &amp; close all
+          </button>
+          <button className={`btn ${live ? "" : "primary"}`} disabled={busy} onClick={live ? goPaper : goLive}>
+            {busy ? "…" : live ? "Switch to Paper" : "Go live"}
+          </button>
+        </div>
       </div>
+      {s.entries_paused && (
+        <p className="note" style={{ margin: "12px 0 0", background: "var(--wait-bg)", color: "var(--wait)" }}>
+          New entries are paused. Open positions still have their stops, targets and the 15:15 square-off.
+        </p>
+      )}
       <div className="rb-row" style={{ marginTop: 12 }}>
         <div className="rb-chip">
           <b>{usingPaperFigure ? "Paper capital (simulated)" : "Real capital"}</b>
@@ -183,7 +233,20 @@ function AutonomyCard({ s }) {
           <div className="rb-chip"><b>Real Kite balance</b><span>{money(realCapital)}</span></div>
         )}
         <div className="rb-chip"><b>F&amp;O (options)</b><span>{fno ? (fno.enabled ? "ON" : "OFF") : "…"}</span></div>
-        <div className="rb-chip"><b>Alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
+        <div className="rb-chip">
+          <b>Phone alerts (Telegram)</b>
+          <span>
+            {!telegram ? "…" : !telegram.configured ? "Not set up — see README §66" : telegram.enabled ? "ON" : "Off"}
+            {telegram?.last_error ? ` · last send failed: ${telegram.last_error}` : ""}
+          </span>
+        </div>
+        {telegram?.configured && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="btn" onClick={toggleTelegram}>{telegram.enabled ? "Turn phone alerts off" : "Turn phone alerts on"}</button>
+            <button className="btn" onClick={testTelegram}>Send test</button>
+          </div>
+        )}
+        <div className="rb-chip"><b>Browser alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
         {scorecard && (
           <div className="rb-chip">
             <b>Proven edge (Dimaag Scorecard)</b>

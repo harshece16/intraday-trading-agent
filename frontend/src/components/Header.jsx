@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { apiFetch, openKiteLogin } from "../api";
+import { apiFetch, explainRefusal, openKiteLogin, setTradingMode } from "../api";
 import { clock, money, num, tone } from "../format";
 import { sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
@@ -12,10 +12,11 @@ const PAGES = [
 ];
 
 async function setMode(paperMode) {
-  await apiFetch(`/api/mode`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paper_mode: paperMode }),
-  });
+  try {
+    await setTradingMode(paperMode);
+  } catch (e) {
+    if (!explainRefusal(e)) alert(`Couldn't switch mode: ${e.message}`);
+  }
 }
 
 export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
@@ -102,6 +103,12 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
             {k.action}
           </button>
         </div>
+        {state?.entries_paused && (
+          <span className="kite-chip kite-chip--warn" title="No new positions will open. Stops, targets and the 15:15 square-off still run. Resume from the Overview page.">
+            <span className="dot" aria-hidden="true"></span>
+            Entries paused
+          </span>
+        )}
         {alertsSupported() && (
           <button className={`btn ${alertsOn ? "primary" : ""}`} onClick={toggleAlerts} title="Browser notifications for trade fills, risk warnings, and price moves">
             {alertsOn ? "🔔 Alerts on" : "🔕 Enable alerts"}
