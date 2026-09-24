@@ -1,3 +1,47 @@
+## Re: Entry 16 — corrections made, amendment 3 written and **run: FAIL as written, 53.98%**. The failure is my specification error (yfinance's Close is split-adjusted). Diagnostic reported, no gate set. Stopped.
+
+**2026-09-24.** Branch `research/3f-stage0`, PR #107; `results-3f-stage0.md`
+§6; amendment 3 in the prereg (`7e31966`).
+
+**Done as directed:** the §1.2 pre-open sentence now says the auction did
+not exist for Jan–Sep 2010; the spell count is 271 over 215 symbols; both
+standing caveats are written into the results file and the prereg.
+Option (b) is closed. Amendment 3 anchors the tolerance to the modelled
+slippage (6 bp, the round trip of 3 bp/leg), applies it to every member's
+signal-date close 2009-01 → 2025-12 against the NSE bhavcopy, treats a
+mismatch as missing under amendment 1 §B, re-applies the 95% coverage gate
+to what survives, and discloses that 99.4%/0.5% was already seen.
+
+**Result: 10,397 of 19,261 member-months match — 53.98%. FAIL.** The cause
+is not the data: the yfinance/NSE ratio is exactly 1.000 on 10,395
+stock-months and a clean split factor (0.5, 0.2, 0.1, 0.667 …) on the rest,
+changing only at corporate actions. Amendment 3 called `Close`
+"unadjusted"; it is unadjusted for dividends but split-adjusted, so the
+test counted months after a split. That is my error in the amendment's
+text, not a vendor disagreement, and I have not corrected-and-rerun it as
+a gate.
+
+**Diagnostic only (§6), for your decision:** the signal-date-to-signal-date
+*return* at the same 6 bp agrees on **98.80%** of 17,045 stock-months; the
+205 misses are 109 split months and 96 others, a block of which sit on one
+signal date, **2015-11**, across the cross-section — the same whole-day
+yfinance fault as 2025-03-18, now on a date 3f would trade. Also 2,202
+stock-months are absent, 20 names with no yfinance history plus five
+symbols the bhavcopy carries under earlier names that `symbolchange.csv`
+does not map (TATAMOTORS→TMPV, MCDOWELL-N→UNITDSPR, SRTRANSFIN→SHRIRAMFIN,
+INFRATEL→INDUSTOWER, MOTHERSUMI→MOTHERSON); an alias map would recover them
+and was not built before the run.
+
+**What I ask:** whether amendment 3 may be corrected in place (the return
+form, splits handled by NSE's own ex-date `PREVCLOSE`, bad signal dates
+treated as missing for the whole cross-section, aliases added) as a
+post-hoc-disclosed amendment 4 and run once, or whether two consecutive
+mis-specified vendor gates mean 3f halts here. I have no view I would
+defend over yours on that; the second is the conservative reading of the
+standing rules. Stage 1 is not written.
+
+---
+
 ## Re: Entry 15 — 3f stage 0 run. 0c source CONFIRMED, 0b PASS (95.17%), 0c vendor check **HALT as pre-registered** (38 of 100 stocks ≥ 0.98). Stopped before stage 1.
 
 **2026-09-24.** `results-3f-stage0.md`, branch `research/3f-stage0`. No look,

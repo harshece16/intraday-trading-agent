@@ -18,6 +18,8 @@ Inputs are sqlite files built outside the repo (none is committed):
            backend/data/kite_history.db, read-only
   --bhav   bhav(symbol, date, close, last, prev_close, ...)  EQ rows of NSE's daily
            BhavCopy_NSE_CM_0_0_0_<YYYYMMDD>_F_0000.csv.zip
+  --bhav-monthend  the same for every month-end session 2009-01..2025-12 plus a
+           fetched(month, date, rows, http) table — amendment 3's level test
   --membership  research/data/nifty100_membership_monthly.csv
 
 Usage:
@@ -145,11 +147,67 @@ def vendor(yf_db, other, label, price_col="close", threshold=0.98, other_returns
     }
 
 
+def level_test(yf_db, bhav_me_db, membership_csv, tolerance=0.0006, start=START, end=END):
+    """Amendment 3: every member's yfinance Close on every signal date vs NSE's official
+    close; a miss or a gap > tolerance is 'missing'; the 95% coverage gate re-applied."""
+    mem = collections.defaultdict(list)
+    for r in csv.DictReader(open(membership_csv)):
+        if start <= r["month"] <= end:
+            mem[r["month"]].append(r["symbol"])
+    yf = _series(yf_db, "select symbol, date, close from daily where date >= '2009-01-01'")
+    off = _series(bhav_me_db, "select symbol, date, close from bhav")
+    fetched = {m: d for m, d in bhav_me_db.execute("select month, date from fetched where http = '200'")}
+    yf_month_end = {}
+    for s in yf:
+        for d in yf[s]:
+            if d[:7] >= "2009-01":
+                yf_month_end[d[:7]] = max(yf_month_end.get(d[:7], ""), d)
+    calendar_mismatch = {m: (yf_month_end[m], fetched[m]) for m in fetched if m in yf_month_end and yf_month_end[m] != fetched[m]}
+    total = exist = match = 0
+    by_year = collections.defaultdict(lambda: [0, 0, 0])
+    mismatches = []
+    for mo, syms in sorted(mem.items()):
+        d = fetched.get(mo)
+        if not d:
+            continue
+        for s in syms:
+            total += 1
+            by_year[mo[:4]][2] += 1
+            y = yf[s].get(d)
+            if y is None and mo in calendar_mismatch:
+                y = yf[s].get(calendar_mismatch[mo][0])  # yfinance's row sits on its own (non-session) date
+            if y is None or s not in off or d not in off[s]:
+                mismatches.append({"month": mo, "symbol": s, "yf": y, "nse": off.get(s, {}).get(d), "reason": "absent"})
+                continue
+            exist += 1
+            by_year[mo[:4]][1] += 1
+            gap = abs(y / off[s][d] - 1)
+            if gap <= tolerance:
+                match += 1
+                by_year[mo[:4]][0] += 1
+            else:
+                mismatches.append({"month": mo, "symbol": s, "yf": round(y, 2), "nse": off[s][d], "gap_bp": round(gap * 1e4, 1), "reason": "gap"})
+    gaps = [m for m in mismatches if m["reason"] == "gap"]
+    return {
+        "tolerance_bp": tolerance * 1e4, "months_with_bhavcopy": len(fetched), "member_months": total,
+        "close_exists": exist, "exists_and_matches": match, "pct_match": round(100 * match / total, 2),
+        "gate_95pct": match / total >= 0.95,
+        "by_year": {y: f"match {a}/{c} ({100 * a / c:.1f}%), exists {b}/{c}" for y, (a, b, c) in sorted(by_year.items())},
+        "gap_mismatches": len(gaps), "absent": len(mismatches) - len(gaps),
+        "gap_by_symbol": dict(collections.Counter(m["symbol"] for m in gaps).most_common(20)),
+        "gap_bp_distribution": {"median": median([m["gap_bp"] for m in gaps]) if gaps else None,
+                                 "over_50bp": sum(1 for m in gaps if m["gap_bp"] > 50)},
+        "yfinance_month_end_not_an_nse_session": calendar_mismatch,
+        "mismatches": mismatches,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--yf", required=True)
     ap.add_argument("--kite", required=True)
     ap.add_argument("--bhav")
+    ap.add_argument("--bhav-monthend", help="bhav(symbol, date, close, ...) + fetched(month, date, rows, http) for every signal date, amendment 3")
     ap.add_argument("--membership", default=os.path.join(HERE, "data", "nifty100_membership_monthly.csv"))
     ap.add_argument("--out", default=None, help="write the full JSON here")
     a = ap.parse_args()
@@ -174,11 +232,13 @@ def main():
         kd.execute("create table daily(symbol, date, close)")
         kd.executemany("insert into daily values (?,?,?)", [(s, d, c) for s in kite for d, c in kite[s].items()])
         result["kite_vs_bhavcopy_close"] = vendor(kd, bhav, "Kite cache last 5m bar vs NSE bhavcopy official close (NSE adjusted return)", other_returns=nse_ret)
+    if a.bhav_monthend:
+        result["level_test_amendment3"] = level_test(yf_db, sqlite3.connect(a.bhav_monthend), a.membership)
     if a.out:
         json.dump(result, open(a.out, "w"), indent=1)
     for k, v in result.items():
         print(f"== {k}")
-        print(json.dumps({kk: vv for kk, vv in v.items() if kk not in ("symbols_missing", "worst")}, indent=1))
+        print(json.dumps({kk: vv for kk, vv in v.items() if kk not in ("symbols_missing", "worst", "below_threshold_ex_corporate_action_days", "mismatches")}, indent=1))
         if "worst" in v:
             print(" worst:", [(r["symbol"], r["corr"], r["corr_ex_corporate_action_days"], r.get("median_level_gap")) for r in v["worst"]])
         if "below_threshold_ex_corporate_action_days" in v:

@@ -1,4 +1,4 @@
-# 3f stage 0 — feasibility. 0c source: CONFIRMED. 0b membership: PASS (95.17%). 0c vendor check: **HALT as pre-registered** (38% of stocks ≥ 0.98). No look, no trial.
+# 3f stage 0 — feasibility. 0c source: CONFIRMED. 0b membership: PASS (95.17%). 0c vendor check: **HALT as pre-registered** (38% of stocks ≥ 0.98); **amendment 3's level test also FAILS as written (53.98%)** — §6. No look, no trial.
 
 **2026-09-24.** Pre-registration: `prereg-3f-momentum-delivery.md` with
 amendments 1 and 2. Stage 0 reads no forward return; nothing here is a look
@@ -266,3 +266,57 @@ further here — offered as an issue.
    the 2024–25 window — a further ~190 downloads.
 
 Nothing in stage 1 has been written. Looks spent: none. Trials spent: none.
+
+## 6 — Amendment 3's level test: **FAIL as written, 53.98%** — and the specification error is mine
+
+Run after amendment 3 was committed (`7e31966`), on NSE's bhavcopy for every
+month-end session 2009-01 → 2025-12 (204 files: the old `cm<DDMMMYYYY>bhav`
+format to June 2024, the new `BhavCopy_NSE_CM` format after). Code:
+`step3f_stage0_checks.py --bhav-monthend`.
+
+| | |
+| --- | --- |
+| member-months 2010-01 → 2025-12 | 19,261 |
+| yfinance close exists **and** bhavcopy row found | 17,059 |
+| within 6 bp of the official close | **10,397 — 53.98%** vs the 95% gate → **FAIL** |
+| by year | 25.6% (2010) rising monotonically to 92.0% (2025) |
+
+**Why, and why this is a specification error rather than a data finding.**
+The ratio yfinance-close / official-close on the 17,059 comparable
+stock-months takes the value **1.000 on 10,395 of them and a clean split or
+bonus factor on the rest** — 0.5 (1,424), 0.2 (700), 0.1 (635), 0.667 (462),
+0.25 (260) … For 82 of 177 stocks it takes exactly one value over the whole
+window; for 87 it takes two to four, changing only at corporate actions.
+That is what a split-adjusted series looks like against an unadjusted one.
+Amendment 3 called yfinance's `Close` "unadjusted"; it is unadjusted for
+**dividends** (as the prereg's 0c wording says) but **adjusted for splits and
+bonuses**, back to the start of the series. The test therefore measured how
+many months lie after a split, which rises over time — the monotone by-year
+pattern — and says nothing about vendor agreement. I wrote the tolerance
+correctly anchored and the price set correctly, and named the wrong column.
+
+**The remaining 2,202 stock-months are absent, not mismatched:** 20 names
+with no yfinance history (§3), plus symbols the bhavcopy carried under an
+earlier name that NSE's `symbolchange.csv` does not map (Tata Motors under
+TATAMOTORS before TMPV — 189 months; United Spirits under MCDOWELL-N — 167;
+Shriram Finance under SRTRANSFIN — 119; Indus Towers under INFRATEL — 81;
+Samvardhana Motherson under MOTHERSUMI — 81). A hand alias map would recover
+these; it was not built before the run and is not applied now.
+
+**Diagnostic, reported and not gated — the reviewer decides what, if
+anything, becomes the rule.** The one comparison that removes the split
+factor without choosing a new number is the **signal-date-to-signal-date
+return**, month t−1 to month t, yfinance vs bhavcopy, at the same 6 bp: of
+17,045 comparable stock-months, **16,840 (98.80%) agree within 6 bp**. The
+205 that do not split into **109 months containing a split or bonus** (where
+the raw official-close ratio is not a return — NSE's own `PREVCLOSE` on the
+ex-date would be needed) and **96 others**, of which a large block share one
+signal date, **2015-11**, across many stocks (ADANIPORTS, APOLLOHOSP,
+AXISBANK, BAJAJFINSV … each a few tenths of a percent off) — the same
+whole-cross-section yfinance fault as 2025-03-18 in §4.3, now on a signal
+date. A bad signal date corrupts every rank and every fill on it, so
+whatever rule the reviewer sets must treat such dates as missing for the
+whole cross-section, not stock by stock.
+
+I have not set a gate on these numbers. They were seen; any rule built on
+them is post hoc and must say so.
