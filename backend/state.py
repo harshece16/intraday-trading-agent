@@ -55,6 +55,9 @@ class AppState:
         #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id"}
         self.fno_positions = {}
         self.set_watchlist(watchlist)
+        # review_queue.ReviewQueue, attached by TradingEngine. Kept here only so
+        # snapshot() can publish it; the engine owns it.
+        self.review_queue = None
 
         self.market = None         # market context from the latest scan
         self.scanner = None        # full latest scan result
@@ -120,6 +123,7 @@ class AppState:
         # Read outside self.lock: it touches only config and module state, and
         # the snapshot lock guards this object's own fields.
         kite = data_provider.kite_session_status()
+        review = self.review_queue.snapshot() if self.review_queue is not None else None
         with self.lock:
             unrealized = 0.0
             positions_out = {}
@@ -169,6 +173,7 @@ class AppState:
                 # you land on when it is.
                 "kite_redirect_url": kite["redirect_url"],
                 "kite_login_stalled": kite["login_stalled"],
+                "review_queue": review,
             }
 
     def apply_fill(self, symbol, side, quantity, price, charges=0.0) -> dict:

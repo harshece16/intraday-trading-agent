@@ -179,6 +179,15 @@ CHECKLIST_SOURCES = {
 }
 
 
+def entry_window_open(hhmm, params=None):
+    """True if a new entry may be taken at `hhmm` ("HH:MM", IST): on or after
+    no_entry_before, before last_entry_time, and outside every no_entry_window.
+    Shared by the signal and the manual review queue so both obey one rule."""
+    p = {**DEFAULTS, **(params or {})}
+    blocked = any(a <= hhmm < b for a, b in p["no_entry_windows"])
+    return p["no_entry_before"] <= hhmm < p["last_entry_time"] and not blocked
+
+
 def _net_rrr(price, stop, target, cost_pct):
     """Reward-to-risk after round-trip costs, as the checklist measures it."""
     cost = price * cost_pct / 100
@@ -564,7 +573,7 @@ def trader_brain_signal(candles, prev_state=None, news=None, fundamentals=None, 
     # 9. Decision with discipline rules — longs and shorts are exact mirrors
     hhmm = last["time"][11:16]
     blocked_window = next(((a, b) for a, b in p["no_entry_windows"] if a <= hhmm < b), None)
-    in_entry_window = p["no_entry_before"] <= hhmm < p["last_entry_time"] and blocked_window is None
+    in_entry_window = entry_window_open(hhmm, p)
     exit_long = bear.total >= p["exit_threshold"] or (price < e50 and structure == "downtrend") or long_veto
     exit_short = bull.total >= p["exit_threshold"] or (price > e50 and structure == "uptrend") or short_veto
     long_ok = (

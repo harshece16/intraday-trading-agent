@@ -315,6 +315,19 @@ PREOPEN_KITE_CHECK_TIME = "08:45"
 # SEPARATE opt-in from PAPER_MODE_DEFAULT/the dashboard's Live toggle: an
 # order only reaches Kite when BOTH paper_mode is off AND enabled is True
 # here, so switching cash equity live never silently turns this on too.
+# Manual review queue (review_queue.py). A setup that misses the entry by
+# exactly one required checklist item — or passes the checklist and is
+# stopped only by the confidence gate — is put in front of the user as a card
+# instead of being skipped. Approving overrides that ONE gate; every risk
+# limit (daily loss, max positions, sector cap, one entry per stock per day,
+# entry window, sizing, liquidity) is re-checked at the moment of approval.
+# Off by default and not persisted: a restart turns it off again. In live
+# mode each approval needs its own real-money confirmation.
+REVIEW_QUEUE = {
+    "enabled": False,
+    "expiry_seconds": 300,          # a card older than this can't be approved; prices move
+}
+
 FNO = {
     "enabled": False,
     "capital": 10000.0,             # ring-fenced sub-allocation of RISK.total_capital, not the whole account

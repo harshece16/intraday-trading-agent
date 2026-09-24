@@ -446,6 +446,49 @@ def journal_trades_csv():
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
+class ReviewQueueUpdate(BaseModel):
+    enabled: bool
+
+
+class ReviewApproval(BaseModel):
+    confirm_live: bool = False
+
+
+@app.post("/api/review-queue/enable")
+def set_review_queue_enabled(update: ReviewQueueUpdate):
+    """Turn the manual review queue on or off (review_queue.py). In memory
+    only: a restart turns it off again."""
+    config.REVIEW_QUEUE["enabled"] = update.enabled
+    state.log("system", "Manual review queue ON — setups that miss by exactly one gate will be offered to you "
+                        "to approve or reject. An approval overrides that one gate; every risk limit still applies."
+              if update.enabled else "Manual review queue OFF", level="warn" if update.enabled else "info")
+    return engine.review_queue.snapshot()
+
+
+@app.get("/api/review-queue")
+def get_review_queue():
+    return engine.review_queue.snapshot()
+
+
+@app.post("/api/review-queue/{review_id}/approve")
+def approve_review(review_id: str, body: ReviewApproval = ReviewApproval()):
+    """The user's decision to take one offered setup. Everything except the
+    card's own blocker and the confidence gate is re-checked at the live
+    price; in live mode this places a real order and needs confirm_live."""
+    result = engine.approve_review(review_id, confirm_live=body.confirm_live)
+    if not result["ok"] and result.get("status") is None:
+        raise HTTPException(status_code=404, detail=result["reason"])
+    return result
+
+
+@app.post("/api/review-queue/{review_id}/reject")
+def reject_review(review_id: str):
+    result = engine.reject_review(review_id)
+    if not result["ok"] and result.get("status") is None:
+        raise HTTPException(status_code=404, detail=result["reason"])
+    return result
+
+
 class ModeUpdate(BaseModel):
     paper_mode: bool
 

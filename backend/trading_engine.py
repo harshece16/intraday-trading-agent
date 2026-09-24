@@ -32,6 +32,7 @@ import holidays
 import liquidity
 import news_sentiment
 import options_pricing
+import review_queue
 from kiteconnect.exceptions import TokenException
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
@@ -136,6 +137,12 @@ class TradingEngine:
         # breached stop would each send a full closing order and turn a flat
         # exit into a reversed position. See _claim_exit().
         self._exiting = set()
+        # Symbols a manual approval is entering right now. The API thread and
+        # the engine's tick both reach the order path; this keeps them from
+        # both opening the same stock. See approve_review().
+        self._entering = set()
+        self.review_queue = review_queue.ReviewQueue()
+        state.review_queue = self.review_queue
         self.stop_watcher = None
 
     def _ensure_kite(self):
@@ -548,33 +555,29 @@ class TradingEngine:
     def _close(self, symbol, ltp, reason, note=None):
         self._exit_position(symbol, ltp, reason, note)
 
-    def _try_enter(self, symbol, side, ltp, candles, analysis):
-        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15).
-        Returns True if a real order was placed, False if blocked for any reason —
-        _process_symbol() uses this to roll back the entries_today count trader_brain
-        already spent on this signal when nothing was actually entered."""
-        if self.state.positions[symbol]["quantity"] != 0:
-            return False
+    def _entry_block_reason(self, symbol, side):
+        """The first rule outside the checklist and the confidence gate that
+        stops a new entry, or None. _try_enter() and approve_review() both
+        call this, so a manual approval can't slip past a risk limit the
+        engine itself would have applied."""
         if symbol in self._untracked_kite_positions:
-            return self._blocked(symbol, f"{analysis.get('setup', 'Entry')} ({side.lower()})",
-                                 "Kite shows an untracked open position in this symbol (see the reconciliation "
-                                 "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
-        setup = f"{analysis.get('setup', 'Entry')} ({side.lower()})"
+            return ("Kite shows an untracked open position in this symbol (see the reconciliation "
+                    "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
         row = self._scan_row(symbol)
         mkt = self.state.market or {}
         reasons_txt = "; ".join(mkt.get("reasons", [])[:2])
         if row and row.get("excluded"):
-            return self._blocked(symbol, setup, row["excluded"])
+            return row["excluded"]
         if row and row.get("side") and row["side"] != side:
-            return self._blocked(symbol, setup, f"scanner favours {row['side']} for this stock today")
+            return f"scanner favours {row['side']} for this stock today"
         if side == "LONG" and mkt.get("bias") == "risk-off" and config.MARKET_FILTER["block_new_longs_when_risk_off"]:
-            return self._blocked(symbol, setup, f"no new longs — market is risk-off ({reasons_txt})")
+            return f"no new longs — market is risk-off ({reasons_txt})"
         if side == "SHORT" and mkt.get("bias") == "risk-on" and config.MARKET_FILTER.get("block_new_shorts_when_risk_on", True):
-            return self._blocked(symbol, setup, f"no new shorts — market is risk-on ({reasons_txt})")
+            return f"no new shorts — market is risk-on ({reasons_txt})"
         if self.risk.daily_loss_limit_hit():
-            return self._blocked(symbol, setup, "daily loss limit reached")
+            return "daily loss limit reached"
         if self.risk.open_positions_count >= config.RISK["max_open_positions"]:
-            return self._blocked(symbol, setup, f"already at the max of {config.RISK['max_open_positions']} open positions")
+            return f"already at the max of {config.RISK['max_open_positions']} open positions"
 
         # A multi-expert review flagged that max_open_positions alone doesn't stop 3
         # concurrent positions from being the same sector — which the scanner's own
@@ -589,8 +592,21 @@ class TradingEngine:
                 if pos["quantity"] != 0 and self._industry_for(sym, self._scan_row(sym)) == industry
             )
             if same_sector >= max_per_sector:
-                return self._blocked(symbol, setup, f"already at the max of {max_per_sector} open position(s) in "
-                                                     f"{industry} — avoids concentrating risk in one sector")
+                return (f"already at the max of {max_per_sector} open position(s) in "
+                        f"{industry} — avoids concentrating risk in one sector")
+        return None
+
+    def _try_enter(self, symbol, side, ltp, candles, analysis):
+        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15).
+        Returns True if a real order was placed, False if blocked for any reason —
+        _process_symbol() uses this to roll back the entries_today count trader_brain
+        already spent on this signal when nothing was actually entered."""
+        if self.state.positions[symbol]["quantity"] != 0 or symbol in self._entering:
+            return False
+        setup = f"{analysis.get('setup', 'Entry')} ({side.lower()})"
+        why = self._entry_block_reason(symbol, side)
+        if why:
+            return self._blocked(symbol, setup, why)
 
         # Same confidence.py gate F&O already used (config.FNO["min_confidence_to_trade"])
         # now applies to cash equity too: a clean-looking checklist pass means nothing
@@ -602,6 +618,15 @@ class TradingEngine:
         min_conf = config.RISK.get("min_confidence_to_trade", 60)
         if conf["score"] < min_conf:
             reason = f"confidence {conf['score']}/100 below the {min_conf} bar ({conf['explanation']})"
+            if self.review_queue.enabled() and analysis.get("entry_mode") == "checklist":
+                try:
+                    blocker = {"key": "confidence", "label": f"Confidence at least {min_conf}",
+                               "detail": f"{conf['score']}/100 (local setup {conf['local_setup']['score']} × "
+                                         f"{conf['system_evidence']['multiplier']:.2f} system evidence)"}
+                    self._offer_review(symbol, side, (analysis.get("checklist") or {}).get(side.lower()),
+                                       blocker, ltp, candles, analysis, conf=conf)
+                except Exception:
+                    logger.exception(f"Review queue: couldn't offer the confidence-blocked {symbol} setup")
             return self._blocked(symbol, setup, reason)
 
         atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) if config.RISK.get("use_atr_risk") else None
@@ -663,6 +688,189 @@ class TradingEngine:
             pos["position_id"] = position_id
         self.risk.open_positions_count += 1
         return True
+
+    # ---- manual review queue (review_queue.py) ---------------------------
+
+    def _offer_near_misses(self, symbol, ltp, bars, analysis):
+        """Offer a card for each side that failed exactly one required
+        checklist item, inside the entry window, on a stock not yet traded today."""
+        if analysis.get("entry_mode") != "checklist":
+            return
+        params = {**trader_brain.DEFAULTS, **self.strategy_params}
+        hhmm = (analysis.get("bar_time") or "")[11:16]
+        if not hhmm or not trader_brain.entry_window_open(hhmm, params):
+            return
+        st = self.state.strategy_state.get(symbol) or {}
+        if st.get("entries_today", 0) >= params["max_entries_per_day"]:
+            return
+        for key, side in (("long", "LONG"), ("short", "SHORT")):
+            if side == "SHORT" and not params.get("allow_shorts", True):
+                continue
+            plan = (analysis.get("checklist") or {}).get(key)
+            blocker = review_queue.single_blocker(plan)
+            if blocker:
+                self._offer_review(symbol, side, plan, blocker, ltp, bars, analysis)
+
+    def _offer_review(self, symbol, side, plan, blocker, ltp, bars, analysis, conf=None):
+        """Put one card in front of the user, if it could actually be taken:
+        the plan has a stop and a target the price hasn't passed, no other
+        rule would stop it, and it sizes to at least one share."""
+        q = self.review_queue
+        if not q.enabled() or not plan or q.seen(symbol, side):
+            return None
+        stop, target = plan.get("stop"), plan.get("target")
+        if stop is None or target is None:
+            return None
+        s = 1 if side == "LONG" else -1
+        if (ltp - stop) * s <= 0 or (target - ltp) * s <= 0:
+            return None
+        if self._entry_block_reason(symbol, side):
+            return None
+        params = {**trader_brain.DEFAULTS, **self.strategy_params}
+        atr_val = compute_atr(bars, config.RISK.get("atr_period", 14)) if config.RISK.get("use_atr_risk") and bars else None
+        qty = self.risk.position_size(ltp, atr=atr_val, stop_price=stop,
+                                      size_factor=self.size_multiplier * plan.get("size_factor", 1.0))
+        if qty <= 0:
+            return None
+        if conf is None:
+            conf = confidence.score_trade(analysis, side, database.journal_summary().get("scorecard", []))
+        card = review_queue.build_card(
+            symbol, side, plan, blocker, ltp, params["cost_pct"], qty,
+            setup=plan.get("pattern") or analysis.get("setup"),
+            confidence={"score": conf["score"], "bar": config.RISK.get("min_confidence_to_trade", 60),
+                        "local": conf["local_setup"]["score"],
+                        "multiplier": conf["system_evidence"]["multiplier"]},
+            mode="paper" if self.state.paper_mode else "live", bar_time=analysis.get("bar_time"))
+        card["checklist"] = analysis.get("checklist")
+        if q.add(card) is None:
+            return None
+        mins = max(1, config.REVIEW_QUEUE["expiry_seconds"] // 60)
+        self.state.log("review", f"{card['setup']} ({side.lower()}) is waiting for your decision: it failed only "
+                                 f"\"{blocker['label']}\" ({blocker['detail']}). {card['verdict']} "
+                                 f"Approve or reject it on the Overview page within {mins} min.",
+                       symbol=symbol, level="warn")
+        return card
+
+    def _refuse_review(self, review_id, reason):
+        card = self.review_queue.decide(review_id, "refused", outcome={"reason": reason})
+        if card:
+            self.state.log("review", f"Your approval of {card['setup']} ({card['side'].lower()}) could not be "
+                                     f"placed: {reason}", symbol=card["symbol"], level="info")
+        return {"ok": False, "status": "refused", "reason": reason}
+
+    def reject_review(self, review_id):
+        card = self.review_queue.get(review_id)
+        if card is None:
+            return {"ok": False, "status": None, "reason": "No such review card (it may be from an earlier day)."}
+        if card["status"] != "pending":
+            return {"ok": False, "status": card["status"], "reason": f"This card is already {card['status']}."}
+        self.review_queue.decide(review_id, "rejected")
+        self.state.log("review", f"You rejected {card['setup']} ({card['side'].lower()}).", symbol=card["symbol"])
+        return {"ok": True, "status": "rejected"}
+
+    def approve_review(self, review_id, confirm_live=False):
+        """The user's Approve click. Overrides only the card's blocker and the
+        confidence gate: every other entry rule is re-checked here, at the
+        live price, and the order goes through the same _execute() path as
+        any engine entry. In live mode it needs confirm_live=True."""
+        card = self.review_queue.get(review_id)
+        if card is None:
+            return {"ok": False, "status": None, "reason": "No such review card (it may be from an earlier day)."}
+        if card["status"] != "pending":
+            return {"ok": False, "status": card["status"], "reason": f"This card is already {card['status']}."}
+        if review_queue.now_ist().timestamp() > card["expires_ts"]:
+            self.review_queue.decide(review_id, "expired")
+            return {"ok": False, "status": "expired",
+                    "reason": "This card expired — the price has moved since it was offered."}
+        if not self.state.paper_mode and not confirm_live:
+            return {"ok": False, "status": "pending",
+                    "reason": "Live mode: approving places a REAL Kite order. It needs your explicit "
+                              "real-money confirmation."}
+        symbol = card["symbol"]
+        with self.state.lock:
+            pos = self.state.positions.get(symbol)
+            busy = pos is None or pos["quantity"] != 0 or symbol in self._entering
+            if not busy:
+                self._entering.add(symbol)
+        if busy:
+            return self._refuse_review(review_id, "this stock is no longer tracked, already has an open position, "
+                                                  "or is being entered right now")
+        try:
+            return self._approve_claimed(card)
+        finally:
+            with self.state.lock:
+                self._entering.discard(symbol)
+
+    def _approve_claimed(self, card):
+        symbol, side, review_id = card["symbol"], card["side"], card["id"]
+        s = 1 if side == "LONG" else -1
+        params = {**trader_brain.DEFAULTS, **self.strategy_params}
+        if self.state.market_status != "open":
+            return self._refuse_review(review_id, "the market isn't open")
+        now = review_queue.now_ist()
+        if not trader_brain.entry_window_open(now.strftime("%H:%M"), params):
+            return self._refuse_review(review_id, f"outside the entry window ({params['no_entry_before']}–"
+                                                  f"{params['last_entry_time']})")
+        today = now.date().isoformat()
+        st = self.state.strategy_state.get(symbol) or {}
+        taken = st.get("entries_today", 0) if st.get("entry_day") in (None, today) else 0
+        if taken >= params["max_entries_per_day"]:
+            return self._refuse_review(review_id, "this stock was already traded today (one entry per stock per day)")
+        why = self._entry_block_reason(symbol, side)
+        if why:
+            return self._refuse_review(review_id, why)
+        try:
+            ltp = data_provider.get_ltp(symbol)
+        except Exception as exc:
+            return self._refuse_review(review_id, f"couldn't read a live price ({exc})")
+        stop, target = card["stop"], card["target"]
+        if (ltp - stop) * s <= 0:
+            return self._refuse_review(review_id, f"the price {ltp:.2f} has already passed the stop {stop:.2f}")
+        if (target - ltp) * s <= 0:
+            return self._refuse_review(review_id, f"the price {ltp:.2f} has already reached the target {target:.2f}")
+        rrr = trader_brain._net_rrr(ltp, stop, target, params["cost_pct"])
+        candles = self.state.candles.get(symbol) or []
+        atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) \
+            if config.RISK.get("use_atr_risk") and candles else None
+        qty = self.risk.position_size(ltp, atr=atr_val, stop_price=stop,
+                                      size_factor=self.size_multiplier * card.get("size_factor", 1.0))
+        if qty <= 0:
+            return self._refuse_review(review_id, "the position sizes to 0 shares at the live price")
+        liq_ok, liq_reason, _ = liquidity.check(symbol, side, qty, ltp, self.state.paper_mode)
+        if not liq_ok:
+            return self._refuse_review(review_id, f"liquidity: {liq_reason}")
+
+        b = card["blocker"]
+        note = (f"Manually approved — overrode \"{b['label']}\" ({b['detail']}). Stop {stop:.2f}, "
+                f"target {target:.2f}, reward-to-risk {rrr:.2f} at the entry price. The confidence gate was not applied.")
+        position_id = database.new_position_id()
+        try:
+            self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp,
+                          reason=f"{card['setup']} ({side.lower()}, manual approval)", note=note,
+                          checklist_snapshot=card.get("checklist"), position_id=position_id)
+        except Exception as exc:
+            logger.exception(f"Manual approval of {symbol} failed at the order")
+            self.review_queue.decide(review_id, "failed", outcome={"reason": str(exc)})
+            self.state.log("error", f"Your approved {side.lower()} in {symbol} was not placed: {exc}",
+                           symbol=symbol, level="error")
+            return {"ok": False, "status": "failed", "reason": f"the order failed: {exc}"}
+        with self.state.lock:
+            pos = self.state.positions[symbol]
+            pos["entry_atr"] = atr_val
+            pos["stop_price"] = stop
+            pos["target_price"] = target
+            pos["initial_risk"] = abs(ltp - stop)
+            pos["position_id"] = position_id
+            st = self.state.strategy_state.get(symbol)
+            if not isinstance(st, dict):
+                st = {}
+                self.state.strategy_state[symbol] = st
+            st["entries_today"], st["entry_day"] = taken + 1, today
+        self.risk.open_positions_count += 1
+        outcome = {"fill_price": round(ltp, 2), "qty": qty, "net_rrr_at_fill": round(rrr, 2),
+                   "mode": "paper" if self.state.paper_mode else "live"}
+        self.review_queue.decide(review_id, "approved", position_id=position_id, outcome=outcome)
+        return {"ok": True, "status": "approved", "position_id": position_id, **outcome}
 
     # ---- F&O (options-buying only — see fno_risk.py) ---------------------
 
@@ -938,6 +1146,12 @@ class TradingEngine:
                     st = self.state.strategy_state.get(symbol)
                     if st and st.get("entries_today", 0) > 0:
                         st["entries_today"] -= 1
+
+        if self.state.positions[symbol]["quantity"] == 0 and self.review_queue.enabled():
+            try:
+                self._offer_near_misses(symbol, ltp, bars, a)
+            except Exception:
+                logger.exception(f"Review queue: couldn't evaluate {symbol} for a near-miss card")
 
     # ---- loop -----------------------------------------------------------
 

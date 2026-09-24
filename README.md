@@ -3091,6 +3091,31 @@ The stock page's **Supporting evidence / Live read** (ADX regime, swing structur
 
 **FAIL on every clause.** The engine loses **before costs**, worse than random entries, and trades 17× as often, so costs multiply the damage. Both halves agree. **The live engine stays on the Varsity checklist.** The evidence read stays on the page as context, but it's measured as a *negative* entry signal. Trial 40; `docs/research/results-confluence-deep.md`.
 
+### 64. The review queue: near-misses come to you, and nothing is placed unless you approve
+
+On most days no setup passes every rule, so the engine trades nothing (23 Sep: 2 setups passed out of 22,100 checklist reads; 24 Sep: 0 by 12:19). The **Review queue** on the Overview page shows you the setups that missed by exactly **one** gate. You decide on each one; the engine never lowers a gate by itself.
+
+**What reaches you.** One side of one stock, inside the entry window (09:30–14:30), on a stock not yet traded today, when:
+
+- exactly one **required** checklist item failed (reward-to-risk, volume, trend, stop at a level, pattern, or cost), and the plan still has a stop and a target the price hasn't passed; or
+- every checklist item passed and only the **confidence gate** stopped it (like INDHOTEL on 23 Sep, at 52/60).
+
+A card is offered only if it could actually be taken. No other rule may block it, and it must size to at least one share. Each stock and side is asked about **once a day**.
+
+**The card is arithmetic, not an opinion.** It shows the entry, stop, target, reward-to-risk after costs, size, and risk, reward and costs in ₹. It shows the **win rate this trade needs to break even**, next to the **32%** this checklist actually wins over 201 trades (§51), and the average result per trade that implies. For example, a setup at R:R 0.14 needs 88% winners to break even. The confidence breakdown is on the card too.
+
+**What an approval does and doesn't override.** It overrides the one gate named on the card, plus the confidence gate. **Everything else is re-checked at the live price when you click**: daily loss limit, max open positions, sector cap, one entry per stock per day, entry window, the scanner and market-bias filters, sizing and the order-book liquidity check. The order then goes through the same path as any engine entry, with the card's stop and target. If any check fails, the card is marked "couldn't be placed" with the reason.
+
+**Safety.**
+- Off by default. A restart turns it off again.
+- A card expires after **5 minutes**, because prices move.
+- In **Live** mode an approval places a **real Kite order**. It needs its own real-money confirmation in the page and `confirm_live` in the API, so a stray request can't place one.
+- Approvals can't race the engine's own entries on the same stock.
+
+**Every card and every decision is journaled** (`manual_reviews` table), approved, rejected or expired. After a few weeks that answers the only question that matters here: do the setups you approve do better than the gate's verdict on them? Until that's measured, the prior is the one on the card. §48 measured the trades the R:R rule rejects at **−1.17R each**.
+
+**Verified** on a copy of the journal on a separate port (the live engine untouched): toggle on, a card rendered with its countdown, one approval refused because the stock wasn't tracked yet, and one approved in paper, which opened a short with the card's stop and target and journaled it. While verifying, the running engine caught a regression the unit tests missed: a refactor of the entry-window rule dropped a variable the signal still used. It was fixed before commit and now has a test that runs the full signal. `review_queue.py`, `TradingEngine.approve_review()`, `tests/test_review_queue.py`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

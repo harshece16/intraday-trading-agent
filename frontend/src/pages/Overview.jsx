@@ -8,6 +8,7 @@ import { SidePill, StatusPill } from "../components/Pill";
 import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import Chart from "../components/Chart";
+import ReviewQueue from "../components/ReviewQueue";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 async function setMode(paperMode) {
@@ -333,6 +334,7 @@ export default function Overview({ state: s }) {
       <KiteSessionAlert s={s} />
       <OnboardingBanner s={s} />
       <AutonomyCard s={s} />
+      <ReviewQueue s={s} />
       <section className="hero">
         <h1>{copy.lead}</h1>
         <p>{copy.rest}</p>
