@@ -978,17 +978,19 @@ class TradingEngine:
         return list((self.state.scanner or {}).get("active", []))
 
     def _record_fno_trade(self, symbol, side, quantity, price, reason, note, realized, position_id,
-                          initial_risk, checklist_snapshot=None):
+                          initial_risk, checklist_snapshot=None, charges=0.0, realized_gross=None):
+        """One F&O leg. Same convention as the equity path (#21, #35): each row
+        carries its own leg's charges; on the exit row `realized` is NET of both
+        legs' charges and `realized_gross` is before them, so the daily loss
+        limit, the journal and the F&O confidence IC all see net figures."""
         r_multiple = (realized / (initial_risk * quantity)) if realized is not None and initial_risk and quantity else None
         mode = "paper" if self.state.paper_mode else "live"
         trade = {
             "id": database.new_position_id(), "position_id": position_id, "ts": time.time(),
             "symbol": symbol, "side": side, "quantity": quantity, "price": price, "mode": mode,
-            # F&O charges aren't modelled yet (₹20/leg brokerage + STT on the
-            # premium), so gross == net here — unlike the equity path, which
-            # deducts real charges since issue #21.
-            "reason": reason, "note": note, "realized": realized, "realized_gross": realized,
-            "charges": 0.0, "initial_risk": initial_risk, "r_multiple": r_multiple,
+            "reason": reason, "note": note, "realized": realized,
+            "realized_gross": realized_gross if realized_gross is not None else realized,
+            "charges": charges, "initial_risk": initial_risk, "r_multiple": r_multiple,
         }
         database.record_trade(trade, checklist_snapshot=checklist_snapshot)
         with self.state.lock:
@@ -1016,9 +1018,16 @@ class TradingEngine:
         ltp = self._fno_ltp(pos["tradingsymbol"]) or pos.get("ltp") or pos["entry_premium"]
         if not self.state.paper_mode:
             self._ensure_kite().place_fno_order(pos["tradingsymbol"], "SELL", pos["lots"], pos["lot_size"])
-        realized = (ltp - pos["entry_premium"]) * pos["lots"] * pos["lot_size"]
-        r_multiple = self._record_fno_trade(pos["tradingsymbol"], "SELL", pos["lots"] * pos["lot_size"], ltp,
-                                            reason, note, realized, pos["position_id"], pos["entry_premium"])
+        qty = pos["lots"] * pos["lot_size"]
+        gross = (ltp - pos["entry_premium"]) * qty
+        entry_charges = pos.get("entry_charges")
+        if entry_charges is None:
+            entry_charges = costs.leg_cost("BUY", pos["entry_premium"], qty, costs.FNO_OPTION_COSTS)
+        exit_charges = costs.leg_cost("SELL", ltp, qty, costs.FNO_OPTION_COSTS)
+        realized = gross - entry_charges - exit_charges
+        r_multiple = self._record_fno_trade(pos["tradingsymbol"], "SELL", qty, ltp,
+                                            reason, note, realized, pos["position_id"], pos["entry_premium"],
+                                            charges=exit_charges, realized_gross=gross)
         try:
             database.record_fno_exit(pos["position_id"], ltp, reason, realized, r_multiple)
         except Exception:
@@ -1117,15 +1126,17 @@ class TradingEngine:
         note = (f"{'Call' if is_call else 'Put'} bought on a {side.lower()} signal, confidence {conf['score']}/100 "
                 f"({conf['label']}). Max loss capped at ₹{max_loss:,.0f} (the premium paid) — "
                 f"stop {exits['stop_premium']:.2f}, target {exits['target_premium']:.2f}.")
+        entry_charges = costs.leg_cost("BUY", premium, lots * contract["lot_size"], costs.FNO_OPTION_COSTS)
         self._record_fno_trade(contract["tradingsymbol"], "BUY", lots * contract["lot_size"], premium,
                                f"fno_{side.lower()}", note, None, position_id, None,
-                               checklist_snapshot=analysis.get("checklist"))
+                               checklist_snapshot=analysis.get("checklist"), charges=entry_charges)
         pos = {
             "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
             "strike": contract["strike"], "expiry": expiry.isoformat(),
             "lots": lots, "lot_size": contract["lot_size"], "entry_premium": premium,
             "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
             "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "entry_greeks": entry_greeks,
+            "entry_charges": entry_charges,
             "max_loss": max_loss, "position_id": position_id,
         }
         with self.state.lock:
