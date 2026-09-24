@@ -167,6 +167,7 @@ class AppState:
                 "entries_paused": self.entries_paused,
                 "running": self.running,
                 "market_status": self.market_status,
+                "square_off_time": config.SQUARE_OFF_TIME,
                 "holiday": self.holiday,
                 "next_open": self.next_open,
                 "market_open": config.MARKET_OPEN,

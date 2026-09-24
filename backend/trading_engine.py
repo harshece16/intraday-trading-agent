@@ -477,7 +477,7 @@ class TradingEngine:
 
     def set_entries_paused(self, paused: bool, source="dashboard"):
         """Stop (or resume) opening new positions. Open positions keep their
-        stops, targets and the 15:15 square-off either way. Persisted, so a
+        stops, targets and the square-off either way. Persisted, so a
         restart doesn't quietly resume trading after the owner paused it."""
         with self.state.lock:
             self.state.entries_paused = bool(paused)
@@ -570,7 +570,7 @@ class TradingEngine:
 
     def _exit_position(self, symbol, ltp, reason, note=None) -> bool:
         """The single way out of a cash position. Everything that closes one —
-        a stop, a target, a brain exit, the 15:15 square-off — goes through
+        a stop, a target, a brain exit, the square-off — goes through
         here so the claim above is never bypassed."""
         if not self._claim_exit(symbol):
             return False
@@ -691,7 +691,7 @@ class TradingEngine:
         return None
 
     def _try_enter(self, symbol, side, ltp, candles, analysis):
-        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off by 15:15).
+        """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off at SQUARE_OFF_TIME).
         Returns True if a real order was placed, False if blocked for any reason —
         _process_symbol() uses this to roll back the entries_today count trader_brain
         already spent on this signal when nothing was actually entered."""

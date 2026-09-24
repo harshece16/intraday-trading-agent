@@ -207,7 +207,7 @@ function AutonomyCard({ s }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn" disabled={busy} onClick={togglePause}
-            title="Stop opening new positions. Stops, targets and the 15:15 square-off keep running.">
+            title={`Stop opening new positions. Stops, targets and the ${s.square_off_time || "15:08"} square-off keep running.`}>
             {s.entries_paused ? "Resume entries" : "Pause entries"}
           </button>
           <button className="btn danger" disabled={busy} onClick={killSwitch}
@@ -221,7 +221,7 @@ function AutonomyCard({ s }) {
       </div>
       {s.entries_paused && (
         <p className="note" style={{ margin: "12px 0 0", background: "var(--wait-bg)", color: "var(--wait)" }}>
-          New entries are paused. Open positions still have their stops, targets and the 15:15 square-off.
+          New entries are paused. Open positions still have their stops, targets and the {s.square_off_time || "15:08"} square-off.
         </p>
       )}
       <div className="rb-row" style={{ marginTop: 12 }}>
@@ -466,7 +466,7 @@ export default function Overview({ state: s }) {
                 ))}
               </div>
             ) : (
-              <p className="empty">None open. At most 3 at a time, all closed by 15:15.</p>
+              <p className="empty">None open. At most 3 at a time, all closed by {s.square_off_time || "15:08"}.</p>
             )}
           </div>
         </div>

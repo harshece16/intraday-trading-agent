@@ -50,7 +50,7 @@ class KiteExecutor:
         not "net" (which also includes carried-forward CNC holdings, already
         shown separately via get_holdings()). Used to reconcile against
         state.positions after a restart, since this engine only ever trades
-        intraday and squares off by 15:15."""
+        intraday and squares off at config.SQUARE_OFF_TIME."""
         return self.kite.positions()["day"]
 
     def place_fno_order(self, tradingsymbol: str, side: str, lots: int, lot_size: int):

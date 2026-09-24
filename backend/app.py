@@ -556,7 +556,7 @@ class PauseUpdate(BaseModel):
 
 @app.post("/api/control/pause")
 def set_entries_paused(update: PauseUpdate):
-    """Stop or resume new entries. Exits, stops and the 15:15 square-off keep running."""
+    """Stop or resume new entries. Exits, stops and the square-off keep running."""
     engine.set_entries_paused(update.paused)
     return {"entries_paused": state.entries_paused}
 
@@ -586,7 +586,7 @@ def set_telegram_enabled(update: TelegramUpdate):
 
 @app.post("/api/alerts/telegram/test")
 def telegram_test():
-    """Send one message now, so setup problems show up here and not at 15:15."""
+    """Send one message now, so setup problems show up here and not at the square-off."""
     mode = "PAPER" if state.paper_mode else "LIVE"
     return telegram_alerts.send_now(f"[{mode}] Trader Sahab test alert — phone alerts are working.")
 
