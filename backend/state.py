@@ -4,6 +4,7 @@ the background trading loop and scanner write to it, the API/WebSocket layer
 reads it. Not persisted across restarts.
 """
 
+import re
 import threading
 import time
 import uuid
@@ -24,6 +25,9 @@ def _gross_of(trade):
     written before issue #21 added the column and never backfilled."""
     gross = trade.get("realized_gross")
     return gross if gross is not None else (trade.get("realized") or 0.0)
+
+
+_STOP_TARGET_RE = re.compile(r"[Ss]top ([0-9]+(?:\.[0-9]+)?), target ([0-9]+(?:\.[0-9]+)?)")
 
 
 def _new_position():
@@ -106,6 +110,40 @@ class AppState:
         self.trades = list(reversed(todays_trades))  # newest first, matching record_trade()'s insert(0, ...)
         self.realized_pnl_today = sum(t["realized"] for t in self.trades if t.get("realized"))
         self._rehydrate_entry_counts(todays_trades)
+        self.restored_positions = self._rehydrate_open_positions(todays_trades)
+
+    def _rehydrate_open_positions(self, todays_trades):
+        """A restart used to drop open positions: they lived only in memory, so
+        a position opened today (paper or live) was left with no stop, target
+        or square-off watching it. Found 2026-09-25 09:50, when a deploy
+        restart orphaned two manually approved paper shorts (GRASIM, HYUNDAI).
+
+        Rebuild every position of the CURRENT mode whose first leg is today
+        and which has no later leg. Stop and target come from the entry note
+        ("Stop X, target Y", the last such pair: every entry path writes it);
+        the entry leg's charges carry over so the close is still net of both
+        legs. Returns the restored symbols, for the engine and the log."""
+        mode = "paper" if self.paper_mode else "live"
+        legs = {}
+        for t in todays_trades:  # oldest first
+            if t.get("position_id"):
+                legs.setdefault(t["position_id"], []).append(t)
+        restored = []
+        for pid, ls in legs.items():
+            entry = ls[0]
+            if len(ls) > 1 or entry.get("mode") != mode or entry.get("realized") is not None:
+                continue
+            m = _STOP_TARGET_RE.findall(entry.get("note") or "")
+            stop, target = (float(m[-1][0]), float(m[-1][1])) if m else (None, None)
+            pos = _new_position()
+            qty = int(entry["quantity"])
+            pos.update(quantity=qty if entry["side"] == "BUY" else -qty, avg_price=float(entry["price"]),
+                       stop_price=stop, target_price=target, position_id=pid,
+                       initial_risk=abs(float(entry["price"]) - stop) if stop else None,
+                       charges=float(entry.get("charges") or 0.0))
+            self.positions[entry["symbol"]] = pos
+            restored.append(entry["symbol"])
+        return restored
 
     def _rehydrate_entry_counts(self, todays_trades):
         """Issue #22: the one-entry-per-stock-per-day count lives in
