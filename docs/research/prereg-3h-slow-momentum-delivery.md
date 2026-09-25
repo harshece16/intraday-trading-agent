@@ -113,9 +113,11 @@ the **top 200** form the universe at *t*. No index membership is used.
 ### Signal (fixed; NSE's own construction, not fitted)
 
 For each universe member at *t*:
-- `r6` = close(*t*) / close(month-end *t−6*) − 1, `r12` likewise for 12
-  months, **each excluding the most recent month**: measured to month-end
-  *t−1*.
+- `r6` = close(month-end *t−1*) / close(month-end *t−7*) − 1 and
+  `r12` = close(month-end *t−1*) / close(month-end *t−13*) − 1: six and
+  twelve months of return, **each ending one month before *t*** (the
+  standard skip-month). "Close at a month-end" means the chain's last close
+  on or before that date.
 - `σ` = standard deviation of daily close-to-close returns over the
   trailing 252 sessions to *t*.
 - `score` = mean( r6/σ , r12/σ ).
@@ -123,7 +125,9 @@ For each universe member at *t*:
 ### Portfolio
 
 - **Long only, 15 names, equal weight** at entry, no re-weighting between
-  rebalances.
+  rebalances. Fractional shares are allowed in the measurement; the number
+  of picks whose price exceeds the per-name allocation (unbuyable as one
+  share at ₹1,00,000) is reported.
 - **Hysteresis (the Novy-Marx–Velikov cost mitigation):** a holding stays
   while its score rank is ≤ 30; it is sold when its rank exceeds 30 or it
   leaves the universe; each sale is replaced by the highest-ranked stock not
@@ -152,9 +156,14 @@ the script prints its own table and the two are compared in the results.
 
 ### Benchmark
 
-The **same 200-name universe, equal-weighted, rebalanced monthly at the
-same fills**, charged the same way (its turnover is small: universe churn
-only). This asks "is the *selection* worth anything", which is the question
+The **same 200-name universe, equal-weighted at entry, no re-weighting,
+traded at the same fills**: names leaving the universe are sold, entrants
+are bought with the proceeds split equally, so its turnover is universe
+churn only. It is charged the percentage costs and slippage but **not the
+per-scrip DP charge**, which on 200 positions of ₹500 would be a
+3.6%-per-sale artefact of the benchmark's construction rather than a cost
+of the idea; leaving it out makes the benchmark *stronger*, which is the
+conservative direction for the strategy's test. This asks "is the *selection* worth anything", which is the question
 the engine would be built for. Buy-and-hold of the universe at 2010-01 and
 the NIFTY 200 level (if a clean series is available; otherwise omitted, not
 substituted) are reported alongside for information.
