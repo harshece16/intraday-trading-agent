@@ -5,7 +5,7 @@
 the whole process; research Reddit, GitHub, blogs, everywhere". This file is
 that research. It was done by four independent sweeps (GitHub repositories;
 academic papers and quant blogs; India-specific instrument costs, access and
-tax; Reddit), each fetching primary pages rather than search snippets, and
+tax; Reddit — the last only partially, see §4), each fetching primary pages rather than search snippets, and
 it is written so the ranking can be audited. **It records no strategy trial
 and spends no look.** The one test it motivates is pre-registered
 separately: `prereg-3h-slow-momentum-delivery.md`.
@@ -166,9 +166,70 @@ SEBI circulars and FIU-IND's registry. Index levels 24 Sep 2026: Nifty
 
 ---
 
-## 4. Reddit (sweep 4)
+## 4. Reddit (sweep 4) — partial: 12 threads read in full, ~55 by title
 
-*Pending — this section is appended when the Reddit sweep reports.*
+Reddit blocks direct fetching; the sweep read full thread text through
+archived captures for 12 threads (r/algotrading, r/IndianStreetBets) and has
+titles and snippets only for about 55 more. **Every profit figure on Reddit
+is a self-report; none is broker-verified.** The value of the sweep is the
+base rates and the failure modes people describe, not the P&L claims.
+
+**What the community's own numbers say.**
+
+- The most-upvoted answer to "how much have your running algos made this
+  year?" (r/algotrading, Dec 2024, 141 points) is *"the lack of clear
+  answers is extremely telling"* (174 points). The runner-up: *"I lost 20%
+  buying calls."* The one concrete positive was a stock market-maker
+  running 800 trades a day whose business scaled only after commissions
+  fell from 3.4 to 0.9 bp — cost, again, as the edge.
+- *"450 systems tested, 425 led to nothing"* (r/algotrading, Aug 2024) —
+  a self-reported base rate of about 5%, before any live decay.
+- A survivorship demonstration with a hard number (r/algotrading, 2020,
+  NorgateData): monthly top-10 momentum on the NASDAQ-100 shows **46%
+  CAGR on today's constituents and 16.4% survivorship-free**, with the
+  drawdown doubling. Any momentum backtest on a current index list is
+  inflated by roughly this factor — which is why 3h uses daily bhavcopies
+  (every stock that traded that day) rather than an index list.
+- "Lessons from live testing" (r/algotrading, Jul 2024): a Binance
+  TA-feature signal that "wasn't bad" was killed by fees; the ex-HFT reply
+  *"the actual edge is low transaction costs"*; the rule of thumb *"if five
+  minutes of slippage matters you're not in the position long enough."*
+- Nine years of indicator strategies on crypto/FX by a data scientist with
+  walk-forward tuning: *"worked for a couple of months then died…
+  TA-indicator strategies just don't work consistently."*
+- **India (r/IndianStreetBets).** The most-upvoted "this works" post is a
+  Friday-3pm naked Nifty strangle at 5–6 delta claiming ~20%/yr; every
+  experienced reply says the same thing: one gap, one circuit, and the
+  year is gone (*"seven winning weeks, then a crash took them all"*). A
+  BankNifty 09:25 straddle "220% in 2.3 years" was a backtest whose
+  ~₹120/day costs, once added, cut the net by roughly a third. An intraday
+  pivot/EMA/RSI algo posted after 3–4 days drew the top replies *"every
+  strategy works in a bull run"* and *"backtest 2–3 years."*
+- The SEBI 93% figure, the ~₹26k/yr per-trader cost, and the 1% crypto
+  TDS ("high-turnover crypto trading in India is structurally dead;
+  volumes fell ~70% in July 2022") recur across the unread India threads'
+  titles and snippets.
+
+**Ranked by how consistently Reddit reports it as positive for retail:**
+(1) low-turnover trend/momentum on daily or 4-hour bars across several
+uncorrelated strategies — the only style with repeated, numerically stated
+live results, all self-reported and mostly from the 2023–24 bull tape;
+(2) structural near-arbitrage niches (funding carry, low-fee market
+making) — capacity- and latency-limited, unverified; (3) far-OTM index
+option selling in India — with the tail-loss objection from everyone who
+has traded it for long; (4) cost minimisation itself; (5) buy-and-hold
+index — not a strategy, but the benchmark the live algos in these threads
+failed to beat.
+
+**Ranked by how consistently it is reported as NOT working:** indicator
+intraday (EMA/RSI/MACD/pivots); ML on price alone; grid and martingale
+bots ("works until it doesn't"); short-horizon strategies whose backtest
+ignores fees and slippage; backtests on current constituents, single-stock
+fits, or bull-run-only samples.
+
+Reddit adds no evidence that contradicts §1–§3; it adds the social base
+rate (most people who try this lose, and the ones who don't answer) and one
+number for the survivorship inflation the 3h data design avoids.
 
 ---
 
