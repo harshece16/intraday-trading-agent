@@ -109,6 +109,14 @@ class TradingEngine:
         # first tick after any restart think a new day had started, which
         # zeroed this same counter right back out a moment later.
         self.risk.daily_realized_pnl = state.realized_pnl_today
+        # Open positions restored from today's journal (state._rehydrate_open_positions)
+        # count against max_open_positions and get their stops watched again.
+        restored = getattr(state, "restored_positions", []) or []
+        self.risk.open_positions_count = len(restored)
+        if restored:
+            state.log("risk", f"Restored {len(restored)} open position(s) from today's journal after a restart: "
+                              f"{', '.join(restored)} — stops, targets and the square-off are watching them again.",
+                      level="warn")
         self.strategy_fn = STRATEGY_FUNCTIONS[config.STRATEGY]
         self.strategy_params = config.STRATEGY_PARAMS[config.STRATEGY]
         self.kite_executor = None
