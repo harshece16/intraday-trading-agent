@@ -109,6 +109,12 @@ CREATE TABLE IF NOT EXISTS chaywanaprash_reports (
     ts REAL NOT NULL, lookback_hours REAL, llm_used INTEGER,
     narrative TEXT, findings_json TEXT, input_tokens INTEGER, output_tokens INTEGER
 );
+CREATE TABLE IF NOT EXISTS depth_samples (
+    ts REAL NOT NULL, symbol TEXT NOT NULL, ltp REAL, bid REAL, ask REAL, spread_bp REAL,
+    bid_qty1 INTEGER, ask_qty1 INTEGER, bid_qty5 INTEGER, ask_qty5 INTEGER, imbalance5 REAL,
+    volume INTEGER, total_buy_qty INTEGER, total_sell_qty INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_depth_symbol_ts ON depth_samples(symbol, ts);
 CREATE TABLE IF NOT EXISTS liquidity_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL, symbol TEXT NOT NULL, side TEXT, qty INTEGER, ltp REAL, mode TEXT,
@@ -488,6 +494,22 @@ def reviews_on(session_date):
                      "shadow": json.loads(r["shadow_json"]) if r["shadow_json"] else None})
         out.append(card)
     return out
+
+
+def record_depth_samples(rows):
+    """One tick's order-book snapshots for the watchlist (depth_sampler.py)."""
+    cols = ("ts", "symbol", "ltp", "bid", "ask", "spread_bp", "bid_qty1", "ask_qty1", "bid_qty5", "ask_qty5",
+            "imbalance5", "volume", "total_buy_qty", "total_sell_qty")
+    with _conn() as c:
+        c.executemany(f"INSERT INTO depth_samples ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
+                      [tuple(r.get(k) for k in cols) for r in rows])
+
+
+def depth_sample_stats():
+    with _conn() as c:
+        row = c.execute("SELECT COUNT(*) n, COUNT(DISTINCT symbol) s, COUNT(DISTINCT date(ts,'unixepoch','+330 minutes')) d, "
+                        "MIN(ts) lo, MAX(ts) hi FROM depth_samples").fetchone()
+    return {"rows": row["n"], "symbols": row["s"], "sessions": row["d"], "first_ts": row["lo"], "last_ts": row["hi"]}
 
 
 def record_liquidity_check(symbol, side, qty, ltp, mode, result):

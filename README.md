@@ -3257,6 +3257,14 @@ The Scorecard has a fourth row, **"Backtest evidence for the live rule set"**. I
 
 Backtests and the parameter tuner still judge a new rule set on its own trades (`journal_summary(include_backtest_evidence=False)`), so the old verdict never vetoes a new candidate. When a new rule set passes pre-registered selection and the held-out look, its evidence replaces this file, and the gate opens on its own.
 
+### 71. Recording the order book every tick — the data for the next brain
+
+§69 settled one thing: candle shapes and indicators on NIFTY 100 bars carry no information before costs, so a new brain needs **new information**, not a new indicator recipe. The one source this project can collect for itself is Kite's five-level order book. The liquidity check (§58) reads it, but only at entry, a few times a day.
+
+`depth_sampler.py` now takes **one Kite quote call per engine tick for the whole watchlist** and writes a row per stock to `depth_samples`: best bid and ask, spread in bp, quantity at the top and across five levels on each side, the five-level imbalance (+1 all bids, −1 all asks), cumulative volume, and the exchange's total buy and sell quantities. Roughly 19,000 rows a session at 25 stocks, about 2 MB a day. `GET /api/journal/depth-samples` reports how much has accumulated.
+
+**It changes no decision.** Nothing reads it yet. After a few weeks there is enough to ask, as a measurement, whether spread, imbalance or a depth shift precedes the move by more than the 16.6 bp round trip. If it does, that becomes a pre-registered candidate; if not, this dataset is what will have shown it. `config.DEPTH_SAMPLER["enabled"]` turns it off.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

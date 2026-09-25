@@ -281,6 +281,11 @@ RISK = {
     "trail_after_r": None,
 }
 
+# Order-book sampling (depth_sampler.py): one Kite quote call per engine tick
+# for the watchlist, rows to depth_samples. Pure data collection for a future
+# brain built on the book rather than on candle shapes (README section 69/71).
+DEPTH_SAMPLER = {"enabled": True}
+
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
 # (2 x COSTS["slippage_pct"], derived rather than set here), when filling our
