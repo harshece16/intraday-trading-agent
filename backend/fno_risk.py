@@ -50,3 +50,24 @@ def max_loss(premium: float, lots: int, lot_size: int) -> float:
     """The one number that matters before placing the order: the entire
     amount this trade can lose, no matter what the underlying does."""
     return round(premium * lots * lot_size, 2)
+
+
+def mwpl_block_reason(underlying: str, ban, today_iso: str, index_underlyings=()):
+    """Why a new option BUY on `underlying` must not be placed under NSE's
+    Market Wide Position Limit ban, or None if it may.
+
+    `ban` is nse_feed.fno_ban_list()'s value: {"trade_date", "symbols"} or
+    None. The check FAILS CLOSED: an unfetchable list, or one published for
+    a different trade date, blocks stock options, because the penalty for
+    increasing a position in a banned stock is real money and "we could not
+    check" is not evidence that it is clear. Index options are exempt; the
+    ban applies to single-stock derivatives only."""
+    if underlying in set(index_underlyings):
+        return None
+    if ban is None:
+        return "F&O ban list (MWPL) could not be fetched — ban status unknown"
+    if ban.get("trade_date") != today_iso:
+        return f"F&O ban list is for {ban.get('trade_date')}, not today ({today_iso}) — ban status unknown"
+    if underlying.upper() in ban.get("symbols", set()):
+        return "in NSE's F&O ban period (market-wide OI above 95% of MWPL) — new positions are penalised"
+    return None

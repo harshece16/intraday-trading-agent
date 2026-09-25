@@ -247,3 +247,51 @@ def results_calendar():
         if today <= d <= horizon and e.get("symbol"):
             out[e["symbol"].upper()] = {"date": e["date"], "purpose": e.get("purpose") or "Financial Results"}
     return out
+
+
+# ---- F&O ban list (Market Wide Position Limit) -----------------------------
+# NISM Series VIII: once market-wide open interest in a stock's derivatives
+# crosses 95% of its MWPL, the stock enters the "ban period" and any trade
+# that INCREASES a position is penalised. NSE publishes the list for each
+# trade date as a small CSV. Index derivatives are never in it.
+
+FNO_BAN_URL = "https://nsearchives.nseindia.com/content/fo/fo_secban.csv"
+_ban_cache = {"at": 0.0, "value": None}
+
+
+def parse_fno_ban(text):
+    """NSE's fo_secban.csv -> {"trade_date": "YYYY-MM-DD", "symbols": set}.
+    The first line is 'Securities in Ban For Trade Date 25-SEP-2026:',
+    then one 'n,SYMBOL' row per banned stock (none on a clear day).
+    Returns None if the header is not recognisable, so a changed format is
+    treated as unknown status rather than as an empty ban list."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines or "Trade Date" not in lines[0]:
+        return None
+    try:
+        raw = lines[0].split("Trade Date", 1)[1].strip().rstrip(":").strip()
+        trade_date = datetime.strptime(raw.title(), "%d-%b-%Y").date().isoformat()
+    except ValueError:
+        return None
+    symbols = set()
+    for ln in lines[1:]:
+        parts = [p.strip() for p in ln.split(",")]
+        if len(parts) >= 2 and parts[1]:
+            symbols.add(parts[1].upper())
+    return {"trade_date": trade_date, "symbols": symbols}
+
+
+def fno_ban_list(ttl=1800):
+    """Today's F&O ban list, cached for `ttl` seconds, or None when it
+    cannot be fetched or parsed. Callers must treat None as UNKNOWN."""
+    if _ban_cache["value"] is not None and time.time() - _ban_cache["at"] < ttl:
+        return _ban_cache["value"]
+    try:
+        resp = requests.get(FNO_BAN_URL, headers=HEADERS, timeout=15)
+        parsed = parse_fno_ban(resp.text) if resp.status_code == 200 else None
+    except requests.RequestException as exc:
+        logger.warning(f"NSE F&O ban list unavailable ({exc})")
+        parsed = None
+    if parsed is not None:
+        _ban_cache.update(at=time.time(), value=parsed)
+    return parsed

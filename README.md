@@ -3284,6 +3284,18 @@ The post's rules are pictures, so each one was turned into an exact rule and **p
 
 The post's author trades it on 24-hour FX, gold and crypto markets, and ends by selling a Telegram channel. **Nothing here tests it there.** On NSE cash intraday it is one more price-only rule, and it fails the same way. Details: `docs/research/results-3g-smc-mtf.md`. Trials now stand at **117**.
 
+### 73. F&O entries now respect NSE's ban list (Market Wide Position Limit)
+
+When market-wide open interest in a stock's derivatives crosses 95% of its limit, NSE puts the stock in a **ban period**. Any trade that increases a position is then penalised, from ₹5,000 to ₹1,00,000 (NISM Series VIII). The dashboard's methods page listed this as a real gap: nothing in code checked it.
+
+**Now it's enforced.** Before any F&O order, the engine reads NSE's daily `fo_secban.csv` (cached for 30 minutes) and refuses a new option buy in a banned stock. The block is logged and journaled like every other F&O block.
+
+- **It fails closed.** If the list can't be fetched, or is published for a different trade date, stock options are blocked with "ban status unknown". Not being able to check is not evidence that a stock is clear.
+- **Index options (NIFTY, BANKNIFTY) are exempt.** The ban applies to single-stock derivatives only.
+- F&O is still **disabled** in `config.FNO`, so nothing changes today. The check is in place for when it's turned on.
+
+Verified against the live list on 2026-09-25: KAYNES, LICHSGFIN, MANAPPURAM and SAIL were banned, and SAIL was blocked with the ban reason.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

@@ -231,16 +231,21 @@ def get_methods():
                            "analysis is built for cross-asset macro trading)."},
                 {"name": "NISM Series VIII (Equity Derivatives) workbook — the parts not yet used",
                  "reason": "Read in full. Its Greeks and long-option payoff definitions now power the F&O "
-                           "section above. Still not built in: SPAN margining (this engine never writes/sells "
-                           "options, so it never posts margin), and the Market Wide Position Limit ban — NSE "
-                           "penalises INCREASING a position once market-wide F&O open interest in a stock "
-                           "crosses its limit (1% of value, ₹5,000-₹1,00,000 penalty), which could in principle "
-                           "block a new option-buy too. There's no live MWPL-status check in code yet — a real "
-                           "gap if F&O volume grows, not something to assume away."},
+                           "section above. SPAN margining is still not built in: this engine never "
+                           "writes or sells options, so it never posts margin. The Market Wide Position "
+                           "Limit ban IS now enforced (2026-09-25): before any F&O order the engine reads "
+                           "NSE's daily ban list and refuses a new stock-option buy in a banned stock, "
+                           "because increasing a position there is penalised. It fails closed: if the "
+                           "list can't be fetched, or is for another date, stock options are blocked. "
+                           "Index options are exempt."},
                 {"name": "Gradient boosting, deep time series, autoencoders, GANs, reinforcement learning, "
                          "RAG/knowledge graphs (Jansen, Machine Learning for Trading, ch 9-24)",
-                 "reason": "Need thousands of examples or months of history; a week of paper trading isn't "
-                           "in range. See research/ml4t_integration_plan.md for the full reasoning."},
+                 "reason": "Not blocked by data any more: the Kite cache holds two years of 5-minute bars "
+                           "for NIFTY 100, 3.6 million rows. Blocked by evidence instead. The 76-configuration "
+                           "search (README §69) found that price-and-volume entries on those bars carry nothing "
+                           "before costs, and a model trained on the same inputs has the same information. "
+                           "It becomes worth a trial once a genuinely new input exists, such as the order-book "
+                           "samples now being recorded (README §71)."},
             ],
         },
     }

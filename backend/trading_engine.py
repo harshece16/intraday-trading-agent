@@ -33,6 +33,7 @@ import fundamentals
 import holidays
 import liquidity
 import news_sentiment
+import nse_feed
 import options_pricing
 import review_queue
 from kiteconnect.exceptions import TokenException
@@ -1086,6 +1087,12 @@ class TradingEngine:
                            symbol=underlying, level="warn")
             log_eval(False, reason)
             return
+
+        mwpl = fno_risk.mwpl_block_reason(underlying, nse_feed.fno_ban_list(),
+                                          datetime.now(IST).date().isoformat(), cfg["index_underlyings"])
+        if mwpl:
+            self._blocked(underlying, "F&O entry", mwpl)
+            return log_eval(False, mwpl)
 
         is_call = side == "LONG"
         expiry = fno_instruments.nearest_expiry(
