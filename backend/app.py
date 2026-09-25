@@ -494,6 +494,12 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/journal/depth-samples")
+def journal_depth_samples():
+    """How much order-book data depth_sampler.py has collected so far."""
+    return database.depth_sample_stats()
+
+
 @app.get("/api/journal/liquidity-checks")
 def journal_liquidity_checks(limit: int = 100):
     """Every entry-time order-book reading liquidity.py took: spread, impact

@@ -24,6 +24,7 @@ import config
 import confidence
 import costs
 import data_provider
+import depth_sampler
 import database
 import telegram_alerts
 import fno_instruments
@@ -1411,6 +1412,9 @@ class TradingEngine:
                 self._close_fno(underlying, "fno_auto_square_off")
         elif phase == "open":
             watchlist = list(self.state.watchlist)
+            # Order-book snapshot for every watched stock, once per tick, before
+            # anything else this tick can move. Data collection only.
+            depth_sampler.sample(watchlist, time.time())
             # Candles for all watched symbols are fetched concurrently up
             # front (data_provider.get_candles_batch) instead of one
             # blocking HTTP round-trip per symbol in this loop — with
