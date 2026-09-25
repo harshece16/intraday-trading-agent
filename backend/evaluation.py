@@ -96,7 +96,48 @@ def trial_count() -> int:
 IC_MIN_T_STAT = 2.0
 
 
-def scorecard(trade_stats, dsr, ic):
+def backtest_evidence_row(evidence, strategy, params):
+    """The Scorecard row for what backtesting has measured about the rule set
+    that is LIVE right now. The other three rows only see paper/live trades,
+    which were 8 when this was added, so they said "not enough data" and the
+    gate ran at 0.6x while two years of backtests said the rule set loses.
+
+    The evidence counts only for the configuration it measured
+    (strategy, entry_mode, interval). A different live configuration gets
+    "not_enough_data" rather than someone else's verdict. PASS needs the same
+    bar as everywhere else: net R > 0 with t >= 2 and both halves positive.
+    FAIL is a significant loss: net R < 0 with t <= -2."""
+    crit = "Backtest evidence for the live rule set"
+    if not evidence:
+        return {"criterion": crit, "status": "not_enough_data", "detail": "No backtest evidence file."}
+    want = evidence.get("applies_to", {})
+    live = {"strategy": strategy, "entry_mode": params.get("entry_mode"), "interval": params.get("interval")}
+    if any(want.get(k) != v for k, v in live.items()):
+        return {"criterion": crit, "status": "not_enough_data",
+                "detail": f"The recorded backtest measured {want}, but the live rule set is {live}. "
+                          f"Backtest the live configuration before this row can grade it."}
+    p = evidence["primary"]
+    halves = p.get("net_r_halves") or []
+    if p["net_r"] > 0 and p["t"] >= 2 and halves and all(h > 0 for h in halves):
+        status, verdict = "pass", "a significant profit, positive in both halves"
+    elif p["net_r"] < 0 and p["t"] <= -2:
+        status, verdict = "fail", "a significant LOSS, so the rule set is measured and it loses"
+    else:
+        status, verdict = "not_enough_data", "not significant either way"
+    return {"criterion": crit, "status": status,
+            "detail": f"{p['label']}: {p['net_r']:+.3f}R per trade over {p['trades']} trades and "
+                      f"{p['sessions']} sessions, t = {p['t']:+.2f} — {verdict} ({p['source']})."}
+
+
+def load_backtest_evidence(path=None):
+    path = Path(path) if path else Path(__file__).parent / "backtest_evidence.json"
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def scorecard(trade_stats, dsr, ic, backtest_row=None):
     """A report card across the distinct things a trading system's quality
     actually rests on. This is deliberately NOT a single 'IQ' number — no
     validated psychometric like that exists for a trading system, and
@@ -157,6 +198,8 @@ def scorecard(trade_stats, dsr, ic):
                       f"Trading, ch 1) — {why} (0 = none, ±1 = perfect).",
         })
 
+    if backtest_row:
+        rows.append(backtest_row)
     return rows
 
 

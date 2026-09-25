@@ -130,7 +130,9 @@ def run_backtest(symbols, strategy_name, strategy_params, risk_cfg, interval, da
     issue)."""
     costs_cfg = costs_cfg if costs_cfg is not None else config.COSTS
     if scorecard is None:
-        scorecard = database.journal_summary().get("scorecard", [])
+        # Live-trade evidence only: the backtest-evidence row grades the LIVE
+        # rule set and must not veto the rule set this backtest is judging.
+        scorecard = database.journal_summary(include_backtest_evidence=False).get("scorecard", [])
     min_conf = risk_cfg.get("min_confidence_to_trade")
     risk = RiskManager(risk_cfg)
     strategy_fn = STRATEGY_FUNCTIONS[strategy_name]
