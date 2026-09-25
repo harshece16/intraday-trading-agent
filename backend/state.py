@@ -131,7 +131,10 @@ class AppState:
         restored = []
         for pid, ls in legs.items():
             entry = ls[0]
-            if len(ls) > 1 or entry.get("mode") != mode or entry.get("realized") is not None:
+            # One leg = still open. Entry legs are journaled with realized 0.0
+            # (not None), so "realized" can't tell an entry from an exit; the
+            # leg count can.
+            if len(ls) > 1 or entry.get("mode") != mode:
                 continue
             m = _STOP_TARGET_RE.findall(entry.get("note") or "")
             stop, target = (float(m[-1][0]), float(m[-1][1])) if m else (None, None)
