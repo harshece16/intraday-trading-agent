@@ -3,7 +3,7 @@
 **2026-09-25. FAIL. Net −0.299R per trade over 256 trades, t = −5.56, negative in
 both halves, Deflated Sharpe 0.0.** Pre-registered in `prereg-3g-smc-mtf.md`
 (commit `48c36ed`), code and tests committed in `5989ba0`, both before any run.
-One run of each stage. **The held-out window was not looked at. Nothing is
+One run of each stage. The branch was later rebased onto #122 for a README conflict, which renamed the commits to `f0b0a61` (pre-registration) and `52e22d4` (code and tests) without changing either file. **The held-out window was not looked at. Nothing is
 deployed.** It ran at the user's direction without external reviewer review.
 
 Selection sample: 316 sessions, 2024-09-25 → 2026-01-01. Halves 158 / 158
