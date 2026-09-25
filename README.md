@@ -3284,6 +3284,16 @@ The post's rules are pictures, so each one was turned into an exact rule and **p
 
 The post's author trades it on 24-hour FX, gold and crypto markets, and ends by selling a Telegram channel. **Nothing here tests it there.** On NSE cash intraday it is one more price-only rule, and it fails the same way. Details: `docs/research/results-3g-smc-mtf.md`. Trials now stand at **117**.
 
+### 72. Do filings move stocks enough to trade? Measured: no, with one lead
+
+An event study (`docs/research/results-event-study.md`, research look L35, pre-registered) took **9,586 non-routine NSE filings** for the NIFTY 100 over 316 sessions and measured the move after each, in the direction the filing suggested, over 30 minutes, 60 minutes and to the close, against normal bars and the 16.63 bp round trip.
+
+- **No filing type clears the cost.** The candidate list was empty before the multiple-testing correction.
+- **Order wins are "sell the news"**: −8.6 bp in the first 30 minutes (t = −2.97). Real, but half the round trip and the wrong way.
+- **Results days move stocks 3× normal** (121 bp in 30 minutes vs 42, 175 bp by the close), but every result scored **zero for direction**: the keyword lexicon can't tell good numbers from bad. That is a volatility finding, not an edge.
+
+The one lead is the last line. Reading a result's *direction* needs the LLM reader (`llm_sentiment.py`), which is new information rather than a new indicator. That's the next measurement (L36), pre-registered on its own.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
