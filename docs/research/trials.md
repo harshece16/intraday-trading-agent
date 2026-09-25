@@ -148,6 +148,7 @@ backtest look better than it is.
 | 115 | **Strategy search** `C-VB-60m-s3.0-hold-both` · net -0.080R (n 848) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 | 116 | **Strategy search** `C-VB-60m-s3.0-hold-short` · net -0.075R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 | 117 | **3g — Smart Money multi-timeframe setup** (daily bias → 4H sweep → 1H order block → 15m sweep + cemented candle), 5m harness, selection only · `prereg-3g-smc-mtf.md` · code `5989ba0` · **FAIL**: net −0.299R/trade, t = −5.56, n = 256; both halves negative; pre-friction +0.070R (t ≈ 1.3) · `results-3g-smc-mtf.md` |
+| 118 | **3h — slow momentum held in delivery, run 1** (`prereg-3h-slow-momentum-delivery.md`, code `f55da3c`) · **VOID, not a verdict**: after the run, adjusted prices showed phantom −90% days on known split dates — NSE's bhavcopy PREVCLOSE is never split/bonus-adjusted, and weekday-only download missed weekend special sessions (amendment 2). Seen before voiding: net monthly excess +0.61% (t 1.99), both halves positive, CAGR gap +6.9 pp, DSR 0.28 → would have been FAIL · `data/slow_momentum_stage1_run1_void.json` · counted as a trial so the DSR denominator grows |
 
 ### What a reviewer should notice in this list
 
