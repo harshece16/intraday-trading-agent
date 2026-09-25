@@ -3284,6 +3284,23 @@ The post's rules are pictures, so each one was turned into an exact rule and **p
 
 The post's author trades it on 24-hour FX, gold and crypto markets, and ends by selling a Telegram channel. **Nothing here tests it there.** On NSE cash intraday it is one more price-only rule, and it fails the same way. Details: `docs/research/results-3g-smc-mtf.md`. Trials now stand at **117**.
 
+### 74. Market breadth and intermarket moves, measured: neither predicts the session by enough to trade
+
+The owner asked to focus on the methods page's "read, but not (yet) built in" list rather than the Varsity checklist. Two items on it bring information the 76-configuration search (§69) never used:
+- **market breadth over every NSE equity**: the advance-decline ratio, the McClellan Oscillator and TRIN, built from two years of NSE bhavcopies;
+- **intermarket moves** known before the open: India VIX, the S&P 500, USD/INR, crude, and the US 10-year yield.
+
+Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadth-intermarket.md`): does the predictor's top or bottom third of sessions see a NIFTY 100 move from 09:20 to 15:10 large enough to pay the 16.6 bp round trip?
+
+**Result: none does.** 0 of 8 survive the multiple-testing correction. The closest is USD/INR: after the rupee's strongest days the session averaged +10.8 bp, which is 0.65× the round trip, and even that isn't significant after correction. The sample could see a tradable effect of that size, and there isn't one.
+
+**The rest of the list stays unbuilt:**
+- **Elliott Wave** has no fixed rule to test.
+- **Point & Figure and time cycles** are price-only, the class §69 already found empty.
+- **ML models** now have the data, but on the same price inputs they have the same information.
+
+The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L35), not a trial, so trials stay at **117**.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
