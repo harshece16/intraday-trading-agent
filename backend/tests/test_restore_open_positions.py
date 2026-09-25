@@ -12,7 +12,9 @@ import trading_engine
 from state import AppState
 
 
-def _leg(pid, symbol, side, qty, price, mode="paper", note=None, realized=None, charges=10.0, ago=60):
+def _leg(pid, symbol, side, qty, price, mode="paper", note=None, realized=0.0, charges=10.0, ago=60):
+    # realized defaults to 0.0: that is what the engine journals on an entry leg
+    # (the first version of this test used None, and passed on data the engine never writes)
     database.record_trade({"id": f"{pid}-{side}-{ago}", "position_id": pid, "ts": time.time() - ago,
                            "symbol": symbol, "side": side, "quantity": qty, "price": price, "mode": mode,
                            "reason": "test", "note": note, "realized": realized, "charges": charges})
@@ -41,7 +43,7 @@ def test_a_checklist_long_is_restored_from_its_lowercase_note():
 
 
 def test_a_closed_position_is_not_restored():
-    _leg("P3", "CHOLAFIN", "SELL", 19, 1667.8, note=MANUAL, ago=120)
+    _leg("P3", "CHOLAFIN", "SELL", 19, 1667.8, note=MANUAL, ago=120)                   # entry: realized 0.0
     _leg("P3", "CHOLAFIN", "BUY", 19, 1670.5, realized=-60.0, ago=60)
     assert "CHOLAFIN" not in AppState(watchlist=[], paper_mode=True).positions
 
