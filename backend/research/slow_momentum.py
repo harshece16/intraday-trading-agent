@@ -434,7 +434,8 @@ def simulate(sessions, chains, start_month, end_month, capital, dp=True):
                     bh.sell(n, fill_price(chains, n, f) or 0.0)
         prev_universe = uni
         series.append((month, sessions[f], strat.value(chains, f), bench.value(chains, f), bh.value(chains, f)))
-        ranks_log.append({"month": month, "universe": len(uni), "scored": len(sc)})
+        ranks_log.append({"month": month, "universe": len(uni), "scored": len(sc),
+                          "holdings": sorted(strat.pos)})   # replication R2: holdings log, no rule change
     return series, strat, bench, bh, ranks_log
 
 
