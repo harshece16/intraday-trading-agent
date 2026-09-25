@@ -3265,6 +3265,25 @@ Backtests and the parameter tuner still judge a new rule set on its own trades (
 
 **It changes no decision.** Nothing reads it yet. After a few weeks there is enough to ask, as a measurement, whether spread, imbalance or a depth shift precedes the move by more than the 16.6 bp round trip. If it does, that becomes a pre-registered candidate; if not, this dataset is what will have shown it. `config.DEPTH_SAMPLER["enabled"]` turns it off.
 
+### 72. The "Smart Money" setup from social media, tested: it loses, and NSE's session is too short for it
+
+The owner shared a Threads post (2026-09-25) describing a popular "Smart Money Concepts" setup:
+- a **daily bias** from yesterday's close against the day before,
+- a **4-hour liquidity sweep** of the previous 4H bar,
+- a **1-hour order block** and its confirmation,
+- a **15-minute "sweep + cemented candle"** entry, with a 2R target.
+
+The post's rules are pictures, so each one was turned into an exact rule and **pre-registered before any code** (`docs/research/prereg-3g-smc-mtf.md`). It ran as **trial 117** on the selection sample, with the same costs and harness as the 76-configuration search (§69).
+
+**Result: FAIL.** It lost **−0.299R per trade over 256 trades** (t = −5.56), and lost in both halves. **The held-out window stays unspent, and nothing was deployed.**
+
+**Why:**
+- **The entries carry nothing measurable.** Before costs they make +0.07R, which is not distinguishable from zero (t ≈ 1.3). It is the same result as every rule in §69.
+- **The session is too short.** The 09:15–13:15 sweep bar isn't known until 13:15, so **two in three entries come after 14:00**. Then 66% of trades are closed by the 15:08 square-off, and only 4.7% ever reach the 2R target.
+- **Friction is 0.37R per trade**, five times what the entries make before costs.
+
+The post's author trades it on 24-hour FX, gold and crypto markets, and ends by selling a Telegram channel. **Nothing here tests it there.** On NSE cash intraday it is one more price-only rule, and it fails the same way. Details: `docs/research/results-3g-smc-mtf.md`. Trials now stand at **117**.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-25: **116**
+## Strategy trials — count as of 2026-09-25: **117**
 
 | n | Label |
 | --- | --- |
@@ -147,6 +147,7 @@ backtest look better than it is.
 | 114 | **Strategy search** `C-VB-60m-s3.0-2R-short` · net -0.074R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 | 115 | **Strategy search** `C-VB-60m-s3.0-hold-both` · net -0.080R (n 848) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 | 116 | **Strategy search** `C-VB-60m-s3.0-hold-short` · net -0.075R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
+| 117 | **3g — Smart Money multi-timeframe setup** (daily bias → 4H sweep → 1H order block → 15m sweep + cemented candle), 5m harness, selection only · `prereg-3g-smc-mtf.md` · code `5989ba0` · **FAIL**: net −0.299R/trade, t = −5.56, n = 256; both halves negative; pre-friction +0.070R (t ≈ 1.3) · `results-3g-smc-mtf.md` |
 
 ### What a reviewer should notice in this list
 
