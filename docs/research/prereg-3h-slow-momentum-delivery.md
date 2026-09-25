@@ -264,3 +264,21 @@ If stage 0 fails, or stage 1 fails, 3h stops. No amendment revises the
 signal, the universe rule, the portfolio size, the hysteresis band, the
 costs or the pass rule. A crash before any statistic is printed may be
 fixed and re-run with both runs recorded.
+
+---
+
+# Amendment 1 — 2026-09-25, before stage 0 ran on the full data, no forward return read
+
+The stage-0 crash test on the first 606 sessions counted **903**
+PREVCLOSE-based adjustments across 1,557 chains — several times the rate of
+real splits, bonuses and rights. Cause: the chain is EQ-series only, so a
+stock's spell in the BE/BZ series (or a suspension) leaves a gap, and the
+PREVCLOSE on its return refers to a close the chain never saw. A plain
+ratio there is noise and would rescale the whole earlier history.
+
+**Rule as amended:** across a gap of more than one session, the PREVCLOSE
+ratio counts as an adjustment **only if it snaps to a clean p/q with
+p, q ≤ 10 within 1%**; ratios that don't snap are skipped and counted
+(`ca_gap_skipped`). With no gap the rule is unchanged. This touches data
+hygiene only; the signal, universe, portfolio, costs and pass rule are as
+written. Committed before stage 0 is run on the full download.

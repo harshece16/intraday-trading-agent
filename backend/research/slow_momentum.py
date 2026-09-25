@@ -203,15 +203,29 @@ def _ratio_snap(x, max_int=10, tol=0.01):
 
 
 def _apply_corporate_actions(chains):
-    n_prev, n_fallback = 0, 0
+    """PREVCLOSE(t)/CLOSE(t-1) off by > 5% is an adjustment factor — but only
+    when t-1 is the previous session. Across a gap in the EQ chain (a spell in
+    the BE/BZ series, or a suspension) PREVCLOSE refers to a close this chain
+    never saw, so a plain ratio there is noise; across a gap the ratio must
+    also snap to a clean p/q (p, q <= 10) to count. Amendment 1 of the prereg."""
+    n_prev, n_fallback, n_gap_skipped = 0, 0, 0
     for c in chains.values():
-        close, prev = c["close"], c["prev"]
+        close, prev, idx = c["close"], c["prev"], c["idx"]
         factors = [1.0] * len(close)
         for i in range(1, len(close)):
             f = None
             if prev[i] > 0 and close[i - 1] > 0 and abs(prev[i] / close[i - 1] - 1) > CA_THRESHOLD:
-                f = prev[i] / close[i - 1]
-                n_prev += 1
+                ratio = prev[i] / close[i - 1]
+                if idx[i] - idx[i - 1] == 1:
+                    f = ratio
+                    n_prev += 1
+                else:
+                    snap = _ratio_snap(ratio)
+                    if snap:
+                        f = snap
+                        n_prev += 1
+                    else:
+                        n_gap_skipped += 1
             else:
                 r = close[i] / close[i - 1] - 1 if close[i - 1] > 0 else 0.0
                 if r < CA_FALLBACK_RETURN:
@@ -224,7 +238,7 @@ def _apply_corporate_actions(chains):
                     factors[j] *= f
         c["close"] = [cl * fa for cl, fa in zip(close, factors)]
         del c["prev"]
-    return {"ca_from_prevclose": n_prev, "ca_fallback": n_fallback}
+    return {"ca_from_prevclose": n_prev, "ca_fallback": n_fallback, "ca_gap_skipped": n_gap_skipped}
 
 
 # --- calendar helpers -------------------------------------------------------
