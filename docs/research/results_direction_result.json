@@ -1,0 +1,48 @@
+{
+ "selection": [
+  "2024-09-25",
+  "2026-01-01",
+  316
+ ],
+ "results_events_in_window": 188,
+ "with_direction": 167,
+ "hurdle_bp": 16.63,
+ "results": {
+  "30m": {
+   "n": 167,
+   "aligned_mean_bp": 5.92,
+   "t": 0.6,
+   "kinds": {
+    "after_hours": 139,
+    "in_hours": 28
+   },
+   "share_positive": 53.3
+  },
+  "60m": {
+   "n": 165,
+   "aligned_mean_bp": 0.53,
+   "t": 0.04,
+   "kinds": {
+    "after_hours": 139,
+    "in_hours": 26
+   },
+   "share_positive": 50.3
+  },
+  "close": {
+   "n": 167,
+   "aligned_mean_bp": -0.63,
+   "t": -0.04,
+   "kinds": {
+    "after_hours": 139,
+    "in_hours": 28
+   },
+   "share_positive": 50.9
+  },
+  "gap_aligned_bp_not_tradable": {
+   "n": 139,
+   "mean": 82.71,
+   "t": 4.78
+  }
+ },
+ "step2_earned": []
+}
