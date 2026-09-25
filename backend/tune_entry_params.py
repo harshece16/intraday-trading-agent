@@ -113,7 +113,7 @@ def main():
 
     # Fixed once for the whole grid — the real, current system-evidence
     # state (see module docstring for why this, not a hypothetical one).
-    scorecard = database.journal_summary().get("scorecard", [])
+    scorecard = database.journal_summary(include_backtest_evidence=False).get("scorecard", [])  # tuning a new config: not vetoed by the old verdict
     print("Current real Dimaag Scorecard (fixed for every cell below):")
     for row in scorecard:
         print(f"  {row['criterion']}: {row['status']}")

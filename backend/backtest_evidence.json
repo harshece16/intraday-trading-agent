@@ -1,0 +1,16 @@
+{
+  "recorded": "2026-09-25",
+  "applies_to": {"strategy": "sahab_dimaag", "entry_mode": "checklist", "interval": "5m"},
+  "primary": {
+    "label": "Test A — the live Varsity checklist on 5m, NIFTY 100 scanner top 5/day, confidence gate off",
+    "trades": 201, "sessions": 495, "period": "2024-09-20 to 2026-09-18",
+    "net_r": -0.356, "t": -3.59, "ci95": [-0.55, -0.16], "net_r_halves": [-0.344, -0.367],
+    "source": "docs/research/report-2026-09-20.md (Test A); README section 51"
+  },
+  "supporting": [
+    {"label": "Trial 39 — current parameters (derived 16.6 bp cost, no formulaic target), selection sample",
+     "trades": 38, "net_r_halves": [-0.360, 0.089], "source": "docs/research/results-fix40-no-level-target.md"},
+    {"label": "Trials 41-116 — 76-configuration search incl. the checklist on 15m/60m and #43; 0 pass, pre-friction R about 0 everywhere",
+     "source": "docs/research/results-strategy-search.md, results-search-diagnostics.md"}
+  ]
+}

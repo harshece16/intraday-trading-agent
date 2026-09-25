@@ -105,8 +105,10 @@ def test_defaults_to_the_real_journal_scorecard_when_not_passed(monkeypatch):
     import database
     called_with = {}
 
-    def fake_journal_summary():
+    def fake_journal_summary(include_backtest_evidence=True):
         called_with["called"] = True
+        # a backtest judges its own rule set: it must not import the live verdict
+        called_with["include_backtest_evidence"] = include_backtest_evidence
         return {"scorecard": [{"criterion": "x", "status": "pass", "detail": ""}]}
     monkeypatch.setattr(database, "journal_summary", fake_journal_summary)
 
@@ -122,5 +124,6 @@ def test_defaults_to_the_real_journal_scorecard_when_not_passed(monkeypatch):
             # no `scorecard=` kwarg -> must fetch the real one
         )
         assert called_with.get("called") is True
+        assert called_with.get("include_backtest_evidence") is False
     finally:
         del STRATEGY_FUNCTIONS[name]

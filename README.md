@@ -3243,6 +3243,20 @@ Stops, targets and timeframes only change the size of that bill. They can't crea
 
 **The live engine stays on the Varsity checklist, in paper mode.** No rule change here was earned. Trials now stand at **116**.
 
+### 70. The confidence gate now knows what the backtests measured, and it stops automatic entries
+
+Until now the Dimaag Scorecard, which sets the confidence gate's system multiplier, looked only at **paper and live trades**: 8 of them. So it said "not enough data" and ran the gate at **0.6×**, letting near-perfect setups through while two years of backtests said the rule set loses.
+
+The Scorecard has a fourth row, **"Backtest evidence for the live rule set"**. It reads `backend/backtest_evidence.json`: Test A, the live Varsity checklist on 5m, **−0.356R per trade over 201 trades and 495 sessions, t = −3.59, negative in both halves** (§51). Trial 39 and the 76-configuration search (§69) are recorded as supporting evidence. The row grades on the same bars as everything else:
+- **PASS**: net R > 0 with t ≥ 2, both halves positive.
+- **FAIL**: net R < 0 with t ≤ −2.
+
+**The row only grades the configuration it measured.** If the live strategy, entry mode or bar interval changes, it says "not enough data: backtest the live configuration" rather than applying another rule set's verdict.
+
+**Effect:** the row is a FAIL, so the gate multiplier is **0.25×**. The highest confidence any setup can reach is 25, under the 60 bar, so **the engine takes no automatic entries**, paper or live, and the same goes for F&O. That is the honest reading of the evidence. **Trades can still happen through the review queue (§64)**, where you approve each one yourself with the full numbers in front of you.
+
+Backtests and the parameter tuner still judge a new rule set on its own trades (`journal_summary(include_backtest_evidence=False)`), so the old verdict never vetoes a new candidate. When a new rule set passes pre-registered selection and the held-out look, its evidence replaces this file, and the gate opens on its own.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

@@ -1330,7 +1330,12 @@ def dimag_ki_batti(field="final_score", min_pairs=20):
     return {"winner": {"pattern": best[0], **best[1]}, "by_pattern": by_pattern, "note": None}
 
 
-def journal_summary():
+def journal_summary(include_backtest_evidence=True):
+    """The dashboard's journal numbers and the Scorecard the confidence gate
+    reads. The Scorecard includes the backtest-evidence row by default, so
+    the live gate knows what two years of backtests measured. backtester.py
+    passes include_backtest_evidence=False: a backtest judging a NEW rule set
+    must not be blocked by the old rule set's verdict."""
     with _conn() as c:
         n_scans = c.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
         n_evals = c.execute("SELECT COUNT(*) FROM checklist_evals").fetchone()[0]
@@ -1347,5 +1352,8 @@ def journal_summary():
         "trade_stats": ts,
         "checklist_item_breakdown": checklist_item_breakdown(),
         "factor_ic": ic,
-        "scorecard": evaluation.scorecard(ts, dsr, ic),
+        "scorecard": evaluation.scorecard(ts, dsr, ic, backtest_row=evaluation.backtest_evidence_row(
+            evaluation.load_backtest_evidence(), config.STRATEGY,
+            {**config.STRATEGY_PARAMS.get(config.STRATEGY, {}), "interval": config.CANDLE_INTERVAL})
+            if include_backtest_evidence else None),
     }
