@@ -6,8 +6,9 @@ first; every rule below is a transcription of it, and the results file
 cites this file's commit hash after the prereg's.
 
 Stage 0 (no look): coverage of the downloaded bhavcopies and universe size
-at every month-end. Stage 1 (trial 118): the strategy against its
-equal-weighted universe benchmark, net of Zerodha's delivery charges.
+at every month-end. Stage 1 (trial 119; run 1 = trial 118 was VOID, see the
+prereg's amendment 2): the strategy against its equal-weighted universe
+benchmark, net of Zerodha's delivery charges.
 
 Usage (from backend/):
     .venv/bin/python research/slow_momentum.py stage0
@@ -53,7 +54,7 @@ MIN_HISTORY = 250
 MIN_PRICE = 20.0
 LIQ_WINDOW = 126
 VOL_WINDOW = 252
-N_TRIALS = 118
+N_TRIALS = 119                   # run 1 (void, data defect) counted; this is run 2
 CAPITAL = 100000.0
 CAPITAL_COLUMNS = (100000.0, 5500.0, 300000.0)
 
@@ -66,8 +67,19 @@ GST = 0.18
 SLIPPAGE = 0.0005
 DP_PER_SELL = 15.34 * 1.18      # ₹ per scrip per sell-day, GST included
 
-CA_THRESHOLD = 0.05             # PREVCLOSE/CLOSE(t-1) deviation → adjustment
-CA_FALLBACK_RETURN = -0.33      # older files: unadjusted PREVCLOSE on ex-date
+# Corporate actions (amendment 2). NSE's PREVCLOSE is never adjusted for a
+# split or bonus, so the only tell is the price itself: a one-day drop of
+# 25% or more whose ratio snaps (within 10%) to a standard split/bonus factor
+# AND whose traded quantity scales by about the same factor (share-count
+# conservation; median implied quantity over 20 sessions either side within
+# [0.5f, 2f]). Factors below 4/3 (1:4, 1:5 bonuses) are deliberately left
+# out: a −17% or −20% day is too often a real crash.
+CA_MIN_DROP = -0.25
+CA_FACTORS = (4 / 3, 1.5, 5 / 3, 2, 2.5, 3, 4, 5, 6, 8, 10, 20, 25, 50, 100)
+CA_SNAP_TOL = 0.10
+CA_QTY_WINDOW = 20
+CA_QTY_BAND = (0.5, 2.0)
+PREVCLOSE_MISMATCH = 0.02       # PREVCLOSE ≠ prior close: a MISSING SESSION, reported in stage 0
 
 
 def buy_cost(value):
@@ -191,54 +203,53 @@ def _parse(path):
     return out
 
 
-def _ratio_snap(x, max_int=10, tol=0.01):
-    """Nearest p/q with p,q <= max_int within tol of x, else None."""
-    best = None
-    for q in range(1, max_int + 1):
-        for p in range(1, max_int + 1):
-            r = p / q
-            if abs(r - x) / x <= tol and (best is None or abs(r - x) < abs(best - x)):
-                best = r
-    return best
+def _snap_factor(ratio):
+    """Nearest standard factor within CA_SNAP_TOL of the one-day ratio, else None."""
+    f = min(CA_FACTORS, key=lambda x: abs(x - ratio))
+    return f if abs(f / ratio - 1) <= CA_SNAP_TOL else None
 
 
 def _apply_corporate_actions(chains):
-    """PREVCLOSE(t)/CLOSE(t-1) off by > 5% is an adjustment factor — but only
-    when t-1 is the previous session. Across a gap in the EQ chain (a spell in
-    the BE/BZ series, or a suspension) PREVCLOSE refers to a close this chain
-    never saw, so a plain ratio there is noise; across a gap the ratio must
-    also snap to a clean p/q (p, q <= 10) to count. Amendment 1 of the prereg."""
-    n_prev, n_fallback, n_gap_skipped = 0, 0, 0
-    for c in chains.values():
-        close, prev, idx = c["close"], c["prev"], c["idx"]
-        factors = [1.0] * len(close)
-        for i in range(1, len(close)):
-            f = None
-            if prev[i] > 0 and close[i - 1] > 0 and abs(prev[i] / close[i - 1] - 1) > CA_THRESHOLD:
-                ratio = prev[i] / close[i - 1]
-                if idx[i] - idx[i - 1] == 1:
-                    f = ratio
-                    n_prev += 1
-                else:
-                    snap = _ratio_snap(ratio)
-                    if snap:
-                        f = snap
-                        n_prev += 1
-                    else:
-                        n_gap_skipped += 1
-            else:
-                r = close[i] / close[i - 1] - 1 if close[i - 1] > 0 else 0.0
-                if r < CA_FALLBACK_RETURN:
-                    snap = _ratio_snap(1 / (1 + r))
-                    if snap:
-                        f = 1 / snap
-                        n_fallback += 1
-            if f is not None:
-                for j in range(i):
-                    factors[j] *= f
+    """Amendment 2: detect splits/bonuses from the price and the traded
+    quantity, never from PREVCLOSE. PREVCLOSE mismatches on contiguous rows
+    are counted as missing sessions and returned for the stage-0 report."""
+    n_ca, n_nosnap, n_qty_reject, n_mismatch = 0, 0, 0, 0
+    mismatches = []
+    for name, c in chains.items():
+        close, prev, idx, val = c["close"], c["prev"], c["idx"], c["val"]
+        n = len(close)
+        factors = [1.0] * n
+        for i in range(1, n):
+            if idx[i] - idx[i - 1] == 1 and prev[i] > 0 and abs(prev[i] / close[i - 1] - 1) > PREVCLOSE_MISMATCH:
+                n_mismatch += 1
+                if len(mismatches) < 400:
+                    mismatches.append((name, i))
+            if close[i - 1] <= 0:
+                continue
+            r = close[i] / close[i - 1] - 1
+            if r > CA_MIN_DROP:
+                continue
+            f = _snap_factor(close[i - 1] / close[i])
+            if f is None:
+                n_nosnap += 1
+                continue
+            lo, hi = max(0, i - CA_QTY_WINDOW), min(n, i + CA_QTY_WINDOW)
+            qb = [v / p for v, p in zip(val[lo:i], close[lo:i]) if p > 0 and v > 0]
+            qa = [v / p for v, p in zip(val[i:hi], close[i:hi]) if p > 0 and v > 0]
+            if not qb or not qa:
+                n_qty_reject += 1
+                continue
+            q = st.median(qa) / st.median(qb)
+            if not (CA_QTY_BAND[0] * f <= q <= CA_QTY_BAND[1] * f):
+                n_qty_reject += 1
+                continue
+            n_ca += 1
+            for j in range(i):
+                factors[j] /= f
         c["close"] = [cl * fa for cl, fa in zip(close, factors)]
         del c["prev"]
-    return {"ca_from_prevclose": n_prev, "ca_fallback": n_fallback, "ca_gap_skipped": n_gap_skipped}
+    return {"ca_detected": n_ca, "ca_nosnap": n_nosnap, "ca_qty_reject": n_qty_reject,
+            "prevclose_mismatches_contiguous": n_mismatch}
 
 
 # --- calendar helpers -------------------------------------------------------
@@ -378,6 +389,8 @@ def simulate(sessions, chains, start_month, end_month, capital, dp=True):
             break
         uni = universe_at(chains, idx)
         sc = scores_at(chains, uni, me_idx, month, idx)
+        if not sc:
+            continue  # amendment 2: the series starts at the first month-end with a signal
         ranked = sorted(sc, key=sc.get, reverse=True)
         rank = {n: i + 1 for i, n in enumerate(ranked)}
         uset = set(uni)
@@ -537,11 +550,11 @@ def stage1(sessions, chains, meta, held_out=False):
         "excess_gross": {k: v for k, v in gex.items() if k != "series"},
         "excess_net_series": ex["series"],
         "dsr": dsr, "cagr_gap_pp": cagr_gap_pp,
-        "turnover": {"one_sided_pct_per_year": strat.turnover_value / 2 / CAPITAL / n_years * 100,
+        "turnover": {"one_sided_pct_of_avg_book_per_year": strat.turnover_value / 2 / st.mean(sv) / n_years * 100,
                      "buys": strat.buys, "sells": strat.sells, "forced_exits": strat.forced_exits,
                      "unbuyable_picks": strat.unbuyable,
-                     "cost_paid_inr": strat.cost_paid, "cost_bp_per_year_of_start_capital":
-                         strat.cost_paid / CAPITAL / n_years * 1e4},
+                     "cost_paid_inr": strat.cost_paid,
+                     "cost_pct_of_avg_book_per_year": strat.cost_paid / st.mean(sv) / n_years * 100},
         "benchmark_turnover": {"buys": bench.buys, "sells": bench.sells, "cost_paid_inr": bench.cost_paid},
         "capital_columns": {str(int(cap)): {"strategy": describe([s[2] for s in r[0]], months),
                                             "cost_paid_inr": r[1].cost_paid,

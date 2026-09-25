@@ -282,3 +282,77 @@ p, q ≤ 10 within 1%**; ratios that don't snap are skipped and counted
 (`ca_gap_skipped`). With no gap the rule is unchanged. This touches data
 hygiene only; the signal, universe, portfolio, costs and pass rule are as
 written. Committed before stage 0 is run on the full download.
+
+---
+
+# Amendment 2 — 2026-09-25, AFTER run 1 was seen. Run 1 is VOID (trial 118); run 2 is trial 119
+
+**Disclosure first.** Stage 1 was run once under amendment 1 (code
+`18971d0`/`f55da3c`, output kept as
+`data/slow_momentum_stage1_run1_void.json`). Its result was seen before this
+amendment was written: **FAIL** on the pre-registered rule — net monthly
+excess +0.61% (t = 1.99, rule t > 2.0), both halves positive, net CAGR gap
++6.9 pp, DSR 0.28 (rule ≥ 0.95). A post-hoc amendment after a near-miss is
+the exact shape of a rescue, so the reader should hold what follows to a
+higher standard, and the held-out check (which this amendment cannot touch)
+is the arbiter if run 2 passes.
+
+**Why run 1 is void rather than a fail.** Auditing the adjusted prices
+after the run found phantom one-day drops of −90% to −95% on well-known
+split dates in liquid names (TATASTEEL 2022-07-28, SBIN 2014-11-20,
+NESTLEIND 2024-01-05, BAJFINANCE 2016-09-08, BEL 2017-03-16, BAJAJFINSV
+2022-09-13, TITAN 2011-06-23, …). Two defects, both checkable without
+reference to any result:
+
+1. **NSE's bhavcopy PREVCLOSE is never adjusted for a split or bonus.**
+   Read directly from the files: TATASTEEL 2022-07-28 close 100.35,
+   PREVCLOSE 959.4; INFY bonus 2018-09-04 close 737.15, PREVCLOSE 1434.25;
+   the same on every split/bonus date checked. The pre-registered primary
+   rule (PREVCLOSE ratio) therefore catches **no** corporate action, and the
+   fallback's 1% snap tolerance rejected every split day on which the stock
+   also moved more than 1% (TATASTEEL moved +4.6% split-adjusted).
+2. **What the PREVCLOSE rule did catch were missing sessions**: the
+   weekday-only download skipped NSE's Saturday/Sunday special sessions
+   (Budget Saturdays 2015-02-28, 2020-02-01, 2025-02-01; Muhurat Sundays;
+   the 2012-03-03 special session). On the following Monday, PREVCLOSE is
+   the weekend close, my chain's previous row is Friday, and the ratio was
+   applied as a "corporate action", erasing the weekend session's move from
+   every earlier price. 1,612 such contiguous mismatches; not one a real
+   corporate action.
+
+A phantom −90% on a held name costs the strategy ~6% of the book and the
+200-name benchmark ~0.45%; several of the affected names (BAJFINANCE 2016,
+BEL 2017, SBIN 2014) are plausible momentum holdings. **The likely direction
+of the fix is therefore to raise the strategy relative to the benchmark.**
+That is stated before run 2 so it cannot be claimed as a surprise.
+
+**Rules as amended (data hygiene only; signal, universe, portfolio, costs
+and the five-part pass rule are untouched):**
+
+- **Weekend sessions are downloaded**; stage 0 reports contiguous PREVCLOSE
+  mismatches (> 2%) as a missing-session count, and they are **not**
+  adjustments.
+- **Corporate action = price + quantity, never PREVCLOSE.** A one-day drop
+  of ≥ 25% whose ratio close(t−1)/close(t) snaps within 10% to a standard
+  factor {4/3, 3/2, 5/3, 2, 5/2, 3, 4, 5, 6, 8, 10, 20, 25, 50, 100}, **and**
+  whose implied traded quantity (value ÷ close, median over 20 sessions
+  either side) scales by the same factor within [0.5f, 2f] — share-count
+  conservation — is adjusted by exactly 1/f; the day's residual move stays
+  a return. YESBANK 2020-03-06 (−56%, quantity ratio 0.37f) is correctly
+  left as a crash under this rule; it was wrongly erased by the 5-day-median
+  variant tried during diagnosis, which is why the one-day ratio is used.
+- **Factors 1.2 and 1.25 (1:5 and 1:4 bonuses) are not adjusted.** A −17%
+  or −20% day is too often a real fall, and erasing real falls flatters the
+  test. Those bonuses remain as phantom drops, which hurt a 15-name book
+  more than a 200-name benchmark: conservative for the strategy.
+- The excess series starts at the **first month-end with a signal
+  (2010-02)**; in run 1 the strategy sat in cash for 2010-01 while the
+  benchmark was invested.
+- Turnover and cost drag are reported as % of the **average** book, not of
+  starting capital (run 1's 544%/yr figure was inflated by growth).
+- **DSR at n_trials = 119.** Run 1 is counted as trial 118 (void); run 2 is
+  trial 119.
+- The last rebalance is the **2025-11** month-end: the 2025-12 month-end's
+  fill would be the first 2026 session, which is held-out data.
+
+**Stop rule stands:** run 2 is the run of record; there is no amendment 3.
