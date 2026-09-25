@@ -3303,6 +3303,12 @@ L35's one lead was that results days move stocks 3× normal. L36 (`docs/research
 
 So a results rule for an intraday cash account has nothing to trade; earning the gap means holding through the announcement, an overnight delivery position outside this project's scope. No rule was written. Together with §69 and §73 this leaves one open line: the **order-book data** collecting since §71.
 
+### 75. The Varsity checklist is retired as the decision-maker; the order book is the one open line
+
+By the owner's decision (2026-09-25) the checklist no longer decides when to trade. It was measured every way it could be (§51, §57, §61, §69) and lost every time, like every other price-bar rule. It stays in the code only as the **review queue's describer** (§64): it labels setups and their numbers, and you decide. Automatic entries are off through the evidence gate (§70).
+
+There is **no proven replacement today**, and none is being wired in. Filings and results numbers were tested (§73, §74): the results direction is real but is priced in the overnight gap, before anyone can act. The only information this account can reach that no test has used is the **order book** (§71, collecting since 2026-09-25). Its test is pre-registered now, before the data exists (`docs/research/prereg-orderbook.md`), to run after 15 sessions. If it clears, that becomes the new brain, tested and confirmed before paper. If it doesn't, the remaining questions are capital, horizon and instrument, not the rule.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
