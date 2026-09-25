@@ -29,3 +29,6 @@ docs/research/data/null_result.json
 # universe_b.csv + the script regenerate it, and the results file has the summary.
 backend/data/universe_b_rows.json
 backend/data/universe_b_overnight_rows.json
+
+# Raw NSE bhavcopies (~350 KB/day); the derived daily breadth table is committed instead.
+backend/data/bhav/
