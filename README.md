@@ -3294,6 +3294,15 @@ An event study (`docs/research/results-event-study.md`, research look L35, pre-r
 
 The one lead is the last line. Reading a result's *direction* needs the LLM reader (`llm_sentiment.py`), which is new information rather than a new indicator. That's the next measurement (L36), pre-registered on its own.
 
+### 73. Results days: the filed numbers point the right way, and the move is gone by the open
+
+L35's one lead was that results days move stocks 3× normal. L36 (`docs/research/results-results-direction.md`) read each company's filed profit figure from its XBRL, took the year-on-year sign, and asked whether it predicts the move (167 results events; NSE's index only covers about two of the five quarters, which is stated).
+
+- **The direction is right.** The **overnight gap** moves **+83 bp in the direction of the profit change, t = 4.8**, on filed numbers alone.
+- **It's priced by the open.** After a 09:20 entry the aligned drift is **6 bp at 30 minutes and zero by the close**, against a 16.63 bp round trip.
+
+So a results rule for an intraday cash account has nothing to trade; earning the gap means holding through the announcement, an overnight delivery position outside this project's scope. No rule was written. Together with §69 and §72 this leaves one open line: the **order-book data** collecting since §71.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
