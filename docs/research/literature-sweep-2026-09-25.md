@@ -237,7 +237,7 @@ number for the survivorship inflation the 3h data design avoids.
 
 | # | Edge | Net evidence | Horizon | Instrument | Reachable at ₹5,500 / ₹1 L / ₹3 L | Status here |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | **Long-only momentum in liquid large/mid-caps, monthly-or-slower** | US net +0.68%/mo (t 2.45); India gross significant 2000–21; live NSE index 5y 11%; cost-aware Indian repos positive OOS | ≥ 1 month | Cash delivery (or the momentum ETF) | ETF / **yes** / yes | **Pre-registered as 3h, trial 118** |
+| 1 | **Long-only momentum in liquid large/mid-caps, monthly-or-slower** | US net +0.68%/mo (t 2.45); India gross significant 2000–21; live NSE index 5y 11%; cost-aware Indian repos positive OOS | ≥ 1 month | Cash delivery (or the momentum ETF) | ETF / **yes** / yes | **Run as 3h (trial 119): FAIL on DSR 0.24; four other gates pass; +0.72%/mo net, t 2.48** — `results-3h-slow-momentum-delivery.md` |
 | 2 | Overnight index premium, close→open | Replicated on Nifty since 2011 and in our data; US net result fragile | 1 night | **Nifty futures only** | no / no / one lot, marginal | Blocked by capital; revisit at ≥ ₹3–5 L |
 | 3 | PEAD long-only, day +2 → +60 | India +6%/qtr L/S gross; US net t 1.6 | 1–3 months | Cash delivery | ETF-less; **yes** / yes | Candidate after 3h; needs post-2017 data (our results index thins after Jan 2025) |
 | 4 | Crypto funding carry | Positive, low-vol, ≈ 0 excess since 2025 | weeks | spot + perp, offshore | tax-closed | Not pursued |
@@ -252,9 +252,11 @@ number for the survivorship inflation the 3h data design avoids.
 1. **The product changes horizon, not indicators.** An intraday scalper
    with a better entry rule is what 117 trials tested. The evidence-backed
    rewire is a **positional book**: delivery holdings, monthly rebalance,
-   liquid large-caps, long only. This is pre-registered as 3h and runs
-   today; it is built into the engine (paper mode) only if it passes its
-   own gates. If it fails, this line closes too, and that is recorded.
+   liquid large-caps, long only. This was pre-registered as 3h and run the
+   same evening: **it failed its pre-registered rule** (DSR 0.24 at 119
+   trials) while passing every economic gate (+0.72%/month net excess,
+   t 2.48, both halves, +8.8 pp CAGR). Per the prereg, nothing is built;
+   the results file puts the gate-design question to the reviewer.
 2. **The real account is too small for stock selection.** At ₹5,500 the
    honest instrument for any slow-equity result is the ETF that already
    tracks it. The agent's value at that size is *not* trading.
