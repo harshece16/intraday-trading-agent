@@ -89,15 +89,35 @@ def deflated_sharpe_ratio(r_values, n_trials, sharpe_std=None):
     }
 
 
-def trial_count() -> int:
-    """How many backtester.py runs have been logged, without adding one — for
-    read-only callers like the dashboard scorecard."""
-    if not TRIAL_LOG_PATH.exists():
-        return 0
+TRIALS_LEDGER_PATH = Path(__file__).parent.parent / "docs" / "research" / "trials.md"
+
+
+def trials_of_record() -> int:
+    """The highest strategy-trial number in docs/research/trials.md — the
+    project's count of record (research scripts log there, not in
+    backtest_trials.json). 0 if the ledger isn't present."""
+    import re
     try:
-        return len(json.loads(TRIAL_LOG_PATH.read_text()))
-    except (json.JSONDecodeError, OSError):
+        text = TRIALS_LEDGER_PATH.read_text()
+    except OSError:
         return 0
+    nums = [int(m) for m in re.findall(r"^\|\s*(\d+)\s*\|", text, flags=re.M)]
+    return max(nums) if nums else 0
+
+
+def trial_count() -> int:
+    """How many strategy configurations have been tried, without adding one —
+    for read-only callers like the dashboard scorecard. The larger of the
+    backtester.py run log and the research ledger's count of record: the log
+    alone said 34 while the ledger said 119, so the Scorecard's DSR deflated
+    for far fewer tries than were made (#136)."""
+    logged = 0
+    if TRIAL_LOG_PATH.exists():
+        try:
+            logged = len(json.loads(TRIAL_LOG_PATH.read_text()))
+        except (json.JSONDecodeError, OSError):
+            logged = 0
+    return max(logged, trials_of_record())
 
 
 IC_MIN_T_STAT = 2.0

@@ -33,3 +33,4 @@ backend/data/universe_b_overnight_rows.json
 # 3h raw bhavcopy cache (600 MB, re-downloadable)
 backend/data/bhav_daily/
 backend/data/bhav/
+backend/data/bhav_daily_2026_heldout/

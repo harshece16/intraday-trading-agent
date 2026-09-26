@@ -141,7 +141,7 @@ SEBI circulars and FIU-IND's registry. Index levels 24 Sep 2026: Nifty
 
 - **At the real balance (₹5,500)** the only executable instruments are cash
   intraday (16.6 bp, measured no edge) and cash delivery — where the flat
-  ₹18.10 DP charge per sell makes a 15-stock book cost ~500 bp per round
+  ₹15.34 DP charge per sell makes a 15-stock book cost ~420 bp per round
   trip. **A stock-picking book is not executable at ₹5,500.** The
   executable form of any slow-equity idea at that size is an **ETF**
   (STT 0.001%, no DP-per-name problem).

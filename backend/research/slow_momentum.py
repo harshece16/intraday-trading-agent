@@ -37,8 +37,10 @@ sys.path.insert(0, BACKEND)
 sys.path.insert(0, HERE)
 
 import evaluation  # noqa: E402
+from splits import HELD_OUT_START as HELD_OUT_FIRST_SESSION  # noqa: E402  "2026-01-02"
 
 DATA_DIR = os.path.join(BACKEND, "data", "bhav_daily")
+HELD_OUT_DIR = os.path.join(BACKEND, "data", "bhav_daily_2026_heldout")   # never read in selection
 OUT_DIR = os.path.join(BACKEND, "..", "docs", "research", "data")
 CACHE = os.path.join(DATA_DIR, "parsed.pkl")
 
@@ -65,7 +67,7 @@ NSE_TXN = 0.0000307
 SEBI = 0.000001
 GST = 0.18
 SLIPPAGE = 0.0005
-DP_PER_SELL = 15.34 * 1.18      # ₹ per scrip per sell-day, GST included
+DP_PER_SELL = 15.34             # ₹ per scrip per sell-day; Zerodha's ₹15.34 already includes GST (#135)
 
 # Corporate actions (amendment 2). NSE's PREVCLOSE is never adjusted for a
 # split or bonus, so the only tell is the price itself: a one-day drop of
@@ -117,26 +119,35 @@ def _canonical(sym, nxt, cache):
     return cur
 
 
-def load_all(data_dir=DATA_DIR, refresh=False):
-    """Returns (sessions, chains). sessions: sorted list of ISO dates.
-    chains: canonical -> dict(idx=[...], close=[...], val=[...], prev=[...])
-    with idx the position in `sessions`. Corporate actions already applied."""
-    if os.path.exists(CACHE) and not refresh:
-        with open(CACHE, "rb") as fh:
+def load_all(data_dir=DATA_DIR, refresh=False, include_held_out=False):
+    """Returns (sessions, chains, meta). sessions: sorted list of ISO dates.
+    chains: canonical -> dict(idx=[...], close=[...], raw=[...], val=[...])
+    with idx the position in `sessions`; `close` is split-adjusted, `raw` is
+    the price as printed that day. Sessions on or after the held-out start
+    are dropped unless include_held_out (#135): a selection run must not be
+    able to read them even if the files sit in the cache."""
+    cache_path = CACHE.replace(".pkl", "_with_heldout.pkl") if include_held_out else CACHE
+    if os.path.exists(cache_path) and not refresh:
+        with open(cache_path, "rb") as fh:
             return pickle.load(fh)
     nxt = _load_symbol_chains(os.path.join(data_dir, "symbolchange.csv"))
     cache = {}
-    files = sorted(f for f in os.listdir(data_dir) if f.endswith(".zip"))
+    paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".zip")]
+    if include_held_out and os.path.isdir(HELD_OUT_DIR):
+        paths += [os.path.join(HELD_OUT_DIR, f) for f in os.listdir(HELD_OUT_DIR) if f.endswith(".zip")]
+    files = sorted(paths)
     by_date = {}
     t0 = time.time()
     for i, f in enumerate(files):
         try:
-            rows = _parse(os.path.join(data_dir, f))
+            rows = _parse(f)
         except Exception as exc:  # a saved 404 page under a .zip name, say
             print(f"skip {f}: {exc}")
             continue
         for sym, d, close, prev, isin, val in rows:
             if close <= 0:
+                continue
+            if d >= HELD_OUT_FIRST_SESSION and not include_held_out:
                 continue
             by_date.setdefault(d, []).append((sym, close, prev, isin, val))
         if i % 500 == 0:
@@ -158,18 +169,19 @@ def load_all(data_dir=DATA_DIR, refresh=False):
                     cache[sym] = prior
                     canon = prior
                     isin_merges += 1
-            c = chains.setdefault(canon, {"idx": [], "close": [], "prev": [], "val": []})
+            c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "prev": [], "val": []})
             if c["idx"] and c["idx"][-1] == idx:
                 continue  # duplicate row for the day
             c["idx"].append(idx)
             c["close"].append(close)
+            c["raw"].append(close)
             c["prev"].append(prev)
             c["val"].append(val)
     ca = _apply_corporate_actions(chains)
     meta = {"files": len(files), "sessions": len(sessions), "chains": len(chains),
             "isin_merges": isin_merges, **ca}
     out = (sessions, chains, meta)
-    with open(CACHE, "wb") as fh:
+    with open(cache_path, "wb") as fh:
         pickle.dump(out, fh)
     print(json.dumps(meta))
     return out
@@ -283,8 +295,8 @@ def universe_at(chains, idx):
         k = rows_before(c, idx)
         if k < MIN_HISTORY or c["idx"][k - 1] != idx:
             continue  # must have traded on the month-end itself
-        if c["close"][k - 1] < MIN_PRICE:
-            continue
+        if c["raw"][k - 1] < MIN_PRICE:
+            continue  # the floor is on the price as printed then, not split-adjusted from the future (#135)
         lo = bisect.bisect_left(c["idx"], idx - LIQ_WINDOW + 1)
         vals = c["val"][lo:k] + [0.0] * (LIQ_WINDOW - (k - lo))
         cands.append((st.median(vals), name))
@@ -387,6 +399,8 @@ def simulate(sessions, chains, start_month, end_month, capital, dp=True):
         f = fill_idx(sessions, idx)
         if f is None:
             break
+        if sessions[f] >= HELD_OUT_FIRST_SESSION and start < HELD_OUT_START:
+            break  # a selection run never fills in the held-out window (#135)
         uni = universe_at(chains, idx)
         sc = scores_at(chains, uni, me_idx, month, idx)
         if not sc:
@@ -585,7 +599,7 @@ def main():
     ap.add_argument("--held-out", action="store_true")
     ap.add_argument("--refresh", action="store_true", help="re-parse the zips instead of using parsed.pkl")
     a = ap.parse_args()
-    sessions, chains, meta = load_all(refresh=a.refresh)
+    sessions, chains, meta = load_all(refresh=a.refresh, include_held_out=a.held_out)
     if a.stage == "stage0":
         stage0(sessions, chains, meta)
     else:

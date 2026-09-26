@@ -149,7 +149,7 @@ backtest look better than it is.
 | 116 | **Strategy search** `C-VB-60m-s3.0-hold-short` · net -0.075R (n 597) · fail · `prereg-strategy-search.md` / `results-strategy-search.md` |
 | 117 | **3g — Smart Money multi-timeframe setup** (daily bias → 4H sweep → 1H order block → 15m sweep + cemented candle), 5m harness, selection only · `prereg-3g-smc-mtf.md` · code `5989ba0` · **FAIL**: net −0.299R/trade, t = −5.56, n = 256; both halves negative; pre-friction +0.070R (t ≈ 1.3) · `results-3g-smc-mtf.md` |
 | 118 | **3h — slow momentum held in delivery, run 1** (`prereg-3h-slow-momentum-delivery.md`, code `f55da3c`) · **VOID, not a verdict**: after the run, adjusted prices showed phantom −90% days on known split dates — NSE's bhavcopy PREVCLOSE is never split/bonus-adjusted, and weekday-only download missed weekend special sessions (amendment 2). Seen before voiding: net monthly excess +0.61% (t 1.99), both halves positive, CAGR gap +6.9 pp, DSR 0.28 → would have been FAIL · `data/slow_momentum_stage1_run1_void.json` · counted as a trial so the DSR denominator grows |
-| 119 | **3h — slow momentum held in delivery, run 2 (of record)** — top-15 of the 200 most-traded NSE names by vol-adjusted 6/12-month return, monthly, rank-30 hysteresis, delivery costs incl. DP charge, vs the same universe equal-weighted · code `0b81a1e` · **FAIL on the pre-registered rule**: net monthly excess +0.72% **t = 2.48** (passes), both halves positive (passes: +0.58%/mo, +0.86%/mo), net CAGR 18.4% vs 9.6% (+8.8 pp, passes), 523 round trips (passes), **DSR 0.24 at 119 trials (fails, rule ≥ 0.95)** · held-out NOT spent · `results-3h-slow-momentum-delivery.md` |
+| 119 | **3h — slow momentum held in delivery, run 2 (of record)** — top-15 of the 200 most-traded NSE names by vol-adjusted 6/12-month return, monthly, rank-30 hysteresis, delivery costs incl. DP charge, vs the same universe equal-weighted · code `0b81a1e` · **FAIL on the pre-registered rule**: net monthly excess +0.72% **t = 2.48** (passes), both halves positive (passes: +0.58%/mo, +0.86%/mo), net CAGR 18.4% vs 9.6% (+8.8 pp, passes), 523 round trips (passes), **DSR 0.24 at 119 trials (fails, rule ≥ 0.95)** · held-out NOT spent · `results-3h-slow-momentum-delivery.md` · **2026-09-26: contaminated by a look-ahead (split-adjusted ₹20 price floor, #135); FAIL stands; not re-run** |
 
 ### What a reviewer should notice in this list
 
@@ -266,3 +266,22 @@ amendment 8.
 **Trial 35 — 3a, 2026-09-21, FAIL** (one run, no re-run). Every phase-2 strategy run is appended to the strategy table
 above with its pre-registration file named, and every measurement to the
 research-looks table.
+
+
+---
+
+## Held-out exposure log
+
+Reads of data dated on or after `HELD_OUT_START` (2026-01-02), whether or not
+a statistic was computed. The window is only as clean as this list says.
+
+| Date | Who | What was read | Statistic computed from it? |
+| --- | --- | --- | --- |
+| 2026-09-26 | edge-map workflow (design/verify agents) | NSE bhavcopies for 2026-07-30, 2026-07-31 and 2026-09-22 → 25 (the September ones are after `UNSEEN_AFTER`), to check ETF/index open-close tracking and file formats | Tracking gaps between ETF and index prices; no strategy return |
+| 2026-09-26 | edge-map workflow | yfinance 1-minute bars for NIFTYBEES and SETFNIF50, 2026-09-17 → 25, to estimate ETF spreads | Spread estimates only |
+| 2026-09-26 | edge-map workflow | NIFTY200 Momentum 30 factsheet (Aug 2026), including its 2026 year-to-date and 1-year returns | Published index returns, read as literature |
+| 2026-09-26 | main session | Downloaded all 2026 NSE equity bhavcopies (182 files) into the cache while refreshing it; moved unread to `backend/data/bhav_daily_2026_heldout/`, which selection code cannot read (#135) | None |
+
+**Consequence:** index-level 2026 held-out evidence has been partly seen
+(open/close tracking on six sessions, a factsheet's 2026 figures). A future
+index-timing confirmation on 2026 should say so and exclude those sessions.
