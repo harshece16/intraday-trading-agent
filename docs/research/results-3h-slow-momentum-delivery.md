@@ -172,3 +172,27 @@ Inputs: `backend/data/bhav_daily/*.zip` (4,215 files, 315 MB, re-downloadable
 with `step3f_stage0_checks.fetch_bhavcopy` over every calendar day 2009-01-01
 → 2025-12-31), `symbolchange.csv`, `EQUITY_L.csv` (NSE archives, fetched
 2026-09-25). Outputs in `docs/research/data/slow_momentum_*.json`.
+
+---
+
+## Addendum, 2026-09-26 — the DSR gate was broken (#132); 3h still fails the corrected one
+
+After this file was written, the project's `deflated_sharpe_ratio` was found
+to be unpassable at this trial count: its default set the luck baseline to
+1.30× the candidate's own Sharpe at N = 119, whatever the data. So the
+"DSR 0.24" above was not a test of anything. Fixed in #132 with the
+null-consistent default (a zero-edge Sharpe estimate's sampling spread,
+1/√(n−1)). Recomputed on the **same saved series** — a declared bug fix to a
+statistic, not a new run, not a trial:
+
+| | Old function | **Corrected** |
+| --- | --- | --- |
+| Run 2 (of record), N = 119 | 0.24 | **0.45 — FAIL** (baseline Sharpe 0.189 vs the strategy's 0.180) |
+| Run 1 (void), N = 118 | 0.28 | 0.28 |
+| Run 2 at N = 1 (family level, for the reviewer only) | — | 0.99 |
+
+**The verdict stands: FAIL.** At the project-wide count the corrected gate
+needs roughly t ≥ 4.3; 3h has t = 2.48. At the family level (momentum was
+never tested before) it would pass — which is reviewer question (a) above,
+now with the right numbers. The Bonferroni view agrees with the corrected
+DSR: two-sided 5% over 119 tests needs t ≈ 3.5.

@@ -3317,6 +3317,10 @@ The one rewire the evidence supported — a **slow, long-only momentum book in d
 
 **What changes in the product: nothing in the engine.** The evidence gate (§70) still holds automatic entries at zero; the review queue is the trading path; the order-book test (§75) is still the one open intraday line. What changed is the honest framing of the question: at this capital the agent's job cannot be stock selection at any horizon, and at ₹1 lakh the only measured net-positive result in the project's history is a monthly one that its own multiple-testing gate declines to certify.
 
+### 77. The Deflated Sharpe gate could never pass; fixed
+
+The Scorecard's "DSR" row and every research pass rule that asked for "DSR ≥ 0.95 at the full trial count" used a luck baseline that grew with the strategy's own Sharpe ratio. Above about 20 trials it sat above every strategy's Sharpe, so the gate failed whatever the data — a synthetic edge with t ≈ 71 scored 0.0 (#132). It now uses the standard null-consistent baseline: at the project's ~120 trials a strategy needs roughly t ≥ 4.3 to pass, which is strict but reachable. No past verdict changes: every affected test failed other gates, and 3h (§76) also fails the corrected gate (0.45). The Scorecard's live figure barely moves, because the paper trades lose.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
