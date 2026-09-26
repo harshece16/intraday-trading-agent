@@ -1,0 +1,708 @@
+"""
+The paper momentum book — the positional strategy that passed 3i (README
+section 83; docs/research/results-3i-momentum-corrected-data.md).
+
+Rules, unchanged from the pre-registration: at each month-end, rank the 200
+most-traded NSE stocks (median traded value over 126 sessions, as-printed
+close >= Rs 20, >= 250 sessions of history, fund units excluded) by
+mean(r6/sigma, r12/sigma) with the skip-month; hold 15, keep a holding while
+it ranks in the top 30, replace from the top; trade at the next session's
+close; pay Zerodha's delivery charges. The benchmark is the same universe
+equal-weighted. Prices come from NSE's daily bhavcopies, adjusted with NSE's
+own corporate-actions file (splits, bonuses, rights, demergers, dividends).
+
+It runs as an evening job in its own process (`python momentum_book.py
+daily`), started by the engine after the close, so building the price panel
+(~70 s, a few hundred MB) never touches the trading process. State lives in
+data/momentum_book_state.json. Paper only: nothing here places an order.
+
+The book switches itself off if, from six months on, the cumulative net
+excess over the benchmark falls below n x 0.82% - 2 x 3.87% x sqrt(n)
+(n months) — the forward band fixed in the results file.
+
+This module deliberately repeats the loader and ranking code of
+research/nse_prices.py and research/momentum_3i.py instead of importing
+them: live code may not import research (test_research_splits). A parity
+test holds the two copies to the same answers.
+"""
+
+import argparse
+import bisect
+import csv
+import datetime
+import glob
+import io
+import json
+import logging
+import math
+import os
+import re
+import statistics as st
+import subprocess
+import sys
+import tempfile
+import time
+import zipfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DATA = os.path.join(HERE, "data")
+sys.path.insert(0, HERE)
+
+logger = logging.getLogger("trading_bot")
+
+BHAV_DIRS = [os.path.join(DATA, d) for d in ("bhav_daily", "bhav_daily_2026_heldout", "bhav_live")]
+LIVE_DIR = os.path.join(DATA, "bhav_live")
+CA_DIR = os.path.join(DATA, "corp_actions")
+STATE_PATH = os.path.join(DATA, "momentum_book_state.json")
+LOG_PATH = os.path.join(DATA, "momentum_book.log")
+
+DEFAULTS = {
+    "enabled": True,
+    "capital": 1_000_000.0,
+    "universe": 200,
+    "hold": 15,
+    "rank_keep": 30,
+    "slippage": 0.0005,
+    "expected_monthly_excess": 0.0082,
+    "monthly_excess_sd": 0.0387,
+    "band_from_month": 6,
+    "job_after": "19:30",
+    "job_until": "23:30",
+    "retry_minutes": 30,
+}
+
+MIN_HISTORY = 250
+MIN_PRICE = 20.0
+LIQ_WINDOW = 126
+VOL_WINDOW = 252
+STT = 0.0010
+STAMP_BUY = 0.00015
+NSE_TXN = 0.0000307
+SEBI = 0.000001
+GST = 0.18
+DP_PER_SELL = 15.34
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+ETF_NAME = re.compile(r"(BEES|ETF|IETF|CASE)$")
+
+
+def cfg():
+    try:
+        import config
+        return {**DEFAULTS, **getattr(config, "MOMENTUM_BOOK", {})}
+    except Exception:
+        return dict(DEFAULTS)
+
+
+# --- data: download ---------------------------------------------------------------
+
+def bhav_url(d):
+    if d >= datetime.date(2024, 7, 8):
+        tag = d.strftime("%Y%m%d")
+        return tag, f"https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{tag}_F_0000.csv.zip"
+    tag = d.strftime("%d%b%Y").upper()
+    return tag, (f"https://nsearchives.nseindia.com/content/historical/EQUITIES/{d.year}/"
+                 f"{d.strftime('%b').upper()}/cm{tag}bhav.csv.zip")
+
+
+def _curl(url, out, extra=None):
+    cmd = ["curl", "-s", "-A", UA, "-w", "%{http_code}", "-o", out, "--max-time", "60"] + (extra or []) + [url]
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=90).stdout.strip()
+    except Exception:
+        return "000"
+
+
+def fetch_bhavcopy(d, out_dir=LIVE_DIR):
+    """Download one session's bhavcopy; returns the path, or None (holiday, not yet published)."""
+    os.makedirs(out_dir, exist_ok=True)
+    tag, url = bhav_url(d)
+    path = os.path.join(out_dir, f"{tag}.zip")
+    if os.path.exists(path) and os.path.getsize(path) > 5000:
+        return path
+    code = _curl(url, path)
+    if code != "200" or not zipfile.is_zipfile(path):
+        if os.path.exists(path):
+            os.remove(path)
+        return None
+    return path
+
+
+def cached_dates():
+    dates = set()
+    for d in BHAV_DIRS:
+        for f in glob.glob(os.path.join(d, "*.zip")):
+            name = os.path.basename(f)[:-4]
+            for fmt in ("%Y%m%d", "%d%b%Y"):
+                try:
+                    dates.add(datetime.datetime.strptime(name, fmt).date())
+                    break
+                except ValueError:
+                    continue
+    return dates
+
+
+def update_bhavcopies(today):
+    """Fetch every missing calendar day from the last cached session to today
+    (weekends included: NSE holds occasional special sessions)."""
+    have = cached_dates()
+    if not have:
+        return 0
+    d, got = max(have) + datetime.timedelta(days=1), 0
+    while d <= today:
+        if d not in have and fetch_bhavcopy(d):
+            got += 1
+        d += datetime.timedelta(days=1)
+        time.sleep(0.3)
+    return got
+
+
+def update_corporate_actions(year, ca_dir=CA_DIR):
+    """Refresh NSE's corporate-actions CSV for one year (cookie-gated API)."""
+    os.makedirs(ca_dir, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        jar, out = os.path.join(tmp, "cj.txt"), os.path.join(tmp, "ca.csv")
+        _curl("https://www.nseindia.com/companies-listing/corporate-filings-actions", os.devnull,
+              ["-c", jar, "-b", jar])
+        time.sleep(1.5)
+        today = datetime.date.today()
+        end = min(datetime.date(year, 12, 31), today + datetime.timedelta(days=90))
+        url = (f"https://www.nseindia.com/api/corporates-corporateActions?index=equities"
+               f"&from_date=01-01-{year}&to_date={end.strftime('%d-%m-%Y')}&csv=true")
+        code = _curl(url, out, ["-b", jar, "-c", jar, "-H",
+                                "Referer: https://www.nseindia.com/companies-listing/corporate-filings-actions"])
+        if code == "200" and os.path.getsize(out) > 1000 and b"SYMBOL" in open(out, "rb").read(200):
+            os.replace(out, os.path.join(ca_dir, f"ca_{year}.csv"))
+            return True
+    return False
+
+
+def refresh_reference_files(max_age_days=7):
+    for name, url in (("symbolchange.csv", "https://nsearchives.nseindia.com/content/equities/symbolchange.csv"),):
+        path = os.path.join(DATA, "bhav_daily", name)
+        if os.path.exists(path) and time.time() - os.path.getmtime(path) < max_age_days * 86400:
+            continue
+        tmp = path + ".tmp"
+        if _curl(url, tmp) == "200" and os.path.getsize(tmp) > 1000:
+            os.replace(tmp, path)
+        elif os.path.exists(tmp):
+            os.remove(tmp)
+
+
+# --- data: parse (a copy of research/nse_prices.py; parity-tested) -------------------
+
+def parse_bhavcopy(path):
+    out = []
+    with zipfile.ZipFile(path) as z, z.open(z.namelist()[0]) as fh:
+        for r in csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8", errors="ignore")):
+            r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+            if "TckrSymb" in r:
+                if r.get("SctySrs") != "EQ":
+                    continue
+                out.append((r["TckrSymb"], r["TradDt"], float(r.get("OpnPric") or 0), float(r["ClsPric"] or 0),
+                            float(r["PrvsClsgPric"] or 0), r.get("ISIN", ""), float(r.get("TtlTrfVal") or 0)))
+            elif "SYMBOL" in r:
+                if r.get("SERIES") != "EQ":
+                    continue
+                ts = r["TIMESTAMP"]
+                try:
+                    d = datetime.datetime.strptime(ts, "%d-%b-%Y").date().isoformat()
+                except ValueError:
+                    d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
+                out.append((r["SYMBOL"], d, float(r.get("OPEN") or 0), float(r["CLOSE"] or 0),
+                            float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0)))
+    return out
+
+
+def symbol_chains(symbolchange_csv):
+    nxt = {}
+    if not os.path.exists(symbolchange_csv):
+        return nxt
+    for line in open(symbolchange_csv, errors="ignore"):
+        p = [x.strip() for x in line.rsplit(",", 3)]
+        if len(p) == 4 and p[1] and p[2] and p[1] != p[2] and p[1].upper() != "SM_KEY_SYMBOL":
+            nxt[p[1]] = p[2]
+    return nxt
+
+
+def canonical(sym, nxt, cache):
+    if sym in cache:
+        return cache[sym]
+    seen, cur = [sym], sym
+    while cur in nxt and nxt[cur] not in seen:
+        cur = nxt[cur]
+        seen.append(cur)
+    for s in seen:
+        cache[s] = cur
+    return cur
+
+
+_NUM = r"(\d+(?:\.\d+)?)"
+RX_SPLIT_KW = re.compile(r"\bs(?:plit|plt|pl|pt)\b|sub-?\s*division", re.I)
+RX_BONUS = re.compile(r"\bbon(?:us)?\b\s*[-:]?\s*(?:issue\s*)?" + _NUM + r"\s*:\s*" + _NUM, re.I)
+RX_BONUS_KW = re.compile(r"\bbon(?:us)?\b", re.I)
+RX_RIGHTS = re.compile(r"\bri?ghts?\b\s*[-:]?\s*" + _NUM + r"\s*:\s*" + _NUM +
+                       r"\s*@\s*(prem(?:ium)?\.?)?\s*(?:of\s*)?(?:rs\.?|re\.?)?\s*" + _NUM, re.I)
+RX_DEMERGER = re.compile(r"demerger|scheme\s+of\s+arrangement|arrangement", re.I)
+RX_RS = re.compile(r"(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)
+RX_PCT = re.compile(_NUM + r"\s*%")
+RX_DIV_BARE = re.compile(r"\bdiv(?!ision)\w*\.?\s*[-:]?\s*" + _NUM, re.I)
+RX_NUM = re.compile(_NUM)
+
+
+def _split_ratio(text):
+    for clause in re.split(r"/(?!-)|;", text):
+        m = RX_SPLIT_KW.search(clause)
+        if not m:
+            continue
+        nums = [float(x) for x in RX_NUM.findall(clause[m.end():])]
+        if len(nums) >= 2 and nums[0] > nums[1] > 0:
+            return nums[0] / nums[1]
+        return None
+    return None
+
+
+def parse_purpose(purpose, face_value):
+    text = purpose.replace("–", "-")
+    acts = []
+    if RX_SPLIT_KW.search(text):
+        r = _split_ratio(text)
+        acts.append(("split", r) if r else ("unparsed", text))
+    m = RX_BONUS.search(text)
+    if m:
+        a, b = float(m.group(1)), float(m.group(2))
+        acts.append(("bonus", (a + b) / b) if a > 0 and b > 0 else ("unparsed", text))
+    elif RX_BONUS_KW.search(text):
+        acts.append(("unparsed", text))
+    m = RX_RIGHTS.search(text)
+    if m:
+        a, b, prem, px = float(m.group(1)), float(m.group(2)), m.group(3), float(m.group(4))
+        acts.append(("rights", (a, b, (face_value or 0) + px if prem else px)))
+    elif re.search(r"\bri?ghts?\b", text, re.I):
+        acts.append(("unparsed_rights", text))
+    if RX_DEMERGER.search(text):
+        acts.append(("demerger", None))
+    if re.search(r"\bdiv(?!ision)", text, re.I):
+        total = 0.0
+        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", text, flags=re.I):
+            if not re.search(r"\bdiv(?!ision)", clause, re.I):
+                continue
+            pct, rs = RX_PCT.findall(clause), RX_RS.findall(clause)
+            if pct and not rs:
+                if face_value:
+                    total += sum(float(x) for x in pct) / 100.0 * face_value
+            elif rs:
+                total += sum(float(x) for x in rs)
+            else:
+                bare = RX_DIV_BARE.search(clause)
+                if bare:
+                    total += float(bare.group(1))
+        if total > 0:
+            acts.append(("dividend", total))
+    return acts
+
+
+def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=None):
+    last_year = last_year or datetime.date.today().year
+    rows = []
+    for path in sorted(glob.glob(os.path.join(ca_dir, "ca_*.csv"))):
+        try:
+            year = int(os.path.basename(path)[3:7])
+        except ValueError:
+            continue
+        if year < first_year or year > last_year:
+            continue
+        with open(path, encoding="utf-8-sig", errors="ignore") as fh:
+            for r in csv.DictReader(fh):
+                r = {k.strip().strip('"'): (v or "").strip() for k, v in r.items() if k}
+                try:
+                    ex = datetime.datetime.strptime(r["EX-DATE"], "%d-%b-%Y").date().isoformat()
+                except (KeyError, ValueError):
+                    continue
+                try:
+                    fv = float(r.get("FACE VALUE") or 0)
+                except ValueError:
+                    fv = 0.0
+                acts = parse_purpose(r.get("PURPOSE", ""), fv)
+                if acts:
+                    rows.append((r["SYMBOL"], ex, acts))
+    return rows
+
+
+def etf_symbols(ca_dir=CA_DIR):
+    path = os.path.join(ca_dir, "eq_etfseclist.csv")
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8-sig", errors="ignore") as fh:
+        return {(r.get("Symbol") or "").strip() for r in csv.DictReader(fh)} - {""}
+
+
+def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
+    """(sessions, chains): chains[name] = dict(idx, close (total-return adjusted), raw, val)."""
+    bhav_dirs = bhav_dirs or BHAV_DIRS
+    nxt = symbol_chains(symbolchange or os.path.join(DATA, "bhav_daily", "symbolchange.csv"))
+    cache, by_date = {}, {}
+    for d in bhav_dirs:
+        for p in glob.glob(os.path.join(d, "*.zip")):
+            try:
+                rows = parse_bhavcopy(p)
+            except Exception:
+                continue
+            for sym, day, op, close, prev, isin, val in rows:
+                if close > 0:
+                    by_date.setdefault(day, []).append((sym, op, close, isin, val))
+    sessions = sorted(by_date)
+    chains, owner = {}, {}
+    for idx, day in enumerate(sessions):
+        for sym, op, close, isin, val in by_date[day]:
+            canon = canonical(sym, nxt, cache)
+            if isin:
+                prior = owner.setdefault(isin, canon)
+                if prior != canon:
+                    cache[canon] = cache[sym] = prior
+                    canon = prior
+            c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "open": [], "val": [], "isins": set()})
+            if c["idx"] and c["idx"][-1] == idx:
+                continue
+            c["idx"].append(idx)
+            c["raw"].append(close)
+            c["close"].append(close)
+            c["open"].append(op)
+            c["val"].append(val)
+            if isin:
+                c["isins"].add(isin)
+    etfs, aliases = etf_symbols(ca_dir), {}
+    for s, canon in cache.items():
+        aliases.setdefault(canon, set()).add(s)
+    for name in list(chains):
+        names = aliases.get(name, set()) | {name}
+        if any(i.startswith("INF") for i in chains[name]["isins"]) or names & etfs or any(ETF_NAME.search(n) for n in names):
+            del chains[name]
+    factors = {}
+    for sym, ex, acts in load_corporate_actions(ca_dir):
+        canon = canonical(sym, nxt, cache)
+        c = chains.get(canon)
+        if c is None:
+            continue
+        target = bisect.bisect_left(sessions, ex)
+        k = bisect.bisect_left(c["idx"], target) if target < len(sessions) else len(c["idx"])
+        if k == 0 or k >= len(c["idx"]):
+            continue
+        prev = c["raw"][k - 1]
+        for kind, value in acts:
+            f = None
+            if kind in ("split", "bonus"):
+                f = 1.0 / value
+            elif kind == "rights":
+                a, b, price = value
+                terp = (b * prev + a * price) / (a + b) if prev > 0 else 0
+                f = terp / prev if 0 < terp < prev else None
+            elif kind == "demerger":
+                op, cl = c["open"][k], c["raw"][k]
+                ratio = op / prev if op > 0 and prev > 0 else 0
+                if not 0.05 < ratio < 0.98 and prev > 0:
+                    ratio = cl / prev
+                f = ratio if 0.05 < ratio < 0.98 else None
+            elif kind == "dividend":
+                f = 1.0 - value / prev if 0 < value < prev * 0.9 else None
+            if f is not None:
+                per = factors.setdefault(canon, {})
+                per[k] = per.get(k, 1.0) * f
+    for canon, per in factors.items():
+        cl, running = chains[canon]["close"], 1.0
+        for j in range(len(cl) - 1, -1, -1):
+            if j + 1 in per:
+                running *= per[j + 1]
+            cl[j] *= running
+    return sessions, chains
+
+
+# --- ranking (a copy of research/momentum_3i.py; parity-tested) -----------------------
+
+def rows_before(c, idx):
+    return bisect.bisect_right(c["idx"], idx)
+
+
+def close_on_or_before(c, idx):
+    k = rows_before(c, idx) - 1
+    return c["close"][k] if k >= 0 else None
+
+
+def ranked_universe(chains, idx):
+    cands = []
+    for name, c in chains.items():
+        k = rows_before(c, idx)
+        if k < MIN_HISTORY or c["idx"][k - 1] != idx or c["raw"][k - 1] < MIN_PRICE:
+            continue
+        lo = bisect.bisect_left(c["idx"], idx - LIQ_WINDOW + 1)
+        vals = c["val"][lo:k] + [0.0] * (LIQ_WINDOW - (k - lo))
+        cands.append((st.median(vals), name))
+    cands.sort(reverse=True)
+    return [n for _, n in cands]
+
+
+def month_end_indices(sessions):
+    return [i for i, d in enumerate(sessions) if i + 1 == len(sessions) or sessions[i + 1][:7] != d[:7]]
+
+
+def scores(chains, names, sessions, idx):
+    """mean(r6/sigma, r12/sigma), returns measured to the month-end before idx."""
+    ends = [i for i in month_end_indices(sessions) if i <= idx]
+    if not ends or ends[-1] != idx or len(ends) < 14:
+        return {}
+    i1, i7, i13 = ends[-2], ends[-8], ends[-14]
+    out = {}
+    for n in names:
+        c = chains[n]
+        c1, c7, c13 = close_on_or_before(c, i1), close_on_or_before(c, i7), close_on_or_before(c, i13)
+        if not (c1 and c7 and c13):
+            continue
+        k = rows_before(c, idx)
+        cl = c["close"][max(0, k - VOL_WINDOW - 1):k]
+        rets = [cl[j] / cl[j - 1] - 1 for j in range(1, len(cl)) if cl[j - 1] > 0]
+        if len(rets) < 60:
+            continue
+        sigma = st.pstdev(rets)
+        if sigma > 0:
+            out[n] = ((c1 / c7 - 1) / sigma + (c1 / c13 - 1) / sigma) / 2
+    return out
+
+
+def target_book(chains, sessions, month_end_idx, current, universe_n, hold, keep):
+    """(keep, sell, buy, universe): the pre-registered rebalance at a month-end."""
+    uni = ranked_universe(chains, month_end_idx)[:universe_n]
+    sc = scores(chains, uni, sessions, month_end_idx)
+    ranked = sorted(sc, key=sc.get, reverse=True)
+    rank = {n: i + 1 for i, n in enumerate(ranked)}
+    uset = set(uni)
+    sell = [n for n in current if chains.get(n) is None or chains[n]["idx"][-1] < month_end_idx
+            or n not in uset or rank.get(n, 10 ** 9) > keep]
+    kept = [n for n in current if n not in sell]
+    buy = [n for n in ranked if n not in kept][:max(0, hold - len(kept))]
+    return kept, sell, buy, uni
+
+
+# --- the book -------------------------------------------------------------------------
+
+def buy_cost(v, slip):
+    return v * (STT + STAMP_BUY + NSE_TXN + SEBI + GST * (NSE_TXN + SEBI) + slip)
+
+
+def sell_cost(v, slip, dp=True):
+    return v * (STT + NSE_TXN + SEBI + GST * (NSE_TXN + SEBI) + slip) + (DP_PER_SELL if dp else 0.0)
+
+
+def new_state(capital, today):
+    return {"version": 1, "created": today, "status": "waiting_for_month_end", "status_reason": None,
+            "capital": capital, "last_processed": None,
+            "book": {"cash": capital, "positions": {}},
+            "bench": {"cash": capital, "positions": {}},
+            "nav": [], "month_points": [], "trades": [], "rebalances": 0}
+
+
+def load_state(path=STATE_PATH):
+    if os.path.exists(path):
+        with open(path) as fh:
+            return json.load(fh)
+    return None
+
+
+def save_state(state, path=STATE_PATH):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(state, fh, indent=1)
+    os.replace(tmp, path)
+
+
+def value_of(position, chains, sess_idx, day_idx):
+    """Value today of an amount invested at a past close, from total-return prices:
+    invariant to corporate actions applied after the purchase."""
+    c = chains.get(position["symbol"])
+    if c is None:
+        return position["amount"]
+    p0 = close_on_or_before(c, sess_idx[position["fill_date"]])
+    p1 = close_on_or_before(c, day_idx)
+    return position["amount"] * p1 / p0 if p0 and p1 else position["amount"]
+
+
+def band_threshold(n, mean, sd):
+    return n * mean - 2 * sd * math.sqrt(n)
+
+
+def process_session(state, chains, sessions, day, conf):
+    """Advance the book through one session: rebalance on the first session of
+    a month (ranking at the previous session's close), then mark to market."""
+    sess_idx = {d: i for i, d in enumerate(sessions)}
+    i = sess_idx[day]
+    slip = conf["slippage"]
+    if state["status"] == "switched_off":
+        return
+    prev = sessions[i - 1] if i > 0 else None
+    month_turn = prev is not None and prev[:7] != day[:7] and (state["last_processed"] or "") >= prev
+    if month_turn:
+        me = i - 1
+        book, bench = state["book"], state["bench"]
+        kept, sell, buy, uni = target_book(chains, sessions, me, list(book["positions"]),
+                                           conf["universe"], conf["hold"], conf["rank_keep"])
+        if not uni:
+            return
+        for n in sell:
+            pos = book["positions"].pop(n)
+            v = value_of(pos, chains, sess_idx, i)
+            c = sell_cost(v, slip)
+            book["cash"] += v - c
+            state["trades"].append({"date": day, "side": "SELL", "symbol": n, "value": round(v, 2), "cost": round(c, 2)})
+        per = book["cash"] / len(buy) if buy else 0
+        for n in buy:
+            raw = chains[n]["raw"][rows_before(chains[n], i) - 1]
+            c = buy_cost(per, slip)
+            book["positions"][n] = {"symbol": n, "fill_date": day, "amount": per - c, "fill_price": raw}
+            book["cash"] -= per
+            state["trades"].append({"date": day, "side": "BUY", "symbol": n, "value": round(per, 2), "cost": round(c, 2)})
+        uset = set(uni)
+        if not bench["positions"]:
+            per_b = bench["cash"] / len(uni)
+            for n in uni:
+                bench["positions"][n] = {"symbol": n, "fill_date": day, "amount": per_b - buy_cost(per_b, slip)}
+                bench["cash"] -= per_b
+        else:
+            for n in [n for n in bench["positions"] if n not in uset or chains.get(n) is None or chains[n]["idx"][-1] < me]:
+                pos = bench["positions"].pop(n)
+                v = value_of(pos, chains, sess_idx, i)
+                bench["cash"] += v - sell_cost(v, slip, dp=False)
+            entrants = [n for n in uni if n not in bench["positions"]]
+            if entrants:
+                per_b = bench["cash"] / len(entrants)
+                for n in entrants:
+                    bench["positions"][n] = {"symbol": n, "fill_date": day, "amount": per_b - buy_cost(per_b, slip)}
+                    bench["cash"] -= per_b
+        state["rebalances"] += 1
+        state["status"] = "active"
+    book_v = state["book"]["cash"] + sum(value_of(p, chains, sess_idx, i) for p in state["book"]["positions"].values())
+    bench_v = state["bench"]["cash"] + sum(value_of(p, chains, sess_idx, i) for p in state["bench"]["positions"].values())
+    if state["status"] == "active":
+        state["nav"] = [r for r in state["nav"] if r["date"] != day] + [{"date": day, "book": round(book_v, 2), "bench": round(bench_v, 2)}]
+    if month_turn:
+        state["month_points"].append({"date": day, "book": book_v, "bench": bench_v})
+        pts = state["month_points"]
+        excess = [(pts[k]["book"] / pts[k - 1]["book"] - 1) - (pts[k]["bench"] / pts[k - 1]["bench"] - 1)
+                  for k in range(1, len(pts))]
+        n = len(excess)
+        state["excess_months"] = n
+        state["cumulative_excess"] = sum(excess)
+        if n >= conf["band_from_month"]:
+            floor = band_threshold(n, conf["expected_monthly_excess"], conf["monthly_excess_sd"])
+            state["band_floor"] = floor
+            if sum(excess) < floor:
+                state["status"] = "switched_off"
+                state["status_reason"] = (f"Cumulative excess {sum(excess):+.2%} after {n} months is below the "
+                                          f"pre-registered floor {floor:+.2%}")
+    state["last_processed"] = day
+
+
+def daily(today=None, state_path=STATE_PATH, fetch=True):
+    """The evening job: fetch data, then advance the book through every
+    session it hasn't processed yet. Exit code 0 = processed today's session,
+    3 = today's bhavcopy isn't published yet (the engine retries)."""
+    conf = cfg()
+    today = today or datetime.date.today()
+    if fetch:
+        refresh_reference_files()
+        update_corporate_actions(today.year)
+        update_bhavcopies(today)
+    sessions, chains = build_panel()
+    state = load_state(state_path) or new_state(conf["capital"], today.isoformat())
+    start = state["last_processed"] or state["created"]
+    todo = [d for d in sessions if d > start and d <= today.isoformat()]
+    if state["last_processed"] is None:
+        # first run: remember the last session before the book existed, so the
+        # next month turn after it triggers the first rebalance
+        before = [d for d in sessions if d <= state["created"]]
+        state["last_processed"] = before[-1] if before else None
+        todo = [d for d in sessions if d > (state["last_processed"] or "") and d <= today.isoformat()]
+    for d in todo:
+        process_session(state, chains, sessions, d, conf)
+    state["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
+    state["latest_session"] = sessions[-1] if sessions else None
+    save_state(state, state_path)
+    return 0 if sessions and sessions[-1] == today.isoformat() else 3
+
+
+# --- read side (the API) ------------------------------------------------------------
+
+def summary(state_path=STATE_PATH):
+    """What the dashboard shows. Cheap: reads the state file only."""
+    conf = cfg()
+    s = load_state(state_path)
+    if not s:
+        return {"enabled": conf["enabled"], "status": "not_started",
+                "note": "The first evening job hasn't run yet. The book trades after the first month-end close."}
+    last = s["nav"][-1] if s["nav"] else None
+    out = {"enabled": conf["enabled"], "status": s["status"], "status_reason": s.get("status_reason"),
+           "capital": s["capital"], "created": s["created"], "last_processed": s["last_processed"],
+           "latest_session": s.get("latest_session"), "updated_at": s.get("updated_at"),
+           "rebalances": s["rebalances"], "nav": s["nav"][-400:],
+           "book_value": last["book"] if last else s["capital"], "bench_value": last["bench"] if last else s["capital"],
+           "excess_months": s.get("excess_months", 0), "cumulative_excess": s.get("cumulative_excess"),
+           "band_floor": s.get("band_floor"), "band_from_month": conf["band_from_month"],
+           "expected_monthly_excess": conf["expected_monthly_excess"],
+           "holdings": sorted(({"symbol": p["symbol"], "since": p["fill_date"], "invested": round(p["amount"], 2),
+                                "fill_price": p.get("fill_price")} for p in s["book"]["positions"].values()),
+                              key=lambda r: r["symbol"]),
+           "cash": round(s["book"]["cash"], 2), "recent_trades": s["trades"][-40:]}
+    return out
+
+
+# --- engine hook ------------------------------------------------------------------------
+
+_last_attempt = {"date": None, "ts": 0.0, "proc": None}
+
+
+def maybe_start_evening_job(now, holiday):
+    """Called from the engine tick. Starts the evening job in its own process
+    after the close on a weekday, retrying every half hour until the day's
+    bhavcopy is in. Never raises."""
+    try:
+        conf = cfg()
+        if not conf["enabled"] or holiday or now.weekday() >= 5:
+            return False
+        hhmm = now.strftime("%H:%M")
+        if not conf["job_after"] <= hhmm < conf["job_until"]:
+            return False
+        today = now.date().isoformat()
+        state = load_state()
+        if state and state.get("latest_session") == today and state.get("last_processed") == today:
+            return False
+        if _last_attempt["date"] == today and time.time() - _last_attempt["ts"] < conf["retry_minutes"] * 60:
+            return False
+        prev = _last_attempt.get("proc")
+        if prev is not None and prev.poll() is None:
+            return False                      # the last job is still running
+        _last_attempt.update(date=today, ts=time.time())
+        log = open(LOG_PATH, "ab")
+        _last_attempt["proc"] = subprocess.Popen([sys.executable, os.path.abspath(__file__), "daily"], cwd=HERE,
+                                                 stdout=log, stderr=log, stdin=subprocess.DEVNULL)
+        logger.info("Momentum book: evening job started")
+        return True
+    except Exception:
+        logger.exception("Momentum book: could not start the evening job")
+        return False
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["daily", "summary"])
+    ap.add_argument("--date", help="process up to this date (YYYY-MM-DD); default today")
+    ap.add_argument("--no-fetch", action="store_true")
+    a = ap.parse_args()
+    if a.cmd == "summary":
+        print(json.dumps(summary(), indent=1))
+        return 0
+    d = datetime.date.fromisoformat(a.date) if a.date else None
+    t0 = time.time()
+    code = daily(d, fetch=not a.no_fetch)
+    print(f"{datetime.datetime.now().isoformat(timespec='seconds')} daily done code={code} in {time.time() - t0:.0f}s", flush=True)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

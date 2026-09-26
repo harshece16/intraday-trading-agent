@@ -494,6 +494,14 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/momentum-book")
+def momentum_book_summary():
+    """The paper momentum book (README section 83): holdings, NAV against its
+    equal-weighted benchmark, cumulative excess and the switch-off band."""
+    import momentum_book
+    return momentum_book.summary()
+
+
 @app.get("/api/journal/depth-samples")
 def journal_depth_samples():
     """How much order-book data depth_sampler.py has collected so far."""

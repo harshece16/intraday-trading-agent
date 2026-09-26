@@ -3352,6 +3352,12 @@ After the owner moved the product from intraday leverage to delivery (§80), 3i 
 
 Read with the caveats in `results-3i-momentum-corrected-data.md`: Part A re-reads months an earlier test had seen; at the project-wide trial count it would fail; eight held-out months are weak and one of them carries much of the result; momentum has losing years (−13% in 2025, −14% in 2016); tax is not modelled. **It is not a prediction of tomorrow's price and not a guarantee** — it is the first result in 120 trials that clears its pre-registered gates and two independent confirmations. As the pre-registration requires, the next step is a paper positional book with an automatic switch-off band, not real money.
 
+### 83. The paper momentum book
+
+The strategy that passed 3i (§82) now runs as a **paper positional book** — a new **Momentum Book** page on the dashboard. Every trading evening after 19:30 the engine starts a separate job (`backend/momentum_book.py daily`) that downloads the day's NSE bhavcopy and corporate actions, rebuilds the adjusted price history, and marks the book to market. On the first session of each month it re-ranks the 200 most-traded stocks at the previous close and trades at that day's close: keep a holding while it ranks in the top 30, fill the rest from the top, 15 names, ₹10 lakh paper capital, every Zerodha delivery charge. The benchmark — the same 200 stocks equal-weighted — runs alongside so the page shows the excess, not just the return.
+
+**It switches itself off** if, from the sixth month on, cumulative excess falls below n × 0.82% − 2 × 3.87% × √n (−14.0% at six months, −17.0% at twelve) — the band fixed in the results file before it started. Paper only; nothing places an order. The code repeats the research loader and ranking rather than importing them (live code may not import research); replaying it over 2026 reproduces the research held-out run exactly — the same 15 names at all nine rebalances and the same book values. The first rebalance is after the 30 September 2026 close.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
