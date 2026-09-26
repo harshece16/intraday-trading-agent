@@ -284,7 +284,15 @@ RISK = {
 # Order-book sampling (depth_sampler.py): one Kite quote call per engine tick
 # for the watchlist, rows to depth_samples. Pure data collection for a future
 # brain built on the book rather than on candle shapes (README section 69/71).
-DEPTH_SAMPLER = {"enabled": True}
+DEPTH_SAMPLER = {
+    "enabled": True,
+    # Overnight-hold research (README section 81): the ETFs' own books and the
+    # index level, only inside the exit window after the open and the entry
+    # window before the close. Times are IST, [start, end).
+    "window_symbols": ["NIFTYBEES", "SETFNIF50"],
+    "window_indices": ["NIFTY 50"],
+    "windows": [["09:15", "09:30"], ["15:00", "15:30"]],
+}
 
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
