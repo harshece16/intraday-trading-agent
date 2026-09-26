@@ -69,7 +69,14 @@ def deflated_sharpe_ratio(r_values, n_trials, sharpe_std=None):
     if sr is None:
         return {"dsr": None, "note": "All trades had the same result; no variance to measure."}
     skew, kurt = _moments(r_values)
-    sharpe_std = sharpe_std if sharpe_std is not None else abs(sr) / 2 or 0.5
+    # The luck baseline needs the dispersion of Sharpe estimates across the
+    # N trials (Bailey & López de Prado 2014, V[{SR_n}]). When the caller
+    # doesn't supply it, use the null-consistent value: the sampling standard
+    # deviation of a Sharpe estimate whose true value is zero, 1/sqrt(n-1).
+    # The old default, |SR|/2, made the baseline proportional to the
+    # candidate's own Sharpe — above it for every strategy once N >= ~21, so
+    # DSR could never pass at the project's trial count (#132).
+    sharpe_std = sharpe_std if sharpe_std is not None else 1 / math.sqrt(n - 1)
     sr0 = expected_max_sharpe(max(n_trials, 1), sharpe_std)
     denom = math.sqrt(max(1e-9, 1 - skew * sr + (kurt - 1) / 4 * sr ** 2))
     z = (sr - sr0) * math.sqrt(n - 1) / denom
