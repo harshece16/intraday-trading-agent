@@ -14,6 +14,7 @@ import Portfolio from "./pages/Portfolio";
 import PortfolioDiagnostic from "./pages/PortfolioDiagnostic";
 import Journal from "./pages/Journal";
 import Trades from "./pages/Trades";
+import MomentumBook from "./pages/MomentumBook";
 
 function Page({ children }) {
   const location = useLocation();
@@ -34,6 +35,7 @@ function AppRoutes({ state }) {
       <Route path="/portfolio/diagnostic" element={<Page><PortfolioDiagnostic /></Page>} />
       <Route path="/journal" element={<Page><Journal /></Page>} />
       <Route path="/trades" element={<Page><Trades state={state} /></Page>} />
+      <Route path="/momentum-book" element={<Page><MomentumBook /></Page>} />
     </Routes>
   );
 }

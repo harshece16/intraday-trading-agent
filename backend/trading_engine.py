@@ -25,6 +25,7 @@ import confidence
 import costs
 import data_provider
 import depth_sampler
+import momentum_book
 import database
 import telegram_alerts
 import fno_instruments
@@ -1394,6 +1395,10 @@ class TradingEngine:
                                    database.session_summary_line(summary))
             except Exception:
                 logger.exception("End-of-session summary failed")
+
+        if phase == "closed" and momentum_book.maybe_start_evening_job(now, holiday):
+            self.state.log("system", "Momentum book: evening job started (fetch today's bhavcopy, mark to market, "
+                                     "rebalance on the first session of a month)")
 
         if self._last_premarket_run_date != now.date() and self.scanner:
             # Runs every day, holiday included — it's a read on the last

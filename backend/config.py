@@ -294,6 +294,24 @@ DEPTH_SAMPLER = {
     "windows": [["09:15", "09:30"], ["15:00", "15:30"]],
 }
 
+# The paper momentum book (momentum_book.py, README section 83): the
+# positional strategy that passed 3i. Paper only; an evening job in its own
+# process after the close. The forward band switches it off automatically.
+MOMENTUM_BOOK = {
+    "enabled": True,
+    "capital": 1_000_000.0,        # paper capital for the book (separate from intraday)
+    "universe": 200,
+    "hold": 15,
+    "rank_keep": 30,
+    "slippage": 0.0005,
+    "expected_monthly_excess": 0.0082,   # 3i Part A
+    "monthly_excess_sd": 0.0387,
+    "band_from_month": 6,
+    "job_after": "19:30",
+    "job_until": "23:30",
+    "retry_minutes": 30,
+}
+
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
 # (2 x COSTS["slippage_pct"], derived rather than set here), when filling our
