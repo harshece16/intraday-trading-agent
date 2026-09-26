@@ -263,7 +263,7 @@ def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR
               "unparsed": 0, "unparsed_rights": 0, "rejected": 0, "no_chain": 0, "no_session": 0}
     events = []   # (chain, row position, kind, factor, ex_date, purpose) for stage-0 checks
     factors = {}  # chain -> {row position: product of factors}
-    for sym, ex, acts, purpose in load_corporate_actions(ca_dir):
+    for sym, ex, acts, purpose in load_corporate_actions(ca_dir, last_year=2026 if include_held_out else 2025):
         canon = canonical(sym, nxt, cache)
         c = chains.get(canon)
         if c is None:
