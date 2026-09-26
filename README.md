@@ -3327,6 +3327,12 @@ Three defects in the 3h research pipeline, found by a second adversarial review 
 
 The dashboard Scorecard's Deflated Sharpe row now deflates for the project's full count of tried configurations — 119, read from `docs/research/trials.md` — instead of the 34 `backtester.py` runs it used to count (#136). It fails either way today because the paper trades lose; the difference matters on the day they don't.
 
+### 79. "The best prediction engine for 2026 intraday or F&O": none that predicts direction, and the one surviving design fails on facts
+
+The owner asked (2026-09-26) for a sweep of GitHub, Reddit, Instagram and X for the best prediction engine to build. Eight sweeps logged 151 approaches, merged into 12 families, each checked by two adversarial reviewers (`docs/research/prediction-engine-sweep-2026-09-26.md`). **No engine guarantees profit, and none showed a verified net profit from predicting Indian intraday or F&O prices** — not ML on price bars, foundation models such as Kronos, LLM agents, reinforcement learning, option-chain signals (open interest, put-call ratio, max pain, gamma exposure), or indicator rules. Volatility is predictable, but India VIX already prices it. The records that hold up are option-premium selling and slow momentum, which are risk premia, not prediction.
+
+The one design that survived review — hold a Nifty ETF overnight, with a nightly go/no-go model — was then found to rely on a pre-open auction the ETF is not part of (NSE's 25 September pre-open list includes gold and silver ETFs but not NIFTYBEES), and after the interest the money could have earned its 2023–25 edge is not significant and 2025 is negative. **Nothing is built.** The order-book test (§75) was amended before its data is read: its horizons must end by the 15:08 square-off, and only stocks sampled through the whole session count.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
