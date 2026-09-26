@@ -42,3 +42,41 @@ def test_a_failing_fetch_never_raises():
     def boom(symbols):
         raise RuntimeError("Kite down")
     assert depth_sampler.sample(["A"], 1.0, fetch=boom) == 0
+
+
+def _at(hhmm):
+    from datetime import datetime
+    import trading_engine
+    h, m = map(int, hhmm.split(":"))
+    return datetime(2026, 9, 28, h, m, tzinfo=trading_engine.IST)
+
+
+def test_window_sampler_is_a_no_op_outside_its_windows():
+    calls = []
+    for hhmm in ("09:14", "09:30", "12:00", "14:59", "15:30"):
+        assert depth_sampler.sample_windows(_at(hhmm), 1.0, fetch=lambda i: calls.append(i) or {}) == 0
+    assert calls == []
+
+
+def test_window_sampler_records_etf_books_and_the_index_level():
+    fetched = []
+    def fetch(instruments):
+        fetched.append(list(instruments))
+        return {"NSE:NIFTYBEES": _quote(bid=265.0, ask=265.02), "NSE:SETFNIF50": _quote(),
+                "NSE:NIFTY 50": {"last_price": 23129.4}}
+    n = depth_sampler.sample_windows(_at("15:25"), 1790332500.0, fetch=fetch)
+    assert fetched == [["NSE:NIFTYBEES", "NSE:SETFNIF50", "NSE:NIFTY 50"]]   # one call per tick
+    assert n == 3
+    n = depth_sampler.sample_windows(_at("09:16"), 1790386560.0, fetch=fetch)
+    assert n == 3
+
+
+def test_window_sampler_never_raises():
+    def boom(instruments):
+        raise RuntimeError("kite down")
+    assert depth_sampler.sample_windows(_at("09:20"), 1.0, fetch=boom) == 0
+
+
+def test_index_row_needs_a_level():
+    assert depth_sampler.index_row("NIFTY 50", {}, 1.0) is None
+    assert depth_sampler.index_row("NIFTY 50", {"last_price": 1.0}, 2.0) == {"ts": 2.0, "symbol": "NIFTY 50", "ltp": 1.0}

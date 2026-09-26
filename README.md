@@ -3336,6 +3336,9 @@ The one design that survived review — hold a Nifty ETF overnight, with a night
 ### 80. Two owner decisions: overnight ETF holds are allowed (paper), and new ideas are judged against their own family
 
 On 2026-09-26 the owner approved **overnight holds of a Nifty index ETF in delivery**, in paper mode, for a strategy that first passes its pre-registered gates and held-out check — ETFs only, no futures, options, leverage or shorts. The owner also chose the **family-level significance bar**: a new idea is judged against the tries made on its own mechanism (at least two), not against all 119 of the project's intraday trials, which needed roughly t ≥ 4.3 and made every new idea unpassable. The easier bar comes with mandatory safeguards: positive in both halves and in the most recent three years, a held-out confirmation and a forward paper run before anything is relied on, and a pass on economics alone still counts as a fail. It applies to new pre-registrations only; no past trial is re-graded. Full record: `docs/research/decision-2026-09-26-overnight-and-significance.md`.
+### 81. The order-book sampler also records the Nifty ETFs at the overnight entry and exit times
+
+For the overnight-hold test (§80), the engine now takes one extra order-book snapshot per tick of **NIFTYBEES and SETFNIF50, plus the Nifty 50 level**, only inside two windows: **09:15–09:30**, when an overnight position would be sold, and **15:00–15:30**, when it would be bought. NIFTYBEES is not in NSE's pre-open auction, so the sale happens in the continuous market after 09:15, and its first prints are noisy; the test needs the spread a trader would actually pay, not the bhavcopy's opening print. Rows go to the same `depth_samples` table as §71; nothing reads them for trading. Configured in `config.DEPTH_SAMPLER` (`window_symbols`, `window_indices`, `windows`).
 
 ## Backtest results
 

@@ -1404,6 +1404,11 @@ class TradingEngine:
         if self.scanner and self.scanner.due(phase != "closed"):
             self.request_scan()
 
+        if phase in ("open", "square_off_window"):
+            # ETF books at the overnight-hold entry and exit times; a no-op
+            # outside those windows. Data collection only.
+            depth_sampler.sample_windows(now, time.time())
+
         if phase == "square_off_window":
             if any(p["quantity"] for p in self.state.positions.values()):
                 self.state.log("risk", "Square-off time — closing all open positions", level="warn")
