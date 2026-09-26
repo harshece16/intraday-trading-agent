@@ -3358,6 +3358,10 @@ The strategy that passed 3i (§82) now runs as a **paper positional book** — a
 
 **It switches itself off** if, from the sixth month on, cumulative excess falls below n × 0.82% − 2 × 3.87% × √n (−14.0% at six months, −17.0% at twelve) — the band fixed in the results file before it started. Paper only; nothing places an order. The code repeats the research loader and ranking rather than importing them (live code may not import research); replaying it over 2026 reproduces the research held-out run exactly — the same 15 names at all nine rebalances and the same book values. The first rebalance is after the 30 September 2026 close.
 
+### 84. Post-earnings drift measured on NSE's own filings: real in sign, too small to trade — dropped
+
+Step three of the delivery plan measured the classic post-earnings drift on the point-in-time NIFTY 100 using NSE's own quarterly XBRL filings, with the event-dating, reporting-basis and share-count fixes two reviewers required (`docs/research/prereg-pead-stage-a.md`). Buying the top third of profit surprises the session after the filing and holding 60 sessions beat the NIFTY 100 by **+0.25% a month before costs (t 1.41)** and **+0.11% after (t 0.62)** over 2019–2025 — below the pre-registered bar of +0.37% and t 1.8, and concentrated in 2022. **Dropped**, with no retries, and the earnings surprise is not used as an input in later models. Details: `results-pead-stage-a.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
