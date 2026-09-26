@@ -3362,6 +3362,18 @@ The strategy that passed 3i (§82) now runs as a **paper positional book** — a
 
 Step three of the delivery plan measured the classic post-earnings drift on the point-in-time NIFTY 100 using NSE's own quarterly XBRL filings, with the event-dating, reporting-basis and share-count fixes two reviewers required (`docs/research/prereg-pead-stage-a.md`). Buying the top third of profit surprises the session after the filing and holding 60 sessions beat the NIFTY 100 by **+0.25% a month before costs (t 1.41)** and **+0.11% after (t 0.62)** over 2019–2025 — below the pre-registered bar of +0.37% and t 1.8, and concentrated in 2022. **Dropped**, with no retries, and the earnings surprise is not used as an input in later models. Details: `results-pead-stage-a.md`.
 
+### 85. Our own prediction engine: 14 signals and a fitted model lost to the one-signal momentum rule
+
+The owner asked for a prediction engine of our own. The research leaves one kind worth building: a **monthly ranking of which liquid NSE stocks will beat the others** (intraday direction is not predictable after costs). "Sahab Ranker" took 14 inputs from the literature — momentum over three horizons, one-month reversal, volatility, beta, idiosyncratic volatility, distance from the 52-week high, liquidity, illiquidity, dividend yield, price — and learned their weights walk-forward two ways (a correlation-weighted composite and a ridge regression), refitted monthly, with the same book and costs as the momentum book (`docs/research/prereg-ranker-engine.md`).
+
+| 2013–2025, net | Excess over its universe | t |
+| --- | --- | --- |
+| **Momentum rule (the running paper book)** | **+0.84% a month** | **2.63** |
+| Ranker, composite | +0.08% a month | 0.23 |
+| Ranker, ridge | +0.14% a month | 0.41 |
+
+Both fail their gates and lose to momentum on unseen stocks too. The models learned to favour quiet, low-beta stocks alongside momentum — a third less drawdown, but that defensive tilt gave up most of the momentum premium in the 2019–2025 rally. **Not adopted; the momentum book stays the engine.** More signals and a fitted model did not beat the one robust signal, as the prediction-engine sweep predicted. Details: `results-ranker-engine.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

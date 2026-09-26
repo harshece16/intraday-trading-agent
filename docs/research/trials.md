@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-26: **120** — 118 is a VOID run (data defect, recorded, still counted), 119 is 3h's run of record, 120 is 3i Part A (first test under the family-level bar)
+## Strategy trials — count as of 2026-09-26 (night): **122** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Sahab Ranker (FAIL)
 
 | n | Label |
 | --- | --- |
@@ -151,6 +151,8 @@ backtest look better than it is.
 | 118 | **3h — slow momentum held in delivery, run 1** (`prereg-3h-slow-momentum-delivery.md`, code `f55da3c`) · **VOID, not a verdict**: after the run, adjusted prices showed phantom −90% days on known split dates — NSE's bhavcopy PREVCLOSE is never split/bonus-adjusted, and weekday-only download missed weekend special sessions (amendment 2). Seen before voiding: net monthly excess +0.61% (t 1.99), both halves positive, CAGR gap +6.9 pp, DSR 0.28 → would have been FAIL · `data/slow_momentum_stage1_run1_void.json` · counted as a trial so the DSR denominator grows |
 | 119 | **3h — slow momentum held in delivery, run 2 (of record)** — top-15 of the 200 most-traded NSE names by vol-adjusted 6/12-month return, monthly, rank-30 hysteresis, delivery costs incl. DP charge, vs the same universe equal-weighted · code `0b81a1e` · **FAIL on the pre-registered rule**: net monthly excess +0.72% **t = 2.48** (passes), both halves positive (passes: +0.58%/mo, +0.86%/mo), net CAGR 18.4% vs 9.6% (+8.8 pp, passes), 523 round trips (passes), **DSR 0.24 at 119 trials (fails, rule ≥ 0.95)** · held-out NOT spent · `results-3h-slow-momentum-delivery.md` · **2026-09-26: contaminated by a look-ahead (split-adjusted ₹20 price floor, #135); FAIL stands; not re-run** |
 | 120 | **3i Part A — slow momentum in delivery on corrected NSE data** (official corporate actions + dividends, equities only; 3h's rules unchanged), top 200, 2010-02 → 2025-11 · `prereg-3i-momentum-corrected-data.md` · code `890dfba` + amendment 1 `3fbe5ed` · **PASS on the family-level bar (N_family = 3)**: net excess +0.82%/month, **t 2.91** (gate 2.394), family DSR 0.98, both halves and last three years positive, CAGR 22.3% vs 12.0%, 519 round trips. Project-wide DSR 0.62 (would fail N = 120 — information). Re-reads trial 119's months: not independent · `results-3i-momentum-corrected-data.md` |
+| 121 | **Sahab Ranker C1 — IC-weighted composite of 14 literature inputs, walk-forward, 3i book** · `prereg-ranker-engine.md` · code `e31114c` · **FAIL** (family N = 2): net excess +0.08%/month, t 0.23; loses to the momentum rule by 0.77%/month (paired t −1.90); unseen ranks 201–400 t 0.80 · `results-ranker-engine.md` |
+| 122 | **Sahab Ranker C2 — ridge regression, same inputs** · **FAIL**: +0.14%/month, t 0.41; loses to momentum by 0.71%/month (paired t −1.77); unseen t 0.78 · `results-ranker-engine.md` |
 
 ### What a reviewer should notice in this list
 
