@@ -27,3 +27,40 @@ Per feature × horizon: rank IC across stock-times, with t across sessions (as s
 **If nothing clears:** the finding is that **the visible book does not predict NIFTY 100 intraday moves past cost**, and with §69, §73 and §74 that closes every information source this account can reach. The write-up will say the remaining questions are capital, horizon and instrument, not the rule.
 
 Research look **L37**. No trial spent by the measurement.
+
+---
+
+# Amendment 1 — 2026-09-26, before any `depth_samples` row has been joined to a return
+
+Two reviews (the 2026-09-26 edge-map and prediction-engine workflows) found
+three things this pre-registration left undefined. They are fixed now,
+before the data is read, and none of them moves the gate.
+
+1. **Late-day horizons.** Samples run until the engine's square-off at 15:08
+   (`SQUARE_OFF_TIME`); Zerodha squares off F&O-stock MIS at 15:12, and since
+   2026-08-03 continuous trading ends at 15:15 with a closing auction. A
+   target that ends after 15:08 would be scored on a price the engine could
+   not trade at. **Rule:** an observation is scored only if its entry (the
+   next 5-minute bar's open) plus the horizon is at or before 15:08. Others
+   are dropped, not truncated, and the dropped count per horizon is
+   reported.
+2. **Which stocks.** `depth_samples` holds one row per stock on the engine's
+   *current watchlist* per ~30 s tick, and the watchlist rotates with the
+   scanner. A stock seen for an hour is not a stock observed for a session.
+   **Rule:** a stock-session is scored only if the stock was sampled in at
+   least 90% of that session's ticks between 09:20 and 15:08. The count of
+   stock-sessions kept and dropped is reported.
+3. **Which sessions.** 2026-09-25 began at 13:37 and is partial; it is
+   excluded. "15 full sessions" starts from 2026-09-28. A session with a
+   sampling gap longer than 5 minutes inside 09:20–15:08 (the session
+   summary's coverage check) is excluded and counted.
+
+**Stated in advance:** the literature expects this test to fail. Three NSE
+studies find order-imbalance predictability strong in the first five
+minutes and gone within thirty (see
+`prediction-engine-sweep-2026-09-26.md`), and Kite's depth is 5 levels at
+~30 s, not tick-by-tick. A failure will therefore not be reinterpreted as
+"needs deeper or faster data" — that is a different, costlier product, and
+it would be a new pre-registration. The 33.26 bp hurdle, the
+Benjamini–Hochberg family of 15 and the ≥ 15-session requirement are
+unchanged.

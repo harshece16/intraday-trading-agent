@@ -281,6 +281,8 @@ a statistic was computed. The window is only as clean as this list says.
 | 2026-09-26 | edge-map workflow | yfinance 1-minute bars for NIFTYBEES and SETFNIF50, 2026-09-17 → 25, to estimate ETF spreads | Spread estimates only |
 | 2026-09-26 | edge-map workflow | NIFTY200 Momentum 30 factsheet (Aug 2026), including its 2026 year-to-date and 1-year returns | Published index returns, read as literature |
 | 2026-09-26 | main session | Downloaded all 2026 NSE equity bhavcopies (182 files) into the cache while refreshing it; moved unread to `backend/data/bhav_daily_2026_heldout/`, which selection code cannot read (#135) | None |
+| 2026-09-26 | prediction-engine workflow (critic and verifiers) | NSE pre-open snapshot of 2026-09-25 09:08 (which securities are in the auction); yfinance 1-minute NIFTYBEES bars for 5–6 September 2026 sessions (ETF opening-print behaviour); Nifty/BankNifty futures bhavcopies 2025 for the nightly premium decay | Opening-print dispersion and futures decay; no strategy return on 2026 |
+| 2026-09-26 | main session | Re-fetched the same NSE pre-open snapshot to confirm NIFTYBEES/SETFNIF50 are not in the pre-open auction | None (membership only) |
 
 **Consequence:** index-level 2026 held-out evidence has been partly seen
 (open/close tracking on six sessions, a factsheet's 2026 figures). A future
