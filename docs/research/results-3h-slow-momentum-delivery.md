@@ -1,5 +1,20 @@
 # 3h results — slow momentum held in delivery. **FAIL** on the pre-registered rule (DSR 0.24 < 0.95). Four of five gates pass. Held-out not spent.
 
+> **Read first — 2026-09-26, #135.** A later review found a **look-ahead in
+> this run**: the universe's ₹20 price floor was applied to *split-adjusted*
+> closes, so names that split later looked cheaper in earlier years and were
+> dropped from the universe (103 of 190 month-ends affected, 259 name-months,
+> top-15 ranking different in 24 months). **Every number below is
+> contaminated by it, in an unknown direction.** The DP charge was also
+> overstated (₹18.10 instead of Zerodha's GST-inclusive ₹15.34), against the
+> strategy. **The FAIL verdict stands** — the corrected multiple-testing gate
+> at N ≈ 120 needs t ≈ 4.2 and nothing plausible moves 2.48 there — and the
+> run is **not repeated** (stop rule; a re-run's only use would be a post-hoc
+> family-level reading). The claim "first strategy in 119 trials with net
+> excess positive in both halves and t above 2" should be read with this
+> defect attached.
+
+
 **2026-09-25.** Pre-registration `prereg-3h-slow-momentum-delivery.md`
 (`adb24af`, clarifications `2a6cbe7`), script
 `backend/research/slow_momentum.py` (`18971d0`), amendment 1 (`f55da3c`,
@@ -80,7 +95,7 @@ momentum is known for.
 
 | Account | Net CAGR | Costs paid | Net excess/month | t |
 | --- | --- | --- | --- | --- |
-| **₹5,500** (₹367 per name; DP ₹18.10 per sell) | **9.6%** — equal to the benchmark | ₹10,484 | +0.07% | 0.25 |
+| **₹5,500** (₹367 per name; DP modelled at ₹18.10 per sell — overstated, see #135) | **9.6%** — equal to the benchmark | ₹10,484 | +0.07% | 0.25 |
 | ₹1,00,000 | 18.4% | ₹58,744 | +0.72% | 2.48 |
 | ₹3,00,000 | 18.6% | ₹1,60,881 | +0.74% | 2.53 |
 
