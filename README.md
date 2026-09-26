@@ -3333,6 +3333,10 @@ The owner asked (2026-09-26) for a sweep of GitHub, Reddit, Instagram and X for 
 
 The one design that survived review — hold a Nifty ETF overnight, with a nightly go/no-go model — was then found to rely on a pre-open auction the ETF is not part of (NSE's 25 September pre-open list includes gold and silver ETFs but not NIFTYBEES), and after the interest the money could have earned its 2023–25 edge is not significant and 2025 is negative. **Nothing is built.** The order-book test (§75) was amended before its data is read: its horizons must end by the 15:08 square-off, and only stocks sampled through the whole session count.
 
+### 80. Two owner decisions: overnight ETF holds are allowed (paper), and new ideas are judged against their own family
+
+On 2026-09-26 the owner approved **overnight holds of a Nifty index ETF in delivery**, in paper mode, for a strategy that first passes its pre-registered gates and held-out check — ETFs only, no futures, options, leverage or shorts. The owner also chose the **family-level significance bar**: a new idea is judged against the tries made on its own mechanism (at least two), not against all 119 of the project's intraday trials, which needed roughly t ≥ 4.3 and made every new idea unpassable. The easier bar comes with mandatory safeguards: positive in both halves and in the most recent three years, a held-out confirmation and a forward paper run before anything is relied on, and a pass on economics alone still counts as a fail. It applies to new pre-registrations only; no past trial is re-graded. Full record: `docs/research/decision-2026-09-26-overnight-and-significance.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
