@@ -103,3 +103,16 @@ rather than run.
 `backend/research/pead_events.py` (fetch and build the event table — data
 only, no returns) and `backend/research/pead_stage_a.py` (data gate,
 statistic), each committed before it runs. One run of the statistic.
+
+---
+
+# Clarification 1 — 2026-09-26, before any code exists
+
+Checked on real filings before writing the parser: NSE's BANKING taxonomy
+tags the same concept (profit for the period, after tax, before minority
+interest) as `ProfitLossForThePeriod`, not `ProfitLossForPeriod`, and bank
+EPS as `BasicEarningsPerShareAfterExtraordinaryItems`. Both are read as the
+same fields as items 4 and 5. (L36 read only `ProfitLossForPeriod`, so it had
+no bank profit figures — a gap in L36, recorded here, not re-run.) A filing
+whose `OneD` context does not span one quarter (start date more than 100
+days before the end date) is not a quarterly filing and is skipped.
