@@ -3340,6 +3340,18 @@ On 2026-09-26 the owner approved **overnight holds of a Nifty index ETF in deliv
 
 For the overnight-hold test (§80), the engine now takes one extra order-book snapshot per tick of **NIFTYBEES and SETFNIF50, plus the Nifty 50 level**, only inside two windows: **09:15–09:30**, when an overnight position would be sold, and **15:00–15:30**, when it would be bought. NIFTYBEES is not in NSE's pre-open auction, so the sale happens in the continuous market after 09:15, and its first prints are noisy; the test needs the spread a trader would actually pay, not the bhavcopy's opening print. Rows go to the same `depth_samples` table as §71; nothing reads them for trading. Configured in `config.DEPTH_SAMPLER` (`window_symbols`, `window_indices`, `windows`).
 
+### 82. The first strategy to pass: slow momentum in delivery, on corrected data, confirmed on unseen stocks and on 2026
+
+After the owner moved the product from intraday leverage to delivery (§80), 3i re-tested slow momentum on data rebuilt from **NSE's own corporate-actions file** — splits, bonuses, rights, demergers and 20,000 dividends — with fund units excluded (`docs/research/prereg-3i-momentum-corrected-data.md`). The rules are unchanged from 3h: hold the 15 of the 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, keep a name while it ranks in the top 30, rebalance monthly, pay every Zerodha delivery charge.
+
+| | Net excess over its own universe | t | Result |
+| --- | --- | --- | --- |
+| **Part A** — top 200, 2010–2025 (trial 120) | +0.82% a month; CAGR 22.3% vs 12.0% | 2.91 | **Pass** (family-level bar, all six gates) |
+| **Part B** — stocks ranked 201–400, never read before | +1.00% a month; CAGR 28.6% vs 15.4% | 3.31 | **Confirms** |
+| **2026 held-out**, Jan–Aug | +1.28% a month, 6 of 8 months ahead | 1.08 | **Confirms** (sign check) |
+
+Read with the caveats in `results-3i-momentum-corrected-data.md`: Part A re-reads months an earlier test had seen; at the project-wide trial count it would fail; eight held-out months are weak and one of them carries much of the result; momentum has losing years (−13% in 2025, −14% in 2016); tax is not modelled. **It is not a prediction of tomorrow's price and not a guarantee** — it is the first result in 120 trials that clears its pre-registered gates and two independent confirmations. As the pre-registration requires, the next step is a paper positional book with an automatic switch-off band, not real money.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
