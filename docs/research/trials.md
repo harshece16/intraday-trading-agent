@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-25 (evening): **119** — 118 is a VOID run (data defect, recorded, still counted), 119 is 3h's run of record
+## Strategy trials — count as of 2026-09-26: **120** — 118 is a VOID run (data defect, recorded, still counted), 119 is 3h's run of record, 120 is 3i Part A (first test under the family-level bar)
 
 | n | Label |
 | --- | --- |
@@ -150,6 +150,7 @@ backtest look better than it is.
 | 117 | **3g — Smart Money multi-timeframe setup** (daily bias → 4H sweep → 1H order block → 15m sweep + cemented candle), 5m harness, selection only · `prereg-3g-smc-mtf.md` · code `5989ba0` · **FAIL**: net −0.299R/trade, t = −5.56, n = 256; both halves negative; pre-friction +0.070R (t ≈ 1.3) · `results-3g-smc-mtf.md` |
 | 118 | **3h — slow momentum held in delivery, run 1** (`prereg-3h-slow-momentum-delivery.md`, code `f55da3c`) · **VOID, not a verdict**: after the run, adjusted prices showed phantom −90% days on known split dates — NSE's bhavcopy PREVCLOSE is never split/bonus-adjusted, and weekday-only download missed weekend special sessions (amendment 2). Seen before voiding: net monthly excess +0.61% (t 1.99), both halves positive, CAGR gap +6.9 pp, DSR 0.28 → would have been FAIL · `data/slow_momentum_stage1_run1_void.json` · counted as a trial so the DSR denominator grows |
 | 119 | **3h — slow momentum held in delivery, run 2 (of record)** — top-15 of the 200 most-traded NSE names by vol-adjusted 6/12-month return, monthly, rank-30 hysteresis, delivery costs incl. DP charge, vs the same universe equal-weighted · code `0b81a1e` · **FAIL on the pre-registered rule**: net monthly excess +0.72% **t = 2.48** (passes), both halves positive (passes: +0.58%/mo, +0.86%/mo), net CAGR 18.4% vs 9.6% (+8.8 pp, passes), 523 round trips (passes), **DSR 0.24 at 119 trials (fails, rule ≥ 0.95)** · held-out NOT spent · `results-3h-slow-momentum-delivery.md` · **2026-09-26: contaminated by a look-ahead (split-adjusted ₹20 price floor, #135); FAIL stands; not re-run** |
+| 120 | **3i Part A — slow momentum in delivery on corrected NSE data** (official corporate actions + dividends, equities only; 3h's rules unchanged), top 200, 2010-02 → 2025-11 · `prereg-3i-momentum-corrected-data.md` · code `890dfba` + amendment 1 `3fbe5ed` · **PASS on the family-level bar (N_family = 3)**: net excess +0.82%/month, **t 2.91** (gate 2.394), family DSR 0.98, both halves and last three years positive, CAGR 22.3% vs 12.0%, 519 round trips. Project-wide DSR 0.62 (would fail N = 120 — information). Re-reads trial 119's months: not independent · `results-3i-momentum-corrected-data.md` |
 
 ### What a reviewer should notice in this list
 
@@ -232,6 +233,7 @@ look at the data is still a look, and a reviewer should be able to count them.
 | L34 | Universe expansion — does universe B (113 F&O-eligible names outside the NIFTY 100) clear the reward:risk gate more often than universe A? **FAIL**: p_A **93.17%** vs p_B **92.83%**, z = **−2.80**. B's targets sit **+21.4%** further but its stops sit **+26.8%** further, so the ratio is worse — and **B is still worse at zero cost** (95.02% vs 94.85%), so this is geometry, not friction. Proxy **saturates at 93% vs the live 9.6%** — weak evidence about the live intraday gate. Held-out untouched | 2026-09-22 | No — measurement · `prereg-L34-universe-b-rrr-gate.md` / `results-L34-universe-b-rrr-gate.md` |
 | L35 | Event study on NSE filings — 9,586 events, 6 classes × 3 windows, direction-aligned vs 16.63 bp with BH. **No class clears.** ORDERS is significantly *negative* (−8.6 bp, t −2.97, "sell the news"); RESULTS move 3× normal (121 bp / 30 min) but the lexicon cannot read their direction (0 signed events) — a volatility finding. Held-out untouched | 2026-09-25 | No — measurement · `prereg-event-study.md` / `results-event-study.md` |
 | L36 | Results direction from the filed YoY profit (XBRL `ProfitLossForPeriod`) — 167 results events. **Direction is right: the overnight gap is +82.7 bp aligned, t 4.78. But after the open the aligned drift is +5.9 bp at 30 min and 0 by the close** — priced by the open, nothing tradable intraday. NSE's index thins after Jan 2025 (~2 quarters covered). Held-out untouched | 2026-09-25 | No — measurement · `prereg-results-direction.md` / `results-results-direction.md` |
+| L38 | **3i Part B — the same momentum rules on ranks 201–400 by liquidity, never read by any test** (confirmation of trial 120, slippage doubled to 0.10%/side) · **CONFIRMS**: +1.00%/month net excess, t 3.31 (rule t ≥ 1.65), both halves positive, CAGR 28.6% vs 15.4%. **Held-out confirmation (same prereg): 2026-01 → 2026-08, Part A rules: +1.28%/month, 6 of 8 months positive, t 1.08 — sign check passes** | 2026-09-26 | Confirmation, not a trial · `prereg-3i-momentum-corrected-data.md` / `results-3i-momentum-corrected-data.md` |
 
 **3f stage 0 (2026-09-24) spent neither a look nor a trial** — it built the
 point-in-time membership and checked data coverage and vendor agreement,
@@ -283,6 +285,7 @@ a statistic was computed. The window is only as clean as this list says.
 | 2026-09-26 | main session | Downloaded all 2026 NSE equity bhavcopies (182 files) into the cache while refreshing it; moved unread to `backend/data/bhav_daily_2026_heldout/`, which selection code cannot read (#135) | None |
 | 2026-09-26 | prediction-engine workflow (critic and verifiers) | NSE pre-open snapshot of 2026-09-25 09:08 (which securities are in the auction); yfinance 1-minute NIFTYBEES bars for 5–6 September 2026 sessions (ETF opening-print behaviour); Nifty/BankNifty futures bhavcopies 2025 for the nightly premium decay | Opening-print dispersion and futures decay; no strategy return on 2026 |
 | 2026-09-26 | main session | Re-fetched the same NSE pre-open snapshot to confirm NIFTYBEES/SETFNIF50 are not in the pre-open auction | None (membership only) |
+| 2026-09-26 | main session (3i held-out confirmation, pre-registered) | All 2026 bhavcopies to 2026-09-25 and NSE's 2026 corporate actions; the held-out run of 3i Part A's rules over 2026-01 → 2026-08 | **Yes — the pre-registered held-out statistic (spent once, for the momentum family)** |
 
 **Consequence:** index-level 2026 held-out evidence has been partly seen
 (open/close tracking on six sessions, a factsheet's 2026 figures). A future
