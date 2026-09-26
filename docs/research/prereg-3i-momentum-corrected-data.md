@@ -140,3 +140,33 @@ index over its live period (2020-08 onward).
 `backend/research/momentum_3i.py` (stage 0, Part A, Part B), committed after
 this file. Nothing on the live path imports them. One run per part. A crash
 before a statistic is printed may be fixed and re-run with both recorded.
+
+---
+
+# Amendment 1 — 2026-09-26, after the first stage-0 run, before any return is read
+
+The first stage-0 run (output kept as `data/momentum_3i_stage0_run1.json`)
+passed gates 1 and 2 (98.7% of 382 splits/bonuses consistent) and listed 35
+residual drops beyond −30%. Checking each against NSE's file found two
+kinds of loader defect and one rule gap:
+
+- **Parser defects (fixed; this implements the rule as written).** NSE's
+  older rows use abbreviations the parser missed: "Fv Splt Frm Rs 10 To
+  Re 1" (JSWSTEEL 2017, KARURVYSYA, ICIL, ALANKIT 2016), "Fv
+  Spl-Rs10tore1/Div-1.50" (KRBL 2010), "Bon 1:1/Fv Spl Rs.5tors.2"
+  (STLTECH 2010), "Fv Spl-Rs10tors5/Bon-2:1" (ENGINERSIN 2010), "Rights
+  87:38 @ Premium Of Rs 2.50" (IDEA 2019), and bare "Div-1.50" amounts.
+- **An implementation guard that was not in the rule (removed).** The
+  loader refused dividends above 50% of the previous close, which rejected
+  Strides' real ₹500 special dividend (STAR, 2013-12-19). The cap is now 90%.
+- **Rule gap (amended).** The demerger rule uses OPEN(ex)/CLOSE(ex−1),
+  assuming the ex-date open is the special pre-open's discovered ex-value.
+  For older demergers (TRIVENI 2011, ZEEMEDIA 2010, SINTEX 2017) the open is
+  not a discovered value, and ADANIENT 2015's ratio (≈ 0.19) fell below an
+  implementation bound. **Amended rule:** use OPEN(ex)/CLOSE(ex−1) when it
+  is between 0.05 and 0.98; otherwise CLOSE(ex)/CLOSE(ex−1) — the ex-date's
+  whole move is attributed to the demerger, losing that one day's market
+  return. Applied identically to strategy and benchmark.
+
+Stage 0 is re-run after this commit; both runs are kept. No forward return
+has been read by either.

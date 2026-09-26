@@ -94,13 +94,30 @@ def canonical(sym, nxt, cache):
 # --- corporate actions ------------------------------------------------------------
 
 _NUM = r"(\d+(?:\.\d+)?)"
-RX_SPLIT = re.compile(r"(?:split|sub-?\s*division)\D*?(?:from\s*)?(?:rs\.?|re\.?)?\s*" + _NUM +
-                      r"\D*?\bto\b\s*(?:rs\.?|re\.?)?\s*" + _NUM, re.I)
-RX_BONUS = re.compile(r"bonus\s*[-:]?\s*(?:issue\s*)?" + _NUM + r"\s*:\s*" + _NUM, re.I)
-RX_RIGHTS = re.compile(r"rights?\s*[-:]?\s*" + _NUM + r"\s*:\s*" + _NUM + r"\s*@\s*(prem(?:ium)?\.?)?\s*(?:rs\.?|re\.?)?\s*" + _NUM, re.I)
+RX_SPLIT_KW = re.compile(r"\bs(?:plit|plt|pl|pt)\b|sub-?\s*division", re.I)
+RX_BONUS = re.compile(r"\bbon(?:us)?\b\s*[-:]?\s*(?:issue\s*)?" + _NUM + r"\s*:\s*" + _NUM, re.I)
+RX_BONUS_KW = re.compile(r"\bbon(?:us)?\b", re.I)
+RX_RIGHTS = re.compile(r"\bri?ghts?\b\s*[-:]?\s*" + _NUM + r"\s*:\s*" + _NUM +
+                       r"\s*@\s*(prem(?:ium)?\.?)?\s*(?:of\s*)?(?:rs\.?|re\.?)?\s*" + _NUM, re.I)
 RX_DEMERGER = re.compile(r"demerger|scheme\s+of\s+arrangement|arrangement", re.I)
 RX_RS = re.compile(r"(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)
 RX_PCT = re.compile(_NUM + r"\s*%")
+RX_DIV_BARE = re.compile(r"\bdiv(?!ision)\w*\.?\s*[-:]?\s*" + _NUM, re.I)
+RX_NUM = re.compile(_NUM)
+
+
+def _split_ratio(text):
+    """'From Rs a To Rs b' in any of NSE's spellings, including the abbreviated
+    ones ('Fv Splt Frm Rs 10 To Re 1', 'Fv Spl-Rs10tore1', 'Fv Spl Rs.5tors.2')."""
+    for clause in re.split(r"/(?!-)|;", text):   # "/-" is the rupee suffix, not a separator
+        m = RX_SPLIT_KW.search(clause)
+        if not m:
+            continue
+        nums = [float(x) for x in RX_NUM.findall(clause[m.end():])]
+        if len(nums) >= 2 and nums[0] > nums[1] > 0:
+            return nums[0] / nums[1]
+        return None
+    return None
 
 
 def parse_purpose(purpose, face_value):
@@ -109,39 +126,40 @@ def parse_purpose(purpose, face_value):
     returned as ('unparsed', text) so stage 0 can count it."""
     text = purpose.replace("–", "-")
     acts = []
-    m = RX_SPLIT.search(text)
-    if m:
-        a, b = float(m.group(1)), float(m.group(2))
-        acts.append(("split", a / b) if a > b > 0 else ("unparsed", text))
-    elif re.search(r"split|sub-?\s*division", text, re.I):
-        acts.append(("unparsed", text))
+    if RX_SPLIT_KW.search(text):
+        r = _split_ratio(text)
+        acts.append(("split", r) if r else ("unparsed", text))
     m = RX_BONUS.search(text)
     if m:
         a, b = float(m.group(1)), float(m.group(2))
         acts.append(("bonus", (a + b) / b) if a > 0 and b > 0 else ("unparsed", text))
-    elif re.search(r"bonus", text, re.I):
+    elif RX_BONUS_KW.search(text):
         acts.append(("unparsed", text))
     m = RX_RIGHTS.search(text)
     if m:
         a, b, prem, px = float(m.group(1)), float(m.group(2)), m.group(3), float(m.group(4))
         price = (face_value or 0) + px if prem else px
         acts.append(("rights", (a, b, price)))
-    elif re.search(r"\brights?\b", text, re.I):
+    elif re.search(r"\bri?ghts?\b", text, re.I):
         acts.append(("unparsed_rights", text))
     if RX_DEMERGER.search(text):
         acts.append(("demerger", None))
-    if re.search(r"dividend", text, re.I):
+    if re.search(r"\bdiv(?!ision)", text, re.I):
         total = 0.0
-        for clause in re.split(r"/|;|\band\b|&|\+", text, flags=re.I):
-            if not re.search(r"div", clause, re.I):
+        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", text, flags=re.I):
+            if not re.search(r"\bdiv(?!ision)", clause, re.I):
                 continue
+            pct = RX_PCT.findall(clause)
             rs = RX_RS.findall(clause)
-            if rs:
+            if pct and not rs:
+                if face_value:
+                    total += sum(float(x) for x in pct) / 100.0 * face_value
+            elif rs:
                 total += sum(float(x) for x in rs)
             else:
-                pct = RX_PCT.findall(clause)
-                if pct and face_value:
-                    total += sum(float(x) for x in pct) / 100.0 * face_value
+                bare = RX_DIV_BARE.search(clause)
+                if bare:
+                    total += float(bare.group(1))
         if total > 0:
             acts.append(("dividend", total))
     return acts
@@ -269,11 +287,16 @@ def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR
                 terp = (b * prev_close + a * price) / (a + b) if prev_close > 0 else 0
                 f = terp / prev_close if 0 < terp < prev_close else None
             elif kind == "demerger":
-                op = c["open"][k]
+                # prereg: OPEN(ex)/CLOSE(ex-1), the special pre-open's ex-value.
+                # Amendment 1: where the open is not a discovered ex-value (no
+                # drop at the open), use CLOSE(ex)/CLOSE(ex-1) instead.
+                op, cl_ex = c["open"][k], c["raw"][k]
                 ratio = op / prev_close if op > 0 and prev_close > 0 else 0
-                f = ratio if 0.2 < ratio < 1.0 else None
+                if not 0.05 < ratio < 0.98 and prev_close > 0:
+                    ratio = cl_ex / prev_close
+                f = ratio if 0.05 < ratio < 0.98 else None
             elif kind == "dividend":
-                f = 1.0 - value / prev_close if 0 < value < prev_close * 0.5 else None
+                f = 1.0 - value / prev_close if 0 < value < prev_close * 0.9 else None
             if f is None:
                 counts["rejected"] += 1
                 continue
