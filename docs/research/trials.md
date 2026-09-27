@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-26 (night): **122** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Sahab Ranker (FAIL)
+## Strategy trials — count as of 2026-09-27: **125** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Ranker (FAIL), 123 Jev book (forward, pending), 124–125 overnight ETF (FAIL)
 
 | n | Label |
 | --- | --- |
@@ -153,6 +153,9 @@ backtest look better than it is.
 | 120 | **3i Part A — slow momentum in delivery on corrected NSE data** (official corporate actions + dividends, equities only; 3h's rules unchanged), top 200, 2010-02 → 2025-11 · `prereg-3i-momentum-corrected-data.md` · code `890dfba` + amendment 1 `3fbe5ed` · **PASS on the family-level bar (N_family = 3)**: net excess +0.82%/month, **t 2.91** (gate 2.394), family DSR 0.98, both halves and last three years positive, CAGR 22.3% vs 12.0%, 519 round trips. Project-wide DSR 0.62 (would fail N = 120 — information). Re-reads trial 119's months: not independent · `results-3i-momentum-corrected-data.md` |
 | 121 | **Sahab Ranker C1 — IC-weighted composite of 14 literature inputs, walk-forward, 3i book** · `prereg-ranker-engine.md` · code `e31114c` · **FAIL** (family N = 2): net excess +0.08%/month, t 0.23; loses to the momentum rule by 0.77%/month (paired t −1.90); unseen ranks 201–400 t 0.80 · `results-ranker-engine.md` |
 | 122 | **Sahab Ranker C2 — ridge regression, same inputs** · **FAIL**: +0.14%/month, t 0.41; loses to momentum by 0.71%/month (paired t −1.77); unseen t 0.78 · `results-ranker-engine.md` |
+| 123 | **The Jev book** — TypeSafe Jev (LLM judge) on the daily shortlist, forward paper test · `prereg-jev-book.md` · **pending** (verdict after 300 trades or 60 sessions; first round 2026-09-28) |
+| 124 | **Overnight ETF H1 — hold NIFTYBEES 15:24 → 09:19** · `prereg-overnight-etf.md` · code `b192b90` · **FAIL** (family N = 2): gross +2.41 bp, net −6.42 bp/night, t −5.88 over 2,655 nights; negative every year; SETFNIF50 −4.35 bp (t −2.71) · `results-overnight-etf.md` |
+| 125 | **Overnight ETF H2 — nightly ridge go/no-go** · **FAIL**: gated book −0.09 bp/night (t −0.15), held 8.8% of nights; beats always-hold only by staying out · `results-overnight-etf.md` |
 
 ### What a reviewer should notice in this list
 

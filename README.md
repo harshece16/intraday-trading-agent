@@ -3380,6 +3380,18 @@ At the owner's request, **TypeSafe Jev** (an LLM judgment service, called throug
 
 The research found no LLM trader with an edge after costs, so this is a **pre-registered forward test** (`docs/research/prereg-jev-book.md`, trial 123), not a switch-on: after 300 trades or 60 sessions, Jev must be positive after costs with t ≥ 2.24, in both halves, and beat the scanner. It turns itself off if it is clearly losing after 100 trades. Jev never sees keys, account data or positions, and places no orders. **It needs a TypeSafe API key** from console.typesafe.ai/keys, stored with `pbpaste | backend/.venv/bin/python backend/typesafe_key.py set` (or the `TYPESAFE_API_KEY` environment variable); `typesafe_key.py test` checks it. Until then each day is recorded as "Jev unavailable". All three questions go in one request per stock; at about 34,000 input tokens a day the cost is roughly $0.03 a month.
 
+### 87. The overnight premium in an ETF: measured on minute data, it does not survive — the line closes
+
+The owner allowed overnight ETF holds (§80). The test (`docs/research/prereg-overnight-etf.md`) used Kite's 1-minute history for NIFTYBEES, SETFNIF50, the Nifty 50 and India VIX, 2015–2025: buy the ETF at 15:24, sell it at 09:19 the next session (NIFTYBEES is not in the pre-open auction), after charges, a 2 bp spread each way and the interest the money could have earned.
+
+| Nightly, 2015–2025 | Before costs | After costs | t |
+| --- | --- | --- | --- |
+| NIFTYBEES, always hold | +2.4 bp | **−6.4 bp** | −5.9 |
+| SETFNIF50, always hold | +4.4 bp | −4.4 bp | −2.7 |
+| NIFTYBEES, only on nights a model picks | | −0.1 bp | −0.2 |
+
+Negative in every year. The index's well-known overnight premium (about +9.8 bp a night) is measured from the closing average to the auction open; an ETF bought and sold in the continuous market around those times captures only a quarter of it, which is less than the interest alone. A nightly model learned to stay out and found no nights that pay. **Both trials fail; the overnight line closes** and nothing is built. Details: `results-overnight-etf.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
