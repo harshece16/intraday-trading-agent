@@ -69,3 +69,12 @@ background thread, the square-off close, the verdict statistics; state in
 `backend/data/jev_book_state.json`; `GET /api/jev-book`; a dashboard page.
 Committed after this file. Until a Jev API key is stored (`jev auth set`),
 the book records "Jev unavailable" and trades nothing.
+
+---
+
+# Clarification 1 — 2026-09-27, before any Jev decision exists
+
+The cost rule is `costs.round_trip_pct` at the book's ₹1,00,000 position,
+which is **14.3 bp** including slippage, not the "~16.6 bp" quoted above
+(16.6 bp is the round trip at the old ₹5,000 position size). The rule is
+unchanged; only the quoted figure was wrong.
