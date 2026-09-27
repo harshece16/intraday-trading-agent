@@ -315,8 +315,8 @@ MOMENTUM_BOOK = {
 # The Jev book (jev_book.py, README section 86): a forward paper test of the
 # TypeSafe Jev LLM judge on the scanner's daily shortlist — buy / short / skip
 # at 09:45, closed at the 15:08 square-off. Paper only; never places an order.
-# Needs a Jev API key stored with `jev auth set`; until then it records
-# "Jev unavailable" and trades nothing.
+# Needs a TypeSafe API key (TYPESAFE_API_KEY, or `typesafe_key.py set`);
+# until then it records "Jev unavailable" and trades nothing.
 JEV_BOOK = {
     "enabled": True,
     "decide_at": "09:45",
@@ -325,8 +325,8 @@ JEV_BOOK = {
     "timeout_s": 90,
     "kill_after": 100,          # pre-registered kill rule (prereg-jev-book.md)
     "kill_t": -2.0,
-    "provider": None,           # None = Jev's default ("official")
-    "model": None,
+    "endpoint": "https://api.typesafe.ai/v1/systemone",   # TypeSafe's official API
+    "model": "jev-latest",
 }
 
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
