@@ -1,47 +1,69 @@
-# Trader Sahab: an intraday trading agent for NSE (Zerodha)
+# Trader Sahab: a research-driven trading agent for NSE (Zerodha)
 
-Trader Sahab is an intraday trading agent for Indian equities and, now,
-options-buying. It works like a disciplined technical trader. It **scans the
-NIFTY 100** to decide *what* is worth trading today and on which side: strong
-stocks to buy on strong days, weak stocks to **short** on weak days. It uses
-market context, relative strength, volume, sector leadership, news and
-results-day risk. The **Sahab's Dimaag** then decides *when* to enter and
-exit, following **Zerodha Varsity's own Grand Checklist** — a candlestick
-pattern, a stop at support or resistance, above-average volume, Dow Theory
-trend agreement, and a minimum reward-to-risk — the same checklist Varsity's
-Technical Analysis module teaches a retail trader to run before every trade.
-It sizes every trade by risk and explains each decision in plain language,
-with a link to the exact source behind it, on a live multi-page dashboard.
+Trader Sahab is a paper-mode trading system for Indian equities, built around
+one rule: **nothing trades until it passes a test that was written down before
+its data was read.** It began as an intraday agent that scans the NIFTY 100
+and follows Zerodha Varsity's Grand Checklist. That approach was measured,
+and it does not work. After 125 recorded strategy trials and two broad research
+sweeps, the one strategy that has passed is slow: a **monthly momentum book
+held in delivery**. It now runs in paper, and new ideas are tested the same
+way beside it.
 
-It runs in **paper mode** by default and can route real orders through
-**Zerodha Kite Connect** — for cash equity, and (opt-in, separately) for
-buying calls/puts once the checklist and a confidence gate both clear.
+The dashboard still runs the intraday engine: live scans of the NIFTY 100,
+the checklist's labels, a review queue where you decide, risk-based sizing,
+and a plain-language explanation of every decision with a link to its
+source. Everything runs in **paper mode** by default. The code can route real
+orders through **Zerodha Kite Connect**, for cash equity and, opt-in, for
+buying calls and puts. **No real-money order has ever been placed**, and
+going live is the owner's decision alone.
+
+## What it runs today (2026-09-27)
+
+| Book | What it does | Evidence | Status |
+| --- | --- | --- | --- |
+| **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: **+0.82% a month** over its own universe after every delivery charge (t 2.91; 22.3% a year against 12.0%). Confirmed on 200 stocks never read before (+1.00% a month, t 3.31) and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
+| **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. First round on **28 September 2026** |
+| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades |
+| **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
 
 ## ⚠️ Read this first
 
-- **The strategy has been measured and it does not work.** Not "unproven" —
-  measured, over 495 sessions and 201 trades, at **−0.36R per trade with
-  t = −3.59** and a 95% confidence interval of **[−0.55, −0.16]** that does
-  not contain zero. Both halves of the sample agree independently. The entry
-  has **no edge** — gross ≈ 0, and against 200 seeds of matched random
-  entries it is **indistinguishable from random**, not worse — and **0.398R
-  of friction per trade** turns that into a significant loss. Holding for days
-  instead of minutes doesn't help, and the scanner's ranking has **no
-  predictive power** (IC −0.0021, t = −0.26). See
-  [§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work)
-  and [§52](#52-holding-longer-doesnt-rescue-it-either).
-  **Do not trade real money with it.**
-- **What this repo is, then.** A well-instrumented decision engine, an honest
-  cost model, and an evidence pipeline that correctly refused to certify an
-  edge for months and has now explained why. The machinery is the asset; the
-  strategy it currently runs is not.
-- **Where the research stands (2026-09-23).**
-  - **Phase 2 is closed** with no tradable edge. Friction is 0.398R per trade, and the round trip costs **16.60 bp**.
-  - The live gate now prices that cost correctly. It had been using 12 bp ([§57](#57-the-reward-to-risk-gate-now-prices-the-round-trip-it-actually-pays), #74).
-  - Every entry now passes an order-book **liquidity check** ([§58](#58-a-liquidity-check-before-every-entry--can-we-get-in-and-out-at-the-price-we-assumed)).
-  - One new hypothesis is **pre-registered but not run**: 3e, wide stops and short side only (`docs/research/prereg-3e-wide-structure-short.md`). It needs reviewer review and the owner's go-ahead.
-  - **Phase-3 scoping** (`docs/research/phase3-scoping.md`) checked every Kite segment at ₹5,500 of margin. Only NSE/BSE cash, MCX GOLDPETAL and CDS futures are reachable. No reachable segment has a documented effect that clears its cost.
-  - **Strategy trials: 37.** The 2026 held-out window is still unspent.
+- **Nothing here guarantees profit.** The one strategy that passed is a
+  monthly momentum tilt with real losing years: −13% against its own
+  universe in 2025 and −14% in 2016. Its evidence is a backtest, 200 unseen
+  stocks and eight unseen months, and at the project-wide trial count it
+  would not pass. No strategy, fund or trader delivers anything like 1% a
+  day.
+- **What was measured and failed**, so nobody retries it blind:
+  - The Varsity checklist the intraday agent was built on: **−0.36R a trade,
+    t = −3.59**, over 495 sessions and 201 trades, with both halves agreeing
+    and the entry indistinguishable from random
+    ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§52](#52-holding-longer-doesnt-rescue-it-either)).
+    **Do not trade real money with it.**
+  - Every intraday price-and-indicator rule, in a 76-configuration search
+    ([§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)), and trading filings and results days
+    ([§73](#73-do-filings-move-stocks-enough-to-trade-measured-no-with-one-lead), [§74](#74-results-days-the-filed-numbers-point-the-right-way-and-the-move-is-gone-by-the-open)).
+  - Post-earnings drift ([§84](#84-post-earnings-drift-measured-on-nses-own-filings-real-in-sign-too-small-to-trade--dropped)), our own 14-signal ranking engine
+    ([§85](#85-our-own-prediction-engine-14-signals-and-a-fitted-model-lost-to-the-one-signal-momentum-rule)), and the overnight premium held in a Nifty ETF
+    ([§87](#87-the-overnight-premium-in-an-etf-measured-on-minute-data-it-does-not-survive--the-line-closes)).
+  - Sweeps of GitHub, Reddit, Instagram, X, papers and blogs found no
+    documented net-of-cost edge from retail intraday trading or from LLM
+    price prediction ([§76](#76-research-what-would-actually-give-profits-and-rewire-the-process-the-answer-is-horizon-and-the-one-test-it-motivated-failed-its-own-gate), [§79](#79-the-best-prediction-engine-for-2026-intraday-or-fo-none-that-predicts-direction-and-the-one-surviving-design-fails-on-facts)).
+- **Costs decide everything.** A cash intraday round trip costs about
+  16.6 bp at small size and 14.3 bp at a ₹1 lakh position. A delivery round
+  trip costs about 22 bp in charges plus 10 bp of assumed slippage, and a
+  ₹15.34 DP charge per stock sold. The momentum book survives because it
+  replaces about three names a month, which costs about 0.7% of the book a
+  year.
+- **Trials of record: 125** (`docs/research/trials.md`). New ideas are
+  judged against their own family of tries ([§80](#80-two-owner-decisions-overnight-etf-holds-are-allowed-paper-and-new-ideas-are-judged-against-their-own-family)), with a corrected
+  Deflated Sharpe ratio ([§77](#77-the-deflated-sharpe-gate-could-never-pass-fixed)). The 2026 held-out window has been
+  spent once, for the momentum family.
+- **Daily housekeeping.** Kite logs every session out at 06:00. Click
+  **Reconnect** on the dashboard before 09:15 on each trading day, or the
+  order-book test loses that session and prices fall back to a ~15-minute
+  delayed feed. The Jev book also needs a TypeSafe API key
+  ([Setup](#storing-the-typesafe-api-key-for-the-jev-book)).
 - **Most retail intraday traders lose.** SEBI's own study (Jul 2024) found
   71% of individual intraday cash traders net-lost in FY23, rising to 80%
   above 500 trades/year. A separate SEBI study (Sep 2024) found 93% of
@@ -53,7 +75,7 @@ buying calls/puts once the checklist and a confidence gate both clear.
   loss is the premium paid, full stop, while a short call's "has to be
   unlimited" — a fundamentally different risk shape from everything else
   this codebase sizes to a known, bounded loss. See
-  [F&O (options-buying only)](#fo-options-buying-only) below.
+  [F&O (options-buying only)](#7-fo-options-buying-only) below.
 - **F&O trades are gated by a confidence score**, not just the checklist —
   it's deliberately capped low whenever the Dimaag Scorecard (expectancy,
   Deflated Sharpe Ratio, Information Coefficient) hasn't proven a real
@@ -89,6 +111,11 @@ buying calls/puts once the checklist and a confidence gate both clear.
   own holiday-master API) — re-pull and update the list each year.
 
 ## How the agent decides
+
+> This section describes the **intraday engine**. Since [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line) the
+> Varsity checklist only labels setups for the review queue, and automatic
+> entries are off. The paper books in [What it runs today](#what-it-runs-today-2026-09-27)
+> run beside it and are described in their own sections.
 
 ### 1. Market context (every scan)
 
@@ -3770,10 +3797,13 @@ uvicorn app:app --port 8000
 ```
 
 On first run, the backend auto-generates a **dashboard API key**
-(`backend/.dashboard_key.json`, gitignored) and logs it on startup. Every
-route except `/kite/callback` requires it (`X-Api-Key` header, or `?key=`
-for the WebSocket and the Kite-login popup, since neither can set a custom
-header).
+(`backend/.dashboard_key.json`, gitignored). It logs the key in full on that
+run only; later starts log a masked reference. Every route except
+`/kite/callback` requires it in the **`X-Api-Key` header**. A `?key=` query
+string is refused with 401, because uvicorn logs every request line (#87).
+The WebSocket takes the key as its first message, and the Connect Kite
+button fetches the login URL with the header instead of opening a keyed
+link. Never put the key in a URL.
 
 In another terminal:
 
@@ -3783,8 +3813,8 @@ npm install
 npm run dev          # http://localhost:5500
 ```
 
-It'll prompt for the dashboard API key once (or pass it via `?key=...` in
-the URL), then remember it via `localStorage`. The key requirement exists
+It prompts for the dashboard API key once and keeps it in the browser's
+`localStorage`. The key requirement exists
 because the backend sometimes needs to be reachable from the public
 internet (see "Connecting Kite locally" below) and has real control
 surface — without it, anyone with the URL could flip the dashboard to live
@@ -3825,8 +3855,10 @@ the form. Two ways around it:
 
 **If the tunnel is down when you log in**, Kite still redirects to it and the page fails to load. The address bar keeps the whole redirect, though. Replace the tunnel host with `http://127.0.0.1:8000` and keep the rest of the URL unchanged (`/kite/callback?...&request_token=...`), then open it. The running backend completes the login the same way. The request token can only be used once and expires within minutes, so do this straight away. (Verified 2026-09-23 with ngrok stopped.)
 
-**Kite sessions expire daily.** Whichever method you used, you'll need to
-redo it each morning before trading live —
+**Kite sessions expire daily, at 06:00.** Whichever method you used, redo
+it each trading morning before 09:15, even in paper mode. The order-book
+test needs a live Kite feed for every session it counts, and without one
+the engine falls back to yfinance prices about 15 minutes behind.
 `python generate_access_token.py` doesn't depend on any tunnel still being
 up, which is why it's the more durable daily habit.
 
@@ -3849,6 +3881,28 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
    you're ready — it stays off by default even with a valid key, and you
    can turn it off again any time without restarting anything.
 
+### Storing the TypeSafe API key (for the Jev book)
+
+The Jev book ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)) calls TypeSafe's official API and needs a key;
+without one, each day is recorded as "Jev unavailable" and nothing is
+traded. TypeSafe is prepaid: add credits, then create a key at
+[console.typesafe.ai/keys](https://console.typesafe.ai/keys). At about
+34,000 input tokens a trading day it costs roughly $0.03 a month.
+
+Copy the key to the clipboard and run, from the repo root:
+
+```bash
+pbpaste | backend/.venv/bin/python backend/typesafe_key.py set
+backend/.venv/bin/python backend/typesafe_key.py test     # one tiny request
+backend/.venv/bin/python backend/typesafe_key.py status   # never prints the key
+```
+
+`set` with nothing piped in asks for the key at a hidden prompt. Never pass
+the key as a command-line argument: it lands in shell history. The key is
+written to `backend/.typesafe_key.json` with mode 0600 (gitignored), and the
+`TYPESAFE_API_KEY` environment variable overrides it. The engine reads the
+key on each call, so no restart is needed.
+
 ### Going live (only once backtests and paper results justify it)
 
 1. Create an app at https://developers.kite.trade and subscribe to the
@@ -3866,7 +3920,7 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
 
 ## Known limitations
 
-- Net-negative in every backtest. There's no edge yet, in cash equity or F&O.
+- Every intraday rule, in cash equity or F&O, is net-negative in backtests. The one pass is the monthly delivery momentum book ([§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026)), and it runs in paper only.
 - **Square-off time is later than the broker's (#78, open).** Since the closing auction started on 2026-08-03, Zerodha auto-squares MIS positions in F&O-eligible stocks at **15:12**, and charges ₹50 + GST per auto square-off order. The engine squares off at 15:15. That covers nearly the whole NIFTY 100, so **fix it before trading live**. Paper mode is unaffected.
 - **Slippage is still an assumption** (3 bp per leg), because no real-money order has ever been placed. The charges side of the cost model now matches Zerodha's published tariff to within about 0.03 bp (#79). Measured spreads have been accumulating in `liquidity_checks` since §58, but only for setups that reach the last gate.
 - **Cash equity only, in practice.** At a small account, NFO futures and all but one MCX contract are out of reach on margin, and Kite has no intraday history for expired F&O/MCX/CDS contracts. A non-equity backtest would need a forward-collected cache first (`docs/research/phase3-scoping.md`).
