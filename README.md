@@ -48,7 +48,7 @@ going live is the owner's decision alone.
     ([§87](#87-the-overnight-premium-in-an-etf-measured-on-minute-data-it-does-not-survive--the-line-closes)).
   - Sweeps of GitHub, Reddit, Instagram, X, papers and blogs found no
     documented net-of-cost edge from retail intraday trading or from LLM
-    price prediction ([§76](#76-research-what-would-actually-give-profits-and-rewire-the-process-the-answer-is-horizon-and-the-one-test-it-motivated-failed-its-own-gate), [§79](#79-the-best-prediction-engine-for-2026-intraday-or-fo-none-that-predicts-direction-and-the-one-surviving-design-fails-on-facts)).
+    price prediction ([§76](#76-research-what-would-actually-give-profits-and-rewire-the-process-the-answer-is-horizon-and-the-one-test-it-motivated-failed-its-own-gate), [§79](#79-the-best-prediction-engine-for-2026-intraday-or-fo-none-that-predicts-direction-and-the-one-surviving-design-fails-on-facts)). A 2026-09-27 sweep found no intraday entry-timing rule that clears costs either ([§88](#88-what-should-decide-when-to-trade-now-the-checklist-is-retired-intraday-nothing-clears-costs-positional-how-much-momentum-to-hold)).
 - **Costs decide everything.** A cash intraday round trip costs about
   16.6 bp at small size and 14.3 bp at a ₹1 lakh position. A delivery round
   trip costs about 22 bp in charges plus 10 bp of assumed slippage, and a
@@ -3418,6 +3418,20 @@ The owner allowed overnight ETF holds (§80). The test (`docs/research/prereg-ov
 | NIFTYBEES, only on nights a model picks | | −0.1 bp | −0.2 |
 
 Negative in every year. The index's well-known overnight premium (about +9.8 bp a night) is measured from the closing average to the auction open; an ETF bought and sold in the continuous market around those times captures only a quarter of it, which is less than the interest alone. A nightly model learned to stay out and found no nights that pay. **Both trials fail; the overnight line closes** and nothing is built. Details: `results-overnight-etf.md`.
+
+### 88. What should decide when to trade, now the checklist is retired? Intraday: nothing clears costs; positional: how much momentum to hold
+
+The owner asked (2026-09-27) for a better way to decide *when* to trade than the Varsity checklist, which lost every test it was given (§51, §69) and no longer decides trades (§75). Two read-only sweeps covered papers, practitioner write-ups, GitHub and Reddit, and checked every idea against the 125 trials already run (`docs/research/entry-timing-sweep-2026-09-27.md`). No trial or research look was spent.
+
+**Intraday, nothing found clears the 14–17 bp round trip.** The best-known "profitable day trading" results, opening-range breakouts on high-volume stocks and index intraday momentum, earn about 1–8 bp gross a trade once converted to Indian costs, and this project already measured the same families at +4.5 bp (trial 35) and +0.7 bp (L32). Meta-labeling and volatility or VIX filters can only filter or scale an entry's gross edge, and ours is zero. The checklist wasn't a bad pick among good ones; the whole class of price-timing rules sits below cost at this size. The one open intraday line stays the pre-registered order-book test (§75), which runs as written once 15 full sessions are recorded; published NSE evidence expects it to fail. If one more intraday trial is wanted, the only candidate with a mechanism for a bigger move is an opening-range breakout restricted to results days with extreme opening volume, and only if a count of qualifying events, reading no returns, shows it can reach about 2,000 trades.
+
+**Positionally, the leads are about how much momentum to hold, not new entry signals:**
+
+1. **Confirm the running rule on 2002–2009**, years no test has read, including the 2008 crash. NSE's old bhavcopies are free and the corporate actions are already cached. This is a confirmation like the unseen-stocks check in §82, not a trial.
+2. **A volatility-scaled momentum overlay**, moving part of the book into NIFTYBEES when momentum's own volatility is high, the mechanism the literature ties to momentum crashes like 2016 and 2025. It would run as a shadow sleeve beside the paper book, never changing it. **It needs an owner decision first:** judged on alpha under the family bar, it will probably fail even if it cuts drawdowns; judged on a non-inferiority rule fixed in advance, it could pass on risk alone, which the current rules don't allow.
+3. **Promoter open-market purchases** from SEBI insider-trading disclosures, held about three months: the one new daily-horizon signal with Indian evidence and a clean 2016–2025 sample.
+
+Trend filters to cash, delivery percentage, FII/DII flows, short-term reversal, bulk deals and turn-of-month timing were rejected on weak, gross-only or contrary evidence. Separately, the cost model's slippage (0.03% a leg) has never been measured (#66). At ₹2–3 lakh positions it is the largest part of the intraday hurdle, and measuring it from the order-book data spends no trial.
 
 ## Backtest results
 
