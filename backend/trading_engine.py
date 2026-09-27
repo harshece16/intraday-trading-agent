@@ -26,6 +26,7 @@ import costs
 import data_provider
 import depth_sampler
 import momentum_book
+import jev_book
 import database
 import telegram_alerts
 import fno_instruments
@@ -1413,6 +1414,11 @@ class TradingEngine:
             # ETF books at the overnight-hold entry and exit times; a no-op
             # outside those windows. Data collection only.
             depth_sampler.sample_windows(now, time.time())
+
+        if phase == "open" and jev_book.maybe_decide(self.state.scanner, now, holiday):
+            self.state.log("system", "Jev book: asking Jev about today's shortlist (paper test, README section 86)")
+        if phase == "square_off_window" and jev_book.maybe_close(now):
+            self.state.log("system", "Jev book: closed today's paper positions at the square-off")
 
         if phase == "square_off_window":
             if any(p["quantity"] for p in self.state.positions.values()):

@@ -8,7 +8,7 @@ import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnab
 
 const PAGES = [
   ["/", "Overview"], ["/premarket", "Pre-Market"], ["/day-plan", "Day Plan"], ["/screener", "Screener"],
-  ["/technical-analysis", "Technical Analysis"], ["/portfolio", "Portfolio"], ["/momentum-book", "Momentum Book"], ["/journal", "Journal"], ["/trades", "Trades"],
+  ["/technical-analysis", "Technical Analysis"], ["/portfolio", "Portfolio"], ["/momentum-book", "Momentum Book"], ["/jev-book", "Jev Book"], ["/journal", "Journal"], ["/trades", "Trades"],
 ];
 
 async function setMode(paperMode) {

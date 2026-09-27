@@ -312,6 +312,23 @@ MOMENTUM_BOOK = {
     "retry_minutes": 30,
 }
 
+# The Jev book (jev_book.py, README section 86): a forward paper test of the
+# TypeSafe Jev LLM judge on the scanner's daily shortlist — buy / short / skip
+# at 09:45, closed at the 15:08 square-off. Paper only; never places an order.
+# Needs a Jev API key stored with `jev auth set`; until then it records
+# "Jev unavailable" and trades nothing.
+JEV_BOOK = {
+    "enabled": True,
+    "decide_at": "09:45",
+    "max_names": 15,
+    "notional": 100_000.0,
+    "timeout_s": 90,
+    "kill_after": 100,          # pre-registered kill rule (prereg-jev-book.md)
+    "kill_t": -2.0,
+    "provider": None,           # None = Jev's default ("official")
+    "model": None,
+}
+
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
 # (2 x COSTS["slippage_pct"], derived rather than set here), when filling our

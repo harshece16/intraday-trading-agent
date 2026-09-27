@@ -494,6 +494,14 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/jev-book")
+def jev_book_summary():
+    """The Jev book (README section 86): the LLM judge's paper decisions on the
+    daily shortlist, scored after costs against the scanner's own side."""
+    import jev_book
+    return jev_book.summary()
+
+
 @app.get("/api/momentum-book")
 def momentum_book_summary():
     """The paper momentum book (README section 83): holdings, NAV against its

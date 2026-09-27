@@ -3374,6 +3374,12 @@ The owner asked for a prediction engine of our own. The research leaves one kind
 
 Both fail their gates and lose to momentum on unseen stocks too. The models learned to favour quiet, low-beta stocks alongside momentum — a third less drawdown, but that defensive tilt gave up most of the momentum premium in the 2019–2025 rally. **Not adopted; the momentum book stays the engine.** More signals and a fitted model did not beat the one robust signal, as the prediction-engine sweep predicted. Details: `results-ranker-engine.md`.
 
+### 86. The Jev book: an LLM judge on the daily shortlist, tested in paper
+
+At the owner's request, **TypeSafe Jev** (an LLM judgment service, `jev` CLI) is wired into the engine as a separate paper book — a new **Jev Book** page. Every trading day at the first tick after 09:45, for each stock on the scanner's shortlist (up to 15), Jev is shown public market data only — the scanner's row, the chart labels, the news headlines, the market summary — and asked three typed questions: **buy, short or skip**; the probability the price is higher at 15:08; and a position size (none, half, normal, double). Each buy or short fills at the live price when Jev answers and closes at the 15:08 square-off, after the engine's ~16.6 bp round-trip cost, and is compared with the scanner's own side on the same stock-day.
+
+The research found no LLM trader with an edge after costs, so this is a **pre-registered forward test** (`docs/research/prereg-jev-book.md`, trial 123), not a switch-on: after 300 trades or 60 sessions, Jev must be positive after costs with t ≥ 2.24, in both halves, and beat the scanner. It turns itself off if it is clearly losing after 100 trades. Jev never sees keys, account data or positions, and places no orders. **It needs a Jev API key on this computer** (`jev auth set`); until then each day is recorded as "Jev unavailable".
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
