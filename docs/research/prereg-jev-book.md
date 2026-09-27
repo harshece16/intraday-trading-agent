@@ -78,3 +78,17 @@ The cost rule is `costs.round_trip_pct` at the book's ₹1,00,000 position,
 which is **14.3 bp** including slippage, not the "~16.6 bp" quoted above
 (16.6 bp is the round trip at the old ₹5,000 position size). The rule is
 unchanged; only the quoted figure was wrong.
+
+---
+
+# Clarification 2 — 2026-09-27, before any Jev decision exists
+
+At the owner's request the book calls **TypeSafe's official System One API**
+(`POST https://api.typesafe.ai/v1/systemone`, model `jev-latest`) instead of
+the community `jev` CLI. The three questions, their wording, the state and
+the fills are unchanged; they now travel in **one request per stock**
+(same state, three typed questions), which also returns each answer's
+probabilities and confidence — recorded for information, not used in the
+rule. The size answer is TypeSafe's probability-weighted score, rounded to
+the nearest level. The key comes from `TYPESAFE_API_KEY` or
+`backend/.typesafe_key.json` (`typesafe_key.py`).

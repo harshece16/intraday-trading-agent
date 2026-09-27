@@ -5,16 +5,18 @@ scanner's daily shortlist. Pre-registration: docs/research/prereg-jev-book.md
 
 Once per trading day at the first tick at or after 09:45 IST, for each stock
 on the scanner's active shortlist (up to 15), Jev is asked three typed
-questions about a JSON snapshot of public market data: buy / short / skip,
-the probability the price is higher at 15:08, and a position size. A buy or
+questions about a JSON snapshot of public market data — buy / short / skip,
+the probability the price is higher at 15:08, and a position size — in one
+request to TypeSafe's official System One API (https://api.typesafe.ai). A buy or
 short "fills" at the live price when the answer returns and closes at the
 live price at the 15:08 square-off, net of the engine's intraday round-trip
 cost. The scanner's own side on the same stock-day is scored the same way,
 so the book always shows whether Jev beats what the engine would do anyway.
 
 Paper only: nothing here places an order, and Jev never sees keys, account
-data or positions. Until a Jev API key is stored (`jev auth set`), each day
-is recorded as "Jev unavailable" and nothing is traded. The book stops itself
+data or positions. The TypeSafe key comes from TYPESAFE_API_KEY or
+backend/.typesafe_key.json (see typesafe_key.py); until one is stored, each
+day is recorded as "Jev unavailable" and nothing is traded. The book stops itself
 if, after 100 buy/short decisions, the cumulative net t is below -2.
 """
 
@@ -23,10 +25,9 @@ import json
 import logging
 import math
 import os
-import shutil
 import statistics as st
-import subprocess
 import threading
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_PATH = os.path.join(HERE, "data", "jev_book_state.json")
@@ -42,8 +43,9 @@ DEFAULTS = {
     "kill_t": -2.0,
     "verdict_after_decisions": 300,
     "verdict_after_sessions": 60,
-    "provider": None,
-    "model": None,
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-latest",
+    "max_attempts": 4,
 }
 
 ACTION_Q = ("You are deciding an intraday paper trade in this NSE stock. A position opens now at the current "
@@ -104,52 +106,84 @@ def build_state(row, market, now):
             "round_trip_cost_pct": 0.17, "market": mkt, "stock": stock}
 
 
-# --- calling Jev -----------------------------------------------------------------
+# --- calling Jev (TypeSafe's official HTTP API) ---------------------------------------
 
-def _jev_cmd(kind, conf):
-    exe = shutil.which("jev") or os.path.expanduser("~/.local/bin/jev")
-    cmd = [exe, kind, "--json-state", "--value", "-s", "-"]
-    if conf.get("provider"):
-        cmd += ["--provider", conf["provider"]]
-    if conf.get("model"):
-        cmd += ["--model", conf["model"]]
-    return cmd
+KEY_PATH = os.path.join(HERE, ".typesafe_key.json")
 
 
-def ask(kind, question, state, conf, options=None, levels=None, runner=subprocess.run):
-    """One typed Jev question. Returns (value, error)."""
-    cmd = _jev_cmd(kind, conf) + ["-q", question]
-    for k, v in (options or {}).items():
-        cmd += ["-o", f"{k}={v}"]
-    for lv in (levels or []):
-        cmd += ["-l", lv]
+def api_key():
+    """TYPESAFE_API_KEY, else backend/.typesafe_key.json. Never logged."""
+    k = os.environ.get("TYPESAFE_API_KEY")
+    if k:
+        return k.strip()
     try:
-        p = runner(cmd, input=json.dumps(state), capture_output=True, text=True, timeout=conf["timeout_s"])
-    except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}"[:300]
-    if p.returncode != 0:
-        return None, (p.stderr or p.stdout or f"exit {p.returncode}").strip()[:300]
-    return p.stdout.strip(), None
-
-
-def _parse_action(v):
-    v = (v or "").strip().strip('"').lower()
-    return v if v in ACTION_OPTIONS else None
-
-
-def _parse_float(v):
-    try:
-        return float((v or "").strip().strip('"'))
-    except ValueError:
+        with open(KEY_PATH) as fh:
+            return (json.load(fh).get("key") or "").strip() or None
+    except (OSError, ValueError):
         return None
 
 
-def _parse_level(v):
-    try:
-        i = int(float((v or "").strip().strip('"')))
-        return i if 0 <= i < len(SIZE_LEVELS) else None
-    except ValueError:
-        return None
+def questions():
+    return {
+        "action": {"type": "choice", "instructions": ACTION_Q, "criteria": dict(ACTION_OPTIONS)},
+        "p_up": {"type": "noul", "instructions": PUP_Q},
+        "size": {"type": "score", "instructions": SIZE_Q, "criteria": list(SIZE_LEVELS)},
+    }
+
+
+def system_one(state, qs, conf, post=None, key=None, sleep=time.sleep):
+    """One System One request. Returns (response dict, error string). Retries
+    429 / 529 / 5xx / connection errors with exponential backoff, honouring
+    retry-after, as TypeSafe's API reference asks."""
+    key = key or api_key()
+    if not key:
+        return None, "no TypeSafe API key stored (set TYPESAFE_API_KEY or run typesafe_key.py set)"
+    if post is None:
+        import requests
+        post = requests.post
+    body = {"state": state, "model": conf["model"], "questions": qs}
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    err = None
+    for attempt in range(conf["max_attempts"]):
+        try:
+            r = post(conf["endpoint"], json=body, headers=headers, timeout=conf["timeout_s"])
+        except Exception as exc:
+            err = f"{type(exc).__name__}: {str(exc)[:160]}"
+            sleep(2 ** attempt)
+            continue
+        if r.status_code == 200:
+            try:
+                return r.json(), None
+            except ValueError:
+                return None, "TypeSafe returned a non-JSON body"
+        if r.status_code in (401, 403):
+            return None, f"TypeSafe rejected the API key (HTTP {r.status_code})"
+        if r.status_code == 422:
+            return None, f"TypeSafe could not validate the request (HTTP 422): {r.text[:200]}"
+        err = f"HTTP {r.status_code}"
+        if r.status_code in (429, 529) or r.status_code >= 500:
+            try:
+                wait = float((r.headers or {}).get("retry-after") or 0)
+            except (TypeError, ValueError):
+                wait = 0
+            sleep(max(wait, 2 ** attempt))
+            continue
+        return None, f"{err}: {r.text[:200]}"
+    return None, f"TypeSafe unavailable after {conf['max_attempts']} attempts ({err})"
+
+
+def parse_answers(resp):
+    a = (resp or {}).get("answers") or {}
+    act, pup, size = a.get("action") or {}, a.get("p_up") or {}, a.get("size") or {}
+    choice = act.get("choice")
+    level = None
+    if isinstance(size.get("score"), (int, float)):
+        level = max(0, min(len(SIZE_LEVELS) - 1, int(round(size["score"]))))
+    return {"action": choice if choice in ACTION_OPTIONS else None,
+            "action_probabilities": act.get("probabilities"), "action_confidence": act.get("confidence"),
+            "p_up": pup.get("noul") if isinstance(pup.get("noul"), (int, float)) else None,
+            "size_level": level, "size_score": size.get("score"), "size_confidence": size.get("confidence"),
+            "model": (resp or {}).get("model"), "usage": (resp or {}).get("usage")}
 
 
 # --- the daily round ------------------------------------------------------------------
@@ -160,7 +194,7 @@ def round_trip_bp():
     return costs.round_trip_pct(DEFAULTS["notional"], config.COSTS) * 100.0
 
 
-def decide_round(scanner, now, get_ltp, runner=subprocess.run, state_path=None):
+def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.sleep):
     """Ask Jev about each shortlisted stock and open paper positions. Runs in a
     background thread from the engine; also callable directly in tests."""
     conf = cfg()
@@ -175,19 +209,15 @@ def decide_round(scanner, now, get_ltp, runner=subprocess.run, state_path=None):
             continue
         row = rows[sym]
         snap = build_state(row, (scanner or {}).get("market"), now)
-        action_v, err = ask("choice", ACTION_Q, snap, conf, options=ACTION_OPTIONS, runner=runner)
+        resp, err = system_one(snap, questions(), conf, post=post, sleep=sleep)
         if err:
             day["status"] = "jev_unavailable"
             day["error"] = err
             save_state(state, state_path)
             logger.warning(f"Jev book: Jev unavailable ({err[:120]})")
             return state
-        pup_v, _ = ask("noul", PUP_Q, snap, conf, runner=runner)
-        size_v, _ = ask("score", SIZE_Q, snap, conf, levels=SIZE_LEVELS, runner=runner)
-        action = _parse_action(action_v)
         d = {"symbol": sym, "asked_at": datetime.datetime.now().isoformat(timespec="seconds"),
-             "action": action, "raw_action": action_v, "p_up": _parse_float(pup_v), "size_level": _parse_level(size_v),
-             "scanner_side": row.get("side"), "state": snap}
+             **parse_answers(resp), "scanner_side": row.get("side"), "state": snap}
         try:
             d["entry"] = float(get_ltp(sym))
         except Exception as exc:
@@ -336,6 +366,9 @@ def summary(state_path=None):
         "brier": st.mean(briers) if briers else None,
         "net_by_size": {k: {"n": len(v), "mean_bp": st.mean(v)} for k, v in by_size.items()},
         "round_trip_bp": round_trip_bp(),
+        "input_tokens": sum(((d.get("usage") or {}).get("input_tokens") or 0)
+                            for v in state["days"].values() for d in v["decisions"]),
+        "key_stored": bool(api_key()), "model": conf["model"],
         "verdict_due": len(tr) >= conf["verdict_after_decisions"] or len(sessions) >= conf["verdict_after_sessions"],
         "last_day": ({"date": last, **{k: v for k, v in state["days"][last].items() if k != "decisions"},
                       "decisions": [{k: d.get(k) for k in ("symbol", "action", "p_up", "size_level", "scanner_side",

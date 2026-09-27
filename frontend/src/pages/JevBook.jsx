@@ -46,10 +46,15 @@ export default function JevBook() {
         research found no LLM trader with an edge after costs; this test checks, rather than assumes.
       </p>
       {data.status_reason && <p className="muted">{data.status_reason}</p>}
+      {!data.key_stored && !unavailable && (
+        <p className="muted">No TypeSafe API key is stored yet, so no round will run. Create one at console.typesafe.ai/keys
+          and store it with <code>pbpaste | backend/.venv/bin/python backend/typesafe_key.py set</code>.</p>
+      )}
       {unavailable && (
         <p className="muted">
-          Today Jev couldn't be reached: <code>{day.error}</code>. Store a Jev API key on this computer with
-          {" "}<code>jev auth set</code> and the next trading day's round runs automatically.
+          Today Jev couldn't be reached: <code>{day.error}</code>. Create a key at console.typesafe.ai/keys, copy it,
+          and store it with <code>pbpaste | backend/.venv/bin/python backend/typesafe_key.py set</code>; the next
+          trading day's round runs automatically.
         </p>
       )}
 

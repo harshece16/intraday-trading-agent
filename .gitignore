@@ -39,3 +39,4 @@ backend/data/bhav_live/
 backend/data/momentum_book_state.json
 backend/data/momentum_book.log
 backend/data/jev_book_state.json
+backend/.typesafe_key.json
