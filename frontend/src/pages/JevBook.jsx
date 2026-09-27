@@ -32,8 +32,9 @@ export default function JevBook() {
 
   const day = data.last_day;
   const unavailable = day && day.status === "jev_unavailable";
+  const noLive = day && day.status === "no_live_prices";
   const statusPill = data.status === "switched_off" ? ["short", "Switched off"]
-    : unavailable ? ["wait", "Jev unavailable"] : ["neutral", "Paper test"];
+    : unavailable ? ["wait", "Jev unavailable"] : noLive ? ["wait", "No live prices"] : ["neutral", "Paper test"];
 
   return (
     <>
@@ -49,6 +50,13 @@ export default function JevBook() {
       {!data.key_stored && !unavailable && (
         <p className="muted">No TypeSafe API key is stored yet, so no round will run. Create one at console.typesafe.ai/keys
           and store it with <code>pbpaste | backend/.venv/bin/python backend/typesafe_key.py set</code>.</p>
+      )}
+      {noLive && (
+        <p className="muted">
+          Kite wasn't connected when today's round was due, so Jev wasn't asked and the day doesn't count toward
+          the test: its fills must be live prices, not the delayed fallback. Reconnect Kite on the dashboard before
+          09:15 on trading days.
+        </p>
       )}
       {unavailable && (
         <p className="muted">

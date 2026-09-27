@@ -140,3 +140,93 @@ def test_key_helper_stores_privately_and_never_prints_the_key(tmp_path, monkeypa
     empty = io.StringIO("  \n")
     empty.isatty = lambda: False
     assert typesafe_key.set_key(empty, path=str(tmp_path / "none.json")) == 1
+
+
+# --- live prices only (#151) ---------------------------------------------------------------
+
+def test_no_live_prices_skips_the_day_without_asking_jev(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    post = _post([_resp()])
+    jb.decide_round(_scanner(), NOW, lambda s: 100.0, post=post, state_path=path, sleep=lambda s: None,
+                    live=lambda: False)
+    day = jb.load_state(path)["days"]["2026-09-28"]
+    assert day["status"] == "no_live_prices" and "Kite" in day["error"]
+    assert day["decisions"] == [] and post.calls == []
+    # nothing to close, and the engine hook doesn't claim it closed anything
+    monkeypatch.setattr(jb, "STATE_PATH", path)
+    assert not jb.maybe_close(NOW.replace(hour=15, minute=8))
+    s = jb.summary(path)
+    assert s["sessions_closed"] == 0 and s["traded"] == 0
+
+
+def test_live_ltp_never_falls_back_to_delayed_prices(monkeypatch):
+    import data_provider as dp
+
+    def no_yfinance(*a, **k):
+        raise AssertionError("the delayed yfinance feed must not be used")
+    monkeypatch.setattr(dp, "_get_intraday_candles_yfinance", no_yfinance)
+    monkeypatch.setattr(dp, "kite_data_active", lambda: False)
+    try:
+        jb.live_ltp("RELIANCE")
+        assert False, "expected no live price"
+    except RuntimeError as exc:
+        assert "not connected" in str(exc)
+
+    noted = []
+    monkeypatch.setattr(dp, "kite_data_active", lambda: True)
+    monkeypatch.setattr(dp, "_note_kite_failure", lambda exc: noted.append(exc))
+    monkeypatch.setattr(dp, "_get_kite", lambda: types.SimpleNamespace(
+        ltp=lambda keys: {"NSE:RELIANCE": {"last_price": 1412.5}}))
+    assert jb.live_ltp("RELIANCE") == 1412.5
+
+    def broken(keys):
+        raise ValueError("token expired")
+    monkeypatch.setattr(dp, "_get_kite", lambda: types.SimpleNamespace(ltp=broken))
+    try:
+        jb.live_ltp("RELIANCE")
+        assert False, "expected the Kite error to surface"
+    except ValueError:
+        pass
+    assert len(noted) == 1
+
+
+def test_a_fill_without_a_live_price_is_excluded(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    jb.decide_round(_scanner(2), NOW, lambda s: 100.0, post=_post([_resp()]), state_path=path,
+                    sleep=lambda s: None, live=lambda: True)
+
+    def no_price(sym):
+        raise RuntimeError("Kite is not connected, so there is no live price")
+    jb.close_round(NOW.replace(hour=15, minute=8), no_price, state_path=path)
+    decisions = jb.load_state(path)["days"]["2026-09-28"]["decisions"]
+    assert all(d["excluded"] == "no live exit price" and d.get("net_bp") is None for d in decisions)
+    s = jb.summary(path)
+    assert s["traded"] == 0 and s["sessions_closed"] == 0
+
+    path2 = str(tmp_path / "s2.json")
+    jb.decide_round(_scanner(2), NOW, no_price, post=_post([_resp()]), state_path=path2,
+                    sleep=lambda s: None, live=lambda: True)
+    decisions = jb.load_state(path2)["days"]["2026-09-28"]["decisions"]
+    assert all(d["entry"] is None and d["excluded"] == "no live entry price" for d in decisions)
+
+
+def test_engine_hooks_fill_only_at_live_kite_prices(monkeypatch, tmp_path):
+    import data_provider as dp
+    path = str(tmp_path / "s.json")
+    monkeypatch.setattr(jb, "STATE_PATH", path)
+    monkeypatch.setattr(jb.threading, "Thread",
+                        lambda target, name, daemon: types.SimpleNamespace(start=target))
+    # test_maybe_decide_gates never runs its thread, so it leaves the flag set
+    monkeypatch.setitem(jb._running, "decide", False)
+    seen = {}
+    monkeypatch.setattr(jb, "decide_round", lambda scanner, now, get_ltp, **k: seen.update(decide=(get_ltp, k)))
+    assert jb.maybe_decide(_scanner(), NOW, None)
+    get_ltp, kw = seen["decide"]
+    assert get_ltp is jb.live_ltp and kw.get("live") is dp.kite_data_active
+
+    jb.save_state({**jb.load_state(path), "days": {"2026-09-28": {"status": "open", "decisions": []}}}, path)
+    monkeypatch.setattr(jb, "close_round", lambda now, get_ltp, **k: seen.update(close=get_ltp))
+    assert jb.maybe_close(NOW.replace(hour=15, minute=8))
+    assert seen["close"] is jb.live_ltp

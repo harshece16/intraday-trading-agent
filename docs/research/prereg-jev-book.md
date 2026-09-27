@@ -92,3 +92,24 @@ probabilities and confidence — recorded for information, not used in the
 rule. The size answer is TypeSafe's probability-weighted score, rounded to
 the nearest level. The key comes from `TYPESAFE_API_KEY` or
 `backend/.typesafe_key.json` (`typesafe_key.py`).
+
+---
+
+# Clarification 3 — 2026-09-27, before any Jev decision exists
+
+The Fills rule says entry and exit are at **the live price**, and names
+`data_provider.get_ltp`. That function silently falls back to yfinance,
+about 15 minutes behind, when Kite isn't connected (#151). A fill from that
+feed is not the live price. Worse, Jev's snapshot carries live headlines,
+so a delayed entry would let Jev see news newer than its own fill price. So
+that the rule means what it says:
+
+- Fills come only from Kite's last traded price (`jev_book.live_ltp`),
+  never from the delayed feed.
+- If Kite isn't connected when the round is due, the day is recorded as
+  **"no live prices"**. Jev is not asked, and the day is not a session.
+- A decision whose entry or exit can't be read from Kite is **excluded**
+  from every figure, with the reason recorded. A session counts toward the
+  60 only if at least one decision was priced live at both ends.
+
+The questions, state, costs, pass rule and kill rule are unchanged.

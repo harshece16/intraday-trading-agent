@@ -194,13 +194,37 @@ def round_trip_bp():
     return costs.round_trip_pct(DEFAULTS["notional"], config.COSTS) * 100.0
 
 
-def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.sleep):
+def live_ltp(symbol):
+    """Kite's last traded price, or an exception. Never the ~15-minute-delayed
+    yfinance fallback that data_provider.get_ltp uses when Kite isn't connected:
+    the pre-registration fills at the live price, and a delayed fill against
+    live headlines would leak information in Jev's favour (#151)."""
+    import data_provider
+    if not data_provider.kite_data_active():
+        raise RuntimeError("Kite is not connected, so there is no live price")
+    key = f"NSE:{symbol}"
+    try:
+        return float(data_provider._get_kite().ltp([key])[key]["last_price"])
+    except Exception as exc:
+        data_provider._note_kite_failure(exc)
+        raise
+
+
+def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.sleep, live=None):
     """Ask Jev about each shortlisted stock and open paper positions. Runs in a
-    background thread from the engine; also callable directly in tests."""
+    background thread from the engine; also callable directly in tests. `live`
+    says whether live prices exist; without them the day is recorded as "no
+    live prices", Jev is not asked, and the day does not count (#151)."""
     conf = cfg()
     today = now.date().isoformat()
     state = load_state(state_path)
     day = state["days"].setdefault(today, {"status": "deciding", "decisions": []})
+    if live is not None and not day["decisions"] and not live():
+        day["status"] = "no_live_prices"
+        day["error"] = "Kite was not connected when the round was due, so there were no live prices to fill at"
+        save_state(state, state_path)
+        logger.warning("Jev book: no live Kite prices at the decision time; today's round is skipped (#151)")
+        return state
     rows = {r["symbol"]: r for r in (scanner or {}).get("rows") or []}
     names = [s for s in ((scanner or {}).get("active") or []) if s in rows][:conf["max_names"]]
     done = {d["symbol"] for d in day["decisions"]}
@@ -222,6 +246,7 @@ def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.s
             d["entry"] = float(get_ltp(sym))
         except Exception as exc:
             d["entry"], d["entry_error"] = None, str(exc)[:120]
+            d["excluded"] = "no live entry price"
         day["decisions"].append(d)
         save_state(state, state_path)
     day["status"] = "open"
@@ -244,6 +269,7 @@ def close_round(now, get_ltp, state_path=None):
             d["exit"] = float(get_ltp(d["symbol"]))
         except Exception as exc:
             d["exit_error"] = str(exc)[:120]
+            d["excluded"] = "no live exit price"
             continue
         move = (d["exit"] / d["entry"] - 1) * 1e4
         d["exit_at"] = datetime.datetime.now().isoformat(timespec="seconds")
@@ -307,7 +333,7 @@ def maybe_decide(scanner, now, holiday=None):
         def work():
             try:
                 import data_provider
-                decide_round(scanner, now, data_provider.get_ltp)
+                decide_round(scanner, now, live_ltp, live=data_provider.kite_data_active)
             except Exception:
                 logger.exception("Jev book: decision round failed")
             finally:
@@ -325,10 +351,10 @@ def maybe_close(now):
     try:
         state = load_state()
         day = state["days"].get(now.date().isoformat())
-        if not day or day.get("closed") or _running["decide"]:
+        # A skipped day ("Jev unavailable", "no live prices") has nothing to close.
+        if not day or day.get("closed") or _running["decide"] or day.get("status") not in ("open", "deciding"):
             return False
-        import data_provider
-        close_round(now, data_provider.get_ltp)
+        close_round(now, live_ltp)
         return True
     except Exception:
         logger.exception("Jev book: square-off close failed")
@@ -352,7 +378,9 @@ def summary(state_path=None):
     for _, d in tr:
         lv = SIZE_LEVELS[d["size_level"]] if d.get("size_level") is not None else "unknown"
         by_size.setdefault(lv, []).append(d["net_bp"])
-    sessions = [k for k, v in state["days"].items() if v.get("closed")]
+    # A session counts only if at least one decision was priced live at both ends (#151).
+    sessions = [k for k, v in state["days"].items()
+                if v.get("closed") and any(d.get("net_bp") is not None for d in v["decisions"])]
     last = sorted(state["days"])[-1] if state["days"] else None
     return {
         "enabled": conf["enabled"], "status": state.get("status"), "status_reason": state.get("status_reason"),
@@ -372,6 +400,6 @@ def summary(state_path=None):
         "verdict_due": len(tr) >= conf["verdict_after_decisions"] or len(sessions) >= conf["verdict_after_sessions"],
         "last_day": ({"date": last, **{k: v for k, v in state["days"][last].items() if k != "decisions"},
                       "decisions": [{k: d.get(k) for k in ("symbol", "action", "p_up", "size_level", "scanner_side",
-                                                           "entry", "exit", "move_bp", "net_bp", "scanner_net_bp")}
+                                                           "entry", "exit", "move_bp", "net_bp", "scanner_net_bp", "excluded")}
                                     for d in state["days"][last]["decisions"]]} if last else None),
     }
