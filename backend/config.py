@@ -200,8 +200,8 @@ NEWS = {
 # heavier on-demand call, not hundreds of small per-headline ones. Shares
 # NEWS['anthropic_api_key'] rather than duplicating the key.
 CHAYWANAPRASH = {
-    # It only ever runs when asked (POST /api/chaywanaprash/analyze), so it is
-    # on whenever there is something to call.
+    # It runs when asked (POST /api/chaywanaprash/analyze) and once a week on
+    # its own (the review below), so it is on whenever there is something to call.
     "enabled": True,
     # "auto" uses the Anthropic API when ANTHROPIC_API_KEY is set, and the
     # Claude Code CLI (`claude -p`, billed to your Claude plan) otherwise or
@@ -209,6 +209,12 @@ CHAYWANAPRASH = {
     "llm_backend": "auto",
     "daily_limit": 12,
     "lookback_hours": 24,
+    # The fortnightly review: after the close, once every 7 days, it reads the
+    # last 14 days of the journal with every change merged in that time and
+    # the rules as they stand, and proposes. It changes nothing. 0 turns it off.
+    "review_every_days": 7,
+    "review_lookback_days": 14,
+    "review_after": "15:40",
 }
 
 # Sahab's Research Desk (research_desk.py): TradingAgents-style research briefs.

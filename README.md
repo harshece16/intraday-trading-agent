@@ -3560,6 +3560,16 @@ Most pages swallowed a failed request and sat on "Loading…" for good.
 
 No backend or trading behaviour changed.
 
+### 95. Chaywanaprash reviews the last two weeks of Sahab's Dimaag every week
+
+The owner asked for Chaywanaprash to improve Sahab's Dimaag on a schedule, using the logic and rules added in the past two weeks. Once a week, at the first engine tick after 15:40 on a trading day, it now reads 14 days of the journal, every change merged in that window (`git log`) and the trading rules as they stand in `docs/architecture/rules.json`. It then answers three questions: whether each change to how stocks are picked, entered, sized or exited shows up as working in the data; which rules never fire, fire on everything or contradict each other; and at most five improvements, each naming the file or rule id and the test it must pass first (net of costs, both halves of the sample, counted as a new trial).
+
+**It proposes; it does not edit the brain.** The report is saved to `chaywanaprash_reports` (`GET /api/chaywanaprash/reports`), and the live log says when it starts and when it is saved. A change it proposes goes through the normal branch, backtest and PR route like any other. An LLM rewriting entry rules from 13 closed trades would be curve-fitting, which is what the trial count and the Deflated Sharpe gate exist to stop.
+
+- **When:** a trading day after 15:40, when no 14-day review with a narrative is under a week old. At most one attempt a day, so a failed run retries the next trading day. It runs in its own thread; the CLI took 85 s on the first real run, and the tick doesn't wait.
+- **Settings:** `config.CHAYWANAPRASH["review_every_days"]` (7; `0` turns it off), `review_lookback_days` (14), `review_after` ("15:40"). It shares the 12-a-day budget and the API-or-CLI backends from §92.
+- **First run, on a copy of the journal (2026-09-28):** 125 merged changes and 202 trading rules went in (58 KB). Among its proposals: stop offering review cards whose own after-cost numbers are negative (already #166), check whether the Scorecard's failing verdict still applies now the scanner changed (§91), and audit target selection rather than lowering the 1.5 reward-to-risk bar. It also flagged two possible bookkeeping gaps (the cost item's pass and fail counts don't add up to the total, and `checklist_item_breakdown` is empty). These are unverified leads.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
