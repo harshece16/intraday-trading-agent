@@ -230,3 +230,133 @@ def test_engine_hooks_fill_only_at_live_kite_prices(monkeypatch, tmp_path):
     monkeypatch.setattr(jb, "close_round", lambda now, get_ltp, **k: seen.update(close=get_ltp))
     assert jb.maybe_close(NOW.replace(hour=15, minute=8))
     assert seen["close"] is jb.live_ltp
+
+
+# --- the live mark of an open round: display only (README section 90) ------------------------
+
+def _open_round(tmp_path, monkeypatch, responses=None, n=3):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    monkeypatch.setitem(jb._mark_cache, "key", None)
+    path = str(tmp_path / "s.json")
+    responses = responses or [_resp(action="buy"), _resp(action="short"), _resp(action="skip", size=0.1)]
+    jb.decide_round(_scanner(n), NOW, lambda s: 100.0, post=_post(responses), state_path=path,
+                    sleep=lambda s: None, live=lambda: True)
+    return path
+
+
+def _prices(**by_symbol):
+    calls = []
+
+    def quotes(keys):
+        calls.append(list(keys))
+        return {"NSE:" + s: {"last_price": p} for s, p in by_symbol.items()}
+    quotes.calls = calls
+    return quotes
+
+
+def test_the_live_mark_prices_an_open_round_after_costs(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)          # S0 buy (scanner LONG), S1 short (SHORT), S2 skip (LONG)
+    rt = jb.round_trip_bp()
+    live = jb.live_marks(path, quotes=_prices(S0=101.0, S1=99.0, S2=102.0), now=NOW.replace(hour=12))
+    assert live["status"] == "open" and live["positions"] == 2 and live["skips"] == 1 and live["priced"] == 2
+    assert live["closes_at"] == "15:08" and live["opened_at"] and live["marked_at"] and live["reason"] is None
+    m = live["marks"]
+    assert abs(m["S0"]["move_bp"] - 100.0) < 1e-6 and abs(m["S0"]["net_bp"] - (100.0 - rt)) < 1e-6
+    assert abs(m["S1"]["net_bp"] - (100.0 - rt)) < 1e-6                     # a short gains when the price falls
+    assert m["S2"]["net_bp"] == 0.0 and abs(m["S2"]["scanner_net_bp"] - (200.0 - rt)) < 1e-6   # a skip costs nothing
+    assert abs(live["mean_net_bp"] - (100.0 - rt)) < 1e-6                   # over Jev's two positions only
+    assert abs(live["scanner_mean_net_bp"] - (100.0 - rt)) < 1e-6
+
+
+def test_the_live_mark_is_never_stored_and_never_scored(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)
+    with open(path, "rb") as fh:
+        before = fh.read()
+    scored = jb.summary(path)
+    page = jb.page(path, quotes=_prices(S0=150.0, S1=50.0, S2=100.0), now=NOW.replace(hour=12))
+    with open(path, "rb") as fh:
+        assert fh.read() == before, "the mark must not touch the state file"
+    assert page["live"]["priced"] == 2 and page["live"]["mean_net_bp"] > 4000
+    for k in ("traded", "mean_net_bp", "t", "hit_rate", "sessions_closed", "scanner_mean_net_bp", "verdict_due"):
+        assert page[k] == scored[k], k
+    assert page["traded"] == 0 and page["mean_net_bp"] is None
+    # the close scores the 15:08 price alone, whatever the mark said
+    jb.close_round(NOW.replace(hour=15, minute=8), lambda s: 100.0, state_path=path)
+    closed = jb.summary(path)
+    assert closed["traded"] == 2 and abs(closed["mean_net_bp"] + jb.round_trip_bp()) < 1e-6
+
+
+def test_no_live_mark_without_kite_and_never_from_the_delayed_feed(tmp_path, monkeypatch):
+    import data_provider as dp
+    path = _open_round(tmp_path, monkeypatch)
+
+    def no_yfinance(*a, **k):
+        raise AssertionError("the delayed yfinance feed must not be used")
+    monkeypatch.setattr(dp, "_get_intraday_candles_yfinance", no_yfinance)
+    monkeypatch.setattr(dp, "get_ltp", no_yfinance)
+    monkeypatch.setattr(dp, "kite_data_active", lambda: False)
+    live = jb.live_marks(path, now=NOW.replace(hour=12))
+    assert live["positions"] == 2 and live["priced"] == 0 and live["marks"] == {} and live["mean_net_bp"] is None
+    assert "Kite is not connected" in live["reason"]
+
+    monkeypatch.setitem(jb._mark_cache, "key", None)
+    noted = []
+    monkeypatch.setattr(dp, "kite_data_active", lambda: True)
+    monkeypatch.setattr(dp, "_note_kite_failure", lambda exc: noted.append(exc))
+
+    def broken(keys):
+        raise ValueError("token expired")
+    monkeypatch.setattr(dp, "_get_kite", lambda: types.SimpleNamespace(ltp=broken))
+    live = jb.live_marks(path, now=NOW.replace(hour=12))
+    assert live["priced"] == 0 and "token expired" in live["reason"] and len(noted) == 1
+
+
+def test_a_stock_kite_cannot_price_is_left_out_of_the_mark(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)
+    live = jb.live_marks(path, quotes=_prices(S1=99.0), now=NOW.replace(hour=12))
+    assert set(live["marks"]) == {"S1"} and live["positions"] == 2 and live["priced"] == 1
+
+
+def test_only_a_round_opened_today_and_still_open_is_marked(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)
+    q = _prices(S0=101.0, S1=99.0, S2=100.0)
+    assert jb.live_marks(path, quotes=q, now=NOW.replace(day=29, hour=12)) is None      # yesterday's round
+    jb.close_round(NOW.replace(hour=15, minute=8), lambda s: 100.0, state_path=path)
+    monkeypatch.setitem(jb._mark_cache, "key", None)
+    assert jb.live_marks(path, quotes=q, now=NOW.replace(hour=15, minute=9)) is None    # closed
+    assert jb.page(path, quotes=q, now=NOW.replace(hour=15, minute=9))["live"] is None
+    assert q.calls == []
+    empty = str(tmp_path / "none.json")
+    assert jb.live_marks(empty, quotes=q, now=NOW) is None and jb.page(empty, quotes=q, now=NOW)["live"] is None
+
+
+def test_a_skipped_day_has_no_live_mark(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    jb.decide_round(_scanner(), NOW, lambda s: 100.0, post=_post([_resp()]), state_path=path,
+                    sleep=lambda s: None, live=lambda: False)
+    assert jb.live_marks(path, quotes=_prices(S0=1.0), now=NOW.replace(hour=12)) is None
+
+
+def test_one_kite_call_serves_page_refreshes_for_thirty_seconds(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)
+    q = _prices(S0=101.0, S1=99.0, S2=100.0)
+    t = {"now": 1000.0}
+    for _ in range(3):
+        live = jb.live_marks(path, quotes=q, now=NOW.replace(hour=12), clock=lambda: t["now"])
+        t["now"] += 10
+    assert len(q.calls) == 1 and live["priced"] == 2
+    t["now"] = 1000.0 + jb.MARK_TTL_S + 1
+    jb.live_marks(path, quotes=q, now=NOW.replace(hour=12), clock=lambda: t["now"])
+    assert len(q.calls) == 2
+    assert q.calls[0] == ["NSE:S0", "NSE:S1", "NSE:S2"]                     # one batched call, every priced decision
+
+
+def test_a_failing_mark_never_breaks_the_page(tmp_path, monkeypatch):
+    path = _open_round(tmp_path, monkeypatch)
+
+    def boom(*a, **k):
+        raise RuntimeError("unexpected")
+    monkeypatch.setattr(jb, "live_marks", boom)
+    page = jb.page(path)
+    assert page["live"] is None and page["decisions"] == 3

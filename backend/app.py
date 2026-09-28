@@ -497,9 +497,10 @@ class ModeUpdate(BaseModel):
 @app.get("/api/jev-book")
 def jev_book_summary():
     """The Jev book (README section 86): the LLM judge's paper decisions on the
-    daily shortlist, scored after costs against the scanner's own side."""
+    daily shortlist, scored after costs against the scanner's own side. While
+    today's round is open, "live" carries a display-only mark of its positions."""
     import jev_book
-    return jev_book.summary()
+    return jev_book.page()
 
 
 @app.get("/api/momentum-book")

@@ -113,3 +113,32 @@ that the rule means what it says:
   60 only if at least one decision was priced live at both ends.
 
 The questions, state, costs, pass rule and kill rule are unchanged.
+
+---
+
+# Clarification 4 — 2026-09-28, after the first round opened and before any round has closed
+
+At the owner's request the Jev Book page shows, while a round is open, where
+its positions stand at Kite's last traded prices ("if closed now", after the
+same round-trip cost). Until now the page showed nothing between the 09:45
+entries and the 15:08 close, and read as if the book were not trading.
+
+**What had been seen when this was written:** the first round's 15 entries
+(2 buys, 13 shorts, no skips, every one on the scanner's own side), and two
+interim marks of it, −9.9 bp a position at 12:14 and −10.7 bp at 12:22. No
+round has closed, so no scored result exists.
+
+**What this changes: nothing in the test.**
+
+- The mark is display only. It is computed on request, never written to the
+  state file, and never enters the summary, the kill rule or the verdict.
+- The record of a decision is still its entry when Jev answered and its exit
+  at the 15:08 square-off, both from Kite. The pass rule is evaluated once,
+  at 300 decisions or 60 sessions, on those closes alone.
+- Jev is shown nothing new. Its snapshot and questions are unchanged.
+- Nothing acts on the mark: no stop, no target, no early close.
+- Prices for the mark come from Kite only, as for the fills (Clarification 3).
+  Without Kite the page says there is no live mark.
+
+An interim mark can tempt a reader to judge the test early. The page says
+beside the figure that it is a live mark and not a result.

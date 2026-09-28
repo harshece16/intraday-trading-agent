@@ -1617,6 +1617,18 @@
    "test": null
   },
   {
+   "id": "JEV-15",
+   "area": "jev",
+   "status": "active",
+   "rule": "While a round is open, the Jev Book page shows where its positions stand at Kite's last traded prices. The mark is for display only: it is never written to the state file and never enters a score, the kill rule or the verdict.",
+   "why": "The owner needs to see that the book is trading before the 15:08 close, and the test's record must still be the close alone.",
+   "enforced_in": "backend/jev_book.py:live_marks; backend/jev_book.py:page; backend/app.py:jev_book_summary",
+   "config": "MARK_TTL_S = 30 (one Kite call serves page refreshes for 30 s)",
+   "verify": "Jev Book page while a round is open: the pill reads 'Open until 15:08' and an 'If closed now' line shows the mark; GET /api/jev-book carries it under 'live'. backend/data/jev_book_state.json holds no mark fields.",
+   "source": "README §90; docs/research/prereg-jev-book.md (Clarification 4)",
+   "test": "backend/tests/test_jev_book.py::test_the_live_mark_is_never_stored_and_never_scored"
+  },
+  {
    "id": "OBK-01",
    "area": "orderbook",
    "status": "active",

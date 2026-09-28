@@ -6,7 +6,7 @@ Start here. These documents describe `main` as of 2026-09-28.
 | --- | --- | --- |
 | [High-Level Design](HLD.md) | What the system is, its parts, a trading day, where entries stop, how it fails | 10 minutes |
 | [Low-Level Design](LLD.md) | Every module, the tick sequence, formulas, the API, the database, the settings | Reference |
-| [Rules checklist](RULES.md) | All 227 rules: what each says, the code that enforces it, how to check it | Reference |
+| [Rules checklist](RULES.md) | Every rule: what it says, the code that enforces it, how to check it | Reference |
 | [Knowledge graph](KNOWLEDGE_GRAPH.md) | How the code and the research connect, and how to query it | 5 minutes |
 
 ## Interactive rulebook

@@ -18,6 +18,11 @@ data or positions. The TypeSafe key comes from TYPESAFE_API_KEY or
 backend/.typesafe_key.json (see typesafe_key.py); until one is stored, each
 day is recorded as "Jev unavailable" and nothing is traded. The book stops itself
 if, after 100 buy/short decisions, the cumulative net t is below -2.
+
+While a round is open the page shows a live mark of its positions
+(live_marks). That mark is for display only: it is never written to the state
+file and never enters a score, the kill rule or the verdict. Those use the
+15:08 close alone.
 """
 
 import datetime
@@ -361,6 +366,107 @@ def maybe_close(now):
         return False
 
 
+# --- live mark of the open round (display only) ---------------------------------------------
+
+MARK_TTL_S = 30                      # one Kite call serves every page refresh for this long
+_mark_lock = threading.Lock()
+_mark_cache = {"key": None, "at": 0.0, "value": None}
+
+
+def _kite_quotes(keys):
+    """Kite's last traded prices for `keys` ("NSE:SYMBOL"), or an exception.
+    Never the delayed feed, for the same reason the fills don't use it (#151)."""
+    import data_provider
+    if not data_provider.kite_data_active():
+        raise RuntimeError("Kite is not connected, so there is no live price")
+    try:
+        return data_provider._get_kite().ltp(keys)
+    except Exception as exc:
+        data_provider._note_kite_failure(exc)
+        raise
+
+
+def _now_ist():
+    from zoneinfo import ZoneInfo
+    return datetime.datetime.now(ZoneInfo("Asia/Kolkata"))
+
+
+def live_marks(state_path=None, quotes=None, now=None, clock=time.time):
+    """Where today's open paper positions stand right now, at Kite's prices.
+
+    Display only. It reads the state file and writes nothing; no figure here
+    reaches summary(), the kill rule or the verdict. Returns None unless a
+    round opened today is still open."""
+    now = now or _now_ist()
+    today = now.date().isoformat()
+    day = load_state(state_path)["days"].get(today)
+    if not day or day.get("closed") or day.get("status") not in ("open", "deciding"):
+        return None
+    priced_at_entry = [d for d in day["decisions"] if d.get("entry") is not None]
+    held = [d for d in priced_at_entry if d.get("action") in ("buy", "short")]
+    try:
+        import config
+        closes_at = config.SQUARE_OFF_TIME
+    except Exception:
+        closes_at = "15:08"
+    out = {
+        "date": today, "status": day["status"], "closes_at": closes_at,
+        "opened_at": min((d["asked_at"] for d in day["decisions"] if d.get("asked_at")), default=None),
+        "positions": len(held),
+        "skips": sum(1 for d in day["decisions"] if d.get("action") == "skip"),
+        "excluded": sum(1 for d in day["decisions"] if d.get("excluded")),
+        "marked_at": None, "priced": 0, "mean_net_bp": None, "scanner_mean_net_bp": None,
+        "reason": None, "marks": {},
+    }
+    if not priced_at_entry:
+        return out
+
+    key = (state_path or STATE_PATH, today, tuple(d["symbol"] for d in priced_at_entry))
+    with _mark_lock:
+        if _mark_cache["key"] == key and clock() - _mark_cache["at"] < MARK_TTL_S:
+            return {**out, **_mark_cache["value"]}
+    try:
+        got = (quotes or _kite_quotes)(["NSE:" + d["symbol"] for d in priced_at_entry])
+    except Exception as exc:
+        fresh = {"reason": str(exc)[:160] or type(exc).__name__}
+    else:
+        rt, marks, jev, scan = round_trip_bp(), {}, [], []
+        for d in priced_at_entry:
+            q = (got or {}).get("NSE:" + d["symbol"]) or {}
+            ltp = q.get("last_price")
+            if not isinstance(ltp, (int, float)) or ltp <= 0:
+                continue
+            move = (ltp / d["entry"] - 1) * 1e4
+            sign = {"buy": 1, "short": -1}.get(d.get("action"))
+            ssign = {"LONG": 1, "SHORT": -1}.get((d.get("scanner_side") or "").upper())
+            m = {"ltp": float(ltp), "move_bp": move,
+                 "net_bp": (sign * move - rt) if sign else 0.0,
+                 "scanner_net_bp": (ssign * move - rt) if ssign else 0.0}
+            marks[d["symbol"]] = m
+            if sign:
+                jev.append(m["net_bp"])
+                scan.append(m["scanner_net_bp"])
+        fresh = {"marked_at": now.isoformat(timespec="seconds"), "priced": len(jev), "marks": marks,
+                 "mean_net_bp": st.mean(jev) if jev else None,
+                 "scanner_mean_net_bp": st.mean(scan) if scan else None,
+                 "reason": None if marks else "Kite returned no price for these stocks"}
+    with _mark_lock:
+        _mark_cache.update(key=key, at=clock(), value=fresh)
+    return {**out, **fresh}
+
+
+def page(state_path=None, quotes=None, now=None):
+    """What the Jev Book page shows: the scored summary and, while today's
+    round is open, the live mark of its positions under "live"."""
+    out = summary(state_path)
+    try:
+        out["live"] = live_marks(state_path, quotes=quotes, now=now)
+    except Exception:
+        logger.exception("Jev book: live mark failed")
+        out["live"] = None
+    return out
+
+
 # --- the read side -------------------------------------------------------------------------
 
 def summary(state_path=None):
@@ -400,6 +506,7 @@ def summary(state_path=None):
         "verdict_due": len(tr) >= conf["verdict_after_decisions"] or len(sessions) >= conf["verdict_after_sessions"],
         "last_day": ({"date": last, **{k: v for k, v in state["days"][last].items() if k != "decisions"},
                       "decisions": [{k: d.get(k) for k in ("symbol", "action", "p_up", "size_level", "scanner_side",
-                                                           "entry", "exit", "move_bp", "net_bp", "scanner_net_bp", "excluded")}
+                                                           "entry", "exit", "move_bp", "net_bp", "scanner_net_bp", "excluded",
+                                                           "asked_at")}
                                     for d in state["days"][last]["decisions"]]} if last else None),
     }
