@@ -6,6 +6,218 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 22 — 2026-09-28 — automated reviewer: stage 0 (L41) ACCEPTED, run 2 passes all six gates. Amendments 2 and 3 ACCEPTED WITH CORRECTIONS. The three loader fixes are legitimate; one is written less exactly than the code applies it. The tiers are not testable and must not be run, and S3 stays. A′, B′ and W may run once amendment 4 and a panel-difference list are committed. Nothing waits on the owner for these runs.
+
+Reviewed amendments 2 and 3, `momentum_width_stage0_run1.json` and
+`_run2.json`, `git diff 946cc31 HEAD -- backend/`, and BUG_LOG rows #175,
+#177 and #178. Figures marked "recorded series" are my arithmetic on the
+committed `momentum_3i_partA.json` and `momentum_3i_partB.json`. I could
+not run the unit tests: this session's Python has no pytest.
+
+### State, checked
+
+| Claim | Source | Result |
+| --- | --- | --- |
+| Text first, then code, then run, each time | `git log`; `run_at` in the two outputs | `ac42d2d` 22:31 → `1991648` 22:32 → run 1 22:35 → `142134c` 22:40:09 → `3d210ce` 22:40:28 → run 2 22:43 |
+| The pre-registration is append-only | `git diff a2372f8 HEAD` | No line removed |
+| No part other than stage 0 has run | `docs/research/data/` | Three stage-0 files only |
+| Run 1: gate 6 fails on 2 of 67 jumps | run 1 output | Match: AURUM, KESORAMIND |
+| Run 2: six gates pass, 64 jumps, none unapplied | run 2 output | Match |
+| Jumps gone: three. None new. None changed | Both jump lists compared | Match |
+| List sizes identical between runs | Both outputs | Match |
+| Engine parity 4.4e-16 and 4.1e-15, holdings identical | Both outputs | Match |
+| Universe parity 100% in each band; loader parity 0 | Both outputs | Match |
+| Months: T3 63, T4 56, T5 30, W at 800 56, at 600 63, at 400 138 | run 2 output | Match |
+| 306 and 1,217 names against 915 and 1,696 | List sizes, 2013-12 and 2025-12 | Match |
+| Exactly two actions newly applied | Counts: dividend +1, demerger +1, rejected −2 | Match |
+
+One fix-and-re-run round of the two allowed has been used.
+
+### Verdict
+
+Stage 0 is accepted. It read list sizes, corporate actions and one-day
+price moves, and no strategy return. Gate 6 did what it was written for:
+it failed, named two real actions, and a parser defect was found from its
+list. The finding that matters is gate 7. **The test as registered cannot
+say whether the rule works beyond rank 400.**
+
+I share that miss. Entry 20 noted that a fixed rupee floor is stricter in
+2010 than in 2025 and left it to gate 7. It also asked for counts of S1
+and S2 failures inside ranks 1–400 as though S3 could not bind there.
+Stage 0 shows S3 failed 1,558 member-months inside ranks 201–400.
+
+### a. The three fixes
+
+| Fix | Ruling | Why |
+| --- | --- | --- |
+| Dividend cap, 90% to the whole price | Legitimate | 3i's written rule has no cap. 3i's own amendment 1 moved this guard from 50% to 90% for the same reason. Gate 6 named a real action. Only one event is newly applied. See F3 |
+| Demerger floor, 0.05 to 0.01 | Legitimate, but the text understates it | See F1 |
+| Dividend amounts (#178) | Legitimate | Found from the jump list. The rule is general, and changes 7 rows. The evidence is prose and five test cases. See F2 |
+
+### b. The tiers
+
+Agreed on both points. Gate 7 was written before stage 0, so T3, T4 and T5
+are not run. Running them on 63, 56 and 30 months would read returns that
+no rule could judge, and would spend the unread sample for nothing. S3 is
+not changed in this test.
+
+I also agree that a test with a different floor is a new pre-registration
+and that the owner decides whether to have one. I propose no floor.
+
+**Would list sizes alone taint it?** Not the return evidence: no return
+beyond rank 400 has been read. Two things would need disclosing:
+- What was seen: list sizes by month, the tradability map by tier and
+  year, the median traded value at each rank, and the jump list.
+- A floor that lets the tiers start in 2010 adds years whose momentum
+  results are known for ranks 1–400. The tiers are new stocks in old
+  months (amendment 1, section 10).
+
+Conditions for any such test: a new document and new ledger numbers, each
+part counted in the family; the floor justified by tradability evidence
+and set by a rule that uses no return; the fill rules and slippage table
+carried over unchanged; review before code.
+
+### c. W's months
+
+Confirmed against amendment 1, section 4, and the code.
+
+| Item | Text | Code |
+| --- | --- | --- |
+| Criterion 3, both halves | W's own months, first floor(n/2) | 138 returns, 69 / 69 |
+| Criterion 3, last three years | Labels from 2023-01 | `LAST3_START` |
+| Criterion 6 | Months W and A′ share | 138, labels 2014-06 to 2025-11 |
+| Criterion 7 | Same months | Same |
+| A′'s own criteria | Its full run | 189 |
+
+### d. The nine demerger residuals
+
+None blocks A′. The demerger rule is the same in both panels apart from
+the floor, so the residuals sit in trial 120 and A′ alike, and in W and A′
+alike. Recorded series: none of the nine names was held by trial 120's or
+L38's book on its date. Two things are new (F10):
+- Two residuals are upward: PIRPHYTO +51.0% and SINTEX +44.4%. 3i's stage
+  0 listed drops only, so these were never disclosed.
+- Trial 120 bought SINTEX at the 2017-08 and 2017-09 rebalances, when its
+  six-month score still contained the +44.4%.
+
+### e. Code against text
+
+The thresholds, K, halves, order of fills, zero-value rows, the low-price
+lock, gates 3, 5 and 6, and the A′ report at N = 10 all transcribe the
+text. Four places do not:
+
+| Code | Text | Correction |
+| --- | --- | --- |
+| The demerger floor moves in two places | "Accepted down to 0.01"; section 5 says the rule is not changed | F1 |
+| Only consolidations are reported against holdings | Amendment 3, section 3, promises all five differences | F9 |
+| `run_wide()` reads three tier files | "T3, T4 and T5 are not run" | F7 |
+| Break-even slippage is an addition to every fill | "The slippage per side at which the base result would be zero" | F11 |
+
+### What is already known about W's 138 months
+
+Recorded series, labels 2014-06 to 2025-11. These replace the full-sample
+figures in amendment 1, section 11, for judging W.
+
+| Quantity | Value |
+| --- | --- |
+| L38's book minus trial 120's book | +0.35% a month, sd 5.17%, t 0.79 |
+| The same, by half | −0.09% then +0.78% |
+| Monthly Sharpe, trial 120 against L38 | 0.326 against 0.323 |
+| Ranks 201–400 equal-weighted minus the top 200 | +0.33% a month, t 1.35 |
+| Trial 120's excess on these months | +1.03% a month, t 3.10 |
+| L38's excess on these months | +1.05% a month, t 2.89 |
+
+On these months the nearest recorded comparison fails the both-halves part
+of criterion 6 and does not pass criterion 7.
+
+### Corrections
+
+**Before A′ runs: amendment 4 (text) and one list**
+
+**F1. Demerger floor.** 3i's written rule names 0.05 as the lower edge of
+the window that chooses the open ratio. The code moved that edge and the
+acceptance bound. Write: "In the repaired panel the demerger rule is 3i's
+with 0.01 in place of 0.05, both where the open ratio is chosen and where
+a ratio is accepted." Correct section 5 to match.
+
+**F2. Panel-difference list.** Commit a list of every corporate action
+whose factor differs between the default and the repaired panel: chain,
+ex-date, kind, purpose, old factor, new factor. It reads two cached panels
+and no return, and is not a stage-0 round. Expected: one consolidation
+(VERTOZ), two newly applied actions (AURUM, KESORAMIND) and seven dividend
+amounts. **If anything else is on it, stop and bring it back before A′.**
+
+**F3. The known effect on B′.** Recorded L38 held AURUM after the 2020-11
+rebalance, through the ex-date. Its return labelled 2020-12 was +1.99%
+against a benchmark of +5.94%. The fix removes a loss of about 98.8% on
+one of fifteen names, so B′ should beat L38 by about 6.6 points in that
+month, about +0.035% a month on the mean. Say so before the run: the fix
+is forced by gate 6, and it moves the result in the favourable direction.
+
+**F4. What had been seen, and power, for 138 months.** Add the table
+above. Restate the power: criterion 6 needs +0.68% a month and 80% power
+needs 1.02% at the full-sample sd of 4.81%; at the sub-period's 5.17% they
+are 0.73% and 1.10%.
+
+**F5. W's universe is not only stock-months already read.** E-wide ranks
+1–400 fills the places of screened names with names from E-3i ranks beyond
+400. Two sentences in amendment 3, section 4, are therefore not exact: "A
+pass would rest only on stock-months trial 120 or L38 already read" and
+"No return on ranks beyond 400 is read". Count, from the lists and by
+month from 2014-05, the member-months of W's universe with an E-3i rank
+above 400. Reword both sentences with that count.
+
+**F6. N_family stays 10** and the bound stays 2.807, although T3 to T5 do
+not run. Lowering them would change a pass criterion after stage-0 output.
+
+**F7. Tier records.** Say that the T3, T4 and T5 commands are invoked once
+each to write "not testable" records, because `run_wide()` reads the three
+files. They build lists and return before `simulate`. L43 to L45 are not
+taken.
+
+**F8. Ledger.** `trials.md` has no row for L41. Add it: two runs, run 1
+failed gate 6 on two jumps, run 2 passed, no strategy return read. Record
+that L43 to L45 were not taken and why.
+
+**With the results**
+
+**F9. The report promised in amendment 3, section 3.** Add the seven
+dividend corrections and the two newly applied actions, by reading F2's
+list against the saved holdings. No re-run.
+
+**F10. The nine residuals.** Report with each part whether any was held on
+its date or bought in the twelve months after. Add a note to 3i's results
+file with the two points in section d.
+
+**F11. Small.**
+- Say why MONNETISPA 2018, the second consolidation row #177 names, was
+  not applied.
+- Call the break-even figure "added slippage per side".
+- Known limit: gate 6 takes membership at the month-end before the jump,
+  so a jump after a gap longer than a month is not listed, even for a name
+  a book still holds.
+- For any later test beyond rank 400: DVL's two jumps (+171% and +126%, on
+  days with ₹13 lakh and ₹2 lakh traded) are kept as real prices. They are
+  not credible one-day returns for a banded stock.
+
+### Needs the owner's decision
+
+Nothing blocks A′, B′ or W.
+- Tell the owner now that the main question could not be tested and why.
+  It depends on no return. Whether to register a new test is theirs.
+- If A′ or B′ fails, the running book goes to the owner, as written.
+- A pass of W produces a recommendation only.
+
+### Next step, and where to stop
+
+1. Commit amendment 4 (F1, F3 to F8) and the list (F2).
+2. If the list holds only the ten expected rows, run A′, then B′, then the
+   three tier records, then W. One invocation each.
+3. Stop for review with the four outputs, the results file and the ledger
+   rows. Do not re-run any part.
+
+---
+
 ## Entry 21 — 2026-09-28 — automated reviewer: amendment 1 to `prereg-universe-width.md` ACCEPTED WITH MINOR CORRECTIONS — all eighteen corrections are answered and the arithmetic checks out. K = 800, N_family = 10 and A′ judged by trial 120's own criteria all stand. Ten small items remain; one (gate 5 must cover consolidations) has to be written before stage 0. After a short amendment 2 the code may be aligned and stage 0 run. O2 does not block T3.
 
 Reviewed amendment 1 (commit `a2372f8`, sections 1 to 15), the reworded
