@@ -74,8 +74,9 @@ rotated with the scanner: 51 stocks were sampled at least once, and only 10
 met the 90% coverage rule of Amendment 1. No feature has been computed and
 no sample has been joined to a return.
 
-**The change:** from 2026-09-29 the engine's watchlist is fixed for each
-session. It is the 25 eligible NIFTY 100 stocks with the highest 20-day
+**The change:** from the first session on which this is deployed (expected
+2026-09-29; the actual date is added below once it is live), the engine's
+watchlist is fixed for each session. It is the 25 eligible NIFTY 100 stocks with the highest 20-day
 average turnover, chosen before the open from daily data and kept all day
 (README §91). A stock that becomes ineligible during the day is dropped and
 not replaced. The choice uses no price move, order-book reading or return.

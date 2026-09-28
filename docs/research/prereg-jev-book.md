@@ -151,10 +151,11 @@ beside the figure that it is a live mark and not a result.
 on the scanner's own side, +22.8 bp net a position (t 0.86), identical to
 the scanner, while the NIFTY fell 36 bp over the same window.
 
-**The change:** from 2026-09-29 the scanner's list is chosen differently
-(README §91). It becomes the 25 eligible stocks with the highest 20-day
+**The change:** from the first session on which this is deployed (expected
+2026-09-29; the actual date is added below once it is live), the scanner's
+list is chosen differently (README §91). It becomes the 25 eligible stocks with the highest 20-day
 average turnover, fixed for the day, in turnover order. The Jev book still
-takes the first 15 names on that list, so from 2026-09-29 Jev judges the 15
+takes the first 15 names on that list, so from then on Jev judges the 15
 most-traded eligible NIFTY 100 stocks each day.
 
 **Unchanged:** the snapshot Jev sees, including the scanner's side and
