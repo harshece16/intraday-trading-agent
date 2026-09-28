@@ -565,3 +565,91 @@ owner was told in the session on 2026-09-28, before stage 0.
 
 Filed as #177, with a row in `BUG_LOG.md`. The live loader in
 `momentum_book.py` has the same gap. Its fix is outside this test.
+
+---
+
+# Amendment 3 — 2026-09-28, after stage 0 run 1, before any return is read
+
+Stage 0 ran once, on code `1991648`. Its output is kept as
+`data/momentum_width_stage0_run1.json`. It read list sizes, corporate
+actions and one-day price moves. It read no strategy return.
+
+## 1. What run 1 found
+
+| Gate | Result |
+| --- | --- |
+| 1 Coverage | pass |
+| 2 Loader parity | pass, 0 differences |
+| 3 Universe parity | pass, 100% in ranks 1–200 and in ranks 201–400 |
+| 4 Engine parity | pass: largest difference 4.4e-16 (trial 120) and 4.1e-15 (L38), holdings identical |
+| 5 Adjustment consistency | pass, 98.4% of 806 |
+| 6 No unapplied action behind a jump | **fail, 2 of 67 jumps** |
+
+The two are real actions that fell outside the loader's bounds:
+
+| Stock | Date | Action in NSE's file | Why it was not applied |
+| --- | --- | --- | --- |
+| AURUM | 2020-12-23 | Interim dividend of ₹974 on a price of ₹986 | Dividends above 90% of the price are refused |
+| KESORAMIND | 2025-03-10 | Demerger that left 4.7% of the price | Demerger ratios below 5% are refused |
+
+## 2. Fixes, in the repaired panel only
+
+The default panel is not touched, so trial 120 stays reproducible.
+
+1. A dividend is applied when it is below the previous close. The cap was
+   90% of it.
+2. A demerger ratio is accepted down to 0.01. The floor was 0.05.
+3. **Dividend amounts.** The jump list showed TULSYAN on 2012-09-20 with an
+   adjusted return of +36.4% against a printed −3.9%. The parser had read
+   the face value in "Div. Of Rs. 1.50/- Per Equity Share Of Rs. 10/- Each"
+   as a second dividend. Reading all 36,750 rows both ways changes seven
+   dividends and nothing else: four face values, two bracketed breakdowns
+   (GSKCONS 2011, ITC 2016) and one stray match (HINDZINC 2018). Filed as
+   #178. The repaired panel reads a dividend without face values or
+   bracketed remarks.
+
+Stage 0 is re-run once after the code commit (round 2 of the three allowed).
+
+## 3. What now differs between A′ and trial 120
+
+Five things: BE and BZ rows are priced; consolidations are adjusted; seven
+dividend amounts are corrected; two actions outside the old bounds are
+applied; and the fill rules H1 to H5 apply. A′ and B′ report how many of
+these touched a name either book held.
+
+## 4. The tiers cannot be tested, and K is 400
+
+| Part | First month the list is long enough | Monthly returns | Rule |
+| --- | --- | --- | --- |
+| T3, ranks 401–600 | 2020-08 | 63 | not testable |
+| T4, ranks 601–800 | 2021-03 | 56 | not testable |
+| T5, ranks 801–1,000 | 2023-05 | 30 | not testable |
+| W at K = 800 | 2021-03 | 56 | not testable |
+| W at K = 600 | 2020-08 | 63 | not testable |
+| **W at K = 400** | **2014-05** | **138** | **runs** |
+
+The cause is screen S3. A floor of ₹70 lakh a day roughly halves the list:
+306 names passed at the end of 2013 and 1,217 at the end of 2025, against
+915 and 1,696 without the screens. Through most of the sample fewer than
+600 stocks traded that much.
+
+By the rules written before stage 0:
+
+- **T3, T4 and T5 are not run and not judged.** No return on ranks beyond
+  400 is read, so the sample named in the entry-timing sweep stays unread.
+- **W runs at K = 400**, from 2014-05. Criterion 8 has no tier to test. A
+  pass would rest only on stock-months trial 120 or L38 already read
+  (amendment 2, section 3).
+- S3 is not changed. No rule under Eligibility, Honest fills or the pass
+  criteria changes after stage-0 output.
+
+So this test cannot say whether the rule works beyond rank 400. It can say
+whether one screened book over the 400 most-traded beats the running book
+over the 200 most-traded.
+
+## 5. Known flaw that stays
+
+Nine of the 67 jumps fall on a demerger date where the loader did apply a
+factor and the adjusted return is still beyond ±30% (ADANIENT 2015,
+ZEEMEDIA 2010, SINTEX 2017 and six others). The demerger rule is 3i's and
+is not changed here. The list is in the stage-0 output.

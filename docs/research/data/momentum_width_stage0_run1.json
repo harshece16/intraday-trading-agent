@@ -1,0 +1,2056 @@
+{
+ "prereg": "prereg-universe-width.md",
+ "ledger": "look L41",
+ "round": 1,
+ "run_at": "2026-09-28T22:35:43",
+ "meta": {
+  "files": 4215,
+  "bad_files": 0,
+  "sessions": 4215,
+  "chains": 3088,
+  "fund_units_excluded": 322,
+  "actions_applied": {
+   "split": 586,
+   "bonus": 594,
+   "rights": 278,
+   "demerger": 178,
+   "dividend": 20302,
+   "unparsed": 34,
+   "unparsed_rights": 28,
+   "rejected": 45,
+   "no_chain": 158,
+   "no_session": 1171,
+   "consolidation": 1
+  },
+  "built_seconds": 83.3,
+  "rows_by_series": {
+   "EQ": 6455077,
+   "BE": 561612,
+   "BZ": 62113
+  }
+ },
+ "files_per_year": {
+  "2009": 243,
+  "2010": 253,
+  "2011": 247,
+  "2012": 252,
+  "2013": 250,
+  "2014": 244,
+  "2015": 248,
+  "2016": 247,
+  "2017": 248,
+  "2018": 246,
+  "2019": 245,
+  "2020": 252,
+  "2021": 248,
+  "2022": 248,
+  "2023": 246,
+  "2024": 249,
+  "2025": 249
+ },
+ "month_ends_late": [],
+ "loader_differences": [],
+ "engine_parity": {
+  "A": {
+   "months": 189,
+   "recorded_months": 189,
+   "largest_difference": 4.440892098500626e-16,
+   "holdings_identical": true,
+   "ok": true
+  },
+  "B": {
+   "months": 189,
+   "recorded_months": 189,
+   "largest_difference": 4.107825191113079e-15,
+   "holdings_identical": true,
+   "ok": true
+  }
+ },
+ "universe_parity_share": {
+  "1-200": 1.0,
+  "201-400": 1.0
+ },
+ "universe_differences": [],
+ "universe_differences_total": 0,
+ "splits_bonuses_consolidations_checked": 806,
+ "inconsistent": [
+  {
+   "symbol": "SHREEASHTA",
+   "ex_date": "2010-02-01",
+   "kind": "bonus",
+   "factor": 0.2,
+   "adjusted_return": 0.2006,
+   "purpose": "Bonus 4:1"
+  },
+  {
+   "symbol": "ENGINERSIN",
+   "ex_date": "2010-05-06",
+   "kind": "split",
+   "factor": 0.5,
+   "adjusted_return": 0.2,
+   "purpose": "Fv Spl-Rs10tors5/Bon-2:1"
+  },
+  {
+   "symbol": "ENGINERSIN",
+   "ex_date": "2010-05-06",
+   "kind": "bonus",
+   "factor": 0.3333333333333333,
+   "adjusted_return": 0.2,
+   "purpose": "Fv Spl-Rs10tors5/Bon-2:1"
+  },
+  {
+   "symbol": "RESURGERE",
+   "ex_date": "2010-09-15",
+   "kind": "split",
+   "factor": 0.1,
+   "adjusted_return": 0.2165,
+   "purpose": "Annual General Meeting/Bonus 2:1/Face Value Split From Rs.10/- To Re.1/-"
+  },
+  {
+   "symbol": "RESURGERE",
+   "ex_date": "2010-09-15",
+   "kind": "bonus",
+   "factor": 0.3333333333333333,
+   "adjusted_return": 0.2165,
+   "purpose": "Annual General Meeting/Bonus 2:1/Face Value Split From Rs.10/- To Re.1/-"
+  },
+  {
+   "symbol": "PRAKASHSTL",
+   "ex_date": "2016-03-03",
+   "kind": "split",
+   "factor": 0.1,
+   "adjusted_return": 0.2018,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Re 1/- Per Share"
+  },
+  {
+   "symbol": "VISHWARAJ",
+   "ex_date": "2021-10-21",
+   "kind": "split",
+   "factor": 0.2,
+   "adjusted_return": 0.2001,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share"
+  },
+  {
+   "symbol": "EASEMYTRIP",
+   "ex_date": "2022-11-21",
+   "kind": "split",
+   "factor": 0.5,
+   "adjusted_return": 0.2002,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 2/- Per Share To Re 1/- Per Share"
+  },
+  {
+   "symbol": "EASEMYTRIP",
+   "ex_date": "2022-11-21",
+   "kind": "bonus",
+   "factor": 0.25,
+   "adjusted_return": 0.2002,
+   "purpose": "Bonus 3:1"
+  },
+  {
+   "symbol": "ANMOL",
+   "ex_date": "2023-07-18",
+   "kind": "bonus",
+   "factor": 0.2,
+   "adjusted_return": 0.2,
+   "purpose": "Bonus 4:1"
+  },
+  {
+   "symbol": "TALBROAUTO",
+   "ex_date": "2023-10-27",
+   "kind": "split",
+   "factor": 0.2,
+   "adjusted_return": 0.2001,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share"
+  },
+  {
+   "symbol": "CGCL",
+   "ex_date": "2024-03-05",
+   "kind": "split",
+   "factor": 0.5,
+   "adjusted_return": 0.2,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 2/- Per Share To Re 1/- Per Share"
+  },
+  {
+   "symbol": "CGCL",
+   "ex_date": "2024-03-05",
+   "kind": "bonus",
+   "factor": 0.5,
+   "adjusted_return": 0.2,
+   "purpose": "Bonus 1:1"
+  }
+ ],
+ "consistent_share": 0.9838709677419355,
+ "consolidations_applied": [
+  {
+   "symbol": "VERTOZ",
+   "ex_date": "2025-06-25",
+   "ratio": 10.0,
+   "purpose": "Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share",
+   "inside_ranks_1_to_400": false,
+   "held_by_this_book": false
+  }
+ ],
+ "jumps": [
+  {
+   "symbol": "ZEEMEDIA",
+   "date": "2010-04-15",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.5283,
+   "raw_return": -0.7565,
+   "traded_value": 2432050513.8,
+   "actions_in_nse_file": [
+    [
+     "2010-04-15",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "KESARENT",
+   "date": "2010-05-13",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3217,
+   "raw_return": -0.5586,
+   "traded_value": 29092110.8,
+   "actions_in_nse_file": [
+    [
+     "2010-05-13",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "SURANAT&P",
+   "date": "2010-08-17",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.5646,
+   "raw_return": -0.6659,
+   "traded_value": 41037001.1,
+   "actions_in_nse_file": [
+    [
+     "2010-08-17",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "RELMEDIA",
+   "date": "2010-10-05",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3677,
+   "raw_return": 0.3677,
+   "traded_value": 6173125814.25,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "TEXINFRA",
+   "date": "2010-11-01",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3051,
+   "raw_return": -0.5943,
+   "traded_value": 29228472.45,
+   "actions_in_nse_file": [
+    [
+     "2010-11-01",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "TRIVENI",
+   "date": "2011-05-03",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.4292,
+   "raw_return": -0.5996,
+   "traded_value": 315541084.8,
+   "actions_in_nse_file": [
+    [
+     "2011-05-03",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "GTL",
+   "date": "2011-06-20",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.6218,
+   "raw_return": -0.6218,
+   "traded_value": 7481514990.95,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "GTLINFRA",
+   "date": "2011-06-20",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.4274,
+   "raw_return": -0.4274,
+   "traded_value": 2096050396.25,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "GTL",
+   "date": "2011-09-09",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3292,
+   "raw_return": 0.3292,
+   "traded_value": 3562507009.0,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "ORIENTCER",
+   "date": "2011-11-11",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.472,
+   "raw_return": -0.6633,
+   "traded_value": 3078746.45,
+   "actions_in_nse_file": [
+    [
+     "2011-11-11",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "PIRPHYTO",
+   "date": "2011-12-23",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.51,
+   "raw_return": -0.9245,
+   "traded_value": 5663348.25,
+   "actions_in_nse_file": [
+    [
+     "2011-12-23",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "IGL",
+   "date": "2012-04-10",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.339,
+   "raw_return": -0.339,
+   "traded_value": 10846799184.55,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "TULSYAN",
+   "date": "2012-09-20",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3636,
+   "raw_return": -0.0385,
+   "traded_value": 8142.15,
+   "actions_in_nse_file": [
+    [
+     "2012-09-20",
+     "Annual General Meeting / Div. Of Rs. 1.50/- Per Equity Share Of Rs. 10/- Each."
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "UNITDSPR",
+   "date": "2012-11-12",
+   "sessions_since_last_row": 2,
+   "adjusted_return": 0.3473,
+   "raw_return": 0.3473,
+   "traded_value": 42408270967.25,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "COREEDUTEC",
+   "date": "2013-02-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.624,
+   "raw_return": -0.624,
+   "traded_value": 2296018446.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "COREEDUTEC",
+   "date": "2013-02-27",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.4581,
+   "raw_return": -0.4581,
+   "traded_value": 1909686640.8,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "SUZLON",
+   "date": "2013-02-28",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3402,
+   "raw_return": -0.3402,
+   "traded_value": 6237951156.0,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "OPTOCIRCUI",
+   "date": "2013-05-31",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.377,
+   "raw_return": -0.377,
+   "traded_value": 1249764804.35,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "OPTOCIRCUI",
+   "date": "2013-07-15",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3443,
+   "raw_return": 0.3443,
+   "traded_value": 1085775258.55,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "63MOONS",
+   "date": "2013-08-01",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.645,
+   "raw_return": -0.645,
+   "traded_value": 6723290487.95,
+   "actions_in_nse_file": [
+    [
+     "2013-08-07",
+     "First Interim Dividend Rs.2/- Per Share (Purpose Revised)"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "63MOONS",
+   "date": "2013-08-05",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3431,
+   "raw_return": 0.3431,
+   "traded_value": 4378786548.65,
+   "actions_in_nse_file": [
+    [
+     "2013-08-07",
+     "First Interim Dividend Rs.2/- Per Share (Purpose Revised)"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "RANBAXY",
+   "date": "2013-09-16",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3034,
+   "raw_return": -0.3034,
+   "traded_value": 11013660014.65,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "ADANIENT",
+   "date": "2015-06-03",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.8086,
+   "raw_return": -0.8277,
+   "traded_value": 5886804680.75,
+   "actions_in_nse_file": [
+    [
+     "2015-06-03",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "EMBDL",
+   "date": "2015-06-22",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3012,
+   "raw_return": 0.3012,
+   "traded_value": 3016061633.15,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "AMTEKAUTO",
+   "date": "2015-08-19",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.306,
+   "raw_return": -0.306,
+   "traded_value": 1995197368.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "AMTEKAUTO",
+   "date": "2015-09-03",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3498,
+   "raw_return": -0.3498,
+   "traded_value": 1559022029.45,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "AMTEKAUTO",
+   "date": "2015-09-11",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.5393,
+   "raw_return": 0.5393,
+   "traded_value": 3822226628.25,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "EMBDL",
+   "date": "2017-04-17",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.4001,
+   "raw_return": 0.4001,
+   "traded_value": 26912257935.85,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "SINTEX",
+   "date": "2017-05-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.4441,
+   "raw_return": -0.7517,
+   "traded_value": 5110046306.55,
+   "actions_in_nse_file": [
+    [
+     "2017-05-25",
+     "Scheme Of Arrangement"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "DVL",
+   "date": "2017-09-14",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 1.707,
+   "raw_return": 1.707,
+   "traded_value": 1302776.6,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "BANKBARODA",
+   "date": "2017-10-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3144,
+   "raw_return": 0.3144,
+   "traded_value": 24583097114.8,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "BANKINDIA",
+   "date": "2017-10-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3412,
+   "raw_return": 0.3412,
+   "traded_value": 4894919317.6,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "CANBK",
+   "date": "2017-10-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3873,
+   "raw_return": 0.3873,
+   "traded_value": 14347627356.55,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "PNB",
+   "date": "2017-10-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.462,
+   "raw_return": 0.462,
+   "traded_value": 31378580984.2,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "UNIONBANK",
+   "date": "2017-10-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3417,
+   "raw_return": 0.3417,
+   "traded_value": 5400712336.65,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "RNAVAL",
+   "date": "2018-01-01",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3235,
+   "raw_return": 0.3235,
+   "traded_value": 5796659029.9,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "PCJEWELLER",
+   "date": "2018-05-04",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.438,
+   "raw_return": 0.438,
+   "traded_value": 27385467607.35,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "PCJEWELLER",
+   "date": "2018-05-07",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3756,
+   "raw_return": 0.3756,
+   "traded_value": 43071479574.65,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "DHFL",
+   "date": "2018-09-21",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.4258,
+   "raw_return": -0.4258,
+   "traded_value": 43884228305.85,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "CCAVENUE",
+   "date": "2018-09-28",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.7083,
+   "raw_return": -0.7083,
+   "traded_value": 13565317193.1,
+   "actions_in_nse_file": [
+    [
+     "2018-09-19",
+     "Annual General Meeting/Dividend Re 0.10 Per Share"
+    ]
+   ],
+   "not_applied": []
+  },
+  {
+   "symbol": "DVL",
+   "date": "2019-01-02",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 1.2622,
+   "raw_return": 1.2622,
+   "traded_value": 197527.0,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "DISHTV",
+   "date": "2019-01-25",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3323,
+   "raw_return": -0.3323,
+   "traded_value": 2735580916.3,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "RPOWER",
+   "date": "2019-02-04",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3485,
+   "raw_return": -0.3485,
+   "traded_value": 1653379247.55,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "RPOWER",
+   "date": "2019-02-05",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3023,
+   "raw_return": -0.3023,
+   "traded_value": 2907171141.0,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "RELINFRA",
+   "date": "2019-02-06",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.321,
+   "raw_return": -0.321,
+   "traded_value": 14628190953.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2019-02-14",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3057,
+   "raw_return": 0.3057,
+   "traded_value": 55893855220.15,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "JETAIRWAYS",
+   "date": "2019-04-18",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3146,
+   "raw_return": -0.3146,
+   "traded_value": 9747080620.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "JETAIRWAYS",
+   "date": "2019-06-18",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.4079,
+   "raw_return": -0.4079,
+   "traded_value": 1618833474.1,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "JETAIRWAYS",
+   "date": "2019-06-20",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.8988,
+   "raw_return": 0.8988,
+   "traded_value": 4084387017.65,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "RELINFRA",
+   "date": "2019-06-20",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3494,
+   "raw_return": 0.3494,
+   "traded_value": 3857354445.95,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "DHFL",
+   "date": "2019-08-06",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3194,
+   "raw_return": 0.3194,
+   "traded_value": 3356479672.95,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "SAMMAANCAP",
+   "date": "2019-09-30",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.344,
+   "raw_return": -0.344,
+   "traded_value": 26194081748.25,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2019-10-03",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3281,
+   "raw_return": 0.3281,
+   "traded_value": 23296790512.55,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-06",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.5611,
+   "raw_return": -0.5611,
+   "traded_value": 18659965778.1,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-09",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3158,
+   "raw_return": 0.3158,
+   "traded_value": 14724650069.9,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-11",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3553,
+   "raw_return": 0.3553,
+   "traded_value": 11296048426.95,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-16",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.4521,
+   "raw_return": 0.4521,
+   "traded_value": 5988013737.4,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-17",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.5809,
+   "raw_return": 0.5809,
+   "traded_value": 12376139125.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "SAMMAANCAP",
+   "date": "2020-03-19",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3374,
+   "raw_return": -0.3374,
+   "traded_value": 7928434274.35,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "INDUSINDBK",
+   "date": "2020-03-26",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.4467,
+   "raw_return": 0.4467,
+   "traded_value": 17536074206.85,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "BANDHANBNK",
+   "date": "2020-03-26",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3932,
+   "raw_return": 0.3932,
+   "traded_value": 4025518033.85,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "SAMMAANCAP",
+   "date": "2020-06-19",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.311,
+   "raw_return": 0.311,
+   "traded_value": 17558503302.2,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "AURUM",
+   "date": "2020-12-23",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.9876,
+   "raw_return": -0.9876,
+   "traded_value": 576376.8,
+   "actions_in_nse_file": [
+    [
+     "2020-12-23",
+     "Interim Dividend - Rs 974 Per Share"
+    ]
+   ],
+   "not_applied": [
+    [
+     "2020-12-23",
+     "Interim Dividend - Rs 974 Per Share"
+    ]
+   ]
+  },
+  {
+   "symbol": "ZEEL",
+   "date": "2021-09-14",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3998,
+   "raw_return": 0.3998,
+   "traded_value": 52091228505.7,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "ZEEL",
+   "date": "2021-09-22",
+   "sessions_since_last_row": 1,
+   "adjusted_return": 0.3172,
+   "raw_return": 0.3172,
+   "traded_value": 61895378304.05,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "ZEEL",
+   "date": "2024-01-23",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.3261,
+   "raw_return": -0.3261,
+   "traded_value": 37750821332.5,
+   "actions_in_nse_file": [],
+   "not_applied": []
+  },
+  {
+   "symbol": "KESORAMIND",
+   "date": "2025-03-10",
+   "sessions_since_last_row": 1,
+   "adjusted_return": -0.9526,
+   "raw_return": -0.9526,
+   "traded_value": 4248527.33,
+   "actions_in_nse_file": [
+    [
+     "2025-03-10",
+     "Demerger"
+    ]
+   ],
+   "not_applied": [
+    [
+     "2025-03-10",
+     "Demerger"
+    ]
+   ]
+  }
+ ],
+ "jumps_total": 67,
+ "jumps_with_an_unapplied_action": 2,
+ "jumps_by_kind": {
+  "on_consecutive_sessions": 66,
+  "across_a_gap": 1,
+  "up": 35,
+  "down": 32
+ },
+ "ewide_size_by_month": {
+  "2010-01": 467,
+  "2010-02": 471,
+  "2010-03": 478,
+  "2010-04": 488,
+  "2010-05": 493,
+  "2010-06": 494,
+  "2010-07": 479,
+  "2010-08": 503,
+  "2010-09": 525,
+  "2010-10": 534,
+  "2010-11": 556,
+  "2010-12": 553,
+  "2011-01": 523,
+  "2011-02": 488,
+  "2011-03": 463,
+  "2011-04": 448,
+  "2011-05": 416,
+  "2011-06": 402,
+  "2011-07": 401,
+  "2011-08": 407,
+  "2011-09": 399,
+  "2011-10": 381,
+  "2011-11": 366,
+  "2011-12": 348,
+  "2012-01": 344,
+  "2012-02": 356,
+  "2012-03": 347,
+  "2012-04": 353,
+  "2012-05": 350,
+  "2012-06": 360,
+  "2012-07": 356,
+  "2012-08": 344,
+  "2012-09": 354,
+  "2012-10": 366,
+  "2012-11": 382,
+  "2012-12": 395,
+  "2013-01": 398,
+  "2013-02": 391,
+  "2013-03": 378,
+  "2013-04": 366,
+  "2013-05": 361,
+  "2013-06": 331,
+  "2013-07": 306,
+  "2013-08": 292,
+  "2013-09": 287,
+  "2013-10": 299,
+  "2013-11": 300,
+  "2013-12": 306,
+  "2014-01": 315,
+  "2014-02": 336,
+  "2014-03": 358,
+  "2014-04": 389,
+  "2014-05": 434,
+  "2014-06": 441,
+  "2014-07": 475,
+  "2014-08": 503,
+  "2014-09": 550,
+  "2014-10": 560,
+  "2014-11": 594,
+  "2014-12": 587,
+  "2015-01": 593,
+  "2015-02": 599,
+  "2015-03": 580,
+  "2015-04": 578,
+  "2015-05": 555,
+  "2015-06": 546,
+  "2015-07": 546,
+  "2015-08": 553,
+  "2015-09": 541,
+  "2015-10": 548,
+  "2015-11": 564,
+  "2015-12": 570,
+  "2016-01": 565,
+  "2016-02": 525,
+  "2016-03": 533,
+  "2016-04": 540,
+  "2016-05": 542,
+  "2016-06": 550,
+  "2016-07": 565,
+  "2016-08": 593,
+  "2016-09": 617,
+  "2016-10": 656,
+  "2016-11": 681,
+  "2016-12": 666,
+  "2017-01": 665,
+  "2017-02": 670,
+  "2017-03": 670,
+  "2017-04": 691,
+  "2017-05": 700,
+  "2017-06": 723,
+  "2017-07": 755,
+  "2017-08": 757,
+  "2017-09": 773,
+  "2017-10": 766,
+  "2017-11": 778,
+  "2017-12": 801,
+  "2018-01": 822,
+  "2018-02": 847,
+  "2018-03": 823,
+  "2018-04": 813,
+  "2018-05": 791,
+  "2018-06": 753,
+  "2018-07": 709,
+  "2018-08": 683,
+  "2018-09": 669,
+  "2018-10": 660,
+  "2018-11": 651,
+  "2018-12": 639,
+  "2019-01": 623,
+  "2019-02": 590,
+  "2019-03": 587,
+  "2019-04": 575,
+  "2019-05": 573,
+  "2019-06": 562,
+  "2019-07": 553,
+  "2019-08": 549,
+  "2019-09": 528,
+  "2019-10": 527,
+  "2019-11": 532,
+  "2019-12": 528,
+  "2020-01": 553,
+  "2020-02": 569,
+  "2020-03": 553,
+  "2020-04": 564,
+  "2020-05": 559,
+  "2020-06": 583,
+  "2020-07": 591,
+  "2020-08": 640,
+  "2020-09": 655,
+  "2020-10": 674,
+  "2020-11": 702,
+  "2020-12": 738,
+  "2021-01": 768,
+  "2021-02": 783,
+  "2021-03": 812,
+  "2021-04": 832,
+  "2021-05": 864,
+  "2021-06": 854,
+  "2021-07": 869,
+  "2021-08": 887,
+  "2021-09": 905,
+  "2021-10": 921,
+  "2021-11": 925,
+  "2021-12": 938,
+  "2022-01": 944,
+  "2022-02": 945,
+  "2022-03": 972,
+  "2022-04": 975,
+  "2022-05": 972,
+  "2022-06": 963,
+  "2022-07": 954,
+  "2022-08": 966,
+  "2022-09": 966,
+  "2022-10": 946,
+  "2022-11": 960,
+  "2022-12": 992,
+  "2023-01": 998,
+  "2023-02": 1003,
+  "2023-03": 984,
+  "2023-04": 996,
+  "2023-05": 1011,
+  "2023-06": 1015,
+  "2023-07": 1037,
+  "2023-08": 1062,
+  "2023-09": 1094,
+  "2023-10": 1095,
+  "2023-11": 1128,
+  "2023-12": 1161,
+  "2024-01": 1178,
+  "2024-02": 1191,
+  "2024-03": 1185,
+  "2024-04": 1198,
+  "2024-05": 1212,
+  "2024-06": 1209,
+  "2024-07": 1229,
+  "2024-08": 1229,
+  "2024-09": 1231,
+  "2024-10": 1213,
+  "2024-11": 1215,
+  "2024-12": 1208,
+  "2025-01": 1194,
+  "2025-02": 1178,
+  "2025-03": 1192,
+  "2025-04": 1198,
+  "2025-05": 1209,
+  "2025-06": 1190,
+  "2025-07": 1188,
+  "2025-08": 1198,
+  "2025-09": 1202,
+  "2025-10": 1199,
+  "2025-11": 1203,
+  "2025-12": 1217
+ },
+ "e3i_size_by_month": {
+  "2010-01": 742,
+  "2010-02": 770,
+  "2010-03": 850,
+  "2010-04": 903,
+  "2010-05": 913,
+  "2010-06": 983,
+  "2010-07": 1013,
+  "2010-08": 1011,
+  "2010-09": 1026,
+  "2010-10": 1009,
+  "2010-11": 1002,
+  "2010-12": 1067,
+  "2011-01": 1036,
+  "2011-02": 1027,
+  "2011-03": 1051,
+  "2011-04": 1054,
+  "2011-05": 1049,
+  "2011-06": 1056,
+  "2011-07": 1054,
+  "2011-08": 1011,
+  "2011-09": 1038,
+  "2011-10": 1059,
+  "2011-11": 1017,
+  "2011-12": 1001,
+  "2012-01": 1013,
+  "2012-02": 1022,
+  "2012-03": 1014,
+  "2012-04": 1005,
+  "2012-05": 986,
+  "2012-06": 1036,
+  "2012-07": 1012,
+  "2012-08": 1021,
+  "2012-09": 1051,
+  "2012-10": 1044,
+  "2012-11": 1045,
+  "2012-12": 1058,
+  "2013-01": 1040,
+  "2013-02": 997,
+  "2013-03": 1004,
+  "2013-04": 974,
+  "2013-05": 957,
+  "2013-06": 939,
+  "2013-07": 873,
+  "2013-08": 872,
+  "2013-09": 879,
+  "2013-10": 903,
+  "2013-11": 920,
+  "2013-12": 915,
+  "2014-01": 905,
+  "2014-02": 904,
+  "2014-03": 958,
+  "2014-04": 960,
+  "2014-05": 1014,
+  "2014-06": 984,
+  "2014-07": 962,
+  "2014-08": 1092,
+  "2014-09": 1101,
+  "2014-10": 1107,
+  "2014-11": 1118,
+  "2014-12": 1104,
+  "2015-01": 1087,
+  "2015-02": 1080,
+  "2015-03": 1046,
+  "2015-04": 1066,
+  "2015-05": 1068,
+  "2015-06": 1071,
+  "2015-07": 1098,
+  "2015-08": 1066,
+  "2015-09": 1070,
+  "2015-10": 1097,
+  "2015-11": 1114,
+  "2015-12": 1137,
+  "2016-01": 1116,
+  "2016-02": 1078,
+  "2016-03": 1094,
+  "2016-04": 1116,
+  "2016-05": 1124,
+  "2016-06": 1140,
+  "2016-07": 1161,
+  "2016-08": 1157,
+  "2016-09": 1160,
+  "2016-10": 1180,
+  "2016-11": 1177,
+  "2016-12": 1172,
+  "2017-01": 1182,
+  "2017-02": 1185,
+  "2017-03": 1173,
+  "2017-04": 1172,
+  "2017-05": 1178,
+  "2017-06": 1177,
+  "2017-07": 1197,
+  "2017-08": 1197,
+  "2017-09": 1194,
+  "2017-10": 1188,
+  "2017-11": 1194,
+  "2017-12": 1182,
+  "2018-01": 1156,
+  "2018-02": 1219,
+  "2018-03": 1183,
+  "2018-04": 1194,
+  "2018-05": 1168,
+  "2018-06": 1163,
+  "2018-07": 1183,
+  "2018-08": 1176,
+  "2018-09": 1147,
+  "2018-10": 1178,
+  "2018-11": 1187,
+  "2018-12": 1187,
+  "2019-01": 1182,
+  "2019-02": 1168,
+  "2019-03": 1171,
+  "2019-04": 1165,
+  "2019-05": 1162,
+  "2019-06": 1146,
+  "2019-07": 1115,
+  "2019-08": 1098,
+  "2019-09": 1106,
+  "2019-10": 1100,
+  "2019-11": 1090,
+  "2019-12": 1092,
+  "2020-01": 1101,
+  "2020-02": 1066,
+  "2020-03": 987,
+  "2020-04": 1019,
+  "2020-05": 1039,
+  "2020-06": 1076,
+  "2020-07": 1053,
+  "2020-08": 1117,
+  "2020-09": 1100,
+  "2020-10": 1104,
+  "2020-11": 1155,
+  "2020-12": 1148,
+  "2021-01": 1139,
+  "2021-02": 1189,
+  "2021-03": 1164,
+  "2021-04": 1216,
+  "2021-05": 1234,
+  "2021-06": 1177,
+  "2021-07": 1168,
+  "2021-08": 1152,
+  "2021-09": 1192,
+  "2021-10": 1248,
+  "2021-11": 1262,
+  "2021-12": 1282,
+  "2022-01": 1286,
+  "2022-02": 1280,
+  "2022-03": 1347,
+  "2022-04": 1335,
+  "2022-05": 1324,
+  "2022-06": 1347,
+  "2022-07": 1360,
+  "2022-08": 1372,
+  "2022-09": 1377,
+  "2022-10": 1375,
+  "2022-11": 1388,
+  "2022-12": 1440,
+  "2023-01": 1427,
+  "2023-02": 1432,
+  "2023-03": 1421,
+  "2023-04": 1439,
+  "2023-05": 1459,
+  "2023-06": 1381,
+  "2023-07": 1355,
+  "2023-08": 1337,
+  "2023-09": 1383,
+  "2023-10": 1394,
+  "2023-11": 1438,
+  "2023-12": 1434,
+  "2024-01": 1446,
+  "2024-02": 1429,
+  "2024-03": 1436,
+  "2024-04": 1483,
+  "2024-05": 1496,
+  "2024-06": 1493,
+  "2024-07": 1493,
+  "2024-08": 1463,
+  "2024-09": 1449,
+  "2024-10": 1475,
+  "2024-11": 1506,
+  "2024-12": 1518,
+  "2025-01": 1528,
+  "2025-02": 1524,
+  "2025-03": 1570,
+  "2025-04": 1578,
+  "2025-05": 1585,
+  "2025-06": 1542,
+  "2025-07": 1526,
+  "2025-08": 1554,
+  "2025-09": 1645,
+  "2025-10": 1650,
+  "2025-11": 1666,
+  "2025-12": 1696
+ },
+ "start_month": {
+  "T3": "2020-08",
+  "T4": "2021-03",
+  "T5": "2023-05",
+  "W_800": "2021-03",
+  "W_600": "2020-08",
+  "W_400": "2014-05"
+ },
+ "monthly_returns_available": {
+  "T3": 63,
+  "T4": 56,
+  "T5": 30,
+  "W_800": 56,
+  "W_600": 63,
+  "W_400": 138
+ },
+ "k": 400,
+ "tiers_against_what_3i_read": {
+  "T3": {
+   "member_months": 27395,
+   "inside_a_universe_3i_read_that_month": 0,
+   "share_from_chains_ever_ranked_1_to_400": 0.8670925351341485
+  },
+  "T4": {
+   "member_months": 15706,
+   "inside_a_universe_3i_read_that_month": 0,
+   "share_from_chains_ever_ranked_1_to_400": 0.597478670571756
+  },
+  "T5": {
+   "member_months": 10046,
+   "inside_a_universe_3i_read_that_month": 0,
+   "share_from_chains_ever_ranked_1_to_400": 0.37965359347003785
+  }
+ },
+ "screens_inside_ranks_1_to_400": {
+  "1-200": {
+   "member_months": 38400,
+   "fail_any": 35,
+   "fail_S1": 35
+  },
+  "201-400": {
+   "member_months": 38400,
+   "fail_any": 1753,
+   "fail_S1": 199,
+   "fail_S3": 1558,
+   "fail_S2": 6
+  }
+ },
+ "median_traded_value_at_rank": {
+  "2010-12": {
+   "200": 85953469.475,
+   "400": 15604445.625
+  },
+  "2011-12": {
+   "200": 42901619.725
+  },
+  "2012-12": {
+   "200": 41664473.05
+  },
+  "2013-12": {
+   "200": 26407176.575
+  },
+  "2014-12": {
+   "200": 78097252.57499999,
+   "400": 20096341.1
+  },
+  "2015-12": {
+   "200": 90188462.55,
+   "400": 20399765.925
+  },
+  "2016-12": {
+   "200": 111218531.475,
+   "400": 23406507.875,
+   "600": 9429942.975000001
+  },
+  "2017-12": {
+   "200": 212506352.5,
+   "400": 39275358.2,
+   "600": 16348049.05,
+   "800": 7097614.975
+  },
+  "2018-12": {
+   "200": 175133057.35,
+   "400": 24661351.950000003,
+   "600": 8430832.075
+  },
+  "2019-12": {
+   "200": 98119336.35,
+   "400": 15381965.125
+  },
+  "2020-12": {
+   "200": 179954267.8,
+   "400": 49090115.55,
+   "600": 14531838.475
+  },
+  "2021-12": {
+   "200": 386773077.35,
+   "400": 101871860.3,
+   "600": 38761297.8,
+   "800": 15830341.149999999
+  },
+  "2022-12": {
+   "200": 395361881.9,
+   "400": 97729704.75,
+   "600": 42173830.05,
+   "800": 18171747.0
+  },
+  "2023-12": {
+   "200": 626608875.15,
+   "400": 197608396.4,
+   "600": 85263695.475,
+   "800": 42369050.525,
+   "1000": 19361700.725
+  },
+  "2024-12": {
+   "200": 895232310.37,
+   "400": 286294673.5,
+   "600": 127096459.275,
+   "800": 60013586.644999996,
+   "1000": 29281422.549999997
+  },
+  "2025-12": {
+   "200": 747459589.45,
+   "400": 226306216.43,
+   "600": 106111747.5,
+   "800": 48519830.849999994,
+   "1000": 21663248.025
+  }
+ },
+ "tradability": {
+  "1-200": {
+   "2010": {
+    "stock_days": 46800,
+    "pct_no_trade": 0.4700854700854701,
+    "pct_locked_up": 0.029914529914529916,
+    "pct_locked_down": 0.07905982905982906,
+    "pct_t2t_rows": 0.042735042735042736
+   },
+   "2011": {
+    "stock_days": 49400,
+    "pct_no_trade": 0.004048582995951417,
+    "pct_locked_up": 0.07894736842105263,
+    "pct_locked_down": 0.13360323886639677,
+    "pct_t2t_rows": 0.0
+   },
+   "2012": {
+    "stock_days": 50400,
+    "pct_no_trade": 0.4146825396825397,
+    "pct_locked_up": 0.11507936507936507,
+    "pct_locked_down": 0.2400793650793651,
+    "pct_t2t_rows": 0.017857142857142856
+   },
+   "2013": {
+    "stock_days": 50000,
+    "pct_no_trade": 0.062,
+    "pct_locked_up": 0.266,
+    "pct_locked_down": 0.412,
+    "pct_t2t_rows": 0.022
+   },
+   "2014": {
+    "stock_days": 48800,
+    "pct_no_trade": 0.0020491803278688526,
+    "pct_locked_up": 0.1168032786885246,
+    "pct_locked_down": 0.06967213114754098,
+    "pct_t2t_rows": 0.09631147540983606
+   },
+   "2015": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.06451612903225806,
+    "pct_locked_up": 0.03225806451612903,
+    "pct_locked_down": 0.024193548387096774,
+    "pct_t2t_rows": 0.02620967741935484
+   },
+   "2016": {
+    "stock_days": 49400,
+    "pct_no_trade": 0.02834008097165992,
+    "pct_locked_up": 0.032388663967611336,
+    "pct_locked_down": 0.020242914979757085,
+    "pct_t2t_rows": 0.006072874493927126
+   },
+   "2017": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.04838709677419355,
+    "pct_locked_up": 0.07661290322580645,
+    "pct_locked_down": 0.02217741935483871,
+    "pct_t2t_rows": 0.004032258064516129
+   },
+   "2018": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.008130081300813009,
+    "pct_locked_up": 0.27439024390243905,
+    "pct_locked_down": 0.24390243902439024,
+    "pct_t2t_rows": 0.10772357723577236
+   },
+   "2019": {
+    "stock_days": 49000,
+    "pct_no_trade": 0.0653061224489796,
+    "pct_locked_up": 0.19795918367346937,
+    "pct_locked_down": 0.12653061224489795,
+    "pct_t2t_rows": 0.006122448979591836
+   },
+   "2020": {
+    "stock_days": 50400,
+    "pct_no_trade": 0.061507936507936505,
+    "pct_locked_up": 0.49603174603174605,
+    "pct_locked_down": 0.41865079365079366,
+    "pct_t2t_rows": 0.037698412698412696
+   },
+   "2021": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.1350806451612903,
+    "pct_locked_down": 0.10483870967741936,
+    "pct_t2t_rows": 0.25806451612903225
+   },
+   "2022": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.012096774193548387,
+    "pct_locked_up": 0.07862903225806452,
+    "pct_locked_down": 0.04435483870967742,
+    "pct_t2t_rows": 0.04838709677419355
+   },
+   "2023": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.026422764227642278,
+    "pct_locked_up": 0.1524390243902439,
+    "pct_locked_down": 0.16666666666666666,
+    "pct_t2t_rows": 0.052845528455284556
+   },
+   "2024": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.002008032128514056,
+    "pct_locked_up": 0.13253012048192772,
+    "pct_locked_down": 0.09839357429718876,
+    "pct_t2t_rows": 0.04618473895582329
+   },
+   "2025": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.05421686746987952,
+    "pct_locked_down": 0.020080321285140562,
+    "pct_t2t_rows": 0.08835341365461848
+   }
+  },
+  "201-400": {
+   "2010": {
+    "stock_days": 46800,
+    "pct_no_trade": 0.45726495726495725,
+    "pct_locked_up": 0.1346153846153846,
+    "pct_locked_down": 0.13675213675213677,
+    "pct_t2t_rows": 0.10683760683760683
+   },
+   "2011": {
+    "stock_days": 48287,
+    "pct_no_trade": 0.02278045850850125,
+    "pct_locked_up": 0.18224366806801,
+    "pct_locked_down": 0.2961459606105163,
+    "pct_t2t_rows": 0.03520616314950194
+   },
+   "2012": {
+    "stock_days": 39060,
+    "pct_no_trade": 0.5017921146953405,
+    "pct_locked_up": 0.4198668714797747,
+    "pct_locked_down": 0.4173067076292883,
+    "pct_t2t_rows": 0.4377880184331797
+   },
+   "2013": {
+    "stock_days": 35552,
+    "pct_no_trade": 0.0056255625562556255,
+    "pct_locked_up": 0.6385013501350135,
+    "pct_locked_down": 1.17011701170117,
+    "pct_t2t_rows": 0.2193969396939694
+   },
+   "2014": {
+    "stock_days": 42692,
+    "pct_no_trade": 0.04918954370842312,
+    "pct_locked_up": 0.36072332052843625,
+    "pct_locked_down": 0.2670289515600112,
+    "pct_t2t_rows": 0.21081233017895623
+   },
+   "2015": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.020161290322580645,
+    "pct_locked_up": 0.2721774193548387,
+    "pct_locked_down": 0.18548387096774194,
+    "pct_t2t_rows": 0.11491935483870967
+   },
+   "2016": {
+    "stock_days": 49400,
+    "pct_no_trade": 0.04048582995951417,
+    "pct_locked_up": 0.32793522267206476,
+    "pct_locked_down": 0.22064777327935223,
+    "pct_t2t_rows": 0.09716599190283401
+   },
+   "2017": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.05040322580645161,
+    "pct_locked_up": 0.3387096774193548,
+    "pct_locked_down": 0.22379032258064516,
+    "pct_t2t_rows": 0.16733870967741934
+   },
+   "2018": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.6036585365853658,
+    "pct_locked_down": 0.5772357723577236,
+    "pct_t2t_rows": 0.13211382113821138
+   },
+   "2019": {
+    "stock_days": 49000,
+    "pct_no_trade": 0.030612244897959183,
+    "pct_locked_up": 0.463265306122449,
+    "pct_locked_down": 0.5877551020408164,
+    "pct_t2t_rows": 0.22653061224489796
+   },
+   "2020": {
+    "stock_days": 50400,
+    "pct_no_trade": 0.013888888888888888,
+    "pct_locked_up": 1.367063492063492,
+    "pct_locked_down": 0.7400793650793651,
+    "pct_t2t_rows": 0.0496031746031746
+   },
+   "2021": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.020161290322580645,
+    "pct_locked_up": 0.5100806451612904,
+    "pct_locked_down": 0.1693548387096774,
+    "pct_t2t_rows": 0.40725806451612906
+   },
+   "2022": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.004032258064516129,
+    "pct_locked_up": 0.24596774193548387,
+    "pct_locked_down": 0.1774193548387097,
+    "pct_t2t_rows": 0.12298387096774194
+   },
+   "2023": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.016260162601626018,
+    "pct_locked_up": 0.1483739837398374,
+    "pct_locked_down": 0.032520325203252036,
+    "pct_t2t_rows": 0.18699186991869918
+   },
+   "2024": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.07429718875502007,
+    "pct_locked_up": 0.3032128514056225,
+    "pct_locked_down": 0.178714859437751,
+    "pct_t2t_rows": 0.22289156626506024
+   },
+   "2025": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.012048192771084338,
+    "pct_locked_up": 0.1606425702811245,
+    "pct_locked_down": 0.08433734939759036,
+    "pct_t2t_rows": 0.12248995983935743
+   }
+  },
+  "401-600": {
+   "2010": {
+    "stock_days": 23213,
+    "pct_no_trade": 0.41356136647568176,
+    "pct_locked_up": 0.27139964674966616,
+    "pct_locked_down": 0.18954895963468746,
+    "pct_t2t_rows": 0.10339034161892044
+   },
+   "2011": {
+    "stock_days": 10208,
+    "pct_no_trade": 0.05877742946708464,
+    "pct_locked_up": 0.19592476489028213,
+    "pct_locked_down": 0.10775862068965517,
+    "pct_t2t_rows": 0.1273510971786834
+   },
+   "2012": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2013": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2014": {
+    "stock_days": 15155,
+    "pct_no_trade": 0.07258330583965687,
+    "pct_locked_up": 0.2837347410095678,
+    "pct_locked_down": 0.059386341141537444,
+    "pct_t2t_rows": 0.026393929396238865
+   },
+   "2015": {
+    "stock_days": 41080,
+    "pct_no_trade": 0.0024342745861733205,
+    "pct_locked_up": 0.42112950340798444,
+    "pct_locked_down": 0.27994157740993186,
+    "pct_t2t_rows": 0.043816942551119765
+   },
+   "2016": {
+    "stock_days": 40853,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.48466452892076467,
+    "pct_locked_down": 0.25212346706484223,
+    "pct_t2t_rows": 0.04406041172006952
+   },
+   "2017": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.0846774193548387,
+    "pct_locked_up": 0.4334677419354839,
+    "pct_locked_down": 0.2157258064516129,
+    "pct_t2t_rows": 0.2439516129032258
+   },
+   "2018": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.3943089430894309,
+    "pct_locked_down": 0.3008130081300813,
+    "pct_t2t_rows": 0.20528455284552846
+   },
+   "2019": {
+    "stock_days": 40389,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.5818415905320755,
+    "pct_locked_down": 0.5744138255465597,
+    "pct_t2t_rows": 0.14855529971031717
+   },
+   "2020": {
+    "stock_days": 44141,
+    "pct_no_trade": 0.029451077229786366,
+    "pct_locked_up": 2.192972519879477,
+    "pct_locked_down": 1.2256179062549557,
+    "pct_t2t_rows": 0.24240502027593394
+   },
+   "2021": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.7036290322580645,
+    "pct_locked_down": 0.2318548387096774,
+    "pct_t2t_rows": 0.7116935483870968
+   },
+   "2022": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.03024193548387097,
+    "pct_locked_up": 0.3185483870967742,
+    "pct_locked_down": 0.17943548387096775,
+    "pct_t2t_rows": 0.23387096774193547
+   },
+   "2023": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.12804878048780488,
+    "pct_locked_up": 0.26422764227642276,
+    "pct_locked_down": 0.09146341463414634,
+    "pct_t2t_rows": 0.15447154471544716
+   },
+   "2024": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.04819277108433735,
+    "pct_locked_up": 0.5080321285140562,
+    "pct_locked_down": 0.3112449799196787,
+    "pct_t2t_rows": 0.6265060240963856
+   },
+   "2025": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.024096385542168676,
+    "pct_locked_up": 0.23694779116465864,
+    "pct_locked_down": 0.16666666666666666,
+    "pct_t2t_rows": 0.20883534136546184
+   }
+  },
+  "601-800": {
+   "2010": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2011": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2012": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2013": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2014": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2015": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2016": {
+    "stock_days": 3281,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.9448338921060653,
+    "pct_locked_down": 0.4266991770801585,
+    "pct_t2t_rows": 0.0
+   },
+   "2017": {
+    "stock_days": 29330,
+    "pct_no_trade": 0.11592226389362427,
+    "pct_locked_up": 0.4602795772246846,
+    "pct_locked_down": 0.41936583702693486,
+    "pct_t2t_rows": 0.3784520968291851
+   },
+   "2018": {
+    "stock_days": 35429,
+    "pct_no_trade": 0.0733862090377939,
+    "pct_locked_up": 0.5052358237601965,
+    "pct_locked_down": 0.4459623472296706,
+    "pct_t2t_rows": 0.32459284766716534
+   },
+   "2019": {
+    "stock_days": 1357,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.07369196757553427,
+    "pct_locked_down": 0.36845983787767134,
+    "pct_t2t_rows": 0.0
+   },
+   "2020": {
+    "stock_days": 5759,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.93766278867859,
+    "pct_locked_down": 0.19100538287897204,
+    "pct_t2t_rows": 0.7813856572321584
+   },
+   "2021": {
+    "stock_days": 47363,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 1.0345628444144164,
+    "pct_locked_down": 0.3694867301480058,
+    "pct_t2t_rows": 0.7579756349893376
+   },
+   "2022": {
+    "stock_days": 49600,
+    "pct_no_trade": 0.036290322580645164,
+    "pct_locked_up": 0.6653225806451613,
+    "pct_locked_down": 0.40524193548387094,
+    "pct_t2t_rows": 0.4032258064516129
+   },
+   "2023": {
+    "stock_days": 49200,
+    "pct_no_trade": 0.09959349593495935,
+    "pct_locked_up": 0.5020325203252033,
+    "pct_locked_down": 0.13821138211382114,
+    "pct_t2t_rows": 0.3048780487804878
+   },
+   "2024": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.13253012048192772,
+    "pct_locked_up": 0.3634538152610442,
+    "pct_locked_down": 0.18875502008032127,
+    "pct_t2t_rows": 0.28112449799196787
+   },
+   "2025": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.01606425702811245,
+    "pct_locked_up": 0.2751004016064257,
+    "pct_locked_down": 0.19477911646586346,
+    "pct_t2t_rows": 0.19678714859437751
+   }
+  },
+  "801-1000": {
+   "2010": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2011": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2012": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2013": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2014": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2015": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2016": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2017": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2018": {
+    "stock_days": 2102,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.23786869647954328,
+    "pct_locked_down": 0.23786869647954328,
+    "pct_t2t_rows": 0.7136060894386299
+   },
+   "2019": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2020": {
+    "stock_days": 0,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.0,
+    "pct_locked_down": 0.0,
+    "pct_t2t_rows": 0.0
+   },
+   "2021": {
+    "stock_days": 14081,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 1.9458845252467865,
+    "pct_locked_down": 0.5539379305447056,
+    "pct_t2t_rows": 0.9942475676443434
+   },
+   "2022": {
+    "stock_days": 39307,
+    "pct_no_trade": 0.03052891342508968,
+    "pct_locked_up": 0.9820133818403847,
+    "pct_locked_down": 0.4960948431577073,
+    "pct_t2t_rows": 0.6716360953519729
+   },
+   "2023": {
+    "stock_days": 48632,
+    "pct_no_trade": 0.061687777594999174,
+    "pct_locked_up": 0.5572462576081593,
+    "pct_locked_down": 0.20562592531666393,
+    "pct_t2t_rows": 0.6456654054943247
+   },
+   "2024": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.002008032128514056,
+    "pct_locked_up": 0.5160642570281124,
+    "pct_locked_down": 0.2389558232931727,
+    "pct_t2t_rows": 0.5843373493975904
+   },
+   "2025": {
+    "stock_days": 49800,
+    "pct_no_trade": 0.0,
+    "pct_locked_up": 0.15261044176706828,
+    "pct_locked_down": 0.10642570281124498,
+    "pct_t2t_rows": 0.46987951807228917
+   }
+  }
+ },
+ "gates": {
+  "1_coverage": true,
+  "2_loader_parity": true,
+  "3_universe_parity": true,
+  "4_engine_parity": true,
+  "5_adjustment_consistency": true,
+  "6_no_unapplied_action_behind_a_jump": false
+ },
+ "PASS": false
+}
