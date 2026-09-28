@@ -6,6 +6,154 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 21 — 2026-09-28 — automated reviewer: amendment 1 to `prereg-universe-width.md` ACCEPTED WITH MINOR CORRECTIONS — all eighteen corrections are answered and the arithmetic checks out. K = 800, N_family = 10 and A′ judged by trial 120's own criteria all stand. Ten small items remain; one (gate 5 must cover consolidations) has to be written before stage 0. After a short amendment 2 the code may be aligned and stage 0 run. O2 does not block T3.
+
+Reviewed amendment 1 (commit `a2372f8`, sections 1 to 15), the reworded
+`stock-picking-sweep-2026-09-28.md`, the two new rows in `trials.md` and
+`data/stock-picking-sweep/tiers_2025_descriptive.out.txt`, against Entry 20.
+
+### State, checked
+
+| Claim | Check | Result |
+| --- | --- | --- |
+| The original text is untouched | `git diff 1e53917 a2372f8` on the pre-registration | 203 lines added, none removed |
+| The code has not changed | `git diff 946cc31 HEAD -- backend/` | Empty |
+| No part has run | `docs/research/data/` | No `momentum_width_*.json` |
+| No repaired panel has been built | Listing of the main checkout's cache, read-only, at the main agent's invitation | `nse_prices.pkl`, `nse_prices_with_heldout.pkl`, `parsed.pkl`. No wide panel |
+| The descriptive output matches the sweep | `.out.txt` against Tables 1 and 2 | Every row matches, as do 1,892 names, 611 symbols and both spread series |
+
+The early loader check is disclosed and read nothing new. It left no
+committed output (R10).
+
+### Verdict: ACCEPTED WITH MINOR CORRECTIONS
+
+C1 to C18 are each answered in full. O1 is accepted as written. O3 does not
+arise. None of the remaining items changes a threshold or a rule that reads
+a return.
+
+### The seven choices
+
+| # | Choice | Ruling |
+| --- | --- | --- |
+| 1 | K = 800, fallback to 600 then 400 from list sizes, criterion 8 | Accepted. The number comes from a recommendation written before any return beyond rank 400 was read. Criterion 6 may stay at 1.65. See R4 |
+| 2 | N_family = 10, t ≥ 2.807, DSR at N = 10 | Accepted |
+| 3 | A′ judged by trial 120's six criteria | Correct. Keep it. See below and R3 |
+| 4 | A pass produces a recommendation only | Accepted |
+| 5 | O2 not put to the owner | Does not block T3. See below and R7 |
+| 6 | Zero-value rows | Accepted. A zero-value row adds zero to the median either way, so the ranking is unaffected |
+| 7 | Consolidations in the repaired panel only | Accepted. Eligibility reads printed prices and traded value, so the E-3i lists and gate 3 are unaffected. See R1, R2, R9 |
+
+**Choice 3.** A′ asks whether a recorded verdict survives a fix. Trial
+120's t was 2.91, and the DSR at N = 10 needs about 3.2. Judged at N = 10,
+A′ would very likely fail even if honest fills changed nothing, and the
+results file would then say "did not survive honest fills" when the cause
+was the bar. A′ cannot create a claim, so the lower bar lets nothing new
+through.
+
+**Choice 5.** Spending this sample is not among the decisions my role
+reserves to the owner. Entry 20 listed it on the strength of a sentence in
+the sweep note, which is the project's own text. The owner's request is the
+direct use of those ranks. The cost is bounded: a later paired test on them
+still reads a difference nobody has read. Because the spend cannot be
+undone, the notice comes before T3, not with the result (R7).
+
+### Remaining corrections
+
+**Before stage 0**
+
+**R1. Gate 5 must cover consolidations.** Amendment 1 adds an adjustment
+and no check on it. Gate 6 asks only whether an action in NSE's file was
+applied, so it cannot catch one applied with the wrong ratio or on the
+wrong date. Add: "Gate 5 counts consolidations with splits and bonuses: the
+adjusted ex-date return must lie within ±20%. Every consolidation applied
+is listed with its ratio."
+
+**Before A′**
+
+**R2. A′ now differs from trial 120 in three ways:** BE and BZ rows,
+consolidation adjustments (they change the adjusted closes the signal
+reads), and the fill rules. Say so in section 1. Report with A′ and B′ the
+number of consolidations applied to chains in E-3i ranks 1–400 and to names
+either book held.
+
+**R3. A′ at the N = 10 bar, as information.** Report A′'s DSR at N = 10
+beside its t against 2.807. The results file says in one sentence whether
+A′ would clear the N = 10 bar, as 3i's disclosure 2 did for the
+project-wide bar.
+
+**R4. K = 400 leaves criterion 8 empty.** Add to section 2: "At K = 400
+criterion 8 has no tier to test. A pass then rests only on stock-months
+already read by trial 120 or L38, and the recommendation says so." Row 3's
+meaning, "the effect reaches less-traded stocks", does not apply at
+K = 400.
+
+**R5. Falsification table.** It is consistent with criteria 1 to 8: rows 1
+and 2 overlap and agree, and a tier inside K is always testable when W is,
+because T4 shares W's deepest rank and T3's is shallower. Two additions:
+- A row: "W has fewer than 120 monthly returns at K = 400: not judged;
+  reported".
+- One line under the table: "No row allows a re-run with other costs,
+  screens, holdings or K." Today only row 2 says it.
+
+**R6. Power.** The five figures are right (table below). Add the inputs so
+they can be recomputed: paired sd 4.81%, tier sd 4.16%, n = 189. Add
+criterion 8: it needs both tiers, so its power is below one tier's. My
+rough arithmetic, assuming each tier's true effect is L38's 1.00% a month
+less its extra slippage, and treating the tiers as independent: about 0.6
+at 189 months, 0.45 at 140, 0.35 at 120. A fail on criterion 8 is weak
+evidence of absence.
+
+**Before T3**
+
+**R7. O2 wording.** In section 14, "the owner is told so with the result"
+becomes "the owner is told before T3 runs; no reply is needed". In the
+sweep note, the line "so the owner must choose which use spends it" gets a
+pointer to section 14, so no reader thinks a decision is pending.
+
+**Wording and housekeeping**
+
+**R8.** Section 3 says "The code uses 2.13 and 1.65". At `a2372f8` the code
+still has `T_TIER = 2.128`, `T_PAIRED = 1.645`, `N_FAMILY = 4` and
+`T_FAMILY = 2.498` (`momentum_width.py:70–73`). Write "will use". In the
+sweep's bottom line, "It supports testing ranks 401–800" has lost its
+subject.
+
+**R9.** The consolidation gap is a defect confirmed from the code in both
+loaders, including `momentum_book.py` on the live path. File the issue and
+the BUG_LOG row. The live loader's fix is outside this test.
+
+**R10.** The cached `nse_prices.pkl` is dated 26 Sep 23:37, after trial 120
+ran at 20:06. Gate 2 shows the refactor left the default loader unchanged.
+Gate 4 is what ties the cached panel to trial 120's numbers. The stage-0
+write-up says so, and its own gate 2 output is the record.
+
+### Arithmetic
+
+| Figure | Recomputed | Result |
+| --- | --- | --- |
+| t ≥ 2.807 | z at 1 − 0.05/20 = 2.8070 | Match |
+| Criterion 6 needs +0.58% | 1.65 × 4.8145% / √189 = 0.578% | Match |
+| 80% power needs 0.87% | (1.65 + 0.8416) × 0.3502% = 0.873% | Match |
+| A tier needs +0.64% | 2.13 × 4.1554% / √189 = 0.644% | Match |
+| 80% power needs 0.90% | (2.13 + 0.8416) × 0.3023% = 0.898% | Match |
+| 1.13% at 120 months | (2.13 + 0.8416) × 0.3793% = 1.127% | Match |
+| N_family = 10 | 3 + 1 + 2 + 3 + 1 | Match |
+
+### Needs the owner's decision
+
+Nothing blocks. O1 is settled by section 13. O2 is a notice, not a
+decision (R7). If A′ or B′ fails, the running book goes to the owner, as
+already written.
+
+### Next step, and where to stop
+
+Write amendment 2 with R1 to R8 (text only; no look or trial is spent). It
+need not come back first: the texts are given above and I check them with
+stage 0. Then align the code in its own commit, run stage 0, and stop for
+review before A′. Bring the stage-0 output, amendment 2 and the code diff.
+
+---
+
 ## Entry 20 — 2026-09-28 — automated reviewer: `prereg-universe-width.md` ACCEPTED WITH CORRECTIONS — the design is sound and no output exists, but N_family is understated, the tier reads select K while being logged as looks, criterion 6 is partly seen and tilted toward the change, the half split is written backwards, and code was committed before this review came back. No part runs, stage 0 included, until amendment 1 is committed and reviewed. Three items go to the owner.
 
 Reviewed `prereg-universe-width.md` (commit `1e53917`),
