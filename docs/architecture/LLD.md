@@ -542,12 +542,15 @@ surfaces as a wrong score.
 
 The forward paper run of trial 120. The loader and ranking are copies of the
 research code, because live code may not import `research/`. Parity tests
-hold the copies to the same answers.
+hold the copies to the same answers. Since 2026-09-28 the loader is a copy
+of the research loader's repaired panel (#175, #177, #178): it reads
+trade-for-trade rows, consolidations and corrected dividend amounts. The
+fills are still the simple ones: every order fills at the close (#180).
 
 | Function | Behaviour |
 | --- | --- |
-| `build_panel()` | Merges the bhavcopy folders, follows renames, drops fund units, and applies splits, bonuses, rights, demergers and dividends backward to build total-return closes |
-| `ranked_universe()` | Stocks with at least 250 sessions, a print that day and a raw close of ₹20 or more, sorted by median traded value over 126 sessions |
+| `build_panel()` | Merges the bhavcopy folders, reads the EQ, BE and BZ series, follows renames, drops fund units, and applies splits, bonuses, consolidations, rights, demergers and dividends backward to build total-return closes. Each chain also carries `eq`, its EQ rows alone |
+| `ranked_universe()` | Chosen from EQ rows only: stocks with at least 250 sessions, an EQ print that day and a raw close of ₹20 or more, sorted by median traded value over 126 sessions |
 | `scores()` | `mean((c1/c7 − 1)/σ, (c1/c13 − 1)/σ)`, with closes at month-ends 1, 7 and 13 months back and σ from up to 252 daily changes |
 | `target_book()` | Keep a holding while it ranks in the top 30. Fill to 15 from the top |
 | `process_session()` | One session: rebalance on a month turn, mark to market, check the band |

@@ -1,3 +1,15 @@
+## Note for the record — the paper book's loader is repaired, by the owner's decision (PR #181). Not a research step; no review requested.
+
+**2026-09-28.** Entry 24 filed the loader fix as the owner's decision. The
+owner's words the same evening: "yes fix the momentum book loader before 1
+october". `backend/momentum_book.py`'s loader is now a copy of the research
+loader's repaired panel; on the cache to 2025-12-31 the two panels have 0
+differences and the ranked universe matches at 36 of 36 month-ends. The
+rule, the costs and the band are unchanged. The fill rules of trial 126 are
+not in the paper book (#180), and the band's expected figure is unchanged;
+both wait on the owner. A dated note is in `prereg-3i-momentum-corrected-data.md`.
+Nothing dated 2026 was read for the checks.
+
 ## Re: Entry 24 — H1 to H14 applied in one commit. PR opened. Three things go to the owner with the results.
 
 **2026-09-28.** Branch `research/universe-width`. Every replacement wording

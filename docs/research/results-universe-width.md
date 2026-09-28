@@ -244,7 +244,8 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
    the evening of 2026-10-01. Fixing it changes live-path code and the data
    a pre-registered forward test runs on, so whether and when is the owner's
    decision. The recommendation is before the first rebalance, in its own
-   PR.
+   PR. **Decided by the owner on 2026-09-28 and fixed in PR #181.** The fill
+   rules of trial 126 are not in the paper book (#180).
 3. **The paper book's forward band** expects +0.82% a month, trial 120's
    figure. A′ says +0.71%. Keeping 0.82 makes the band stricter. Changing it
    is the owner's decision.

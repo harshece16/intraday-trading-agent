@@ -391,6 +391,7 @@ affects today's paper operation with automatic entries off.
 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) | F&O entries skip several cash entry rules | Before enabling F&O |
 | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) | Jev book: interrupted rounds and the live-price gate | Now, for the test's record |
 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) | Momentum book: silent data gaps and a skippable rebalance | Before 1 Oct |
+| [#180](https://github.com/harshece16/intraday-trading-agent/issues/180) | Momentum book fills every order at the close; it does not model band locks or no-trade days, which trial 126 did | For the forward test's record |
 | [#160](https://github.com/harshece16/intraday-trading-agent/issues/160) | LLM features switch on with the key alone | Now, small cost |
 | [#161](https://github.com/harshece16/intraday-trading-agent/issues/161) | Dashboard key file isn't mode 0600 | Now, low risk |
 | [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only | Before 2027 |
