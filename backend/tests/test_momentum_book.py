@@ -4,6 +4,7 @@ engine hook's timing."""
 import csv
 import datetime
 import io
+import math
 import os
 import sys
 import zipfile
@@ -277,6 +278,18 @@ def test_band_threshold_is_the_preregistered_formula():
     assert mb.band_threshold(12, 0.0082, 0.0387) == pytest.approx(-0.1697, abs=5e-4)
 
 
+def test_the_band_uses_trial_126s_figures():
+    """The owner's decision of 2026-09-29: the book runs trial 126's
+    configuration, so the band expects what trial 126 measured."""
+    import config
+    conf = mb.cfg()
+    assert (conf["expected_monthly_excess"], conf["monthly_excess_sd"]) == (0.0071, 0.0389)
+    assert config.MOMENTUM_BOOK["expected_monthly_excess"] == mb.DEFAULTS["expected_monthly_excess"]
+    assert config.MOMENTUM_BOOK["monthly_excess_sd"] == mb.DEFAULTS["monthly_excess_sd"]
+    assert mb.band_threshold(6, 0.0071, 0.0389) == pytest.approx(-0.1480, abs=5e-4)
+    assert mb.band_threshold(12, 0.0071, 0.0389) == pytest.approx(-0.1843, abs=5e-4)
+
+
 def test_summary_before_the_first_job(tmp_path):
     out = mb.summary(state_path=str(tmp_path / "missing.json"))
     assert out["status"] == "not_started"
@@ -290,6 +303,215 @@ def test_summary_reads_the_state(tmp_path):
     mb.save_state(state, path)
     out = mb.summary(state_path=path)
     assert out["status"] == "active" and len(out["holdings"]) == 15 and out["nav"]
+
+
+# --- orders that wait (README section 99) -------------------------------------------------
+
+def _wide_panel(n_stocks=30, n=470):
+    """A panel with every field build_panel makes, and leaders that rotate so
+    the book has to trade."""
+    sessions = _sessions(n=n)
+    chains = {}
+    for k in range(n_stocks):
+        px, closes = 100.0, []
+        for i in range(n):
+            px *= 1 + 0.002 * math.sin(2 * math.pi * (i / 180.0 + k / n_stocks)) \
+                + 0.01 * (((i * 7 + k * 13) % 11) - 5) / 5
+            closes.append(px)
+        chains["S%02d" % k] = {
+            "idx": list(range(n)), "close": closes[:], "raw": closes[:], "open": closes[:],
+            "val": [1e8 + k * 1e6] * n, "isins": set(),
+            "high": [x * 1.01 for x in closes], "low": [x * 0.99 for x in closes],
+            "prev": [closes[0]] + closes[:-1]}
+    return sessions, _with_series(chains)
+
+
+def _lock(c, j, up=True):
+    """Make row j a close at the 5% band."""
+    c["prev"][j] = c["raw"][j] / (1.05 if up else 0.95)
+    c["high" if up else "low"][j] = c["raw"][j]
+
+
+def _turns(sessions):
+    return [i for i in range(1, len(sessions)) if sessions[i][:7] != sessions[i - 1][:7]]
+
+
+def _book_through(sessions, chains, conf, until=None):
+    state = mb.new_state(conf["capital"], sessions[0])
+    state["last_processed"] = sessions[0]
+    for d in sessions[1:until]:
+        mb.process_session(state, chains, sessions, d, conf)
+    return state
+
+
+@pytest.mark.parametrize("close,prev,high,low", [
+    (105.0, 100.0, 105.0, 101.0), (104.75, 100.0, 104.75, 101.0), (104.6, 100.0, 104.6, 101.0),
+    (105.0, 100.0, 105.5, 101.0), (103.0, 100.0, 103.0, 100.0), (120.0, 100.0, 120.0, 101.0),
+    (95.0, 100.0, 99.0, 95.0), (90.0, 100.0, 99.0, 90.0), (95.0, 100.0, 99.0, 94.0), (105.0, 0.0, 105.0, 101.0),
+    (9.55, 10.0, 10.0, 9.55), (9.40, 10.0, 10.0, 9.40), (10.45, 10.0, 10.45, 9.9), (95.5, 100.0, 99.0, 95.5),
+])
+def test_the_band_lock_rule_matches_research(close, prev, high, low):
+    c = {"raw": [close], "prev": [prev], "high": [high], "low": [low]}
+    assert mb.lock(c, 0) == mw.lock(c, 0)
+
+
+def test_fill_constants_match_research():
+    assert (mb.BANDS, mb.BAND_INSIDE, mb.BAND_OUTSIDE, mb.LOW_PRICE, mb.TICK, mb.BUY_CARRY) == (
+        mw.BANDS, mw.BAND_INSIDE, mw.BAND_OUTSIDE, mw.LOW_PRICE, mw.TICK, mw.BUY_CARRY)
+
+
+def test_the_book_is_trial_126s_simulator_month_by_month():
+    """Band locks on fill days, days without a trade and a stock in
+    trade-for-trade: the book and the research simulator give the same values."""
+    sessions, chains = _wide_panel(n_stocks=60)
+    for t in _turns(sessions):
+        for k, name in enumerate(sorted(chains)):
+            c = chains[name]
+            if k % 5 == 0:
+                _lock(c, t, up=True)                       # any buy of it waits a session
+            elif k % 5 == 1:
+                _lock(c, t, up=False)                      # any sell of it waits
+                _lock(c, t + 1, up=False) if t + 1 < len(sessions) else None
+            elif k % 5 == 2:
+                for j in range(t, min(t + 7, len(sessions))):
+                    c["val"][j] = 0.0                      # no trade for seven sessions: a buy is cancelled
+    for j in range(300, 360):
+        chains["S03"]["ser"][j] = BE                       # two months in trade-for-trade
+    _with_series(chains)
+    conf = {**mb.DEFAULTS, "band_from_month": 10 ** 9}
+    unis = mw.universes(sessions, chains, screens=False)
+    series, strat, bench, holdings = mw.simulate(sessions, chains, unis, mw.PARTS["A"], conf["capital"],
+                                                 m3.SELECTION_START)
+    state = mb.new_state(conf["capital"], sessions[0])
+    state["last_processed"] = sessions[0]
+    held = []                                              # the book's names after each rebalance day
+    for d in sessions[1:]:
+        if d > series[-1][1]:
+            break                                          # the simulator stops at its last fill day
+        before = len(state["month_points"])
+        mb.process_session(state, chains, sessions, d, conf)
+        if len(state["month_points"]) > before:
+            held.append(sorted(state["book"]["positions"]))
+    pts = state["month_points"]
+    assert len(pts) == len(series) > 5
+    for p, r in zip(pts, series):
+        assert p["date"] == r[1]
+        assert p["book"] == pytest.approx(r[2], rel=1e-12)
+        assert p["bench"] == pytest.approx(r[3], rel=1e-12)
+    assert held == [h["holdings"] for h in holdings]
+    assert state["fills"].get("waited_buy_locked") == strat.count["carried_buy_locked"] > 0
+    assert state["fills"].get("waited_sell_locked") == strat.count["carried_sell_locked"] > 0
+    assert state["fills"].get("sells_priced_in_trade_for_trade", 0) == strat.count["sells_priced_in_t2t"]
+    assert len([t for t in state["trades"] if t["side"] == "SELL"]) == strat.sells > 10
+    assert state["fills"].get("waited_buy_no_trade") == strat.count["carried_buy_no_trade"] > 0
+    assert state["fills"].get("buys_cancelled") == strat.count["buys_cancelled"] > 0
+
+
+def _first_rebalance(sessions, chains, conf):
+    """The book up to the session before its first rebalance, and that turn."""
+    turn = _turns(sessions)[13]
+    return _book_through(sessions, chains, conf, until=turn), turn
+
+
+def test_a_buy_at_the_upper_band_waits_and_fills_at_the_later_close():
+    sessions, chains = _wide_panel()
+    conf = {**mb.DEFAULTS, "universe": 30}
+    turn = _turns(sessions)[13]
+    top = mb.ranking(chains, sessions, turn - 1, 30)[1][0]
+    _lock(chains[top], turn, up=True)
+    state = _book_through(sessions, chains, conf, until=turn + 1)
+    assert top not in state["book"]["positions"] and len(state["book"]["positions"]) == 14
+    assert [(o["side"], o["symbol"], o["waiting"]) for o in state["book"]["orders"]] == [("BUY", top, "locked")]
+    per = state["book"]["orders"][0]["amount"]
+    assert state["book"]["cash"] == pytest.approx(per)                 # its money is kept for it
+    mb.process_session(state, chains, sessions, sessions[turn + 1], conf)
+    assert not state["book"]["orders"] and len(state["book"]["positions"]) == 15
+    pos = state["book"]["positions"][top]
+    assert pos["fill_date"] == sessions[turn + 1] and pos["fill_price"] == chains[top]["raw"][turn + 1]
+    trade = [t for t in state["trades"] if t["symbol"] == top][0]
+    assert trade["date"] == sessions[turn + 1] and trade["ordered"] == sessions[turn]
+    assert trade["value"] == pytest.approx(per, abs=0.01)
+
+
+def test_a_buy_that_cannot_fill_in_five_sessions_is_cancelled_and_its_cash_kept():
+    sessions, chains = _wide_panel()
+    conf = {**mb.DEFAULTS, "universe": 30}
+    turn = _turns(sessions)[13]
+    top = mb.ranking(chains, sessions, turn - 1, 30)[1][0]
+    for j in range(turn, turn + 8):
+        chains[top]["val"][j] = 0.0
+    state = _book_through(sessions, chains, conf, until=turn + 6)       # the fill day and five more
+    assert [o["symbol"] for o in state["book"]["orders"]] == [top]
+    cash = state["book"]["cash"]
+    mb.process_session(state, chains, sessions, sessions[turn + 6], conf)
+    assert not state["book"]["orders"] and top not in state["book"]["positions"]
+    assert state["book"]["cash"] == cash and state["fills"]["buys_cancelled"] == 1
+    assert state["trades"][-1]["side"] == "CANCELLED BUY" and state["trades"][-1]["reason"] == "no_trade"
+
+
+def test_a_sell_at_the_lower_band_waits_and_the_holding_still_counts():
+    sessions, chains = _wide_panel(n_stocks=60)
+    conf = {**mb.DEFAULTS, "universe": 60}
+    nxt = next(t for t in _turns(sessions)[14:]
+               if mb.target_book(chains, sessions, t - 1, list(_book_through(sessions, chains, conf, until=t)
+                                                                ["book"]["positions"]), 60, 15, 30)[1])
+    state = _book_through(sessions, chains, conf, until=nxt)
+    held = list(state["book"]["positions"])
+    _, sell, buy, _ = mb.target_book(chains, sessions, nxt - 1, held, 60, conf["hold"], conf["rank_keep"])
+    assert sell, "the rotating panel should sell something"
+    stuck = sell[0]
+    _lock(chains[stuck], nxt, up=False)
+    mb.process_session(state, chains, sessions, sessions[nxt], conf)
+    assert stuck in state["book"]["positions"]
+    assert [(o["side"], o["symbol"]) for o in state["book"]["orders"] if o["side"] == "SELL"] == [("SELL", stuck)]
+    assert len(state["book"]["positions"]) == 15                       # one buy fewer than if it had sold
+    assert len([t for t in state["trades"] if t["date"] == sessions[nxt] and t["side"] == "BUY"]) == len(buy) - 1
+    mb.process_session(state, chains, sessions, sessions[nxt + 1], conf)
+    assert stuck not in state["book"]["positions"] and not state["book"]["orders"]
+    sale = [t for t in state["trades"] if t["symbol"] == stuck and t["side"] == "SELL"][0]
+    assert sale["date"] == sessions[nxt + 1] and sale["ordered"] == sessions[nxt]
+
+
+def test_orders_still_open_at_the_next_month_end_are_decided_again():
+    sessions, chains = _wide_panel()
+    conf = {**mb.DEFAULTS, "universe": 30}
+    state, turn = _first_rebalance(sessions, chains, conf)
+    nxt = _turns(sessions)[14]
+    state["book"]["orders"].append({"side": "SELL", "symbol": "S00", "placed": sessions[turn], "amount": 0.0,
+                                    "waiting": "locked"})
+    state["book"]["positions"].setdefault("S00", {"symbol": "S00", "fill_date": sessions[turn], "amount": 1000.0})
+    for j in range(turn, nxt):
+        _lock(chains["S00"], j, up=False)                            # it never comes off the band
+    for d in sessions[turn:nxt + 1]:
+        mb.process_session(state, chains, sessions, d, conf)
+    assert all(o["placed"] == sessions[nxt] for o in state["book"]["orders"])
+
+
+def test_a_state_written_before_orders_could_wait_is_read(tmp_path):
+    path = str(tmp_path / "old.json")
+    old = mb.new_state(1_000_000.0, "2026-09-26")
+    for side in ("book", "bench"):
+        del old[side]["orders"]
+    del old["fills"]
+    old["version"] = 1
+    mb.save_state(old, path)
+    state = mb.load_state(path)
+    assert state["book"]["orders"] == [] and state["bench"]["orders"] == [] and state["fills"] == {}
+    assert mb.summary(state_path=path)["waiting_orders"] == []
+
+
+def test_summary_shows_the_orders_that_wait(tmp_path):
+    sessions, chains = _wide_panel()
+    conf = {**mb.DEFAULTS, "universe": 30}
+    turn = _turns(sessions)[13]
+    top = mb.ranking(chains, sessions, turn - 1, 30)[1][0]
+    _lock(chains[top], turn, up=True)
+    state = _book_through(sessions, chains, conf, until=turn + 1)
+    path = str(tmp_path / "s.json")
+    mb.save_state(state, path)
+    out = mb.summary(state_path=path)
+    assert out["waiting_orders"] == [{"side": "BUY", "symbol": top, "ordered": sessions[turn], "reason": "locked"}]
+    assert out["fills"] == {"waited_buy_locked": 1} and len(out["holdings"]) == 14
 
 
 # --- engine hook -----------------------------------------------------------------------

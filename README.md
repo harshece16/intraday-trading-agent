@@ -27,7 +27,7 @@ going live is the owner's decision alone.
 
 | Book | What it does | Evidence | Status |
 | --- | --- | --- | --- |
-| **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: **+0.82% a month** over its own universe after every delivery charge (t 2.91; 22.3% a year against 12.0%). Confirmed on 200 stocks never read before (+1.00% a month, t 3.31) and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
+| **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session, lets an order wait when a stock is locked at its price band, and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: +0.82% a month over its own universe after every delivery charge (t 2.91). Re-run on repaired prices with orders that wait, which is what the book now runs: **+0.71% a month** (t 2.51; 20.6% a year against 11.9%), a narrow pass ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better), [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month)). Confirmed on 200 stocks never read before and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
 | **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. Running since **28 September 2026** |
 | **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades |
 | **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
@@ -3392,7 +3392,7 @@ Read with the caveats in `results-3i-momentum-corrected-data.md`: Part A re-read
 
 The strategy that passed 3i (§82) now runs as a **paper positional book** — a new **Momentum Book** page on the dashboard. Every trading evening after 19:30 the engine starts a separate job (`backend/momentum_book.py daily`) that downloads the day's NSE bhavcopy and corporate actions, rebuilds the adjusted price history, and marks the book to market. On the first session of each month it re-ranks the 200 most-traded stocks at the previous close and trades at that day's close: keep a holding while it ranks in the top 30, fill the rest from the top, 15 names, ₹10 lakh paper capital, every Zerodha delivery charge. The benchmark — the same 200 stocks equal-weighted — runs alongside so the page shows the excess, not just the return.
 
-**It switches itself off** if, from the sixth month on, cumulative excess falls below n × 0.82% − 2 × 3.87% × √n (−14.0% at six months, −17.0% at twelve) — the band fixed in the results file before it started. Paper only; nothing places an order. The code repeats the research loader and ranking rather than importing them (live code may not import research); replaying it over 2026 reproduces the research held-out run exactly — the same 15 names at all nine rebalances and the same book values. The first rebalance is after the 30 September 2026 close.
+**It switches itself off** if, from the sixth month on, cumulative excess falls below the band. When this section was written the band was n × 0.82% − 2 × 3.87% × √n (−14.0% at six months, −17.0% at twelve), fixed in the results file. Since 2026-09-29, before the first rebalance, it is n × 0.71% − 2 × 3.89% × √n (−14.8% and −18.4%); see [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month). Paper only; nothing places an order. The code repeats the research loader and ranking rather than importing them (live code may not import research); replaying it over 2026 reproduces the research held-out run exactly — the same 15 names at all nine rebalances and the same book values. The first rebalance is after the 30 September 2026 close.
 
 ### 84. Post-earnings drift measured on NSE's own filings: real in sign, too small to trade — dropped
 
@@ -3632,7 +3632,7 @@ Files: `docs/research/results-universe-width.md`, `docs/research/stock-picking-s
 
 The book had held nothing and recorded no return before this change, so its forward record starts on the repaired data.
 
-**What this does not fix (#180).** The paper book still fills every order at the close. The re-run in §96 did not: it carried a buy past a day the stock was locked at its upper band, and a sell past a lower-band lock. So the paper book now runs repaired prices with the old fill assumption, which is neither of the two tested configurations. The band still expects +0.82% a month; the re-run gave +0.71%. Keeping 0.82% makes the band stricter. Both are the owner's decisions.
+**What this did not fix (#180, fixed in §99).** The paper book still filled every order at the close. The re-run in §96 did not: it carried a buy past a day the stock was locked at its upper band, and a sell past a lower-band lock. So the paper book now runs repaired prices with the old fill assumption, which is neither of the two tested configurations. The band still expects +0.82% a month; the re-run gave +0.71%. Keeping 0.82% makes the band stricter. Both are the owner's decisions.
 
 Files: `backend/momentum_book.py`, `backend/tests/test_momentum_book.py`, `docs/research/prereg-3i-momentum-corrected-data.md` (dated note).
 
@@ -3666,6 +3666,47 @@ A checklist entry's stop and target are chart levels, so they don't move with th
 That is from 34,338 book samples over **2 sessions**, which is too little to change the cost model, and they are snapshots of the book, not fills. Against the signal price the cost was higher: a median of 1.7 bp and a 90th percentile of 7.2 bp over 79 matched signals, of which one was a full pass. The script says so itself and recommends nothing.
 
 Four new defects were filed: live option orders still book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)), open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)), the order-book sampler doesn't store levels 2 to 5, which #66 needs ([#188](https://github.com/harshece16/intraday-trading-agent/issues/188)), and paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189), not verified against Kite).
+
+### 99. The paper momentum book runs what was tested: orders wait, and the band expects +0.71% a month
+
+**Owner's decisions, 2026-09-29**, both before the book's first rebalance on the evening of 2026-10-01.
+
+**1. Orders wait (#180).** The book used to fill every order at the day's close. A close at a locked price band is not a price an order could have had. The book now follows the fill rules of trial 126 (§96):
+
+| Situation on the fill day | What the book does |
+| --- | --- |
+| The stock closed locked at its upper band | A buy waits and is tried again the next session |
+| The stock closed locked at its lower band | A sell waits. The holding stays in the book and keeps its slot |
+| The stock did not trade | Nothing fills |
+| A buy has waited five sessions | It is cancelled. Its cash stays uninvested until the next rebalance |
+| An order is still open at the next month-end | It is dropped and decided again |
+
+The *Momentum Book* page shows the orders that are waiting and why, and each trade says if it waited or was filled while the stock was in trade-for-trade.
+
+**2. The band expects +0.71% a month.** The switch-off band was set from trial 120's figures. The book now runs trial 126's configuration, so the band uses trial 126's: a mean of 0.71% and a standard deviation of 3.89%. **This loosens the floor:**
+
+| Months of record | Floor before | Floor now |
+| --- | --- | --- |
+| 6 | −14.0% | −14.8% |
+| 12 | −17.0% | −18.4% |
+
+It is a change to a threshold fixed in advance. It was made before any forward return exists, and it is written into the pre-registration as a dated note.
+
+**Checked on the real data.** The book's own code was run over 2010 to 2025 on the bhavcopy cache, session by session, and compared with trial 126:
+
+| Check | Result |
+| --- | --- |
+| Monthly values of the book and of the benchmark, 190 months | Equal to trial 126's; largest difference 7e-16 |
+| Mean excess and t | +0.709% a month, t 2.505, as trial 126 |
+| Holdings after the last rebalance | The same 15 names |
+| Orders that waited | 7 buys and 9 sells, as trial 126 |
+| Sells filled from a trade-for-trade row | 14, as trial 126 |
+
+The page was checked in the browser on an example from July 2021, when three holdings closed locked at the lower band for three sessions.
+
+**What this does not settle.** Real fills. Slippage of 0.05% a side is still a judgement (#66), and trial 126's pass would fail at 0.07%. Nothing here guarantees a profit.
+
+Files: `backend/momentum_book.py`, `backend/config.py`, `backend/tests/test_momentum_book.py`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-3i-momentum-corrected-data.md` (second dated note).
 
 ## Backtest results
 

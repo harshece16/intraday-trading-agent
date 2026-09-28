@@ -302,7 +302,7 @@ Kite's prices. The mark is never stored and never scored.
 
 | Book | Rule it runs | Switches itself off when | Verdict |
 | --- | --- | --- | --- |
-| Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.82% − 2 × 3.87% × √n, from month 6 | Forward record against the pre-registered band |
+| Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.71% − 2 × 3.89% × √n, from month 6 | Forward record against the pre-registered band |
 | Jev | Buy, short or skip each shortlisted stock at 09:45; close at 15:08 | After 100 trades, t below −2 | After 300 trades or 60 sessions: t ≥ 2.24, both halves positive, beats the scanner |
 | Order-book test | None. It records data | Never | After 15 full sessions: one pre-registered analysis |
 
@@ -392,7 +392,6 @@ affects today's paper operation with automatic entries off.
 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) | F&O entries skip several cash entry rules | Before enabling F&O |
 | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) | Jev book: interrupted rounds and the live-price gate | Now, for the test's record |
 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) | Momentum book: silent data gaps and a skippable rebalance | Before 1 Oct |
-| [#180](https://github.com/harshece16/intraday-trading-agent/issues/180) | Momentum book fills every order at the close; it does not model band locks or no-trade days, which trial 126 did | For the forward test's record |
 | [#160](https://github.com/harshece16/intraday-trading-agent/issues/160) | LLM features switch on with the key alone | Now, small cost |
 | [#161](https://github.com/harshece16/intraday-trading-agent/issues/161) | Dashboard key file isn't mode 0600 | Now, low risk |
 | [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only | Before 2027 |

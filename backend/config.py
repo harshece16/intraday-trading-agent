@@ -329,8 +329,12 @@ MOMENTUM_BOOK = {
     "hold": 15,
     "rank_keep": 30,
     "slippage": 0.0005,
-    "expected_monthly_excess": 0.0082,   # 3i Part A
-    "monthly_excess_sd": 0.0387,
+    # Trial 126's figures: the rule on repaired prices with orders that wait
+    # (README section 99). They were 0.0082 and 0.0387, trial 120's, until the
+    # owner's decision of 2026-09-29. The change moves the six-month floor from
+    # -14.0% to -14.8%.
+    "expected_monthly_excess": 0.0071,
+    "monthly_excess_sd": 0.0389,
     "band_from_month": 6,
     "job_after": "19:30",
     "job_until": "23:30",

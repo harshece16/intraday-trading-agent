@@ -1399,9 +1399,9 @@
    "id": "MOM-05",
    "area": "momentum",
    "status": "active",
-   "rule": "Hold 15 names. Keep a holding while it ranks in the top 30; sell it if it leaves the universe, has no print at the month-end, or ranks below 30; fill the empty slots from the top of the ranking.",
+   "rule": "Hold 15 names. Keep a holding while it ranks in the top 30; sell it if it leaves the universe, has no EQ print at the month-end, or ranks below 30; fill the empty slots from the top of the ranking. A holding whose sell is waiting still counts as held, so it takes a slot until it is sold.",
    "why": "The pre-registered buffer cuts turnover and costs.",
-   "enforced_in": "backend/momentum_book.py:target_book",
+   "enforced_in": "backend/momentum_book.py:rebalance",
    "config": "MOMENTUM_BOOK.hold = 15; MOMENTUM_BOOK.rank_keep = 30",
    "verify": "Momentum Book page holdings count (15 once active) and Recent trades",
    "source": "README §83",
@@ -1411,11 +1411,11 @@
    "id": "MOM-06",
    "area": "momentum",
    "status": "active",
-   "rule": "Rebalance only on the first session of a month, ranking at the previous (month-end) close and trading at that first session's close, and only if the book had already processed the month-end session.",
+   "rule": "Rebalance only on the first session of a month, ranking at the previous (month-end) close and ordering for that first session's close, and only if the book had already processed the month-end session. Sells that can fill are filled first; each buy's amount is fixed that day as cash over vacancies.",
    "why": "Prevents look-ahead and retroactive trades from before the book existed.",
-   "enforced_in": "backend/momentum_book.py:process_session",
+   "enforced_in": "backend/momentum_book.py:process_session and rebalance",
    "config": null,
-   "verify": "state.trades dates are all first sessions of a month; the first rebalance fills at the 1 Oct 2026 close",
+   "verify": "state.trades: every trade's date, or its 'ordered' date if it waited, is the first session of a month; the first rebalance is ordered for the 1 Oct 2026 close",
    "source": "README §83",
    "test": "backend/tests/test_momentum_book.py::test_book_does_not_rebalance_on_months_before_it_existed"
   },
@@ -1447,13 +1447,13 @@
    "id": "MOM-09",
    "area": "momentum",
    "status": "active",
-   "rule": "Switch-off band: once there are 6 or more months of excess, the book switches itself off if cumulative net excess falls below n*0.82% - 2*3.87%*sqrt(n), which is -14.0% at 6 months and -17.0% at 12.",
-   "why": "The forward band was fixed before the book started, so failure is automatic and not a judgment call.",
+   "rule": "Switch-off band: once there are 6 or more months of excess, the book switches itself off if cumulative net excess falls below n*0.71% - 2*3.89%*sqrt(n), which is -14.8% at 6 months and -18.4% at 12. The two figures are trial 126's. They were 0.82% and 3.87%, trial 120's, until the owner's decision of 2026-09-29, made before the book's first rebalance.",
+   "why": "The forward band was fixed before the book started, so failure is automatic and not a judgment call. The book runs trial 126's configuration, so the band expects what trial 126 measured. The change loosens the floor by 0.8 points at 6 months.",
    "enforced_in": "backend/momentum_book.py:process_session and band_threshold",
-   "config": "MOMENTUM_BOOK.expected_monthly_excess = 0.0082; MOMENTUM_BOOK.monthly_excess_sd = 0.0387; MOMENTUM_BOOK.band_from_month = 6",
+   "config": "MOMENTUM_BOOK.expected_monthly_excess = 0.0071; MOMENTUM_BOOK.monthly_excess_sd = 0.0389; MOMENTUM_BOOK.band_from_month = 6",
    "verify": "Momentum Book page 'Switch-off floor now'; state.band_floor and status_reason",
-   "source": "docs/research/results-3i-momentum-corrected-data.md (What follows, item 2)",
-   "test": "backend/tests/test_momentum_book.py::test_band_threshold_is_the_preregistered_formula"
+   "source": "docs/research/results-universe-width.md; docs/research/prereg-3i-momentum-corrected-data.md (notes on the forward paper book); README §99",
+   "test": "backend/tests/test_momentum_book.py::test_the_band_uses_trial_126s_figures"
   },
   {
    "id": "MOM-10",
@@ -1523,7 +1523,21 @@
    "source": "README §97; docs/research/results-universe-width.md",
    "test": "backend/tests/test_momentum_book.py::test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for",
    "issues": [
-    175,
+    175
+   ]
+  },
+  {
+   "id": "MOM-15",
+   "area": "momentum",
+   "status": "active",
+   "rule": "An order fills at the fill day's close unless the stock did not trade that day, or closed locked against the order: a buy at its upper price band, a sell at its lower. An order that cannot fill waits and is tried again each session. A buy that has waited five sessions is cancelled and its cash stays uninvested until the next rebalance. A sell waits until it fills. Orders still open at the next month-end are dropped and decided again.",
+   "why": "A close at a locked band is not a price an order could have had. These are the fill rules of trial 126, the configuration that was tested on repaired prices.",
+   "enforced_in": "backend/momentum_book.py:lock, why_not, work_orders and rebalance",
+   "config": "BUY_CARRY = 5; BANDS = 2%, 5%, 10%, 20%",
+   "verify": "Momentum Book page: 'Orders waiting', and the Note column of Recent trades. Run over 2010 to 2025 the book equals trial 126 month by month (largest difference 7e-16)",
+   "source": "docs/research/prereg-universe-width.md (rules H1 to H5); README §99",
+   "test": "backend/tests/test_momentum_book.py::test_the_book_is_trial_126s_simulator_month_by_month",
+   "issues": [
     180
    ]
   },
@@ -2175,8 +2189,8 @@
    "status": "active",
    "rule": "A forward paper book carries a pre-registered band and switches itself off on a breach.",
    "why": "A strategy that stops working must stop without anyone deciding to stop it.",
-   "enforced_in": "backend/momentum_book.py:band_threshold, applied at lines 592-594; backend/jev_book.py:_apply_kill_rule",
-   "config": "expected_monthly_excess = 0.0082; monthly_excess_sd = 0.0387; band_from_month = 6; kill_after = 100; kill_t = -2.0",
+   "enforced_in": "backend/momentum_book.py:band_threshold, applied in process_session; backend/jev_book.py:_apply_kill_rule",
+   "config": "expected_monthly_excess = 0.0071; monthly_excess_sd = 0.0389; band_from_month = 6; kill_after = 100; kill_t = -2.0",
    "verify": "band_floor in backend/data/momentum_book_state.json once n >= 6; Momentum Book dashboard page.",
    "source": "README §83, §86; docs/research/results-3i-momentum-corrected-data.md",
    "test": "backend/tests/test_momentum_book.py::test_band_threshold_is_the_preregistered_formula"

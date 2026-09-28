@@ -8,7 +8,13 @@ close >= Rs 20, >= 250 sessions of history, fund units excluded) by
 mean(r6/sigma, r12/sigma) with the skip-month; hold 15, keep a holding while
 it ranks in the top 30, replace from the top; trade at the next session's
 close; pay Zerodha's delivery charges. The benchmark is the same universe
-equal-weighted. Prices come from NSE's daily bhavcopies, adjusted with NSE's
+equal-weighted.
+
+Orders fill as they did in trial 126 (README section 99): a buy waits when
+the stock closes locked at its upper band, a sell waits at the lower band,
+and nothing fills on a day the stock did not trade. A buy that has waited
+five sessions is cancelled. Orders still open at the next month-end are
+dropped and decided again. Prices come from NSE's daily bhavcopies, adjusted with NSE's
 own corporate-actions file (splits, bonuses, consolidations, rights,
 demergers, dividends).
 
@@ -23,14 +29,15 @@ daily`), started by the engine after the close, so building the price panel
 data/momentum_book_state.json. Paper only: nothing here places an order.
 
 The book switches itself off if, from six months on, the cumulative net
-excess over the benchmark falls below n x 0.82% - 2 x 3.87% x sqrt(n)
-(n months) — the forward band fixed in the results file.
+excess over the benchmark falls below n x 0.71% - 2 x 3.89% x sqrt(n)
+(n months). The two figures are trial 126's, the configuration this book
+runs (the owner's decision of 2026-09-29).
 
 This module deliberately repeats the loader and ranking code of
-research/nse_prices.py (its repaired panel, `load(wide=True)`) and
-research/momentum_3i.py instead of importing them: live code may not import
-research (test_research_splits). A parity test holds the two copies to the
-same answers.
+research/nse_prices.py (its repaired panel, `load(wide=True)`),
+research/momentum_3i.py and the fill rules of research/momentum_width.py
+instead of importing them: live code may not import research
+(test_research_splits). Parity tests hold the copies to the same answers.
 """
 
 import argparse
@@ -70,8 +77,8 @@ DEFAULTS = {
     "hold": 15,
     "rank_keep": 30,
     "slippage": 0.0005,
-    "expected_monthly_excess": 0.0082,
-    "monthly_excess_sd": 0.0387,
+    "expected_monthly_excess": 0.0071,
+    "monthly_excess_sd": 0.0389,
     "band_from_month": 6,
     "job_after": "19:30",
     "job_until": "23:30",
@@ -96,6 +103,11 @@ SERIES = ("EQ", "BE", "BZ")
 EQ = 0
 DIVIDEND_MAX_SHARE = 1.0      # of the previous close
 DEMERGER_MIN_RATIO = 0.01
+# Fills (a copy of research/momentum_width.py's rules H2 to H4)
+BANDS = (0.02, 0.05, 0.10, 0.20)
+BAND_INSIDE, BAND_OUTSIDE = 0.0030, 0.0010
+LOW_PRICE, TICK = 20.0, 0.05  # below Rs 20 a band is also matched to within one tick
+BUY_CARRY = 5                 # sessions after the fill day a buy may wait
 
 
 def cfg():
@@ -205,7 +217,8 @@ def refresh_reference_files(max_age_days=7):
 
 def parse_bhavcopy(path):
     """Rows of the EQ, BE and BZ series: (symbol, iso date, open, close,
-    previous close, isin, traded value, position of the series in SERIES)."""
+    previous close, isin, traded value, position of the series in SERIES,
+    high, low)."""
     out = []
     code = {name: i for i, name in enumerate(SERIES)}
     with zipfile.ZipFile(path) as z, z.open(z.namelist()[0]) as fh:
@@ -216,7 +229,7 @@ def parse_bhavcopy(path):
                     continue
                 out.append((r["TckrSymb"], r["TradDt"], float(r.get("OpnPric") or 0), float(r["ClsPric"] or 0),
                             float(r["PrvsClsgPric"] or 0), r.get("ISIN", ""), float(r.get("TtlTrfVal") or 0),
-                            code[r["SctySrs"]]))
+                            code[r["SctySrs"]], float(r.get("HghPric") or 0), float(r.get("LwPric") or 0)))
             elif "SYMBOL" in r:
                 if r.get("SERIES") not in code:
                     continue
@@ -227,7 +240,7 @@ def parse_bhavcopy(path):
                     d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
                 out.append((r["SYMBOL"], d, float(r.get("OPEN") or 0), float(r["CLOSE"] or 0),
                             float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0),
-                            code[r["SERIES"]]))
+                            code[r["SERIES"]], float(r.get("HIGH") or 0), float(r.get("LOW") or 0)))
     return out
 
 
@@ -390,9 +403,10 @@ def etf_symbols(ca_dir=CA_DIR):
 
 def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
     """(sessions, chains): chains[name] = dict(idx, close (total-return
-    adjusted), raw, val, ser, eq). ser is each row's series as a position in
-    SERIES. eq holds the EQ rows alone, which is what the universe is chosen
-    from; prices and sales use every row."""
+    adjusted), raw, val, ser, high, low, prev, eq). ser is each row's series
+    as a position in SERIES. high, low and prev (the previous close) are as
+    printed; the band-lock rule reads them. eq holds the EQ rows alone, which
+    is what the universe is chosen from; prices and sales use every row."""
     bhav_dirs = bhav_dirs or BHAV_DIRS
     nxt = symbol_chains(symbolchange or os.path.join(DATA, "bhav_daily", "symbolchange.csv"))
     cache, by_date = {}, {}
@@ -402,15 +416,15 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
                 rows = parse_bhavcopy(p)
             except Exception:
                 continue
-            for sym, day, op, close, prev, isin, val, series in rows:
+            for sym, day, op, close, prev, isin, val, series, high, low in rows:
                 if close > 0:
-                    by_date.setdefault(day, []).append((sym, op, close, isin, val, series))
+                    by_date.setdefault(day, []).append((sym, op, close, isin, val, prev, high, low, series))
     sessions = sorted(by_date)
     chains, owner = {}, {}
     for idx, day in enumerate(sessions):
         # EQ rows first, in file order, so the row kept for a chain on a day
         # is its EQ row when it has one (the sort is stable)
-        for sym, op, close, isin, val, series in sorted(by_date[day], key=lambda r: r[-1]):
+        for sym, op, close, isin, val, prev, high, low, series in sorted(by_date[day], key=lambda r: r[-1]):
             canon = canonical(sym, nxt, cache)
             if isin:
                 prior = owner.setdefault(isin, canon)
@@ -418,7 +432,7 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
                     cache[canon] = cache[sym] = prior
                     canon = prior
             c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "open": [], "val": [], "ser": [],
-                                          "isins": set()})
+                                          "high": [], "low": [], "prev": [], "isins": set()})
             if c["idx"] and c["idx"][-1] == idx:
                 continue
             c["idx"].append(idx)
@@ -427,6 +441,9 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
             c["open"].append(op)
             c["val"].append(val)
             c["ser"].append(series)
+            c["high"].append(high)
+            c["low"].append(low)
+            c["prev"].append(prev)
             if isin:
                 c["isins"].add(isin)
     etfs, aliases = etf_symbols(ca_dir), {}
@@ -536,17 +553,61 @@ def scores(chains, names, sessions, idx):
 
 
 def target_book(chains, sessions, month_end_idx, current, universe_n, hold, keep):
-    """(keep, sell, buy, universe): the pre-registered rebalance at a month-end."""
-    uni = ranked_universe(chains, month_end_idx)[:universe_n]
-    sc = scores(chains, uni, sessions, month_end_idx)
-    ranked = sorted(sc, key=sc.get, reverse=True)
-    rank = {n: i + 1 for i, n in enumerate(ranked)}
+    """(keep, sell, buy, universe): the pre-registered rebalance at a month-end,
+    as it would be if every order filled. The book itself decides with
+    ranking() and lets an order wait (process_session)."""
+    uni, ranked, rank = ranking(chains, sessions, month_end_idx, universe_n)
     uset = set(uni)
-    sell = [n for n in current if chains.get(n) is None or chains[n]["idx"][-1] < month_end_idx
-            or n not in uset or rank.get(n, 10 ** 9) > keep]
+    sell = [n for n in current if ended(chains, n, month_end_idx) or n not in uset or rank.get(n, 10 ** 9) > keep]
     kept = [n for n in current if n not in sell]
     buy = [n for n in ranked if n not in kept][:max(0, hold - len(kept))]
     return kept, sell, buy, uni
+
+
+def ranking(chains, sessions, month_end_idx, universe_n):
+    """(universe, names by score best first, rank of each name)."""
+    uni = ranked_universe(chains, month_end_idx)[:universe_n]
+    sc = scores(chains, uni, sessions, month_end_idx)
+    ranked = sorted(sc, key=sc.get, reverse=True)
+    return uni, ranked, {n: i + 1 for i, n in enumerate(ranked)}
+
+
+def ended(chains, name, month_end_idx):
+    """The listing has no row on or after the month-end."""
+    return chains.get(name) is None or chains[name]["idx"][-1] < month_end_idx
+
+
+# --- fills (a copy of research/momentum_width.py; parity-tested) -----------------------
+
+def lock(c, j):
+    """+1 if row j closed locked at its upper band, -1 at its lower band."""
+    close, prev = c["raw"][j], c["prev"][j]
+    if prev <= 0 or close <= 0:
+        return 0
+    ret = close / prev - 1
+    at_high, at_low = close >= c["high"][j] - 1e-9, close <= c["low"][j] + 1e-9
+    for b in BANDS:
+        up = b - BAND_INSIDE <= ret <= b + BAND_OUTSIDE
+        down = -b - BAND_OUTSIDE <= ret <= -b + BAND_INSIDE
+        if prev < LOW_PRICE:
+            up = up or abs(close - prev * (1 + b)) <= TICK + 1e-9
+            down = down or abs(close - prev * (1 - b)) <= TICK + 1e-9
+        if at_high and up:
+            return 1
+        if at_low and down:
+            return -1
+    return 0
+
+
+def why_not(c, idx, side):
+    """None if an order on this side can fill at session idx, else the reason
+    it waits: the stock did not trade, or it closed locked against the order."""
+    k = rows_before(c, idx)
+    if not k or c["idx"][k - 1] != idx or c["val"][k - 1] <= 0:
+        return "no_trade"
+    if "high" in c and lock(c, k - 1) == (1 if side == "BUY" else -1):
+        return "locked"
+    return None
 
 
 # --- the book -------------------------------------------------------------------------
@@ -560,18 +621,27 @@ def sell_cost(v, slip, dp=True):
 
 
 def new_state(capital, today):
-    return {"version": 1, "created": today, "status": "waiting_for_month_end", "status_reason": None,
+    return {"version": 2, "created": today, "status": "waiting_for_month_end", "status_reason": None,
             "capital": capital, "last_processed": None,
-            "book": {"cash": capital, "positions": {}},
-            "bench": {"cash": capital, "positions": {}},
-            "nav": [], "month_points": [], "trades": [], "rebalances": 0}
+            "book": {"cash": capital, "positions": {}, "orders": []},
+            "bench": {"cash": capital, "positions": {}, "orders": []},
+            "nav": [], "month_points": [], "trades": [], "rebalances": 0, "fills": {}}
 
 
 def load_state(path=STATE_PATH):
     if os.path.exists(path):
         with open(path) as fh:
-            return json.load(fh)
+            return upgrade_state(json.load(fh))
     return None
+
+
+def upgrade_state(state):
+    """A state written before orders could wait has none open."""
+    for side in ("book", "bench"):
+        state[side].setdefault("orders", [])
+    state.setdefault("fills", {})
+    state["version"] = 2
+    return state
 
 
 def save_state(state, path=STATE_PATH):
@@ -596,59 +666,151 @@ def band_threshold(n, mean, sd):
     return n * mean - 2 * sd * math.sqrt(n)
 
 
-def process_session(state, chains, sessions, day, conf):
+def _sell_now(state, side, name, chains, sess_idx, i, day, slip, order=None):
+    book = state[side]
+    pos = book["positions"].pop(name)
+    v = value_of(pos, chains, sess_idx, i)
+    c = sell_cost(v, slip, dp=side == "book")
+    book["cash"] += v - c
+    if side == "book":
+        trade = {"date": day, "side": "SELL", "symbol": name, "value": round(v, 2), "cost": round(c, 2)}
+        if order and order["placed"] != day:
+            trade["ordered"] = order["placed"]
+        row = chains.get(name)
+        if row is not None and "ser" in row:
+            k = rows_before(row, i)
+            if k and row["idx"][k - 1] == i and row["ser"][k - 1] != EQ:
+                trade["series"] = SERIES[row["ser"][k - 1]]
+                _count(state, "sells_priced_in_trade_for_trade")
+        state["trades"].append(trade)
+
+
+def _count(state, what):
+    state["fills"][what] = state["fills"].get(what, 0) + 1
+
+
+def work_orders(state, side, chains, sess_idx, i, day, slip, only=None):
+    """Try every open order of one book at session i. An order that cannot
+    fill waits; a buy that has waited BUY_CARRY sessions is cancelled."""
+    book, still = state[side], []
+    for o in book["orders"]:
+        if only and o["side"] != only:
+            still.append(o)
+            continue
+        if o["side"] == "BUY" and i > sess_idx[o["placed"]] + BUY_CARRY:
+            if side == "book":
+                _count(state, "buys_cancelled")
+                state["trades"].append({"date": day, "side": "CANCELLED BUY", "symbol": o["symbol"],
+                                        "value": round(o["amount"], 2), "cost": 0.0, "ordered": o["placed"],
+                                        "reason": o.get("waiting")})
+            continue
+        c = chains.get(o["symbol"])
+        why = "no_trade" if c is None else why_not(c, i, o["side"])
+        if why:
+            if not o.get("waiting"):
+                o["waiting"] = why
+                if side == "book":
+                    _count(state, "waited_%s_%s" % (o["side"].lower(), why))
+            still.append(o)
+            continue
+        if o["side"] == "SELL":
+            _sell_now(state, side, o["symbol"], chains, sess_idx, i, day, slip, o)
+            continue
+        amount = o["amount"]
+        if amount <= 0:
+            continue
+        cost = buy_cost(amount, slip)
+        pos = {"symbol": o["symbol"], "fill_date": day, "amount": amount - cost}
+        if side == "book":
+            pos["fill_price"] = c["raw"][rows_before(c, i) - 1]
+            trade = {"date": day, "side": "BUY", "symbol": o["symbol"], "value": round(amount, 2),
+                     "cost": round(cost, 2)}
+            if o["placed"] != day:
+                trade["ordered"] = o["placed"]
+            state["trades"].append(trade)
+        book["positions"][o["symbol"]] = pos
+        book["cash"] -= amount
+    book["orders"] = still
+
+
+def _order(book, side, name, day, amount=0.0):
+    book["orders"].append({"side": side, "symbol": name, "placed": day, "amount": amount, "waiting": None})
+
+
+def rebalance(state, chains, sessions, sess_idx, i, day, conf):
+    """The month-turn rebalance, decided at the previous session's close.
+    Sells that can fill are filled first; a holding whose sell waits still
+    counts as held; each buy's amount is fixed today as cash over vacancies.
+    Returns False when there is nothing to rank yet."""
+    me, slip = i - 1, conf["slippage"]
+    uni, ranked, rank = ranking(chains, sessions, me, conf["universe"])
+    if not uni or not ranked:
+        return False
+    uset, book, bench = set(uni), state["book"], state["bench"]
+    book["orders"], bench["orders"] = [], []
+
+    for n in list(book["positions"]):
+        if ended(chains, n, me):
+            _count(state, "ended")
+            _sell_now(state, "book", n, chains, sess_idx, i, day, slip)
+        elif n not in uset or rank.get(n, 10 ** 9) > conf["rank_keep"]:
+            _order(book, "SELL", n, day)
+    work_orders(state, "book", chains, sess_idx, i, day, slip, "SELL")
+    vacancies = conf["hold"] - len(book["positions"])
+    per = book["cash"] / vacancies if vacancies > 0 else 0
+    for n in ranked:
+        if vacancies <= 0:
+            break
+        if n not in book["positions"]:
+            _order(book, "BUY", n, day, per)
+            vacancies -= 1
+    work_orders(state, "book", chains, sess_idx, i, day, slip, "BUY")
+
+    if state["rebalances"] == 0:
+        per_b = bench["cash"] / len(uni)
+        for n in uni:
+            _order(bench, "BUY", n, day, per_b)
+    else:
+        for n in list(bench["positions"]):
+            if ended(chains, n, me):
+                _sell_now(state, "bench", n, chains, sess_idx, i, day, slip)
+            elif n not in uset:
+                _order(bench, "SELL", n, day)
+        work_orders(state, "bench", chains, sess_idx, i, day, slip, "SELL")
+        entrants = [n for n in uni if n not in bench["positions"]]
+        if entrants:
+            per_b = bench["cash"] / len(entrants)
+            for n in entrants:
+                _order(bench, "BUY", n, day, per_b)
+    work_orders(state, "bench", chains, sess_idx, i, day, slip, "BUY")
+    state["rebalances"] += 1
+    state["status"] = "active"
+    return True
+
+
+def process_session(state, chains, sessions, day, conf, sess_idx=None):
     """Advance the book through one session: rebalance on the first session of
-    a month (ranking at the previous session's close), then mark to market."""
-    sess_idx = {d: i for i, d in enumerate(sessions)}
+    a month (ranking at the previous session's close), otherwise try the
+    orders that are waiting, then mark to market."""
+    sess_idx = sess_idx or {d: i for i, d in enumerate(sessions)}
     i = sess_idx[day]
-    slip = conf["slippage"]
     if state["status"] == "switched_off":
         return
+    upgrade_state(state)
     prev = sessions[i - 1] if i > 0 else None
     month_turn = prev is not None and prev[:7] != day[:7] and (state["last_processed"] or "") >= prev
     if month_turn:
-        me = i - 1
-        book, bench = state["book"], state["bench"]
-        kept, sell, buy, uni = target_book(chains, sessions, me, list(book["positions"]),
-                                           conf["universe"], conf["hold"], conf["rank_keep"])
-        if not uni:
+        if not rebalance(state, chains, sessions, sess_idx, i, day, conf):
             return
-        for n in sell:
-            pos = book["positions"].pop(n)
-            v = value_of(pos, chains, sess_idx, i)
-            c = sell_cost(v, slip)
-            book["cash"] += v - c
-            state["trades"].append({"date": day, "side": "SELL", "symbol": n, "value": round(v, 2), "cost": round(c, 2)})
-        per = book["cash"] / len(buy) if buy else 0
-        for n in buy:
-            raw = chains[n]["raw"][rows_before(chains[n], i) - 1]
-            c = buy_cost(per, slip)
-            book["positions"][n] = {"symbol": n, "fill_date": day, "amount": per - c, "fill_price": raw}
-            book["cash"] -= per
-            state["trades"].append({"date": day, "side": "BUY", "symbol": n, "value": round(per, 2), "cost": round(c, 2)})
-        uset = set(uni)
-        if not bench["positions"]:
-            per_b = bench["cash"] / len(uni)
-            for n in uni:
-                bench["positions"][n] = {"symbol": n, "fill_date": day, "amount": per_b - buy_cost(per_b, slip)}
-                bench["cash"] -= per_b
-        else:
-            for n in [n for n in bench["positions"] if n not in uset or chains.get(n) is None or chains[n]["idx"][-1] < me]:
-                pos = bench["positions"].pop(n)
-                v = value_of(pos, chains, sess_idx, i)
-                bench["cash"] += v - sell_cost(v, slip, dp=False)
-            entrants = [n for n in uni if n not in bench["positions"]]
-            if entrants:
-                per_b = bench["cash"] / len(entrants)
-                for n in entrants:
-                    bench["positions"][n] = {"symbol": n, "fill_date": day, "amount": per_b - buy_cost(per_b, slip)}
-                    bench["cash"] -= per_b
-        state["rebalances"] += 1
-        state["status"] = "active"
+    else:
+        for side in ("book", "bench"):
+            work_orders(state, side, chains, sess_idx, i, day, conf["slippage"])
     book_v = state["book"]["cash"] + sum(value_of(p, chains, sess_idx, i) for p in state["book"]["positions"].values())
     bench_v = state["bench"]["cash"] + sum(value_of(p, chains, sess_idx, i) for p in state["bench"]["positions"].values())
     if state["status"] == "active":
-        state["nav"] = [r for r in state["nav"] if r["date"] != day] + [{"date": day, "book": round(book_v, 2), "bench": round(bench_v, 2)}]
+        if state["nav"] and state["nav"][-1]["date"] == day:
+            state["nav"].pop()
+        state["nav"].append({"date": day, "book": round(book_v, 2), "bench": round(bench_v, 2)})
     if month_turn:
         state["month_points"].append({"date": day, "book": book_v, "bench": bench_v})
         pts = state["month_points"]
@@ -687,8 +849,9 @@ def daily(today=None, state_path=STATE_PATH, fetch=True):
         before = [d for d in sessions if d <= state["created"]]
         state["last_processed"] = before[-1] if before else None
         todo = [d for d in sessions if d > (state["last_processed"] or "") and d <= today.isoformat()]
+    sess_idx = {d: i for i, d in enumerate(sessions)}
     for d in todo:
-        process_session(state, chains, sessions, d, conf)
+        process_session(state, chains, sessions, d, conf, sess_idx)
     state["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
     state["latest_session"] = sessions[-1] if sessions else None
     save_state(state, state_path)
@@ -716,6 +879,9 @@ def summary(state_path=STATE_PATH):
            "holdings": sorted(({"symbol": p["symbol"], "since": p["fill_date"], "invested": round(p["amount"], 2),
                                 "fill_price": p.get("fill_price")} for p in s["book"]["positions"].values()),
                               key=lambda r: r["symbol"]),
+           "waiting_orders": [{"side": o["side"], "symbol": o["symbol"], "ordered": o["placed"],
+                               "reason": o.get("waiting")} for o in s["book"].get("orders", [])],
+           "fills": s.get("fills", {}),
            "cash": round(s["book"]["cash"], 2), "recent_trades": s["trades"][-40:]}
     return out
 

@@ -200,3 +200,39 @@ trial 120's configuration (old prices) nor trial 126's (repaired prices,
 carried orders). Trial 126 gave +0.71% a month. Keeping 0.82% makes the band
 stricter than either figure would. Adding the fill rules, and changing the
 expected figure, are the owner's decisions and have not been made (#180).
+
+---
+
+# Second note on the forward paper book — 2026-09-29, before its first rebalance
+
+**Owner's decisions, 2026-09-29**, given by choosing them from a list: add
+the fill rules of trial 126 to the paper book, and change the band's expected
+figure to +0.71% a month.
+
+The book still holds nothing and has recorded no return.
+
+**The fill rules.** Rules H1 to H5 of `prereg-universe-width.md`, base case:
+an order is not filled on a day the stock did not trade, a buy is not filled
+at an upper-band lock nor a sell at a lower-band lock, a buy is cancelled
+after five sessions, and orders still open at the next month-end are dropped
+and decided again.
+
+**The band.** `n × 0.71% − 2 × 3.89% × √n`, trial 126's mean and standard
+deviation. It was `n × 0.82% − 2 × 3.87% × √n`. **This loosens the floor:**
+
+| Months | Floor before | Floor now |
+| --- | --- | --- |
+| 6 | −14.0% | −14.8% |
+| 12 | −17.0% | −18.4% |
+
+It is a change to a pre-registered threshold, made before any forward return
+exists, to match the configuration the book now runs.
+
+**What the forward test measures from its first rebalance.** Trial 126's
+configuration: the rule, on repaired prices, with orders that wait. Run over
+2010-02 to 2025-11 on the bhavcopy cache, the paper book's code gives trial
+126's monthly values to within 7e-16, the same holdings, and the same counts
+(7 buys and 9 sells waited, 14 sells filled from a trade-for-trade row).
+
+**What it still does not measure.** Real fills. The slippage of 0.05% a side
+is a judgement (#66), and trial 126's pass would fail at 0.07%.
