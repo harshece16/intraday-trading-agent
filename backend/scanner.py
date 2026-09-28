@@ -511,12 +511,48 @@ def select_active(eligible, bias, cfg):
     return active
 
 
+LIQUIDITY_RULE = ("The {n} most-traded eligible NIFTY 100 stocks by 20-day average turnover, "
+                  "chosen once for the session and kept all day.")
+SCORE_RULE = "The best {n} by scan score, re-chosen every scan."
+
+
+def selection_mode(cfg):
+    return "score" if cfg.get("selection") == "score" else "liquidity"
+
+
+def select_liquid(eligible, cfg):
+    """The active_count eligible stocks with the highest 20-day average
+    turnover, most-traded first (ties by symbol, so the list is reproducible).
+    No score, side or trend enters: the list is chosen for cost and coverage,
+    not as a prediction."""
+    ranked = sorted(eligible, key=lambda r: (-(r.get("turnover_cr") or 0.0), r["symbol"]))
+    return [r["symbol"] for r in ranked[: cfg["active_count"]]]
+
+
 class Scanner:
     def __init__(self, cfg):
         self.cfg = cfg
         self.last_run = 0.0
         self.result = None
         self.intraday = {}
+        # The session's fixed list in "liquidity" mode: {"session", "symbols", "fixed_ts"}.
+        self.day_list = None
+
+    def day_list_for(self, session, eligible, n_rows, n_universe, now=None):
+        """Today's list in "liquidity" mode. Chosen once per session and then
+        kept; a stock that stops being eligible later in the day (a results
+        announcement, a missing download) is dropped, not replaced, so the list
+        only ever shrinks during the session. It is fixed only when the scan
+        has data for enough of the universe; until then it is recomputed."""
+        eligible_syms = {r["symbol"] for r in eligible}
+        dl = self.day_list
+        if dl and dl["session"] == session:
+            return [s for s in dl["symbols"] if s in eligible_syms], True
+        chosen = select_liquid(eligible, self.cfg)
+        if n_universe and n_rows >= self.cfg.get("freeze_min_coverage", 0.9) * n_universe:
+            self.day_list = {"session": session, "symbols": chosen, "fixed_ts": now or time.time()}
+            return chosen, True
+        return chosen, False
 
     def due(self, market_open):
         minutes = self.cfg["interval_minutes_open"] if market_open else self.cfg["interval_minutes_closed"]
@@ -613,8 +649,16 @@ class Scanner:
             })
 
         eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
+        mode = selection_mode(cfg)
+        fixed = False
+        if mode == "liquidity":
+            active, fixed = self.day_list_for(session, eligible, len(rows), len(uni))
+            chosen = set(active)
+            deep = [r for r in eligible if r["symbol"] in chosen]
+        else:
+            deep = eligible[: cfg["deep_analysis"]]
         brain_params = config.STRATEGY_PARAMS.get("sahab_dimaag", {})
-        for r in eligible[: cfg["deep_analysis"]]:
+        for r in deep:
             news = None
             if cfg.get("use_news", True):
                 try:
@@ -637,7 +681,8 @@ class Scanner:
                 r["final_score"] = _r(r["score"] + max(-15.0, min(15.0, edge * 2)), 1)
 
         eligible.sort(key=lambda r: -r["final_score"])
-        active = select_active(eligible, ctx["bias"], cfg)
+        if mode == "score":
+            active = select_active(eligible, ctx["bias"], cfg)
 
         excluded_rows = sorted((r for r in rows if r["excluded"]), key=lambda r: -r["score"])
         ranked = eligible + excluded_rows
@@ -657,6 +702,12 @@ class Scanner:
             "excluded_count": len(excluded_rows),
             "active": active,
             "active_sides": active_sides,
+            "selection": {
+                "mode": mode,
+                "rule": (LIQUIDITY_RULE if mode == "liquidity" else SCORE_RULE).format(n=cfg["active_count"]),
+                "fixed": fixed,
+                "fixed_at": (self.day_list or {}).get("fixed_ts") if mode == "liquidity" and fixed else None,
+            },
             "market": ctx,
             "sectors": sectors,
             "rows": ranked,
@@ -847,11 +898,18 @@ def run_premarket(cfg):
     eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
     excluded_rows = sorted((r for r in rows if r["excluded"]), key=lambda r: -r["score"])
     ranked = eligible + excluded_rows
+    mode = selection_mode(cfg)
+    if mode == "liquidity":
+        picked = select_liquid(eligible, {**cfg, "active_count": cfg.get("active_count", 6)})
+        by_sym = {r["symbol"]: r for r in eligible}
+        top_picks = [by_sym[s] for s in picked]
+    else:
+        top_picks = eligible[: cfg.get("active_count", 6)]
+    chosen = {r["symbol"] for r in top_picks}
     for i, r in enumerate(ranked, 1):
         r["rank"] = i
-        r["status"] = "AVOID" if r["excluded"] else "WATCHLIST" if i <= cfg.get("active_count", 6) else "WATCH"
+        r["status"] = "AVOID" if r["excluded"] else "WATCHLIST" if r["symbol"] in chosen else "WATCH"
 
-    top_picks = eligible[: cfg.get("active_count", 6)]
     narrative = _premarket_narrative(bias, mkt_reasons, vix, vix_high, top_picks, events, ex_actions)
 
     return {
@@ -863,6 +921,8 @@ def run_premarket(cfg):
         "scanned": len(rows),
         "excluded_count": len(excluded_rows),
         "watchlist": [r["symbol"] for r in top_picks],
+        "selection": {"mode": mode, "rule": (LIQUIDITY_RULE if mode == "liquidity" else SCORE_RULE).format(
+            n=cfg.get("active_count", 6))},
         "narrative": narrative,
         "market": {
             "bias": bias, "score": mkt_score, "reasons": mkt_reasons, "session_date": session,

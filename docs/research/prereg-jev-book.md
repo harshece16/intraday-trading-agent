@@ -142,3 +142,32 @@ round has closed, so no scored result exists.
 
 An interim mark can tempt a reader to judge the test early. The page says
 beside the figure that it is a live mark and not a result.
+
+---
+
+# Clarification 5 — 2026-09-28, after the first round closed
+
+**What had been seen:** the first round, closed at 15:08. 15 decisions, all
+on the scanner's own side, +22.8 bp net a position (t 0.86), identical to
+the scanner, while the NIFTY fell 36 bp over the same window.
+
+**The change:** from the first session on which this is deployed (expected
+2026-09-29; the actual date is added below once it is live), the scanner's
+list is chosen differently (README §91). It becomes the 25 eligible stocks with the highest 20-day
+average turnover, fixed for the day, in turnover order. The Jev book still
+takes the first 15 names on that list, so from then on Jev judges the 15
+most-traded eligible NIFTY 100 stocks each day.
+
+**Unchanged:** the snapshot Jev sees, including the scanner's side and
+reasons; the three questions; the fills from Kite only; the cost; the
+comparison with the scanner's own side; the pass rule; the kill rule.
+
+**How the record is read:** the list was always a daily choice by the
+scanner, and only the way it is chosen changes. 2026-09-28 stays in the
+record. The verdict will also be reported with that day left out, so the
+reader can see whether it moves the result.
+
+This change was not made to improve Jev's score. It follows from the
+scanner's ranking carrying no information and from the list rotating, both
+found in the same review.
+

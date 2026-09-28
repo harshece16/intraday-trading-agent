@@ -411,8 +411,10 @@ and the entry path skips several cash rules
 6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index.
 7. **Exclusions.** See the table below.
 8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
-9. **Deep read.** The top 25 get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`.
-10. **Selection.** `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, and stops at 25.
+9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
+10. **Selection** (`SCANNER["selection"]`, README §91).
+    - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. `Scanner.day_list_for()` fixes that list once per session, when the scan covers at least 90% of the universe, and keeps it all day. A stock that stops being eligible is dropped, not replaced.
+    - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
 11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`. The watchlist becomes pinned + active + held.
 
 | Market bias input | Score |
@@ -434,7 +436,7 @@ Risk-on at +2 or more. Risk-off at −2 or less.
 | Results | Due today or the next weekday |
 | Corporate action | Ex-date today |
 
-The pre-market read (`run_premarket`) uses daily bars only. It runs once a
+The pre-market read (`run_premarket`) uses daily bars only, and chooses its watchlist by the same rule as the live scan. It runs once a
 day on the first tick and seeds the watchlist only until the day's first
 live scan.
 

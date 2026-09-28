@@ -3471,6 +3471,28 @@ While a round is open the page now shows:
 
 The first round also showed something to watch: Jev took the scanner's own side on all 15 stocks and skipped none. On such a day Jev and the scanner score exactly the same, so the day cannot show Jev adding anything. One day is too little to judge.
 
+### 91. The day's 25 stocks: the most-traded, chosen once and kept all day
+
+The owner said the 25 stocks the scanner picks were wrong and there was too much checklist. Measured on 2026-09-28:
+
+| Problem with the old list | Measured |
+| --- | --- |
+| Its ranking predicts nothing | Rank IC ≈ 0 over 434–436 sessions (§37, §52). The one feature that survived testing, volatility, is worth 8 bp against a 16.6 bp round trip (step 2 follow-ups) |
+| It was built from a pile of rules | About 20 score components plus a checklist read that moved each score by up to 15 points |
+| It rotated all day | 51 different stocks were on it; 4 stayed in every scan; the list changed in 69 of 72 scans |
+| So most stocks weren't watched long enough | Only 10 met the order-book test's rule of being sampled for 90% of the session |
+| It leaned one way | 92% of active rows were shorts on a falling day, so the Jev book and the review queue became bets on the index |
+
+**The new rule** (`SCANNER["selection"] = "liquidity"`, now the default): the 25 eligible NIFTY 100 stocks with the highest 20-day average turnover, chosen once before trading and kept all day. The existing filters still apply: price, turnover, range, and no results or ex-date that day. A stock that becomes ineligible during the day is dropped, not replaced. The pre-market read uses the same rule, so the morning list and the day's list are the same stocks.
+
+**Why this rule, and what it doesn't claim.** It is chosen for what can be measured, not as a prediction. The most-traded stocks are the cheapest to trade: on 2026-09-28 the median quoted spread was 1.0 bp for the most-traded third of the index and 2.5 bp for the least-traded third, and 1.3 bp for the 15 stocks of the new list that were being sampled, against 2.1 bp for the old list. A fixed list lets every watched stock be observed for the whole session. It does not make the intraday side profitable. No stock-selection rule tested here, or found in the literature for this market, predicts which stocks will move which way within a day net of costs.
+
+Scores, sides and reasons are still computed and shown, and the checklist still reads every watched stock. None of them chooses the list any more. The old ranked list is kept one setting away (`"selection": "score"`).
+
+**Two running tests take this list as input**, so both carry a note written before the change takes effect: `prereg-orderbook.md` Amendment 2 and `prereg-jev-book.md` Clarification 5. The change takes effect on the first session after it is deployed. Neither pass rule changes.
+
+The flood of review cards is a separate problem (#166), and its fix waits on the owner's choice of a reward-to-risk floor.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
