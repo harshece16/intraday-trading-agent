@@ -917,7 +917,7 @@ All gitignored unless marked.
 | `JEV_BOOK` | The Jev book | On; 09:45; 15 names; `jev-latest` |
 | `DEPTH_SAMPLER` | Order-book sampling | On; two ETF windows |
 | `RESEARCH_DESK` | Research desk | Off; 25 briefs and $10 a day |
-| `NEWS`, `CHAYWANAPRASH` | News sources and self-review | Budgets: Marketaux 90, Alpha Vantage 20, LLM 500, self-review 12 |
+| `NEWS`, `CHAYWANAPRASH` | News sources and self-review | Budgets: Marketaux 90, Alpha Vantage 20, LLM 500, self-review 12. Self-review is on and runs only when asked, through the API or else the Claude Code CLI |
 | `SQUARE_OFF_TIME` | Intraday flatten | `15:08` |
 | `POLL_INTERVAL_SECONDS` | Tick | 30 |
 | `PREOPEN_KITE_CHECK_TIME` | Daily Kite reminder | `08:45` |

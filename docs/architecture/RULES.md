@@ -1492,16 +1492,16 @@ LLM headline scoring (Claude Haiku 4.5) falls back to the keyword lexicon on any
 <details>
 <summary><code>INT-08</code> <b>Active</b> · known gap #160 — Chaywanaprash is read-only.</summary>
 
-Chaywanaprash is read-only. It always returns the real computed journal stats, and adds an LLM narrative only when enabled, keyed and within budget. Every run, with or without the LLM, is saved to chaywanaprash_reports, and it never edits code or config.
+Chaywanaprash is read-only. It always returns the real computed journal stats, and adds an LLM narrative only when an LLM is available and today's budget allows: the Anthropic API when ANTHROPIC_API_KEY is set, otherwise the Claude Code CLI with every tool, hook and MCP server switched off. In 'auto' the CLI is also the fallback when the API call fails. It runs only when asked. Every run, with or without the LLM, is saved to chaywanaprash_reports.
 
 | | |
 | --- | --- |
 | **Why** | Never fabricate a narrative; a human decides on every change. |
-| **Enforced in** | `backend/chaywanaprash.py:analyze` |
-| **Setting** | `CHAYWANAPRASH.enabled = bool(ANTHROPIC_API_KEY); lookback_hours = 24` |
-| **How to check** | POST /api/chaywanaprash/analyze -> llm_used, note; GET /api/chaywanaprash/reports |
-| **Test** | `backend/tests/test_chaywanaprash.py::test_analyze_without_api_key_returns_real_stats_no_fake_narrative` |
-| **Source** | README §29 |
+| **Enforced in** | `backend/chaywanaprash.py:analyze; backend/chaywanaprash.py:backends; backend/chaywanaprash.py:_ask_cli` |
+| **Setting** | `CHAYWANAPRASH.enabled = True; llm_backend = 'auto'; daily_limit = 12; lookback_hours = 24` |
+| **How to check** | GET /api/chaywanaprash/status lists the backends a run would use; POST /api/chaywanaprash/analyze saves one report |
+| **Test** | `backend/tests/test_chaywanaprash.py::test_cli_is_used_when_there_is_no_api_key` |
+| **Source** | README §29, §92 |
 | **Known gap** | [#160](https://github.com/harshece16/intraday-trading-agent/issues/160) |
 
 </details>

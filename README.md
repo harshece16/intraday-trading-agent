@@ -1265,7 +1265,7 @@ near-misses grouped by their lone blocker, the real R:R and volume-ratio
 distributions — the same aggregate analysis that found §27's bug, now
 reusable instead of hand-rolled each time) and `recent_activity_issues()`
 (recent warn/error log lines) — and, when an LLM is available (the
-Anthropic API or the Claude Code CLI, §91), asks Claude (Sonnet 5, a heavier on-demand call than
+Anthropic API or the Claude Code CLI, §92), asks Claude (Sonnet 5, a heavier on-demand call than
 `llm_sentiment.py`'s per-headline Haiku scoring) to turn those real
 numbers into prioritized, evidence-cited platform improvements. The
 system prompt explicitly forbids citing any number it wasn't given and
