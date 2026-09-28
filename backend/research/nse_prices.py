@@ -16,6 +16,12 @@ so `close` is a total-return price series (dividends reinvested) and `raw`
 is the price as printed that day. Fund units (ISIN INF..., NSE's ETF list,
 BEES/ETF names) are excluded. Sessions on or after the held-out start are
 never loaded unless asked. Data only: nothing here reads a forward return.
+
+`load(wide=True)` is the repaired panel of #175
+(prereg-universe-width.md): it also keeps trade-for-trade rows (series BE and
+BZ) and each row's high, low, printed previous close and series, so a held
+stock that leaves the EQ series is still priced. The default output is
+unchanged, value for value, so trial 120 stays reproducible.
 """
 
 import csv
@@ -35,10 +41,17 @@ sys.path.insert(0, HERE)
 
 from splits import HELD_OUT_START as HELD_OUT_FIRST_SESSION  # noqa: E402
 
-BHAV_DIR = os.path.join(BACKEND, "data", "bhav_daily")
-HELD_OUT_DIR = os.path.join(BACKEND, "data", "bhav_daily_2026_heldout")
-CA_DIR = os.path.join(BACKEND, "data", "corp_actions")
+# The bhavcopy cache is 600 MB and is not in git. A worktree has none, so it
+# can point at the main checkout's copy with SAHAB_RESEARCH_DATA.
+DATA = os.environ.get("SAHAB_RESEARCH_DATA") or os.path.join(BACKEND, "data")
+BHAV_DIR = os.path.join(DATA, "bhav_daily")
+HELD_OUT_DIR = os.path.join(DATA, "bhav_daily_2026_heldout")
+CA_DIR = os.path.join(DATA, "corp_actions")
 CACHE = os.path.join(BHAV_DIR, "nse_prices.pkl")
+
+# Series kept by the repaired panel, in order of preference when a symbol has
+# more than one on a day. BE and BZ are trade-for-trade.
+WIDE_SERIES = ("EQ", "BE", "BZ")
 
 ETF_NAME = re.compile(r"(BEES|ETF|IETF|CASE)$")
 
@@ -66,6 +79,34 @@ def parse_bhavcopy(path):
                     d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
                 out.append((r["SYMBOL"], d, float(r.get("OPEN") or 0), float(r["CLOSE"] or 0),
                             float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0)))
+    return out
+
+
+def parse_bhavcopy_wide(path, series=WIDE_SERIES):
+    """Rows of the given series: parse_bhavcopy's seven fields, then high, low
+    and the series' position in `series`."""
+    out = []
+    code = {name: i for i, name in enumerate(series)}
+    with zipfile.ZipFile(path) as z, z.open(z.namelist()[0]) as fh:
+        for r in csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8", errors="ignore")):
+            r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
+            if "TckrSymb" in r:
+                if r.get("SctySrs") not in code:
+                    continue
+                out.append((r["TckrSymb"], r["TradDt"], float(r.get("OpnPric") or 0), float(r["ClsPric"] or 0),
+                            float(r["PrvsClsgPric"] or 0), r.get("ISIN", ""), float(r.get("TtlTrfVal") or 0),
+                            float(r.get("HghPric") or 0), float(r.get("LwPric") or 0), code[r["SctySrs"]]))
+            elif "SYMBOL" in r:
+                if r.get("SERIES") not in code:
+                    continue
+                ts = r["TIMESTAMP"]
+                try:
+                    d = datetime.datetime.strptime(ts, "%d-%b-%Y").date().isoformat()
+                except ValueError:
+                    d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
+                out.append((r["SYMBOL"], d, float(r.get("OPEN") or 0), float(r["CLOSE"] or 0),
+                            float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0),
+                            float(r.get("HIGH") or 0), float(r.get("LOW") or 0), code[r["SERIES"]]))
     return out
 
 
@@ -199,14 +240,30 @@ def etf_symbols(ca_dir=CA_DIR):
 
 # --- the panel --------------------------------------------------------------------
 
-def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR):
-    """(sessions, chains, meta). chains: canonical -> dict(idx, close (total-return
-    adjusted), raw, open, val, isins). Fund units excluded."""
-    cache_path = CACHE.replace(".pkl", "_with_heldout.pkl") if include_held_out else CACHE
+def cache_file(include_held_out=False, wide=False):
+    path = CACHE.replace(".pkl", "_wide.pkl") if wide else CACHE
+    return path.replace(".pkl", "_with_heldout.pkl") if include_held_out else path
+
+
+def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
+    """(sessions, chains, meta, events), cached. See build()."""
+    cache_path = cache_file(include_held_out, wide)
     if os.path.exists(cache_path) and not refresh:
         with open(cache_path, "rb") as fh:
             return pickle.load(fh)
+    out = build(include_held_out, bhav_dir, ca_dir, wide)
+    with open(cache_path, "wb") as fh:
+        pickle.dump(out, fh)
+    return out
+
+
+def build(include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
+    """(sessions, chains, meta, events). chains: canonical -> dict(idx, close
+    (total-return adjusted), raw, open, val, isins). Fund units excluded.
+    wide=True keeps BE and BZ rows too and adds high, low, prev (the printed
+    previous close) and ser (position in WIDE_SERIES) to every chain."""
     t0 = time.time()
+    parse = parse_bhavcopy_wide if wide else parse_bhavcopy
     nxt = symbol_chains(os.path.join(bhav_dir, "symbolchange.csv"))
     cache = {}
     paths = [os.path.join(bhav_dir, f) for f in os.listdir(bhav_dir) if f.endswith(".zip")]
@@ -215,25 +272,37 @@ def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR
     by_date, bad_files = {}, 0
     for p in paths:
         try:
-            rows = parse_bhavcopy(p)
+            rows = parse(p)
         except Exception:
             bad_files += 1
             continue
-        for sym, d, op, close, prev, isin, val in rows:
+        for row in rows:
+            sym, d, op, close, prev, isin, val = row[:7]
             if close <= 0 or (d >= HELD_OUT_FIRST_SESSION and not include_held_out):
                 continue
-            by_date.setdefault(d, []).append((sym, op, close, isin, val))
+            by_date.setdefault(d, []).append((sym, op, close, isin, val, prev) + tuple(row[7:]))
     sessions = sorted(by_date)
     chains, isin_owner = {}, {}
+    series_rows = [0] * len(WIDE_SERIES)
     for idx, d in enumerate(sessions):
-        for sym, op, close, isin, val in by_date[d]:
+        rows = by_date[d]
+        if wide:
+            # EQ rows first, in file order, so the first row kept for a chain
+            # on a day is its EQ row when it has one (the sort is stable)
+            rows = sorted(rows, key=lambda r: r[-1])
+        for row in rows:
+            sym, op, close, isin, val = row[:5]
             canon = canonical(sym, nxt, cache)
             if isin:
                 prior = isin_owner.setdefault(isin, canon)
                 if prior != canon:
                     cache[canon] = cache[sym] = prior
                     canon = prior
-            c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "open": [], "val": [], "isins": set()})
+            c = chains.get(canon)
+            if c is None:
+                c = chains[canon] = {"idx": [], "close": [], "raw": [], "open": [], "val": [], "isins": set()}
+                if wide:
+                    c.update({"high": [], "low": [], "prev": [], "ser": []})
             if c["idx"] and c["idx"][-1] == idx:
                 continue
             c["idx"].append(idx)
@@ -241,6 +310,12 @@ def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR
             c["close"].append(close)
             c["open"].append(op)
             c["val"].append(val)
+            if wide:
+                c["prev"].append(row[5])
+                c["high"].append(row[6])
+                c["low"].append(row[7])
+                c["ser"].append(row[8])
+                series_rows[row[8]] += 1
             if isin:
                 c["isins"].add(isin)
 
@@ -314,7 +389,7 @@ def load(refresh=False, include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR
     meta = {"files": len(paths), "bad_files": bad_files, "sessions": len(sessions), "chains": len(chains),
             "fund_units_excluded": len(excluded), "actions_applied": counts,
             "built_seconds": round(time.time() - t0, 1)}
-    out = (sessions, chains, meta, events)
-    with open(cache_path, "wb") as fh:
-        pickle.dump(out, fh)
-    return out
+    if wide:
+        meta["rows_by_series"] = dict(zip(WIDE_SERIES, series_rows))
+        meta["aliases"] = {canon: sorted(names) for canon, names in aliases.items() if canon in chains}
+    return sessions, chains, meta, events
