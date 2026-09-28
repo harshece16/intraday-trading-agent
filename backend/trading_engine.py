@@ -39,12 +39,13 @@ import news_sentiment
 import options_pricing
 import review_queue
 from kiteconnect.exceptions import TokenException
+from kite_broker import ORDER_FINAL, ORDER_UNKNOWN, OrderNotFilled, OrderUnconfirmed
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
 from scanner import Scanner, run_premarket
 import trader_brain
 import universe
-from state import AppState
+from state import AppState, _STOP_TARGET_RE
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 
 logger = logging.getLogger("trading_bot")
@@ -154,6 +155,10 @@ class TradingEngine:
         # the engine's tick both reach the order path; this keeps them from
         # both opening the same stock. See approve_review().
         self._entering = set()
+        # symbol -> a live order that was sent but whose outcome Kite never
+        # confirmed, with everything needed to book it once it does. While a
+        # symbol is here the engine sends no other order in it. See _live_fill().
+        self._unconfirmed_orders = {}
         self.review_queue = review_queue.ReviewQueue()
         state.review_queue = self.review_queue
         self._last_shadow_update = 0.0
@@ -433,8 +438,86 @@ class TradingEngine:
 
     # ---- execution ------------------------------------------------------
 
+    def _live_fill(self, symbol, side, qty, price, context):
+        """Send a live order and return what Kite executed: (filled quantity,
+        average price, order id). Before #155 the engine booked every live
+        order as filled in full at the modelled price and never read Kite's
+        answer, so a rejected order became a position the account didn't hold.
+
+        Raises OrderNotFilled when Kite confirms nothing was bought or sold,
+        and OrderUnconfirmed when the outcome can't be read. An unconfirmed
+        order is kept in _unconfirmed_orders with its `context`, and the
+        symbol takes no other order until _resolve_unconfirmed_orders() has
+        settled it: sending a second closing order on top of one that did
+        fill would flip the position."""
+        if symbol in self._unconfirmed_orders:
+            raise OrderUnconfirmed(f"order {self._unconfirmed_orders[symbol]['order_id']} in {symbol} is still "
+                                   f"unconfirmed, so no new order is sent")
+        executor = self._ensure_kite()
+        order_id = executor.place_order(symbol, side, qty)
+        result = executor.wait_for_fill(order_id)
+        if result["status"] == ORDER_UNKNOWN:
+            self._unconfirmed_orders[symbol] = {"order_id": order_id, "side": side, "qty": qty, "price": price,
+                                                "context": context}
+            self.state.log("error", f"Kite hasn't confirmed what happened to the {side} {qty} order ({order_id}). "
+                                    f"Nothing is booked and no other order is sent in {symbol} until it does. "
+                                    f"Check Kite.", symbol=symbol, level="error")
+            raise OrderUnconfirmed(f"order {order_id} is unconfirmed: {result['message'] or 'Kite did not answer'}")
+        return self._confirmed_fill(symbol, side, qty, order_id, result)
+
+    def _confirmed_fill(self, symbol, side, qty, order_id, result):
+        filled, avg = result["filled_quantity"], result["average_price"]
+        if filled <= 0 or avg <= 0:
+            self.state.log("error", f"Kite did not fill the {side} {qty} order ({order_id}): {result['status']}"
+                                    + (f" — {result['message']}" if result["message"] else "")
+                                    + ". Nothing is booked.", symbol=symbol, level="error")
+            raise OrderNotFilled(f"Kite {result['status'].lower()} the order"
+                                 + (f": {result['message']}" if result["message"] else ""))
+        if filled < qty:
+            self.state.log("risk", f"Kite filled {filled} of {qty} on the {side} order ({order_id}); the rest was "
+                                   f"cancelled. {filled} booked.", symbol=symbol, level="warn")
+        return filled, avg, order_id
+
+    def _resolve_unconfirmed_orders(self):
+        """Ask Kite again about every order it never confirmed, and book or
+        drop each one that has now ended. Called at the start of every tick.
+        Never raises."""
+        for symbol, pending in list(self._unconfirmed_orders.items()):
+            try:
+                result = self._ensure_kite().order_state(pending["order_id"])
+                if result["status"] not in ORDER_FINAL:
+                    continue
+                del self._unconfirmed_orders[symbol]
+                try:
+                    confirmed = self._confirmed_fill(symbol, pending["side"], pending["qty"],
+                                                     pending["order_id"], result)
+                except OrderNotFilled:
+                    continue
+                with self.state.lock:
+                    was_flat = self.state.positions.get(symbol, {}).get("quantity", 0) == 0
+                self._execute(symbol, pending["side"], confirmed[0], pending["price"], confirmed=confirmed,
+                              **pending["context"])
+                with self.state.lock:
+                    pos = self.state.positions[symbol]
+                    if was_flat and pos["quantity"] != 0:
+                        # The entry path never got to set these: the order raised first.
+                        m = _STOP_TARGET_RE.findall(pending["context"].get("note") or "")
+                        if m:
+                            pos["stop_price"], pos["target_price"] = float(m[-1][0]), float(m[-1][1])
+                            pos["initial_risk"] = abs(pos["avg_price"] - pos["stop_price"])
+                        pos["position_id"] = pending["context"].get("position_id")
+                        self.risk.open_positions_count += 1
+                    elif not was_flat and pos["quantity"] == 0:
+                        self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+                self.state.log("risk", f"Kite confirmed order {pending['order_id']}; it is now booked.",
+                               symbol=symbol, level="warn")
+            except Exception:
+                logger.exception(f"Couldn't resolve the unconfirmed order in {symbol}")
+
     def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
-                position_id=None, initial_risk=None):
+                position_id=None, initial_risk=None, confirmed=None):
+        """`confirmed` is a fill Kite has already reported, as (quantity,
+        price, order id); it is booked as a live fill and no order is sent."""
         # backtester.py has always applied costs.apply_slippage() to every
         # fill; this function — every live and paper trade's one real path
         # — never did, only leg_cost() (brokerage/STT/exchange charges).
@@ -444,21 +527,28 @@ class TradingEngine:
         # performance is. price stays the raw signal/stop/target price for
         # logging the plan; fill_price is what P&L and the journal actually
         # use, same as backtester.py already does for both entries and exits.
-        fill_price = costs.apply_slippage(side, price, config.COSTS)
-        charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
-        if self.state.paper_mode:
+        if confirmed is None and self.state.paper_mode:
+            fill_price = costs.apply_slippage(side, price, config.COSTS)
+            charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
                                        charges=charges, checklist_snapshot=checklist_snapshot,
-                                       position_id=position_id, initial_risk=initial_risk)
+                                       position_id=position_id, initial_risk=initial_risk, signal_price=price)
         else:
-            executor = self._ensure_kite()
-            executor.place_order(symbol, side, qty)
+            # Live: the quantity and price are Kite's, not the model's (#155).
+            qty, fill_price, order_id = confirmed or self._live_fill(
+                symbol, side, qty, price,
+                {"reason": reason, "note": note, "checklist_snapshot": checklist_snapshot,
+                 "position_id": position_id, "initial_risk": initial_risk})
+            charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = self.state.apply_fill(symbol, side, qty, fill_price, charges=charges)
             r_multiple = (fill["net"] / (initial_risk * qty)) if initial_risk and qty else None
+            slip_bp = (fill_price - price) / price * 1e4 * (1 if side == "BUY" else -1) if price else 0.0
+            note = f"{note + ' — ' if note else ''}Kite filled at {fill_price:.2f}, {slip_bp:+.1f} bp against " \
+                   f"the signal price {price:.2f}"
             self.state.record_trade(symbol, side, qty, fill_price, mode="live", reason=reason, note=note,
                                     realized=fill["net"], realized_gross=fill["gross"], charges=charges,
                                     position_id=position_id, initial_risk=initial_risk, r_multiple=r_multiple,
-                                    checklist_snapshot=checklist_snapshot)
+                                    checklist_snapshot=checklist_snapshot, signal_price=price, order_id=order_id)
         # net of both legs' charges, so the daily loss limit and the log agree
         # with what the account actually did (issue #21).
         realized = fill["net"]
@@ -595,7 +685,9 @@ class TradingEngine:
                 return False
             self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason,
                           note=note, position_id=position_id, initial_risk=initial_risk)
-            self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+            # A live order can fill in part; what is left stays open and watched.
+            if self.state.positions[symbol]["quantity"] == 0:
+                self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
             return True
         finally:
             self._release_exit(symbol)
@@ -783,14 +875,23 @@ class TradingEngine:
                    f"confidence {conf['score']}/100 ({conf['label']})" if "bull_score" in analysis else \
                    f"confidence {conf['score']}/100 ({conf['label']})"
         position_id = database.new_position_id()
-        self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
-                      checklist_snapshot=analysis.get("checklist"), position_id=position_id)
+        try:
+            self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
+                          checklist_snapshot=analysis.get("checklist"), position_id=position_id)
+        except OrderNotFilled as exc:
+            return self._blocked(symbol, setup, str(exc))
+        except OrderUnconfirmed:
+            # An order did go out, so today's entry in this stock stays spent.
+            return True
         with self.state.lock:
             pos = self.state.positions[symbol]
             pos["entry_atr"] = atr_val
             pos["stop_price"] = stop_price
             pos["target_price"] = plan["target"] if plan else None
-            pos["initial_risk"] = abs(ltp - stop_price) if stop_price else self.risk._stop_distance(ltp, atr_val)
+            # Risk per share from the price actually paid, not the signal
+            # price: the stop is a chart level and doesn't move with the fill.
+            entry = pos["avg_price"]
+            pos["initial_risk"] = abs(entry - stop_price) if stop_price else self.risk._stop_distance(entry, atr_val)
             pos["position_id"] = position_id
         self.risk.open_positions_count += 1
         return True
@@ -965,15 +1066,16 @@ class TradingEngine:
             pos["entry_atr"] = atr_val
             pos["stop_price"] = stop
             pos["target_price"] = target
-            pos["initial_risk"] = abs(ltp - stop)
+            pos["initial_risk"] = abs(pos["avg_price"] - stop)
             pos["position_id"] = position_id
+            fill_price, qty = pos["avg_price"], abs(pos["quantity"])
             st = self.state.strategy_state.get(symbol)
             if not isinstance(st, dict):
                 st = {}
                 self.state.strategy_state[symbol] = st
             st["entries_today"], st["entry_day"] = taken + 1, today
         self.risk.open_positions_count += 1
-        outcome = {"fill_price": round(ltp, 2), "qty": qty, "net_rrr_at_fill": round(rrr, 2),
+        outcome = {"fill_price": round(fill_price, 2), "qty": qty, "net_rrr_at_fill": round(rrr, 2),
                    "mode": "paper" if self.state.paper_mode else "live"}
         self.review_queue.decide(review_id, "approved", position_id=position_id, outcome=outcome)
         return {"ok": True, "status": "approved", "position_id": position_id, **outcome}
@@ -1287,6 +1389,8 @@ class TradingEngine:
         cycle 30s later, instead of ending the engine."""
         self._tick_started_at = time.time()
         try:
+            if self._unconfirmed_orders:
+                self._resolve_unconfirmed_orders()
             self._tick_impl()
         except Exception as exc:
             logger.exception("tick() failed — skipping this cycle, will retry next one")
