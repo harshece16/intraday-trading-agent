@@ -45,7 +45,7 @@ from risk_manager import RiskManager
 from scanner import Scanner, run_premarket
 import trader_brain
 import universe
-from state import AppState, _STOP_TARGET_RE
+from state import AppState, _STOP_TARGET_RE, _new_position
 from strategy_engine import STRATEGY_FUNCTIONS, atr as compute_atr
 
 logger = logging.getLogger("trading_bot")
@@ -122,6 +122,15 @@ class TradingEngine:
             state.log("risk", f"Restored {len(restored)} open position(s) from today's journal after a restart: "
                               f"{', '.join(restored)} — stops, targets and the square-off are watching them again.",
                       level="warn")
+        # Restored live positions come from the journal, which can't know what
+        # happened in Kite while the engine was down. Until Kite confirms one
+        # is still open, no order is sent for it. See _verify_live_position().
+        self._unverified_live = {s for s in restored if state.positions[s].get("live")}
+        if self._unverified_live:
+            state.log("error", f"A LIVE position is open ({', '.join(sorted(self._unverified_live))}) and the engine "
+                               f"restarted in {'Paper' if state.paper_mode else 'Live'}. It is still watched: its "
+                               f"stop, target and the square-off will close it with a real order, once Kite "
+                               f"confirms it is still open. Check Kite.", level="error")
         self.strategy_fn = STRATEGY_FUNCTIONS[config.STRATEGY]
         self.strategy_params = config.STRATEGY_PARAMS[config.STRATEGY]
         self.kite_executor = None
@@ -253,8 +262,49 @@ class TradingEngine:
             else:
                 self.state.log("risk", f"Risk capital synced to real Kite balance: ₹{effective:,.0f}")
 
-        if not self.state.paper_mode:
+        if not self.state.paper_mode or self._holds_live():
             self._check_position_reconciliation()
+
+    def _holds_live(self):
+        with self.state.lock:
+            return any(p["quantity"] and p.get("live") for p in self.state.positions.values())
+
+    def _verify_live_position(self, symbol, kite_positions=None):
+        """Bring a restored live position in line with what Kite holds, before
+        any order is sent for it. The closing order is sized from the
+        journal; if the position was closed or cut in Kite while the engine
+        was down, that order would open a new position the other way.
+
+        Kite flat: the position is dropped and no order is sent. Kite smaller,
+        same side: the quantity is cut to Kite's. Kite bigger or on the other
+        side: left alone and reported, as that isn't ours to guess at. Raises
+        if Kite can't be read, so the caller sends nothing."""
+        if kite_positions is None:
+            kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions()}
+        held = int((kite_positions.get(symbol) or {}).get("quantity") or 0)
+        with self.state.lock:
+            pos = self.state.positions[symbol]
+            ours = pos["quantity"]
+            if held == 0:
+                pos.update(_new_position())
+                self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+            elif held * ours > 0 and abs(held) < abs(ours):
+                pos["charges"] = pos.get("charges", 0.0) * abs(held) / abs(ours)
+                pos["quantity"] = held
+            self._unverified_live.discard(symbol)
+        if held == 0:
+            self.state.log("error", f"Kite shows no open position in {symbol}, but today's journal has an open "
+                                    f"live leg of {ours:+d}. It was closed outside the engine. The engine has "
+                                    f"stopped watching it and sent no order; its exit is not in the journal.",
+                           symbol=symbol, level="error")
+        elif held != ours:
+            self.state.log("error", f"Kite holds {held:+d} in {symbol}; today's journal says {ours:+d}. "
+                                    + (f"The engine now watches {held:+d}." if held * ours > 0 and abs(held) < abs(ours)
+                                       else "The engine keeps watching its own figure. Check Kite."),
+                           symbol=symbol, level="error")
+        else:
+            self.state.log("risk", f"Kite confirms the restored live position in {symbol} ({held:+d}).", symbol=symbol)
+        return held
 
     def _check_position_reconciliation(self):
         """A review flagged that live positions reset on restart and are
@@ -276,6 +326,11 @@ class TradingEngine:
         except Exception as exc:
             logger.warning(f"Position reconciliation check failed: {exc}")
             return
+        for sym in list(self._unverified_live):
+            try:
+                self._verify_live_position(sym, kite_positions)
+            except Exception:
+                logger.exception(f"Couldn't verify the restored live position in {sym}")
         with self.state.lock:
             tracked = {sym for sym, pos in self.state.positions.items() if pos["quantity"] != 0}
         untracked = set(kite_positions) - tracked
@@ -453,6 +508,15 @@ class TradingEngine:
         if symbol in self._unconfirmed_orders:
             raise OrderUnconfirmed(f"order {self._unconfirmed_orders[symbol]['order_id']} in {symbol} is still "
                                    f"unconfirmed, so no new order is sent")
+        if symbol in self._unverified_live:
+            try:
+                held = self._verify_live_position(symbol)
+            except Exception as exc:
+                raise OrderUnconfirmed(f"Kite couldn't confirm the restored position in {symbol} is still open, "
+                                       f"so no order is sent: {exc}")
+            if held == 0:
+                raise OrderNotFilled(f"Kite holds no position in {symbol}; there is nothing to close")
+            qty = min(qty, abs(held))
         executor = self._ensure_kite()
         order_id = executor.place_order(symbol, side, qty)
         result = executor.wait_for_fill(order_id)
@@ -515,9 +579,15 @@ class TradingEngine:
                 logger.exception(f"Couldn't resolve the unconfirmed order in {symbol}")
 
     def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
-                position_id=None, initial_risk=None, confirmed=None):
+                position_id=None, initial_risk=None, confirmed=None, live=None):
         """`confirmed` is a fill Kite has already reported, as (quantity,
-        price, order id); it is booked as a live fill and no order is sent."""
+        price, order id); it is booked as a live fill and no order is sent.
+        `live` says where the order goes; None follows the engine's mode. An
+        exit passes the position's own flag, so real money is closed with a
+        real order and a paper position never sends one, whatever the mode
+        has been switched to since it opened (#156)."""
+        if live is None:
+            live = not self.state.paper_mode
         # backtester.py has always applied costs.apply_slippage() to every
         # fill; this function — every live and paper trade's one real path
         # — never did, only leg_cost() (brokerage/STT/exchange charges).
@@ -527,7 +597,7 @@ class TradingEngine:
         # performance is. price stays the raw signal/stop/target price for
         # logging the plan; fill_price is what P&L and the journal actually
         # use, same as backtester.py already does for both entries and exits.
-        if confirmed is None and self.state.paper_mode:
+        if confirmed is None and not live:
             fill_price = costs.apply_slippage(side, price, config.COSTS)
             charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
@@ -549,6 +619,9 @@ class TradingEngine:
                                     realized=fill["net"], realized_gross=fill["gross"], charges=charges,
                                     position_id=position_id, initial_risk=initial_risk, r_multiple=r_multiple,
                                     checklist_snapshot=checklist_snapshot, signal_price=price, order_id=order_id)
+        with self.state.lock:
+            if self.state.positions[symbol]["quantity"] != 0:
+                self.state.positions[symbol]["live"] = bool(confirmed or live)
         # net of both legs' charges, so the daily loss limit and the log agree
         # with what the account actually did (issue #21).
         realized = fill["net"]
@@ -638,6 +711,10 @@ class TradingEngine:
             blockers.append(f"Kite isn't usable: {kite.get('reason') or kite.get('state')}")
         if self.risk.daily_loss_limit_hit():
             blockers.append("Today's daily loss limit is already hit — live trading can start next session")
+        if probe and kite.get("connected"):
+            # Otherwise the first look at Kite's positions is the capital sync
+            # after the switch, and going live isn't held back by them (#156).
+            self._check_position_reconciliation()
         if self._untracked_kite_positions:
             blockers.append("Kite holds positions the engine isn't tracking ("
                             + ", ".join(sorted(self._untracked_kite_positions)) + ") — resolve them in Kite first")
@@ -681,10 +758,11 @@ class TradingEngine:
                 pos = self.state.positions[symbol]
                 qty = pos["quantity"]
                 position_id, initial_risk = pos.get("position_id"), pos.get("initial_risk")
+                live = pos.get("live")
             if qty == 0:
                 return False
             self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason,
-                          note=note, position_id=position_id, initial_risk=initial_risk)
+                          note=note, position_id=position_id, initial_risk=initial_risk, live=live)
             # A live order can fill in part; what is left stays open and watched.
             if self.state.positions[symbol]["quantity"] == 0:
                 self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
