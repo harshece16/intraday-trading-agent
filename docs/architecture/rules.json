@@ -1,6 +1,6 @@
 {
  "title": "Trader Sahab rules catalogue",
- "as_of": "2026-09-28",
+ "as_of": "2026-09-29",
  "note": "Source of truth for docs/architecture/RULES.md and rules.html. Edit this file, then run tools/build_rules_docs.py.",
  "interactive_url": "https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK",
  "statuses": {
@@ -608,10 +608,7 @@
    "config": "KITE_MARKET_PROTECTION_PCT = 1",
    "verify": "backend log '[LIVE] BUY n SYM -> order id'",
    "source": "README §17",
-   "test": null,
-   "issues": [
-    155
-   ]
+   "test": null
   },
   {
    "id": "EXE-04",
@@ -648,6 +645,29 @@
    "verify": "approve response status 'pending' with the real-money message",
    "source": "README §64",
    "test": "backend/tests/test_review_queue.py::test_live_mode_never_orders_without_explicit_confirmation"
+  },
+  {
+   "id": "EXE-07",
+   "area": "execution",
+   "status": "active",
+   "rule": "A live order is booked only from Kite's report of it. Rejected or empty: nothing is booked. Part filled: the rest is cancelled after the deadline and what filled is booked. Unreadable: nothing is booked, the stock takes no other order, and every tick asks Kite again.",
+   "why": "The account, not the model, is the record; a second closing order on top of one that filled would flip the position.",
+   "enforced_in": "backend/kite_broker.py:KiteExecutor.wait_for_fill; backend/trading_engine.py:_live_fill; backend/trading_engine.py:_resolve_unconfirmed_orders",
+   "config": "KITE_FILL_DEADLINE_S = 5; KITE_FILL_POLL_S = 0.25",
+   "verify": "A live journal row has order_id and signal_price, and its note gives the slippage in bp",
+   "source": "README §98",
+   "test": "backend/tests/test_live_fills.py::test_a_rejected_order_books_nothing"
+  },
+  {
+   "id": "EXE-08",
+   "area": "execution",
+   "status": "active",
+   "rule": "A position carries whether it is real money, set by the order that opened it, and its closing order goes where that says, whatever mode the engine is in. A live position restored after a restart sends no order until Kite's positions confirm it is still open; if Kite holds nothing, it is dropped and no order is sent.",
+   "why": "A restart comes back in Paper and the mode can be switched with a position open; a closing order for a position Kite no longer holds would open a new one the other way.",
+   "enforced_in": "backend/trading_engine.py:_exit_position; backend/trading_engine.py:_verify_live_position; backend/state.py:_rehydrate_open_positions",
+   "verify": "After a restart with a live leg open, the live log shows 'A LIVE position is open' at error level",
+   "source": "README §98",
+   "test": "backend/tests/test_live_restart.py::test_a_position_closed_in_kite_while_the_engine_was_down_sends_no_order"
   },
   {
    "id": "EXT-01",
@@ -749,15 +769,14 @@
    "id": "CST-02",
    "area": "costs",
    "status": "active",
-   "rule": "Every fill (paper or live) is booked 3 bp against the trade and charged Zerodha's intraday tariff; realized P&L is net of both legs' charges.",
+   "rule": "A paper fill is booked 3 bp against the trade. A live fill is booked at the quantity and average price Kite executed. Both are charged Zerodha's intraday tariff, and realized P&L is net of both legs' charges.",
    "why": "Same costs as the backtester; gross P&L understated losses by ~0.74R/trade.",
-   "enforced_in": "backend/trading_engine.py:_execute; backend/state.py:apply_fill; backend/costs.py:leg_cost",
+   "enforced_in": "backend/trading_engine.py:_execute; backend/trading_engine.py:_live_fill; backend/state.py:apply_fill; backend/costs.py:leg_cost",
    "config": "COSTS.slippage_pct = 0.03, brokerage_per_order = 20.0, brokerage_pct = 0.03, stt_pct_sell = 0.025, exchange_txn_pct = 0.00307, sebi_charges_pct = 0.0001, ipft_pct = 0.0000001, stamp_duty_pct_buy = 0.003, gst_pct = 18.0",
    "verify": "trades table realized (net), realized_gross, charges columns",
    "source": "README §45, issues #21, #79",
    "test": "backend/tests/test_net_pnl_charges.py::test_both_legs_charges_come_off_the_closing_fill",
    "issues": [
-    155,
     66
    ]
   },
@@ -855,15 +874,15 @@
    "id": "FNO-06",
    "area": "fno",
    "status": "off-by-default",
-   "rule": "Premium exits: close if the premium falls 40% or rises 80% from entry, checked each open-phase tick. In paper mode the premium never updates, so these exits never fire and paper positions close only at 15:08 or via the kill switch.",
+   "rule": "Premium exits: close if the premium falls 40% or rises 80% from entry, checked each open-phase tick. In paper mode the premium is a model price, Black-Scholes at the entry volatility on the underlying's live price; if that price can't be read, nothing fires on that tick.",
    "why": "An option buyer's P&L is realized in premium terms.",
-   "enforced_in": "backend/trading_engine.py:_check_fno_stop_take; backend/fno_risk.py:stop_and_target_premium",
+   "enforced_in": "backend/trading_engine.py:_check_fno_stop_take; backend/trading_engine.py:_paper_fno_premium; backend/fno_risk.py:stop_and_target_premium",
    "config": "FNO.stop_loss_pct_of_premium = 40.0, target_pct_of_premium = 80.0",
    "verify": "trades reason 'fno_stop_loss' / 'fno_take_profit'",
    "source": "README §7",
-   "test": null,
+   "test": "backend/tests/test_paper_fno_stops.py",
    "issues": [
-    154
+    189
    ]
   },
   {
@@ -2613,16 +2632,13 @@
    "id": "OPS-03",
    "area": "ops",
    "status": "active",
-   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L, the daily-loss counter, per-stock entry counts, and single-leg current-mode open positions (stop and target parsed from the entry note, entry charges carried). Seed max_open_positions from the restored count.",
+   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L, the daily-loss counter, per-stock entry counts, and single-leg open positions (stop and target parsed from the entry note, entry charges carried): paper legs when in Paper, live legs always. Seed max_open_positions from the restored count.",
    "why": "A restart orphaned two open positions (GRASIM, HYUNDAI) and could erase today's losses from the loss limit.",
    "enforced_in": "backend/state.py:_rehydrate_today, _rehydrate_open_positions; backend/trading_engine.py:TradingEngine.__init__",
    "config": null,
    "verify": "activity 'Restored N open position(s) from today's journal after a restart'",
    "source": "README §67, issue #118",
-   "test": "backend/tests/test_restore_open_positions.py::test_an_open_short_is_restored_with_its_stop_target_and_entry_charges",
-   "issues": [
-    156
-   ]
+   "test": "backend/tests/test_restore_open_positions.py::test_an_open_short_is_restored_with_its_stop_target_and_entry_charges"
   },
   {
    "id": "OPS-04",
