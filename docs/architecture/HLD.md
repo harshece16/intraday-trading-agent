@@ -326,7 +326,7 @@ flowchart TD
     Own -->|"only the owner"| Real(["Real money"])
 ```
 
-Trials of record: **127**. Passed: **1** (trial 120; re-run on repaired prices as trial 126, it survives with a smaller edge). Held-out window: spent
+Trials of record: **127**. Passed: **1** (trial 120; re-run on repaired prices as trial 126, it survives narrowly, with a smaller edge). Held-out window: spent
 once, for the momentum family.
 
 ## 9. Security model

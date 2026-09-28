@@ -3,14 +3,16 @@
 > **Note added 2026-09-28 (`results-universe-width.md`).** These figures
 > stand as recorded. A re-run on repaired prices with honest fills (trial
 > 126) gives less: **+0.71% a month, t 2.51, CAGR 20.6%** for Part A, and
-> +0.91%, t 3.00 for Part B. Both still meet the rules written here. Three
-> things about the data below were not known when this was written:
+> +0.91%, t 3.00 for Part B. Both still meet the rules written here, Part A
+> narrowly (Deflated Sharpe 0.952 against 0.95). Three things about the data
+> below were not known when this was written:
 >
 > - The price loader read the EQ series only (#175). A held stock that moved
 >   to trade-for-trade was sold at its last EQ close, and 743 corporate
 >   actions were applied with a different factor, 42 of them on stocks
->   inside the 400 most-traded. Most are demergers applied ten sessions
->   late.
+>   inside the 400 most-traded. Of those 42, 32 are demergers, 30 of them
+>   applied ten sessions late. Of the 743, 566 are dividends and 127
+>   demergers.
 > - Stage 0 here listed one-day drops only. Two of the nine demerger
 >   residuals are upward: PIRPHYTO +51.0% (2011-12-23) and SINTEX +44.4%
 >   (2017-05-25).

@@ -39,8 +39,8 @@ going live is the owner's decision alone.
   universe in 2025 and −14% in 2016. Its evidence is a backtest, 200 unseen
   stocks and eight unseen months, and at the project-wide trial count it
   would not pass. Re-run on repaired prices with honest fills it still
-  passes its own rule, with a smaller edge: +0.71% a month against the
-  +0.82% first recorded ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better)). No strategy, fund or trader delivers anything like 1% a
+  passes its own rule, narrowly and with a smaller edge: +0.71% a month
+  against the +0.82% first recorded ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better)). No strategy, fund or trader delivers anything like 1% a
   day.
 - **What was measured and failed**, so nobody retries it blind:
   - The Varsity checklist the intraday agent was built on: **−0.36R a trade,
@@ -3583,27 +3583,27 @@ The owner asked (2026-09-28) whether the first pick should come from more stocks
 
 **The test** was written down before its code (`docs/research/prereg-universe-width.md`), reviewed four times and amended four times before any return was read. It repaired the price data first, because a sweep found that the loaders read the EQ series only.
 
-**What the repair found (#175, #177, #178).** A stock that moves to trade-for-trade has no EQ row. The old data priced it at its last EQ close and sold it there. It also applied 743 corporate actions with a different factor, 42 of them on stocks inside the 400 most-traded. Most are demergers: NSE puts a stock in trade-for-trade for about ten sessions after one, and the old data folded those sessions into the adjustment. Consolidations were not adjusted at all, and seven dividend amounts were overstated.
+**What the repair found (#175, #177, #178).** A stock that moves to trade-for-trade has no EQ row. The old data priced it at its last EQ close and sold it there. It also applied 743 corporate actions with a different factor, 42 of them on stocks inside the 400 most-traded. Of those 42, 32 are demergers, 30 of them applied ten sessions late: NSE puts a stock in trade-for-trade for about ten sessions after a demerger, and the old data folded those sessions into the adjustment. Of the 743, 566 are dividends and 127 demergers. Consolidations were not adjusted at all, and seven dividend amounts were overstated.
 
 **Results.** All figures are net of every Zerodha delivery charge and slippage, on 2010 to 2025. Nothing from 2026 was read.
 
 | Question | Result | Verdict |
 | --- | --- | --- |
-| Does the running rule survive repaired prices and honest fills? (trial 126) | **+0.71% a month over its benchmark, t 2.51, CAGR 20.6% against 11.9%.** First recorded as +0.82%, t 2.91, CAGR 22.3% | Survives its own rule, with a smaller edge |
+| Does the running rule survive repaired prices and honest fills? (trial 126) | **+0.71% a month over its benchmark, t 2.51, CAGR 20.6% against 11.9%.** First recorded as +0.82%, t 2.91, CAGR 22.3% | Survives its own rule narrowly, with a smaller edge |
 | Does its confirmation on ranks 201–400 survive? (L42) | +0.91% a month, t 3.00. First recorded as +1.00%, t 3.31 | Survives |
 | Does the rule work on ranks 401 to 1,000? (L43–L45) | Not run. With a floor of ₹70 lakh traded a day, the list reaches 600 stocks only from August 2020: 63, 56 and 30 months against the 120 required | **Could not be tested** |
-| Is one book over the 400 most-traded better than the running book? (trial 127) | +0.31% a month more, **t 0.97** against a bar of 1.65. Over half of the gap is the wider list's own return, not the rule. It also missed the family bar: t 2.76 against 2.807 | **FAIL. No change** |
+| Is one book over the 400 most-traded better than the running book? (trial 127) | +0.31% a month more, **t 0.97** against a bar of 1.65. About half of the gap is the wider list's own return. It also missed the family bar: t 2.76 against 2.807 | **FAIL. No change** |
 
-**Honest fills** means three things the first test did not model: no buy when a stock closes locked at its upper band and no sell at its lower band, no fill on a day it did not trade, and a real price when it is in trade-for-trade. The largest single effect was June 2021, when three Adani stocks fell to their lower band for days. The recorded book had sold them at a price that no longer existed.
+**Honest fills** means three things the first test did not model: no buy when a stock closes locked at its upper band and no sell at its lower band, no fill on a day it did not trade, and a real price when it is in trade-for-trade. The two largest monthly differences were June and July 2021, when the book held three Adani stocks that had moved to trade-for-trade. The old data priced and sold them at the close of 8 June. On repaired prices the book did 4.4 and 3.6 points worse, and its sells waited three sessions at the lower band.
 
 **What this does not show.**
 
 - Whether momentum works in less-traded stocks. The liquidity floor was set before the list sizes were known, and it made that question untestable. The floor was not changed afterwards. A new test would need its own pre-registration, and that is the owner's decision.
 - How much of the smaller edge is the data and how much the fills. Separating them would be another counted trial.
 - That the rule clears today's bar. The momentum family now counts ten tries. At ten, trial 126 would not pass (t 2.51 against 2.807). It is judged on trial 120's criteria because it cannot make a new claim.
-- What slippage really is. The rates are judgements from a 2010 study (#66). The result would survive about 2 percentage points more per side.
+- What slippage really is. The rates are judgements from a 2010 study (#66). The excess stays above zero until about 2 percentage points more per side. Trial 126's pass does not: about 0.02 points more per side would fail it (Deflated Sharpe 0.952 against 0.95).
 
-**Still to do.** The paper book's own loader (`backend/momentum_book.py`) has the same three defects. Its first rebalance is on the evening of 2026-10-01.
+**For the owner.** The paper book's own loader (`backend/momentum_book.py`) has the same three defects, and its first rebalance is on the evening of 2026-10-01. Fixing it changes the data a pre-registered forward test runs on, so whether and when is the owner's decision. The recommendation is before that date, in its own PR.
 
 Files: `docs/research/results-universe-width.md`, `docs/research/stock-picking-sweep-2026-09-28.md`, `backend/research/momentum_width.py`, `backend/research/panel_differences.py`, `backend/research/width_report.py`, `backend/tests/test_momentum_width.py`.
 

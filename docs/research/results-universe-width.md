@@ -1,17 +1,20 @@
-# Universe width — results. **The running rule survives repaired data and honest fills (trial 126), with a smaller edge. The 400-stock book FAILS (trial 127). Ranks 401 to 1,000 could not be tested.**
+# Universe width — results. **The running rule survives repaired data and honest fills (trial 126), narrowly and with a smaller edge. The 400-stock book FAILS (trial 127). Ranks 401 to 1,000 could not be tested.**
 
-**2026-09-28.** Pre-registration `prereg-universe-width.md` (`1e53917`),
-amendments 1 to 4 (`a2372f8`, `ac42d2d`, `142134c`, `c93936e`), code
-`3d210ce`, in that order with the reviews between them (entries 20 to 23).
-Stage 0 ran twice. Each other part ran once: A′ 23:08, B′ 23:09, the three
-tier records 23:11, W 23:11. Nothing dated 2026 was read.
+**2026-09-28.** Pre-registration `prereg-universe-width.md` (`1e53917`).
+First code `946cc31`, committed before the first review and not approved by
+it. Amendments 1 and 2 (`a2372f8`, `ac42d2d`), code aligned (`1991648`),
+stage 0 run 1, amendment 3 (`142134c`), code `3d210ce`, stage 0 run 2,
+amendment 4 (`c93936e`, text only; the simulator did not change), then the
+runs. Reviews: entries 20 to 24. Each part other than stage 0 ran once: A′
+23:08, B′ 23:09, the three tier records 23:11, W 23:11. Nothing dated 2026
+was read.
 
 ## Verdict, in the pre-registration's terms
 
 | Part | Rule | Result | |
 | --- | --- | --- | --- |
 | **Stage 0** (L41) | six gates | run 1 failed gate 6; run 2 passed all six | pass |
-| **A′** (trial 126): trial 120's rule, repaired data, honest fills | trial 120's six criteria | **+0.71% a month net excess, t 2.51**; all six met | **survives** |
+| **A′** (trial 126): trial 120's rule, repaired data, honest fills | trial 120's six criteria | **+0.71% a month net excess, t 2.51**; all six met, one by a hair | **survives, narrowly** |
 | **B′** (L42): L38's rule, the same | t ≥ 1.65, both halves positive | **+0.91% a month, t 3.00**; +0.57% / +1.24% | **survives** |
 | **T3, T4, T5** (ranks 401–1,000) | at least 120 months | 63, 56 and 30 months | **not testable, not run** |
 | **W** (trial 127): one book over the 400 most-traded | eight criteria | fails 1, 2 and 6 | **FAIL** |
@@ -40,9 +43,10 @@ the list sizes were seen, and no return beyond rank 419 was read.
 | Monthly Sharpe | 0.319 | 0.304 |
 
 - W minus A′ is **+0.31% a month, t 0.97**. The rule needed t ≥ 1.65.
-- More than half of that gap is the universe, not the rule. Less-traded
-  stocks returned more in these years: the benchmarks differ by +0.17% a
-  month (t 1.36). The rule's own edge differs by +0.14% (t 0.47).
+- About half of that gap is the universe and about half the rule, and
+  neither part is distinguishable from zero. Less-traded stocks returned
+  more in these years: the benchmarks differ by +0.17% a month (t 1.36). The
+  rule's own edge differs by +0.14% (t 0.47).
 - The two books hold 7 of 15 names in common on average.
 - The test could detect a gap of 0.80% a month or more with 80% power. So
   the honest sentence is "no difference larger than about 0.8% a month", not
@@ -50,7 +54,7 @@ the list sizes were seen, and no return beyond rank 419 was read.
 - W also missed the family bar: t 2.76 against 2.807, Deflated Sharpe 0.871
   against 0.95 at a family of 10.
 
-**3. Was the recorded result right? It was too high by about a ninth.**
+**3. Was the recorded result right? It was higher than repaired data gives: +0.82% a month against +0.71%.**
 
 | | Recorded (trial 120) | Repaired data, honest fills (A′) |
 | --- | --- | --- |
@@ -60,22 +64,52 @@ the list sizes were seen, and no return beyond rank 419 was read.
 | Benchmark CAGR | 12.0% | 11.9% |
 | Deflated Sharpe, family of 3 | 0.98 | **0.952** |
 
+The gap is 0.11 points a month, 13% of the recorded figure. Month by month
+it has t −1.87, so its size is not well measured. June and July 2021 carry
+39% of it; without them it is −0.07% a month (t −1.32).
+
 A′ clears trial 120's bar, and only just: t 2.51 against 2.394, Deflated
-Sharpe 0.952 against 0.95. **At the family of 10 this project now counts, it
-would not clear**: t 2.51 against 2.807, Deflated Sharpe 0.825. That
-sentence is information, as amendment 2 wrote before the run. It does not
-re-grade trial 120.
+Sharpe 0.952 against 0.95. **The pass is inside the uncertainty of one
+input.** The margin on the Deflated Sharpe is 0.006% a month of excess,
+which at this turnover is 0.02 points of slippage a side. At 0.07% a side
+instead of the assumed 0.05%, A′ would have failed. The margin on t is
+0.03% a month, or 0.10 points a side. Both figures are first-order and hold
+the trades fixed.
+
+**At the family of 10 this project now counts, it would not clear**: t 2.51
+against 2.807, Deflated Sharpe 0.825. That sentence is information, as
+amendment 2 wrote before the run. It does not re-grade trial 120.
 
 ## What changed the numbers
 
 A′ and B′ measure the repaired data and the fill rules together. They cannot
 say how much comes from each (amendment 4).
 
-The largest single cause is visible. In June 2021 three Adani stocks (ATGL,
-ADANIGREEN, ADANIENSOL) moved to trade-for-trade and fell to their lower
-band for days. The recorded book sold them at their last EQ close, a price
-that no longer existed. The honest book could not sell at the band, held
-them, and lost 4.4 points against the recorded book in June and 3.6 in July.
+The two largest monthly differences are June and July 2021, −4.4 and −3.6
+points. The printed prices behind them are in
+`data/momentum_width_june_2021.json`.
+
+- Both books held ATGL, ADANIGREEN and ADANIENSOL through June. All three
+  moved to trade-for-trade on 9 June and were still there in August.
+- **June is prices.** Both books held the same fifteen names. The default
+  panel's last row for the three is 8 June, so the recorded book marked them
+  there on 1 July. On repaired prices they had fallen:
+
+  | Stock | Default panel, 1 July (the close of 8 June) | Printed close, 1 July |
+  | --- | --- | --- |
+  | ATGL | 1,640.85 | 968.90 |
+  | ADANIENSOL | 1,592.60 | 1,006.50 |
+  | ADANIGREEN | 1,267.55 | 1,068.70 |
+
+  A′'s book returned +1.65% that month and the recorded book +6.80%.
+- **July is fills.** At the end of June the rule sold all three. The
+  recorded book sold them on 1 July at the prices in the first column. On 1,
+  2 and 5 July each closed locked at its 5% lower band, so A′'s sells were
+  carried. The first session a sell could fill was 6 July, at 918.20, 953.80
+  and 1,012.75.
+
+The individual orders were read from the price rows and the rule, not from
+an order log; the simulator keeps counts, not a log.
 
 | | A′ | B′ | W |
 | --- | --- | --- | --- |
@@ -88,7 +122,9 @@ them, and lost 4.4 points against the recorded book in June and 3.6 in July.
 
 No ended listing was in trade-for-trade at the end, so the stress case for
 ended listings changed nothing. The five were mergers, takeovers or
-buy-outs by the parent (BANKRAJAS, CAIRN, UTVSOF, ALFALAVAL, PRICOL).
+buy-outs by the parent (BANKRAJAS, CAIRN, UTVSOF, ALFALAVAL, PRICOL). That
+is from the public record, not from project data: the output shows only that
+each ended in the EQ series.
 
 **Corporate actions on a name the book held** (amendment 4, section 8):
 
@@ -97,7 +133,7 @@ buy-outs by the parent (BANKRAJAS, CAIRN, UTVSOF, ALFALAVAL, PRICOL).
 | A′ | FRETAIL 2017-11-29 | The recorded panel applied a demerger ten sessions late; on the ex-date's own prices the rule refuses it | −5.5% | about −0.37 points |
 | B′ | AARTIIND 2019-07-03 | Demerger applied on the ex-date, not ten sessions later | −3.5% | −0.23 points |
 | B′, W | STAR 2024-12-06 | The same | +9.7% | +0.65 points |
-| B′, W | AURUM 2020-12-23 | A dividend of ₹974 on ₹986, refused by the old cap | a 98.8% loss removed | B′'s month was +7.8 points against L38 |
+| B′, W | AURUM 2020-12-23 | A dividend of ₹974 on ₹986, refused by the old cap | a 98.8% loss removed | about +6.6 points, as written in advance; the month was +7.8 against L38 |
 | A′, W | ATGL 2021-06-24 | Dividend applied on the ex-date | under 0.01% | nil |
 
 The AURUM fix was forced by stage 0 and was known to help B′ before B′ ran.
@@ -122,9 +158,10 @@ the demerger adjustment. Trial 120 did the same.
 | Net excess at ₹1 lakh | +0.69% (t 2.45) | +0.89% (t 2.95) | +1.00% (t 2.72) | — |
 
 The break-even figure is a first-order estimate that holds the trades fixed.
-It says the result does not hang on the slippage guess: every fill would
-have to cost about 2 percentage points more, per side, to erase it. The
-slippage rates themselves are still judgements, not measurements (#66).
+It says the sign of the excess does not hang on the slippage guess: every
+fill would have to cost about 2 percentage points more, per side, to erase
+it. The pass does hang on it, as section 3 shows. The slippage rates
+themselves are still judgements, not measurements (#66).
 
 W charged 22 fills (2.2% of its turnover) at the last row of the slippage
 table, 0.75% a side. Those are sales of names that had left the ranked list.
@@ -167,7 +204,9 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
    419 without the screens.
 2. **The family is now 10, and nothing in it clears the bar at 10.** Trial
    120 was judged at a family of 3. A′ is judged on trial 120's own criteria
-   because it cannot create a new claim.
+   because it cannot create a new claim. W fails at a family of 7 as well: t
+   2.76 clears 2.690, Deflated Sharpe is 0.905, and criterion 6 is
+   unchanged.
 3. **The slippage table is a judgement.** The only tiered order-book study
    found is from 2010.
 4. **Demergers.** The series assumes the value that left was put back into
@@ -184,7 +223,8 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
    after a gap longer than a month is not listed.
 8. **Tax is not modelled.** Short-term capital gains tax applies to a book
    that turns over two to three times a year.
-9. **The project-wide Deflated Sharpe for W is 0.553** at 126 trials.
+9. **The project-wide Deflated Sharpe for W is 0.552** at 127 trials. The
+   run printed 0.553 at 126, the ledger's count when it ran.
 
 ## What this does not settle
 
@@ -201,7 +241,10 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
 2. **The paper book's own loader has the three defects** this test repaired
    in the research loader: #175 (trade-for-trade rows), #177
    (consolidations) and #178 (dividend amounts). Its first rebalance is on
-   the evening of 2026-10-01. The fix belongs before that.
+   the evening of 2026-10-01. Fixing it changes live-path code and the data
+   a pre-registered forward test runs on, so whether and when is the owner's
+   decision. The recommendation is before the first rebalance, in its own
+   PR.
 3. **The paper book's forward band** expects +0.82% a month, trial 120's
    figure. A′ says +0.71%. Keeping 0.82 makes the band stricter. Changing it
    is the owner's decision.
@@ -220,6 +263,7 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
 | `data/momentum_width_stage0_run1.json`, `_run2.json` | Stage 0, both runs |
 | `data/momentum_width_panel_differences.json` | The 743 corporate actions that differ between the panels |
 | `data/momentum_width_A.json`, `_B.json`, `_W.json` | The three runs, with monthly series and holdings |
-| `data/momentum_width_T3.json`, `_T4.json`, `_T5.json` | "Not testable" records; no simulation |
+| `data/momentum_width_T3.json`, `_T4.json`, `_T5.json` | "Not testable" records; no simulation. They carry `ledger: look L43` to `L45`; those looks were not taken |
+| `data/momentum_width_june_2021.json` | Printed prices and lock flags of three held stocks, June to August 2021 |
 | `data/momentum_width_report.json` | Actions and residuals on held names |
 | `backend/research/momentum_width.py`, `panel_differences.py`, `width_report.py` | Code |
