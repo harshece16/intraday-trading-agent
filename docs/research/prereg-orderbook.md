@@ -96,3 +96,36 @@ liquid NIFTY 100 names. A result will describe those stocks, not the whole
 index.
 
 **Amendment 2, deploy date.** **Deployed 2026-09-28 at 20:37 IST** (backend restarted from `main` at `f0a1287`). The first session chosen by the new rule is **2026-09-29**. Every session before it used the old rotating list.
+
+---
+
+# Amendment 3 — 2026-09-29, before any `depth_samples` row has been joined to a return, written before the change is deployed
+
+**What had been seen:** row counts only, as in amendment 2.
+
+**A correction to amendment 2.** It said the list is "chosen before the open
+from daily data". It was chosen from daily data, and it was fixed at the
+first scan of the session, not before the open. That is how 2026-09-29 was
+sampled, and any session before this amendment is deployed.
+
+**The change**, from the first session after it is deployed (the date is
+added below once it is live). README §100.
+
+1. The list is fixed before the open, at the first pre-market read at or
+   after 08:45, so the engine watches the day's stocks from the first tick of
+   the session.
+2. The daily data it is chosen from runs through the last completed session
+   (#192).
+3. A stock on the F&O ban list, in trade-for-trade, under graded
+   surveillance, or within 2% of a fixed price band is left out of the list.
+
+**Unchanged:** the five features, the three horizons, the 15-session
+requirement, the 90% coverage rule, the hurdle and the Benjamini–Hochberg
+family of 15. The choice of the list still uses no price move of the day,
+no order-book reading and no return.
+
+**A consequence to state now:** coverage in the first minutes of the session
+should rise, because the sampler has the list from 09:15. Sessions before and
+after the change differ in that, and the write-up will say how many of each
+the sample holds.
+

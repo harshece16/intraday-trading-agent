@@ -46,3 +46,6 @@ backend/.typesafe_key.json
 backend/research/kronos_vendor/
 backend/research/kronos_rows_*.jsonl
 backend/research/.kvenv/
+
+# NSE index closing files, downloaded by the scanner to complete the last session (README section 100)
+backend/data/nse_indices/

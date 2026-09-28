@@ -10,6 +10,13 @@ This audit reads the code as it is on `main` (`3c515d1`) and the project's
 own measurements. It runs nothing and changes no rule. Every figure is
 quoted from the file named beside it.
 
+> **Progress, 2026-09-29.** The owner approved the three fixes of section 6.
+> Done in README section 100: the day's list is fixed before the open, on
+> data through the last completed session; the F&O ban, price-band,
+> trade-for-trade and surveillance guards. Two defects were found on the way
+> (#192, #193). Still to do: the scanner's move to live prices, and the side
+> no longer set by the old score.
+
 ## Verdict
 
 1. Stock selection is not the weakest link. **No stage of the intraday

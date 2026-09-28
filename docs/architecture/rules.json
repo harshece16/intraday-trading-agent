@@ -901,13 +901,16 @@
    "id": "SCN-01",
    "area": "scanner",
    "status": "active",
-   "rule": "The scanner's daily and 5-minute data always come from yfinance in one batched request each, never from Kite, even when a Kite session is live.",
+   "rule": "The scanner's daily and 5-minute data come from yfinance in one batched request each, never from Kite, even when a Kite session is live. The one exception is the last completed session's daily bar, which is added from NSE's own files when yfinance does not have it yet (SCN-21).",
    "why": "Batched free data for about 110 tickers; the per-tick engine path is where Kite is used.",
    "enforced_in": "backend/scanner.py:download_batch, Scanner.run",
    "config": null,
    "verify": "Code read; scan duration_s in /api/scanner",
    "source": null,
-   "test": null
+   "test": null,
+   "issues": [
+    193
+   ]
   },
   {
    "id": "SCN-02",
@@ -1009,13 +1012,13 @@
    "id": "SCN-15",
    "area": "scanner",
    "status": "active",
-   "rule": "The day's list is chosen once per session and kept all day. A stock that stops being eligible later in the day is dropped, not replaced, so the list only shrinks. The list is fixed only when the scan has data for at least 90% of the universe.",
+   "rule": "The day's list is fixed before the open, at the first pre-market read at or after 08:45 on a trading day, and kept all day. A stock that stops being eligible later in the day is dropped, not replaced, so the list only shrinks. If no read ran before the open, the first scan with data for at least 90% of the universe fixes it, and the page says so.",
    "why": "A stable list lets every watched stock be observed for the whole session, which the order-book test needs, and stops the review queue and the Jev book from seeing a different set of stocks every few minutes.",
-   "enforced_in": "backend/scanner.py:Scanner.day_list_for",
-   "config": "SCANNER.freeze_min_coverage = 0.9",
-   "verify": "GET /api/scanner: selection.fixed is true and selection.fixed_at is set; the active list is the same on every scan that day",
-   "source": "README §91",
-   "test": "backend/tests/test_scanner_selection.py::test_the_list_is_fixed_for_the_session_and_does_not_rotate"
+   "enforced_in": "backend/scanner.py:Scanner.fix_day_list and day_list_for; backend/trading_engine.py:should_fix_list and _fix_day_list",
+   "config": "SCANNER.fix_list_from = \"08:45\"; SCANNER.freeze_min_coverage = 0.9",
+   "verify": "Screener page: 'Fixed before the open at HH:MM'; /api/scanner selection.fixed_when",
+   "source": "README §91, §100",
+   "test": "backend/tests/test_scanner_guards.py::test_a_list_fixed_before_the_open_is_the_days_list"
   },
   {
    "id": "SCN-16",
@@ -1028,6 +1031,69 @@
    "verify": "Pre-Market page: the 'On today's list' stocks match the Screener's Trading tab",
    "source": "README §91",
    "test": null
+  },
+  {
+   "id": "SCN-17",
+   "area": "scanner",
+   "status": "active",
+   "rule": "A stock on NSE's F&O ban list for the day is left alone: it is excluded from the day's list and from new trades.",
+   "why": "A stock enters the ban when market-wide derivative positions pass 95% of the limit. Positioning is crowded and its futures cannot take new positions.",
+   "enforced_in": "backend/scanner.py:guard_check; backend/nse_feed.py:fno_ban_list",
+   "config": "SCANNER.guards = True",
+   "verify": "Screener page, the line under the intro; Skipped tab shows the reason",
+   "source": "README §100; NSE fo_secban.csv",
+   "test": "backend/tests/test_scanner_guards.py::test_a_stock_in_the_ban_is_left_alone"
+  },
+  {
+   "id": "SCN-18",
+   "area": "scanner",
+   "status": "active",
+   "rule": "A stock with a fixed price band is long-only: it is never scored or traded as a short. It is left alone when its price is within 2% of either band. Stocks with derivatives have no fixed band and are not affected.",
+   "why": "A short caught at the upper band cannot be covered, and an order at a locked band does not fill.",
+   "enforced_in": "backend/scanner.py:guard_check; backend/nse_feed.py:price_bands",
+   "config": "SCANNER.near_band_pct = 2.0",
+   "verify": "Screener page: 'Long only' on ENRIN, TATACAP and TMCV (2026-09-29)",
+   "source": "README §100; NSE sec_list.csv",
+   "test": "backend/tests/test_scanner_guards.py::test_a_banded_stock_near_its_band_is_left_alone"
+  },
+  {
+   "id": "SCN-19",
+   "area": "scanner",
+   "status": "active",
+   "rule": "A stock in trade-for-trade (series BE or BZ) or carrying a graded-surveillance remark in NSE's price-band list is left alone.",
+   "why": "A trade-for-trade position cannot be squared off the same day, so it cannot be an intraday trade.",
+   "enforced_in": "backend/scanner.py:guard_check",
+   "config": "SCANNER.guards = True",
+   "verify": "Skipped tab shows the reason",
+   "source": "README §100; NSE sec_list.csv",
+   "test": "backend/tests/test_scanner_guards.py::test_a_stock_in_trade_for_trade_or_under_surveillance_is_left_alone"
+  },
+  {
+   "id": "SCN-20",
+   "area": "scanner",
+   "status": "active",
+   "rule": "A guard file that cannot be fetched or read is unknown, not empty: it excludes nothing, and the page says it could not be read.",
+   "why": "Showing 'no stock is banned' when the list was never read would be a false statement.",
+   "enforced_in": "backend/nse_feed.py:_archive, parse_fno_ban, parse_price_bands; backend/scanner.py:guards_summary",
+   "config": null,
+   "verify": "Screener page: 'could not be read'",
+   "source": "README §100",
+   "test": "backend/tests/test_scanner_guards.py::test_unknown_files_exclude_nothing"
+  },
+  {
+   "id": "SCN-21",
+   "area": "scanner",
+   "status": "active",
+   "rule": "When the daily bars do not yet hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. If that fails, the pre-market read says which session it ranked on.",
+   "why": "The delayed feed's daily bars end a session early for hours after the close, so a read before the open ranked on data one session old (#192).",
+   "enforced_in": "backend/scanner.py:complete_daily; backend/nse_feed.py:last_session",
+   "config": null,
+   "verify": "Pre-market page: 'Ranked on the <date> close'; /api/premarket result.daily",
+   "source": "README §100",
+   "test": "backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched",
+   "issues": [
+    192
+   ]
   },
   {
    "id": "SCN-09",

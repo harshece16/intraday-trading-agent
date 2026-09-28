@@ -158,6 +158,81 @@ class _Points:
         self.items.append((pts, text))
 
 
+def complete_daily(daily, today_iso):
+    """Add the last completed session to the daily bars where the delayed
+    feed has not published it yet, from NSE's own daily files. Returns the
+    number of series completed and the date they now run through."""
+    try:
+        last = nse_feed.last_session(datetime.fromisoformat(today_iso).date())
+    except Exception:
+        logger.exception("Could not read the last session from NSE's files")
+        return 0, None
+    added = 0
+    for ticker, bars in daily.items():
+        if not bars or _date(bars[-1]) >= last["date"]:
+            continue
+        bar = last["indices"].get(ticker)
+        if bar is None and ticker.endswith(".NS"):
+            bar = last["stocks"].get(ticker[:-3])
+        if bar:
+            bars.append(dict(bar))
+            added += 1
+    return added, last["date"]
+
+
+def load_guards(cfg):
+    """The day's tradability guards from NSE. Either file may be missing, in
+    which case its guard is unknown and excludes nothing."""
+    if not cfg.get("guards", True):
+        return {"ban": None, "bands": None, "off": True}
+    return {"ban": nse_feed.fno_ban_list(), "bands": nse_feed.price_bands()}
+
+
+def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None):
+    """(why the stock is left alone today, or None; whether it is long-only).
+    A stock with a fixed price band can lock: a short caught at the upper
+    band cannot be covered, so it is long-only, and it is left alone when the
+    price is close to either band."""
+    ban = guards.get("ban")
+    if ban and ban["trade_date"] >= session and symbol in ban["symbols"]:
+        return (f"In the F&O ban for {ban['trade_date']}: market-wide positions are above 95% of the limit", False)
+    row = (guards.get("bands") or {}).get(symbol)
+    if not row:
+        return None, False
+    if row["series"] and row["series"] != "EQ":
+        return (f"In trade-for-trade (series {row['series']}): a position cannot be squared off the same day", True)
+    if row["remarks"]:
+        return f"Under surveillance: {row['remarks']}", row["band"] is not None
+    band = row["band"]
+    if band is None:
+        return None, False
+    if ltp and prev_close:
+        near = cfg.get("near_band_pct", 2.0) / 100
+        upper, lower = prev_close * (1 + band / 100), prev_close * (1 - band / 100)
+        if ltp >= upper * (1 - near):
+            return f"Within {near * 100:.0f}% of its upper price band (₹{upper:,.2f}, {band:.0f}%)", True
+        if ltp <= lower * (1 + near):
+            return f"Within {near * 100:.0f}% of its lower price band (₹{lower:,.2f}, {band:.0f}%)", True
+    return None, True
+
+
+def guards_summary(guards, symbols):
+    """What the page shows about the guards: what was read, and which of the
+    universe's stocks they touch."""
+    ban, bands = guards.get("ban"), guards.get("bands")
+    uni = set(symbols)
+    return {
+        "off": bool(guards.get("off")),
+        "ban": None if not ban else {"trade_date": ban["trade_date"], "count": len(ban["symbols"]),
+                                     "in_universe": sorted(ban["symbols"] & uni)},
+        "bands": None if not bands else {
+            "banded": sorted(s for s in uni if s in bands and bands[s]["band"] is not None),
+            "not_eq": sorted(s for s in uni if s in bands and bands[s]["series"] not in ("", "EQ")),
+            "surveillance": sorted(s for s in uni if s in bands and bands[s]["remarks"]),
+        },
+    }
+
+
 def tradability_exclusion(p, cfg):
     if p["close"] < cfg["min_price"]:
         return f"Price ₹{p['close']:.0f} below ₹{cfg['min_price']}"
@@ -538,19 +613,34 @@ class Scanner:
         # The session's fixed list in "liquidity" mode: {"session", "symbols", "fixed_ts"}.
         self.day_list = None
 
+    def fix_day_list(self, session, symbols, now=None):
+        """Fix the day's list before the open, from the pre-market read. It
+        is not moved once fixed."""
+        if self.list_fixed_for(session):
+            return False
+        self.day_list = {"session": session, "symbols": list(symbols), "fixed_ts": now or time.time(),
+                         "when": "before the open"}
+        return True
+
+    def list_fixed_for(self, session):
+        return bool(self.day_list and self.day_list["session"] == session)
+
     def day_list_for(self, session, eligible, n_rows, n_universe, now=None):
         """Today's list in "liquidity" mode. Chosen once per session and then
         kept; a stock that stops being eligible later in the day (a results
         announcement, a missing download) is dropped, not replaced, so the list
-        only ever shrinks during the session. It is fixed only when the scan
-        has data for enough of the universe; until then it is recomputed."""
+        only ever shrinks during the session. It is normally fixed before the
+        open (fix_day_list). If it was not, the first scan with data for
+        enough of the universe fixes it; until then it is recomputed."""
         eligible_syms = {r["symbol"] for r in eligible}
         dl = self.day_list
-        if dl and dl["session"] == session:
+        if dl and dl["session"] >= session:
+            # >: today's list is fixed and this scan still reads the last session's bars
             return [s for s in dl["symbols"] if s in eligible_syms], True
         chosen = select_liquid(eligible, self.cfg)
         if n_universe and n_rows >= self.cfg.get("freeze_min_coverage", 0.9) * n_universe:
-            self.day_list = {"session": session, "symbols": chosen, "fixed_ts": now or time.time()}
+            self.day_list = {"session": session, "symbols": chosen, "fixed_ts": now or time.time(),
+                             "when": "at the first scan of the session"}
             return chosen, True
         return chosen, False
 
@@ -573,6 +663,7 @@ class Scanner:
         if not nifty_5m or NIFTY not in daily:
             raise RuntimeError("NIFTY data unavailable")
         session = nifty_5m[-1]["time"][:10]
+        completed, _ = complete_daily(daily, session)
         nifty_dates = [_date(b) for b in daily[NIFTY]]
         nifty_closes = [b["close"] for b in daily[NIFTY]]
 
@@ -582,6 +673,7 @@ class Scanner:
         fii_dii = nse_feed.fii_dii_flows() if cfg.get("use_news", True) else None
         large_deals = nse_feed.large_deals_today() if cfg.get("use_news", True) else {}
         real_breadth = nse_feed.market_breadth() if cfg.get("use_news", True) else None
+        guards = load_guards(cfg)
         if real_breadth:
             try:
                 database.record_market_breadth(session, real_breadth)
@@ -622,9 +714,11 @@ class Scanner:
                 excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
             if not excluded and sym in ex_actions:
                 excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
+            guarded, long_only = guard_check(sym, guards, session, cfg, ltp=m["ltp"], prev_close=prof["close"])
+            excluded = excluded or guarded
             scored = {}
             rs_today = None
-            for side in sides:
+            for side in (("long",) if long_only else sides):
                 pre, pre_items, _ = premarket_score(prof, cfg, side, date_iso=session)
                 intra, intra_items, rs_today = intraday_score(
                     m, prof, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym),
@@ -636,6 +730,7 @@ class Scanner:
                 "side": best.upper(),
                 "long_score": _r(scored["long"][0], 1),
                 "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
+                "long_only": long_only,
                 "score": _r(score, 1), "final_score": _r(score, 1), "excluded": excluded,
                 "reasons": [{"points": _r(float(p), 1), "text": t} for p, t in items[:7]],
                 "ltp": _r(m["ltp"]), "gap_pct": _r(m["gap_pct"]), "rvol": _r(m["rvol"]),
@@ -707,7 +802,10 @@ class Scanner:
                 "rule": (LIQUIDITY_RULE if mode == "liquidity" else SCORE_RULE).format(n=cfg["active_count"]),
                 "fixed": fixed,
                 "fixed_at": (self.day_list or {}).get("fixed_ts") if mode == "liquidity" and fixed else None,
+                "fixed_when": (self.day_list or {}).get("when") if mode == "liquidity" and fixed else None,
             },
+            "guards": guards_summary(guards, [u["symbol"] for u in uni]),
+            "daily_completed_from_nse": completed,
             "market": ctx,
             "sectors": sectors,
             "rows": ranked,
@@ -815,6 +913,7 @@ def run_premarket(cfg):
     today = datetime.now(IST).date().isoformat()
     tickers = [yf_ticker(u["symbol"]) for u in uni]
     daily = download_batch(tickers + [NIFTY, VIX], "1y", "1d")
+    completed, expected = complete_daily(daily, today)
     nifty_bars = [b for b in daily.get(NIFTY, []) if _date(b) < today]
     if len(nifty_bars) < 60:
         raise RuntimeError("NIFTY data unavailable")
@@ -836,6 +935,7 @@ def run_premarket(cfg):
     ex_actions = nse_feed.corporate_actions_on(today)
     catalysts = news_sentiment.market_catalysts(uni) if cfg.get("use_news", True) else {}
     large_deals = nse_feed.large_deals_today() if cfg.get("use_news", True) else {}
+    guards = load_guards(cfg)
 
     sides = ("long", "short") if cfg.get("allow_shorts", True) else ("long",)
     rows, adv, dec = [], 0, 0
@@ -873,8 +973,10 @@ def run_premarket(cfg):
             excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
         if not excluded and sym in ex_actions:
             excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
+        guarded, long_only = guard_check(sym, guards, today, cfg)
+        excluded = excluded or guarded
         scored = {}
-        for side in sides:
+        for side in (("long",) if long_only else sides):
             pre, pre_items, _ = premarket_score(prof, cfg, side, date_iso=today)
             scored[side] = (pre, pre_items)
         best = max(scored, key=lambda k: scored[k][0])
@@ -883,6 +985,7 @@ def run_premarket(cfg):
             "side": best.upper(), "score": _r(score, 1),
             "long_score": _r(scored["long"][0], 1),
             "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
+            "long_only": long_only,
             "excluded": excluded,
             "reasons": [{"points": _r(float(p), 1), "text": t} for p, t in sorted(items, key=lambda x: -abs(x[0]))[:7]],
             "close": _r(prof["close"]), "atr_pct": _r(prof["atr_pct"]), "daily_trend": prof["trend"],
@@ -915,14 +1018,18 @@ def run_premarket(cfg):
     return {
         "ts": time.time(),
         "session_date": session,
-        "as_of_note": f"Ranked on the {session} close — the last completed session. Refreshes once today's "
-                      f"candles exist and the live intraday scanner takes over.",
+        "daily": {"through": session, "last_session": expected, "completed_from_nse": completed,
+                  "stale": bool(expected and session < expected)},
+        "as_of_note": (f"Ranked on the {session} close — the last completed session. " if not (expected and session < expected)
+                       else f"Ranked on the {session} close. The {expected} session is not in the daily data yet. ")
+                      + "Refreshes once today's candles exist and the live intraday scanner takes over.",
         "duration_s": _r(time.time() - started, 1),
         "scanned": len(rows),
         "excluded_count": len(excluded_rows),
         "watchlist": [r["symbol"] for r in top_picks],
         "selection": {"mode": mode, "rule": (LIQUIDITY_RULE if mode == "liquidity" else SCORE_RULE).format(
             n=cfg.get("active_count", 6))},
+        "guards": guards_summary(guards, [u["symbol"] for u in uni]),
         "narrative": narrative,
         "market": {
             "bias": bias, "score": mkt_score, "reasons": mkt_reasons, "session_date": session,

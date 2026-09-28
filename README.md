@@ -144,7 +144,7 @@ today for X" and when trading resumes.
 
 | Stage | Rules (points) |
 |---|---|
-| **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** |
+| **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** · in the F&O ban, in trade-for-trade, or within 2% of a fixed price band → excluded; a stock with a fixed band is long only (§100) |
 | **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 · confirmed Bulkowski daily pattern +15 · Murphy reversal day/selling climax +10 to +18 |
 | **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
@@ -3485,7 +3485,7 @@ The owner said the 25 stocks the scanner picks were wrong and there was too much
 | So most stocks weren't watched long enough | Only 10 met the order-book test's rule of being sampled for 90% of the session |
 | It leaned one way | 92% of active rows were shorts on a falling day, so the Jev book and the review queue became bets on the index |
 
-**The new rule** (`SCANNER["selection"] = "liquidity"`, now the default): the 25 eligible NIFTY 100 stocks with the highest 20-day average turnover, chosen once before trading and kept all day. The existing filters still apply: price, turnover, range, and no results or ex-date that day. A stock that becomes ineligible during the day is dropped, not replaced. The pre-market read uses the same rule, so the morning list and the day's list are the same stocks.
+**The new rule** (`SCANNER["selection"] = "liquidity"`, now the default): the 25 eligible NIFTY 100 stocks with the highest 20-day average turnover, chosen once and kept all day. (It was fixed at the first scan of the session until §100, which fixes it before the open.) The existing filters still apply: price, turnover, range, and no results or ex-date that day. A stock that becomes ineligible during the day is dropped, not replaced. The pre-market read uses the same rule, so the morning list and the day's list are the same stocks.
 
 **Why this rule, and what it doesn't claim.** It is chosen for what can be measured, not as a prediction. The most-traded stocks are the cheapest to trade: on 2026-09-28 the median quoted spread was 1.0 bp for the most-traded third of the index and 2.5 bp for the least-traded third, and 1.3 bp for the 15 stocks of the new list that were being sampled, against 2.1 bp for the old list. A fixed list lets every watched stock be observed for the whole session. It does not make the intraday side profitable. No stock-selection rule tested here, or found in the literature for this market, predicts which stocks will move which way within a day net of costs.
 
@@ -3707,6 +3707,37 @@ The page was checked in the browser on an example from July 2021, when three hol
 **What this does not settle.** Real fills. Slippage of 0.05% a side is still a judgement (#66), and trial 126's pass would fail at 0.07%. Nothing here guarantees a profit.
 
 Files: `backend/momentum_book.py`, `backend/config.py`, `backend/tests/test_momentum_book.py`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-3i-momentum-corrected-data.md` (second dated note).
+
+### 100. The day's list is fixed before the open, on the last session's data, with guards from two NSE files
+
+**Owner's decision, 2026-09-29:** start the scanner fixes from the audit (`docs/research/scanner-audit-2026-09-28.md`). This is the first part. The move to live prices is separate and not done yet.
+
+**1. The list is fixed before the open.** §91 said the day's 25 stocks were "chosen once before trading". They were chosen from daily data, and the list was fixed at the first scan after the open. Now a pre-market read at or after 08:45 on a trading day fixes it, and the engine watches those stocks from the first tick. If the engine starts after the open, the first scan fixes it as before, and the Screener says which happened.
+
+**2. The daily data runs through the last completed session (#192).** For hours after a close, the delayed feed's daily bars still end on the session before. At 01:03 on 29 September they ended on the 25th, so a read before the open would have ranked on data one session old. The scanner now adds the last session from NSE's own files, the equity bhavcopy and the index closing file, when it is missing. With it the day's list changed by one name. If NSE's files cannot be read, the Pre-market page says which session it ranked on.
+
+**3. Guards.** Two small files from NSE's archives are read each scan:
+
+| Guard | Rule | On 2026-09-29 |
+| --- | --- | --- |
+| F&O ban | A stock on the ban list for the day is left alone | 2 stocks banned, none in the NIFTY 100 |
+| Fixed price band | Long only, and left alone within 2% of either band. Stocks with derivatives have no fixed band | ENRIN, TATACAP, TMCV |
+| Trade-for-trade | Series BE or BZ: left alone, because the position cannot be squared off the same day | None |
+| Surveillance | A graded-surveillance remark in NSE's list: left alone | None |
+
+A file that cannot be read is treated as unknown. It excludes nothing, and the page says it could not be read instead of saying nothing was found.
+
+**What this does not do.**
+
+- It does not make the intraday side profitable. No selection rule tested here predicts direction after costs (§51, §69, §91). These are tradability and data fixes.
+- The scanner's intraday numbers still come from the delayed feed. Its gap is the open of that feed's first bar, which is not NSE's opening price: on 20 stock-days checked against the bhavcopy the gap differed by 0.3 points or more on 7 (#193).
+- The 2% distance from a band is a judgement, not a measured figure.
+
+**Two running tests take the list as input.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 6 and `prereg-orderbook.md` amendment 3. Amendment 3 also corrects amendment 2, which had described the list as fixed before the open.
+
+**Checked.** The pre-market read and a scan were run from this code against NSE's live files and the delayed feed on 2026-09-29; the pages were checked in the browser on a read-only preview.
+
+Files: `backend/scanner.py`, `backend/nse_feed.py`, `backend/trading_engine.py`, `backend/config.py`, `backend/tests/test_scanner_guards.py`, `frontend/src/components/ListNotes.jsx`, `frontend/src/pages/Screener.jsx`, `Overview.jsx`, `PreMarket.jsx`.
 
 ## Backtest results
 
