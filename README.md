@@ -17,12 +17,18 @@ orders through **Zerodha Kite Connect**, for cash equity and, opt-in, for
 buying calls and puts. **No real-money order has ever been placed**, and
 going live is the owner's decision alone.
 
-## What it runs today (2026-09-27)
+**Design documents:** [High-level design](docs/architecture/HLD.md) ·
+[Low-level design](docs/architecture/LLD.md) ·
+[Rules checklist](docs/architecture/RULES.md) (227 rules) ·
+[Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) ·
+[Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK)
+
+## What it runs today (2026-09-28)
 
 | Book | What it does | Evidence | Status |
 | --- | --- | --- | --- |
 | **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: **+0.82% a month** over its own universe after every delivery charge (t 2.91; 22.3% a year against 12.0%). Confirmed on 200 stocks never read before (+1.00% a month, t 3.31) and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
-| **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. First round on **28 September 2026** |
+| **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. Running since **28 September 2026** |
 | **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades |
 | **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
 
@@ -89,7 +95,7 @@ going live is the owner's decision alone.
   instead of the keyword lexicon — off by default, costs real (small) money
   once you turn it on, and is not a price predictor: it scores a headline's
   tone toward the company, nothing more. See
-  [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below
+  [LLM-read news sentiment](docs/architecture/LLD.md#91-headline-scoring) below
   for exactly what it does and doesn't claim, and why raw "ask an LLM to
   predict the stock" isn't a feature here at all.
 - **"Certified trader" describes the knowledge, not a licence.** The rules
@@ -114,7 +120,7 @@ going live is the owner's decision alone.
 
 > This section describes the **intraday engine**. Since [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line) the
 > Varsity checklist only labels setups for the review queue, and automatic
-> entries are off. The paper books in [What it runs today](#what-it-runs-today-2026-09-27)
+> entries are off. The paper books in [What it runs today](#what-it-runs-today-2026-09-28)
 > run beside it and are described in their own sections.
 
 ### 1. Market context (every scan)
@@ -129,9 +135,10 @@ going live is the owner's decision alone.
 ### 2. Scanner — *what* to trade (`scanner.py`, every 5 min open / 60 min closed)
 
 The universe is the NIFTY 100 (large, liquid, F&O-eligible stocks), refreshed
-weekly from NSE's list. The engine won't scan or trade on an NSE holiday or
-weekend (`holidays.py`) — the dashboard shows "Markets are shut today for
-X" and when trading resumes instead of treating it as an ordinary closed day.
+weekly from NSE's list. The engine doesn't trade on an NSE holiday or
+weekend (`holidays.py`). The scanner still refreshes once an hour on those
+days, so the dashboard stays current. The dashboard shows "Markets are shut
+today for X" and when trading resumes.
 
 | Stage | Rules (points) |
 |---|---|
@@ -235,12 +242,12 @@ They get the same discipline penalties as longs (fighting the 15-min uptrend
 −2, support within 1 ATR −1.5, thin volume −0.5, RSI washed out −1.5), and
 strongly positive news blocks a new short. The engine also refuses a short
 the scanner ranked as a long, and vice versa. Shorts are MIS (intraday)
-orders and are always covered by the 15:15 square-off. Never hold a cash
+orders and are always covered by the 15:08 square-off. Never hold a cash
 short overnight, because a short delivery goes to exchange auction.
 
 Exits for both sides: the ATR stop-loss and take-profit (or the checklist's
 own pattern-based stop and level-based target, when `entry_mode: "checklist"`),
-the opposite case reaching 5 or the swing structure breaking, and the 15:15
+the opposite case reaching 5 or the swing structure breaking, and the 15:08
 square-off. `allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and
 `SCANNER` turns shorting off.
 
@@ -351,7 +358,7 @@ and sizing; `costs.py` models Zerodha's published intraday tariff.
 
 The weight column above is about *trust*, not *how a headline gets scored*.
 Scoring is a separate step (`llm_sentiment.py` / `sentiment_lexicon.py`) —
-see [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below.
+see [LLM-read news sentiment](docs/architecture/LLD.md#91-headline-scoring) below.
 
 NSE bulk/block deals ("smart money" signal) were researched as a possible
 addition but not built — it needs scraping an undocumented NSE endpoint, not
@@ -391,7 +398,7 @@ logged as a trial in `backend/data/backtest_trials.json`).
 The one LLM integration in this codebase, and deliberately narrow. Added
 after explicitly declining a broader ask ("use an LLM to predict the
 stock") — that request is answered in full in
-[High-Level Design](#high-level-design) below, but the short version: an
+[High-Level Design](docs/architecture/HLD.md) below, but the short version: an
 LLM has no live market feed and no calibration for numeric forecasting: it
 generates the most statistically fluent continuation of a prompt, not a
 prediction, and that isn't a limitation prompting can fix.
@@ -2976,7 +2983,7 @@ lines (recomputed client-side from the same candles, not a separate value),
 a volume histogram panel, the checklist's actual entry/stop/target as
 labeled price lines, and arrows marking the latest detected candlestick
 pattern — explicitly **not** a projected price path, see
-[Enhancing the chart](#enhancing-the-chart-componentschartjsx) below.
+[Enhancing the chart](docs/architecture/LLD.md#173-chart-componentschartjsx) below.
 
 - **Overview** — one-sentence headline of what the agent is doing, a market
   countdown ("opens in 2h 14m" / a live session-progress bar, computed
@@ -3003,7 +3010,7 @@ pattern — explicitly **not** a projected price path, see
   confirmed daily patterns) on every real Kite holding, using the exact same
   indicators the scanner runs on the NIFTY 100. Deliberately **not** a buy/
   sell call or a return forecast — see
-  [Holdings diagnostic](#holdings-diagnostic-portfolio_diagnosticpy) below
+  [Holdings diagnostic](docs/architecture/LLD.md#112-holdings-diagnostic-portfolio_diagnosticpy) below
   for why that line is drawn where it is.
 - **Journal** — the Dimaag Scorecard, the F&O knowledge base summary, the
   honest SEBI-sourced benchmark panel ("What good actually looks like
@@ -3433,6 +3440,23 @@ The owner asked (2026-09-27) for a better way to decide *when* to trade than the
 
 Trend filters to cash, delivery percentage, FII/DII flows, short-term reversal, bulk deals and turn-of-month timing were rejected on weak, gross-only or contrary evidence. Separately, the cost model's slippage (0.03% a leg) has never been measured (#66). At ₹2–3 lakh positions it is the largest part of the intraday hurdle, and measuring it from the order-book data spends no trial.
 
+### 89. The system design, written down: high-level and low-level design, 227 rules with a checklist, and a knowledge graph
+
+The owner asked for the system to be presented at design level, with its rules as an interactive checklist, on GitHub. The whole codebase was mapped against the code, and a knowledge graph of 316 files was rebuilt with graphify.
+
+| What | Where |
+| --- | --- |
+| **High-level design**: parts, a trading day, where entries stop, how it fails | [`docs/architecture/HLD.md`](docs/architecture/HLD.md) |
+| **Low-level design**: modules, tick sequence, formulas, API, database, settings | [`docs/architecture/LLD.md`](docs/architecture/LLD.md) |
+| **Rules checklist**: 227 rules, each with its enforcing code and a way to check it | [`docs/architecture/RULES.md`](docs/architecture/RULES.md) |
+| **Interactive rulebook**: search, filters, saved ticks, the design diagrams | [Open it](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) (private to the owner), or [`rules.html`](docs/architecture/rules.html) opened in a browser |
+| **Checklists to tick on GitHub**: pre-market, new strategy, go-live readiness | New issue → choose a template |
+| **Knowledge graph**: 3,619 nodes, 8,545 edges, 200 clusters | [`docs/architecture/KNOWLEDGE_GRAPH.md`](docs/architecture/KNOWLEDGE_GRAPH.md) |
+
+The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_docs.py` builds the GitHub page and the interactive page from it, and a test in CI fails when a rule names code that no longer exists or when a built page is stale. Of the 227 rules, 208 are enforced now, 15 are switched off or pending, 4 are retired and kept on record, and 133 are covered by an automated test.
+
+**Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
@@ -3517,272 +3541,53 @@ python backtester.py --no-costs   # frictionless, for reference only
    gradient boosting / deep learning / RL once there's enough real trade
    history to justify them (see `research/ml4t_integration_plan.md`).
 
-## Architecture
+## Architecture and design
+
+The design lives in [`docs/architecture/`](docs/architecture/README.md).
+
+| Document | Read it for |
+| --- | --- |
+| [High-level design](docs/architecture/HLD.md) | The parts, a trading day, where entries stop today, how it fails, known gaps |
+| [Low-level design](docs/architecture/LLD.md) | Every module, the tick sequence, formulas, the API, the database, the settings |
+| [Rules checklist](docs/architecture/RULES.md) | All 227 rules, each with the code that enforces it and a way to check it |
+| [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) | How the code and the research connect |
+| [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) | Search, filter and tick the rules; private to the owner |
+
+```mermaid
+flowchart LR
+    Owner(["Owner"]) --> Dash["Dashboard<br/>React, localhost:5500"]
+    Dash <-->|"X-Api-Key header<br/>WebSocket, key in first message"| Back["Backend<br/>FastAPI + engine"]
+    Back --> Journal[("Journal<br/>SQLite")]
+    Back <--> Kite["Zerodha Kite<br/>prices, order book, orders"]
+    Back --> Feeds["yfinance, NSE, news"]
+    Back --> Models["TypeSafe Jev, Claude"]
+    Back -->|"evening job"| Book["Momentum book"]
+    Research["Research scripts<br/>one run per hypothesis"] -.->|"a pass earns a paper book"| Book
+```
+
+One backend process owns all state and is the only writer of the journal.
+Only Kite can receive an order, and only in Live mode. The paper books run
+beside the engine and are not affected by its mode, pause or kill switch.
+Research scripts are never imported by live code.
 
 ```
 webapp/
 ├── backend/
-│   ├── app.py                   # FastAPI: REST + WebSocket, API-key middleware, runs the engine
-│   ├── config.py                # SCANNER, MARKET_FILTER, NEWS, STRATEGY_PARAMS, RISK, COSTS, FNO, DASHBOARD_API_KEY
-│   ├── trading_engine.py        # loop: scan → per-stock brain → market/risk gates → execute (cash + F&O) → activity log
-│   ├── scanner.py               # ★ NIFTY 100 ranking: market context, tradability, setup, in-play, catalysts
-│   ├── trader_brain.py          # ★ confluence timing strategy with explanations (shared by cash and F&O)
-│   ├── confidence.py            # ★ F&O per-trade confidence check, scaled by the Dimaag Scorecard
-│   ├── options_pricing.py       # ★ Black-Scholes-Merton pricing, Greeks, implied-volatility solve
-│   ├── fno_instruments.py       # ★ resolves live NFO contracts via Kite's own instrument dump
-│   ├── fno_risk.py              # ★ premium-based position sizing (options-buying only, capped max loss)
-│   ├── evaluation.py            # ★ Deflated Sharpe Ratio + the Dimaag Scorecard
-│   ├── methods.py               # ★ assembles the Technical Analysis page from real code constants
-│   ├── holidays.py              # NSE trading holiday calendar
-│   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
-│   ├── fundamentals.py          # ★ real ROE/margin/PEG/debt-equity via Yahoo Finance — §41
-│   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
-│   ├── chaywanaprash.py         # ★ platform research analyst — real journal stats + Claude Sonnet, read-only — §29, §30
-│   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
-│   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals + market breadth/TRIN — §20, §33
-│   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
-│   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
-│   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, OBV, resampling
-│   ├── candlestick_patterns.py  # context-aware pattern recognition (24 patterns)
-│   ├── swing_patterns.py        # Bulkowski daily patterns + Murphy reversal days (scanner only)
-│   ├── market_structure.py      # swings, Dow trend, S/R zones, breakouts, Fibonacci, CPR
-│   ├── seasonality.py           # ★ real, cited calendar effects only — March effect, Budget day — §18
-│   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
-│   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
-│   ├── liquidity.py             # ★ entry-time order-book check: spread, impact of our size, entry AND exit depth; journals every reading — §58
-│   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
-│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33, §38
-│   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
-│   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
-│   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36
-│   ├── swing_backtester.py      # ★ multi-day long-only holds on daily bars vs an every-stock benchmark, plus daily ranking IC — §37
-│   ├── research/                # ★ phase-2/3 research harnesses (splits, null test, friction, 3a/3b/3c, #74 before/after); no live module imports it — tested
-│   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
-│   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
-│   └── data/nifty100.csv
-└── frontend/                     # React + Vite dashboard (migrated from a single-file vanilla-JS app)
-    ├── src/
-    │   ├── App.jsx                # routing (react-router) + layout shell
-    │   ├── api.js                 # apiFetch, dashboard-key handling, useAppState() WebSocket hook
-    │   ├── helpers.js             # domain helpers shared across pages (scanRows, analysisFor, primaryRule, ...)
-    │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary (GLOSSARY)
-    │   ├── notifications.js       # ★ browser Notification wrapper — permission + on/off, all client-side
-    │   ├── useAlerts.js           # ★ watches state for new trades/risk warnings/price moves, fires notifications
-    │   ├── components/
-    │   │   ├── Header.jsx          # topbar: market status/countdown, realized/open P&L, Kite connect, Paper/Live
-    │   │   ├── Chart.jsx            # ★ Lightweight Charts v5 wrapper — see Low-Level Design below
-    │   │   ├── Tip.jsx              # the hover/focus glossary tooltip
-    │   │   ├── RuleBook.jsx · Pill.jsx · SymLink.jsx · Feed.jsx
-    │   │   ├── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
-    │   │   └── LiveLog.jsx          # ★ terminal-style live activity drawer, available from any page — §22
-    │   └── pages/
-    │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
-    │       ├── PreMarket.jsx      # ★ renders scanner.run_premarket()'s daily-only pre-open ranking
-    │       ├── DayPlan.jsx        # ★ renders day_plan.py — real risk-boundary sizing, never a return forecast
-    │       ├── TechnicalAnalysis.jsx
-    │       ├── Portfolio.jsx      # incl. the synced-capital Kite margins card — see §15
-    │       ├── PortfolioDiagnostic.jsx # ★ renders portfolio_diagnostic.py's read on your holdings
-    │       └── Journal.jsx
-    └── legacy/index.html          # the original single-file version, kept working for reference
+│   ├── app.py, auth.py, config.py        API, dashboard key, settings
+│   ├── trading_engine.py, state.py       tick loop, the only order path, shared state
+│   ├── scanner.py, trader_brain.py       what to watch; the setup describer
+│   ├── confidence.py, evaluation.py      the evidence gate, Deflated Sharpe, Scorecard
+│   ├── risk_manager.py, liquidity.py, costs.py, review_queue.py
+│   ├── momentum_book.py, jev_book.py, depth_sampler.py    paper books and the sampler
+│   ├── data_provider.py, nse_feed.py, news_sentiment.py   market data and context
+│   ├── database.py                       the journal
+│   ├── research/                         pre-registered tests; never imported by live code
+│   └── tests/                            pytest
+├── frontend/src/                         React dashboard: 12 pages, one WebSocket
+├── docs/architecture/                    design documents and the rules catalogue
+├── docs/research/                        pre-registrations, results, the trial ledger
+└── tools/build_rules_docs.py             builds the rules pages from rules.json
 ```
-
-## High-Level Design
-
-```mermaid
-flowchart TB
-    subgraph Client["Your browser"]
-        SPA["React SPA (Vite)\nhash-free routing, WebSocket state"]
-    end
-
-    subgraph Backend["FastAPI backend — single process"]
-        API["REST + WebSocket\nApiKeyMiddleware gates every route\nexcept /kite/callback"]
-        Engine["TradingEngine loop\n(async, runs forever)"]
-        Scanner["scanner.py\nNIFTY 100 ranking"]
-        Brain["trader_brain.py\nGrand Checklist — shared by cash & F&O"]
-        Risk["risk_manager.py / fno_risk.py\nposition sizing"]
-        Conf["confidence.py\nscaled by the Dimaag Scorecard"]
-        Liq["liquidity.py\norder-book check before every entry"]
-        News["news_sentiment.py\naggregation + relevance filter"]
-        Diag["portfolio_diagnostic.py\nread-only holdings snapshot"]
-        DB[("sahab_journal.db\nSQLite — scans, checklist reads,\ntrades, F&O evaluations, liquidity checks")]
-    end
-
-    subgraph External["External services"]
-        Kite["Zerodha Kite Connect\norders, quotes, holdings, F&O instruments"]
-        YF["yfinance\ndelayed OHLCV fallback"]
-        NSE["nseindia.com\nfilings, holidays, results calendar"]
-        NewsAPIs["Google News / Marketaux /\nAlpha Vantage"]
-        Claude["Anthropic Claude API\nHaiku 4.5 — headline sentiment ONLY"]
-    end
-
-    SPA <-->|"WebSocket /ws\n?key=... every 3s"| API
-    SPA -->|"REST, X-Api-Key header"| API
-    API --> Engine
-    Engine --> Scanner --> Brain --> Risk --> Liq
-    Brain --> Conf
-    Engine -->|"paper fill, or\nreal order"| Kite
-    Scanner --> YF
-    Scanner --> NSE
-    Engine --> News
-    News --> NewsAPIs
-    News -.->|"score_headline()\noff by default, budget-capped"| Claude
-    Engine --> DB
-    API --> Diag
-    Diag --> Kite
-    Diag --> YF
-```
-
-**Why this shape:** one backend process owns all state (`state.py`'s
-`AppState`, behind a lock) and pushes it to every connected browser over
-the WebSocket — there's no separate state store the frontend and backend
-could disagree about. The engine loop is the only writer; the REST API and
-the diagnostic/LLM paths are read-mostly extensions bolted onto the side,
-which is why they can be built, tested, and toggled independently without
-touching the core scan → brain → risk → liquidity → execute chain. External services
-are all optional except Kite for live data/orders and yfinance for
-backtesting — everything else (Marketaux, Alpha Vantage, Claude) degrades
-to "skip this source" on its own, never blocking a decision.
-
-## Low-Level Design
-
-Three pieces added this session don't have detailed documentation
-elsewhere in this README (the trading logic itself is documented narrative-
-style in [How the agent decides](#how-the-agent-decides) above, which *is*
-effectively its LLD) — their internals, below.
-
-### LLM-read news sentiment (`llm_sentiment.py`)
-
-```mermaid
-sequenceDiagram
-    participant Agg as news_sentiment._aggregate()
-    participant LLM as llm_sentiment.score_headline()
-    participant Cache as _cache (in-process dict)
-    participant Budget as _budget (daily counters)
-    participant API as Anthropic API (Haiku 4.5)
-    participant Lex as sentiment_lexicon.score_text()
-
-    Agg->>Agg: de-dup headline, check it actually names the company
-    Agg->>LLM: score_headline(title, summary)
-    LLM->>Cache: seen this exact headline before?
-    alt cached
-        Cache-->>LLM: return cached score
-    else not cached
-        LLM->>Budget: _allowed()? (key set, toggle on, under daily_limit)
-        alt not allowed
-            Budget-->>LLM: False
-            LLM-->>Agg: None
-            Agg->>Lex: score_text(title + summary)
-            Lex-->>Agg: score in [-1, 1]
-        else allowed
-            Budget-->>LLM: True (used += 1)
-            LLM->>API: messages.create(system=..., headline)
-            API-->>LLM: {"score": x} + real input/output token counts
-            LLM->>Budget: add real token counts (for cost tracking)
-            LLM->>Cache: store score, keyed by sha256(title+summary)
-            LLM-->>Agg: score in [-1, 1]
-        end
-    end
-    Agg->>Agg: weight by source trust x recency, accumulate
-```
-
-Any exception anywhere in the API-call branch (network error, bad JSON,
-rate limit) is caught, logged, and treated as "not allowed right now" —
-`score_headline()` returns `None` and the caller falls back to the lexicon
-in the exact same code path as a disabled/unconfigured LLM. There is no
-branch where a failure surfaces as a wrong score instead of a graceful
-fallback.
-
-`stats()` (backing `GET /api/llm-sentiment/status`, polled every 15s by
-`LlmSentimentPanel.jsx`) reads `_budget`'s real accumulated
-`input_tokens`/`output_tokens` and multiplies by the published per-token
-price — not `used_today × an assumed average call size`. `set_enabled()`
-(backing `POST /api/llm-sentiment/enable`) mutates
-`config.NEWS["use_llm_sentiment"]` directly, so the toggle takes effect on
-the very next headline scored, no restart.
-
-### Holdings diagnostic (`portfolio_diagnostic.py`)
-
-```mermaid
-sequenceDiagram
-    participant FE as PortfolioDiagnostic.jsx
-    participant API as GET /api/portfolio/diagnostic
-    participant Kite as kite_broker.get_holdings()
-    participant YF as scanner.download_batch()
-    participant Ind as indicators.py / market_structure.py / swing_patterns.py
-
-    FE->>API: fetch on page load
-    API->>API: 400 if Kite isn't connected
-    API->>Kite: holdings() — real symbols, quantities, avg cost, P&L
-    API->>YF: download_batch([sym.NS for sym in holdings], "1y", "1d")
-    loop each holding with >= 60 daily bars
-        API->>Ind: EMA20/50, RSI(14), ATR(14), 52w high/low
-        API->>Ind: swing_points + key_levels -> nearest support/resistance
-        API->>Ind: scan_daily_patterns() + detect_reversal_day()
-        Ind-->>API: one diagnostic row: trend, rsi, levels, posture[]
-    end
-    API-->>FE: {rows: [...], unreadable: [symbols yfinance couldn't fetch]}
-    FE->>FE: render as a table — no score, no buy/sell column, no target
-```
-
-`_posture()` is the only place this module makes a judgment call, and it's
-a bounded one: it names which real, already-computed signals are present
-(`"Uptrend, RSI overbought"`, `"Within 3% of its 52-week high"`) — it never
-combines them into a single number, because that number would look like a
-recommendation whether or not it was labeled as one.
-
-### Enhancing the chart (`components/Chart.jsx`)
-
-Four independent `useEffect` hooks, each keyed on exactly the props that
-should trigger it — not one big effect that redoes everything on every
-render:
-
-1. **Mount-only** — creates the chart once (`createChart`), the candlestick
-   series, two `LineSeries` (EMA 20/50), a `HistogramSeries` on its own
-   price scale (the volume panel, squeezed into the bottom 18% via
-   `scaleMargins`), and a `ResizeObserver`. Cleans up (`chart.remove()`) on
-   unmount.
-2. **Keyed on `symbol`** — fetches `/api/candles/:symbol`, sets the
-   candlestick data, then recomputes EMA 20/50 *client-side* from those
-   same closes (`emaSeriesJS()`, the identical formula
-   `indicators.ema_series()` uses server-side — not a separately-fetched or
-   guessed value) and sets the volume histogram, colored per bar direction.
-3. **Keyed on `plan`** (support/resistance/VWAP + the checklist's
-   entry/stop/target) — removes and redraws price lines. Worth repeating
-   the framing from "Read this first" above: entry/stop/target are the
-   checklist's actual computed trade plan, never a projected future price
-   — there is no forecasting model backing a price curve, and the chart
-   draws none.
-4. **Keyed on `patterns`/`barTime`** — arrow markers
-   (`createSeriesMarkers`, the v5 API; v4 used `series.setMarkers()`
-   directly) on the most recently detected candlestick pattern's bar.
-
-Lightweight Charts was upgraded 4 → 5 as part of the React migration, which
-changed series creation from `chart.addCandlestickSeries(...)` to
-`chart.addSeries(CandlestickSeries, ...)` (series types are now imported
-values, not method names) — worth knowing if you're diffing this against
-older Lightweight Charts examples online. `kineticScroll`, `handleScroll`,
-and `handleScale` are all explicitly enabled in the chart options; they
-aren't v5 defaults.
-
-### Frontend state flow
-
-```mermaid
-flowchart LR
-    WS["WebSocket /ws"] -->|"JSON snapshot\nevery 3s"| Hook["useAppState()\napi.js"]
-    Poll["10s REST poll\n(belt-and-braces fallback)"] --> Hook
-    Hook -->|"state"| Shell["<Shell> in App.jsx"]
-    Shell --> Header["<Header state=.../>"]
-    Shell --> Router["<Routes>"]
-    Router --> Pages["Overview / Screener / Stock /\nPortfolio / Journal / Trades"]
-    Pages -->|"apiFetch() for\npage-specific data"| REST["REST endpoints\n(methods, portfolio, journal, ...)"]
-```
-
-There is exactly one WebSocket connection and one source of truth
-(`state` in `App.jsx`'s `<Shell>`) — every page receives it as a prop rather
-than opening its own connection or keeping local copies that could drift.
-Page-specific data (news, methods, journal, the diagnostic) is fetched
-independently per page via `apiFetch()`, since that data doesn't change
-every 3 seconds and doesn't belong in the constant WebSocket stream.
 
 ## Development workflow
 
@@ -3935,7 +3740,12 @@ key on each call, so no restart is needed.
 ## Known limitations
 
 - Every intraday rule, in cash equity or F&O, is net-negative in backtests. The one pass is the monthly delivery momentum book ([§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026)), and it runs in paper only.
-- **Square-off time is later than the broker's (#78, open).** Since the closing auction started on 2026-08-03, Zerodha auto-squares MIS positions in F&O-eligible stocks at **15:12**, and charges ₹50 + GST per auto square-off order. The engine squares off at 15:15. That covers nearly the whole NIFTY 100, so **fix it before trading live**. Paper mode is unaffected.
+- **Known gaps, filed while the design was mapped (2026-09-28).** None affects today's paper operation with automatic entries off.
+  - Before going live: live fills are booked at the modelled price, not Kite's ([#155](https://github.com/harshece16/intraday-trading-agent/issues/155)); a live position is unwatched after a restart ([#156](https://github.com/harshece16/intraday-trading-agent/issues/156)); slippage has never been measured ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)).
+  - Before enabling options: paper stops and targets can never fire ([#154](https://github.com/harshece16/intraday-trading-agent/issues/154)); options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)).
+  - For the paper books: [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) (Jev book) and [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) (momentum book).
+  - Housekeeping: [#160](https://github.com/harshece16/intraday-trading-agent/issues/160), [#161](https://github.com/harshece16/intraday-trading-agent/issues/161), [#162](https://github.com/harshece16/intraday-trading-agent/issues/162), [#163](https://github.com/harshece16/intraday-trading-agent/issues/163).
+- **Square-off time (#78, fixed).** Zerodha auto-squares MIS positions in F&O-eligible stocks at 15:12 and charges ₹50 + GST per order. The engine squares off at **15:08**.
 - **Slippage is still an assumption** (3 bp per leg), because no real-money order has ever been placed. The charges side of the cost model now matches Zerodha's published tariff to within about 0.03 bp (#79). Measured spreads have been accumulating in `liquidity_checks` since §58, but only for setups that reach the last gate.
 - **Cash equity only, in practice.** At a small account, NFO futures and all but one MCX contract are out of reach on margin, and Kite has no intraday history for expired F&O/MCX/CDS contracts. A non-equity backtest would need a forward-collected cache first (`docs/research/phase3-scoping.md`).
 - F&O confidence currently borrows cash equity's Scorecard rather than
