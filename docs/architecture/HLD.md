@@ -297,6 +297,9 @@ stateDiagram-v2
     }
 ```
 
+While a Jev round is open, its page shows a live mark of the positions at
+Kite's prices. The mark is never stored and never scored.
+
 | Book | Rule it runs | Switches itself off when | Verdict |
 | --- | --- | --- | --- |
 | Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.82% − 2 × 3.87% × √n, from month 6 | Forward record against the pre-registered band |

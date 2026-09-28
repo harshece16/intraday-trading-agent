@@ -6,7 +6,44 @@ import SymLink from "../components/SymLink";
 const SIZE = ["none", "half", "normal", "double"];
 
 function bp(x, d = 1) {
-  return x === null || x === undefined ? "—" : `${x >= 0 ? "+" : ""}${Number(x).toFixed(d)} bp`;
+  return x === null || x === undefined ? "—" : `${x >= 0 ? "+" : "−"}${Math.abs(Number(x)).toFixed(d)} bp`;
+}
+
+function clock(iso) {
+  return iso ? String(iso).slice(11, 16) : "";
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+// While today's round is open: what is held, when it closes, and where it stands at
+// Kite's prices. The mark is for watching only. The backend never stores or scores it.
+function OpenRound({ live }) {
+  const held = live.positions;
+  const title = held
+    ? `${plural(held, "paper position")} ${held === 1 ? "is" : "are"} open`
+    : "Today's round is open, with no position";
+  return (
+    <div className="plan">
+      <h3>{title}</h3>
+      <p>
+        {live.opened_at ? `Opened at ${clock(live.opened_at)}. ` : ""}
+        {held ? `They close at the ${live.closes_at} square-off, and only that close is scored.` : "Jev skipped every stock."}
+        {live.excluded ? ` ${plural(live.excluded, "decision")} had no live entry price and ${live.excluded === 1 ? "is" : "are"} left out.` : ""}
+      </p>
+      {held > 0 && (live.mean_net_bp !== null && live.mean_net_bp !== undefined ? (
+        <p>
+          If closed now: Jev <strong className={toneOf(live.mean_net_bp)}>{bp(live.mean_net_bp)}</strong> a position
+          after costs, the scanner alone <strong className={toneOf(live.scanner_mean_net_bp)}>{bp(live.scanner_mean_net_bp)}</strong>.
+          Marked at {clock(live.marked_at)} from Kite
+          {live.priced < held ? `, ${live.priced} of ${held} priced` : ""}. This is a live mark, not a result.
+        </p>
+      ) : (
+        <p>No live mark: {live.reason || "Kite gave no price"}. The positions stay open.</p>
+      ))}
+    </div>
+  );
 }
 
 function toneOf(x) {
@@ -23,7 +60,7 @@ export default function JevBook() {
       .then((d) => { if (alive) { setData(d); setError(null); } })
       .catch((e) => { if (alive) setError(e.message); });
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 30000);
     return () => { alive = false; clearInterval(t); };
   }, []);
 
@@ -33,8 +70,11 @@ export default function JevBook() {
   const day = data.last_day;
   const unavailable = day && day.status === "jev_unavailable";
   const noLive = day && day.status === "no_live_prices";
+  const live = data.live;                     // present only while today's round is open
+  const marks = (live && live.marks) || {};
   const statusPill = data.status === "switched_off" ? ["short", "Switched off"]
-    : unavailable ? ["wait", "Jev unavailable"] : noLive ? ["wait", "No live prices"] : ["neutral", "Paper test"];
+    : unavailable ? ["wait", "Jev unavailable"] : noLive ? ["wait", "No live prices"]
+      : live ? ["long", `Open until ${live.closes_at}`] : ["neutral", "Paper test"];
 
   return (
     <>
@@ -47,7 +87,7 @@ export default function JevBook() {
         research found no LLM trader with an edge after costs; this test checks, rather than assumes.
       </p>
       {data.status_reason && <p className="muted">{data.status_reason}</p>}
-      {!data.key_stored && !unavailable && (
+      {!data.key_stored && !unavailable && !live && (
         <p className="muted">No TypeSafe API key is stored yet, so no round will run. Create one at console.typesafe.ai/keys
           and store it with <code>pbpaste | backend/.venv/bin/python backend/typesafe_key.py set</code>.</p>
       )}
@@ -66,10 +106,12 @@ export default function JevBook() {
         </p>
       )}
 
+      {live && <OpenRound live={live} />}
+
       <div className="grid3" style={{ margin: "16px 0" }}>
-        <div className="stat"><small>Jev, net per trade</small>
+        <div className="stat"><small>Jev, net per closed trade</small>
           <strong className={toneOf(data.mean_net_bp)}>{bp(data.mean_net_bp)}</strong>
-          <small>{data.traded} trades · t {data.t != null ? data.t.toFixed(2) : "—"} · hit rate {data.hit_rate != null ? `${(data.hit_rate * 100).toFixed(0)}%` : "—"}</small></div>
+          <small>{data.traded} closed{live && live.positions ? ` · ${live.positions} open now` : ""} · t {data.t != null ? data.t.toFixed(2) : "—"} · hit rate {data.hit_rate != null ? `${(data.hit_rate * 100).toFixed(0)}%` : "—"}</small></div>
         <div className="stat"><small>Scanner alone, same stocks</small>
           <strong className={toneOf(data.scanner_mean_net_bp)}>{bp(data.scanner_mean_net_bp)}</strong>
           <small>Jev minus scanner {bp(data.paired_vs_scanner_bp)} · t {data.paired_t != null ? data.paired_t.toFixed(2) : "—"}</small></div>
@@ -87,7 +129,11 @@ export default function JevBook() {
       {day && day.decisions && day.decisions.length ? (
         <div className="table-wrap">
           <table className="datatable">
-            <thead><tr><th>Stock</th><th>Jev</th><th>P(up)</th><th>Size</th><th>Scanner</th><th>Entry</th><th>Exit</th><th>Move</th><th>Jev net</th><th>Scanner net</th></tr></thead>
+            <thead><tr><th>Stock</th><th>Jev</th><th>P(up)</th><th>Size</th><th>Scanner</th><th>Entry</th>
+              {live
+                ? <><th>Now</th><th>Move so far</th><th>Jev, if closed now</th><th>Scanner, if closed now</th></>
+                : <><th>Exit</th><th>Move</th><th>Jev net</th><th>Scanner net</th></>}
+            </tr></thead>
             <tbody>
               {day.decisions.map((d) => (
                 <tr key={d.symbol}>
@@ -96,10 +142,22 @@ export default function JevBook() {
                   <td>{d.p_up != null ? d.p_up.toFixed(2) : "—"}</td>
                   <td>{d.size_level != null ? SIZE[d.size_level] : "—"}</td>
                   <td>{d.scanner_side || "—"}</td>
-                  <td>{d.entry != null ? num(d.entry) : "—"}</td><td>{d.exit != null ? num(d.exit) : "—"}</td>
-                  <td className={toneOf(d.move_bp)}>{bp(d.move_bp, 0)}</td>
-                  <td className={toneOf(d.net_bp)}>{bp(d.net_bp, 0)}</td>
-                  <td className={toneOf(d.scanner_net_bp)}>{bp(d.scanner_net_bp, 0)}</td>
+                  <td>{d.entry != null ? num(d.entry) : <span className="muted">{d.excluded || "—"}</span>}</td>
+                  {live ? (() => {
+                    const m = marks[d.symbol];
+                    if (!m) return <td colSpan={4} className="muted">{d.entry != null ? "No live price" : ""}</td>;
+                    return <>
+                      <td>{num(m.ltp)}</td>
+                      <td className={toneOf(m.move_bp)}>{bp(m.move_bp, 0)}</td>
+                      <td className={toneOf(m.net_bp)}>{d.action === "skip" ? "skipped" : bp(m.net_bp, 0)}</td>
+                      <td className={toneOf(m.scanner_net_bp)}>{bp(m.scanner_net_bp, 0)}</td>
+                    </>;
+                  })() : <>
+                    <td>{d.exit != null ? num(d.exit) : "—"}</td>
+                    <td className={toneOf(d.move_bp)}>{bp(d.move_bp, 0)}</td>
+                    <td className={toneOf(d.net_bp)}>{bp(d.net_bp, 0)}</td>
+                    <td className={toneOf(d.scanner_net_bp)}>{bp(d.scanner_net_bp, 0)}</td>
+                  </>}
                 </tr>
               ))}
             </tbody>

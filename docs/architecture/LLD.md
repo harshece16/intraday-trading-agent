@@ -610,7 +610,9 @@ switched off, nothing turns the book back on.
 | `live_ltp(symbol)` | Kite's last traded price, or an exception. Never the delayed feed |
 | `decide_round()`, `close_round()` | The morning round and the 15:08 close |
 | `_apply_kill_rule()` | After 100 traded decisions, t below −2 switches the book off |
-| `summary()` | The read model for `/api/jev-book` |
+| `summary()` | The scored read model. Counts a trade only after its 15:08 close |
+| `live_marks()` | While today's round is open: each position at Kite's last traded price, and the mean after costs. One batched Kite call, cached 30 s. Display only: it writes nothing and feeds no score |
+| `page()` | `summary()` plus the live mark under `live`. What `/api/jev-book` returns |
 
 ```mermaid
 sequenceDiagram

@@ -19,7 +19,7 @@ going live is the owner's decision alone.
 
 **Design documents:** [High-level design](docs/architecture/HLD.md) ·
 [Low-level design](docs/architecture/LLD.md) ·
-[Rules checklist](docs/architecture/RULES.md) (227 rules) ·
+[Rules checklist](docs/architecture/RULES.md) ·
 [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) ·
 [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK)
 
@@ -3457,6 +3457,20 @@ The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_d
 
 **Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
 
+### 90. The Jev Book page shows an open round: its status and a live mark
+
+The Jev book opened 15 paper positions on its first morning (2026-09-28, 09:45), and its page read "0 trades". A trade was only counted after its 15:08 close, and nothing on the page said positions were open. The owner asked why it wasn't trading.
+
+While a round is open the page now shows:
+
+- **A status:** "Open until 15:08", with how many paper positions are open and when they were opened.
+- **A live mark:** what Jev's positions and the scanner's own side would net after costs if closed now, and when that was marked.
+- **Per stock:** the price now, the move so far, and both nets, in place of the empty Exit columns.
+
+**The mark is for watching only.** It is computed on request from Kite's last traded prices, never written to the state file, and never enters the summary, the kill rule or the verdict. The test still scores the 15:08 close alone (`docs/research/prereg-jev-book.md`, Clarification 4). Without Kite the page says there is no live mark; it never uses delayed prices. One Kite call serves every page refresh for 30 seconds.
+
+The first round also showed something to watch: Jev took the scanner's own side on all 15 stocks and skipped none. On such a day Jev and the scanner score exactly the same, so the day cannot show Jev adding anything. One day is too little to judge.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
@@ -3549,7 +3563,7 @@ The design lives in [`docs/architecture/`](docs/architecture/README.md).
 | --- | --- |
 | [High-level design](docs/architecture/HLD.md) | The parts, a trading day, where entries stop today, how it fails, known gaps |
 | [Low-level design](docs/architecture/LLD.md) | Every module, the tick sequence, formulas, the API, the database, the settings |
-| [Rules checklist](docs/architecture/RULES.md) | All 227 rules, each with the code that enforces it and a way to check it |
+| [Rules checklist](docs/architecture/RULES.md) | Every rule, each with the code that enforces it and a way to check it |
 | [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) | How the code and the research connect |
 | [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) | Search, filter and tick the rules; private to the owner |
 
