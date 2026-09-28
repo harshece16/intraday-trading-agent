@@ -485,3 +485,83 @@ disclose that the base rule was read first.
   returns the sweep read, a row for the 2025 descriptive read with the
   script's printed output, and a note that ranks 401–600 stop being unread
   for the base rule once T3 runs.
+
+---
+
+# Amendment 2 — 2026-09-28, after reviewer entry 21, before any run
+
+Entry 21 accepted amendment 1 with corrections R1 to R10. This amendment
+writes them down. It is text only. No part has run, no repaired panel has
+been built, and the code still stands at `946cc31`. The code is aligned with
+both amendments in the next commit, and stage 0 runs after that.
+
+## 1. Gate 5 covers consolidations (R1)
+
+Gate 5 counts consolidations with splits and bonuses: the adjusted ex-date
+return must lie within ±20%. Every consolidation applied is listed with its
+ratio.
+
+## 2. What differs between A′ and trial 120 (R2, R3)
+
+A′ differs from trial 120 in three ways: BE and BZ rows are priced,
+consolidations are adjusted (which changes the adjusted closes the signal
+reads), and the fill rules H1 to H5 apply. The same holds for B′ and L38.
+
+Reported with A′ and B′: the number of consolidations applied to chains
+inside E-3i ranks 1–400, and to names either book held.
+
+A′ is judged by trial 120's six criteria. Its Deflated Sharpe at N = 10 is
+reported beside its t against 2.807, and the results file says in one
+sentence whether A′ would clear the N = 10 bar. That sentence is
+information. Trial 120's t was 2.91 and the bar at N = 10 needs about 3.2,
+so A′ would probably miss it even if honest fills changed nothing.
+
+## 3. K = 400 (R4)
+
+At K = 400 criterion 8 has no tier to test. A pass then rests only on
+stock-months already read by trial 120 or L38, and the recommendation says
+so. The meaning "the effect reaches less-traded stocks" does not apply at
+K = 400.
+
+## 4. Falsification table (R5)
+
+One row is added to the table in amendment 1:
+
+| Tiers inside K | W | Meaning | Action |
+| --- | --- | --- | --- |
+| — | fewer than 120 monthly returns at K = 400 | The screened list is too short to test | Not judged; reported |
+
+**No row allows a re-run with other costs, screens, holdings or K.**
+
+## 5. Power (R6)
+
+The figures in amendment 1 come from a paired standard deviation of 4.81% a
+month, a tier standard deviation of 4.16% a month, and n = 189.
+
+Criterion 8 needs both tiers to confirm, so its power is below one tier's.
+The reviewer's rough figure is about 0.6 at 189 months, 0.45 at 140 and 0.35
+at 120. It assumes each tier's true effect is L38's 1.00% a month less the
+tier's extra slippage, and treats the tiers as independent. A fail on
+criterion 8 is weak evidence of absence.
+
+## 6. The sample named in the entry-timing sweep (R7)
+
+In amendment 1, section 14, "the owner is told so with the result" is
+replaced by: "the owner is told before T3 runs; no reply is needed". The
+owner was told in the session on 2026-09-28, before stage 0.
+
+## 7. Wording (R8, R10)
+
+- Amendment 1, section 3: "The code uses 2.13 and 1.65" should read "will
+  use". At `a2372f8` the code still had 2.128, 1.645, N_FAMILY = 4 and
+  2.498.
+- The cached panel `nse_prices.pkl` is dated 26 September 23:37, after trial
+  120 ran at 20:06. Gate 2 shows the refactor left the default loader
+  unchanged. Gate 4 is what ties the cached panel to trial 120's numbers.
+  The loader check made before amendment 1 left no committed output, so
+  stage 0's own gate 2 is the record.
+
+## 8. The consolidation gap is a bug (R9)
+
+Filed as #177, with a row in `BUG_LOG.md`. The live loader in
+`momentum_book.py` has the same gap. Its fix is outside this test.
