@@ -1264,8 +1264,8 @@ structured stats straight out of the journal database — a new
 near-misses grouped by their lone blocker, the real R:R and volume-ratio
 distributions — the same aggregate analysis that found §27's bug, now
 reusable instead of hand-rolled each time) and `recent_activity_issues()`
-(recent warn/error log lines) — and, when `ANTHROPIC_API_KEY` is
-configured, asks Claude (Sonnet 5, a heavier on-demand call than
+(recent warn/error log lines) — and, when an LLM is available (the
+Anthropic API or the Claude Code CLI, §91), asks Claude (Sonnet 5, a heavier on-demand call than
 `llm_sentiment.py`'s per-headline Haiku scoring) to turn those real
 numbers into prioritized, evidence-cited platform improvements. The
 system prompt explicitly forbids citing any number it wasn't given and
@@ -3492,6 +3492,14 @@ Scores, sides and reasons are still computed and shown, and the checklist still 
 **Two running tests take this list as input**, so both carry a note written before the change takes effect: `prereg-orderbook.md` Amendment 2 and `prereg-jev-book.md` Clarification 5. The change takes effect on the first session after it is deployed. Neither pass rule changes.
 
 The flood of review cards is a separate problem (#166), and its fix waits on the owner's choice of a reward-to-risk floor.
+
+### 92. Chaywanaprash runs on the Claude Code CLI when there is no API key
+
+Chaywanaprash (§29) only ever called the Anthropic API, so without a paid key it returned bare stats: every report in the journal until now was saved with no analysis. It now uses the same two backends as the Research Desk. With `ANTHROPIC_API_KEY` set it calls the API; without one it runs `claude -p` on the owner's Claude plan, with every tool, hook and MCP server switched off, so it can only read the stats it is given and write text. With `config.CHAYWANAPRASH["llm_backend"] = "auto"` (the default) the CLI is also the fallback when the API call fails, so a wrong or out-of-credit key doesn't silently turn the analysis off. Set it to `"anthropic_api"` or `"claude_cli"` to force one.
+
+It is now on by default, because it only runs when asked (`POST /api/chaywanaprash/analyze`, still capped at 12 runs a day), and `GET /api/chaywanaprash/status` lists the backends it would use. **Verified live on 2026-09-28:** after a restart the status read `"backends": ["claude_cli"]`, and one analysis through the app took 27 s and was saved as report #5 with a 5,440-character narrative.
+
+**Read its output as leads, not verdicts.** That report and a test run the same morning agreed with the journal on the two findings that matter: 99% of setups fail reward-to-risk because targets at the next support or resistance don't cover the round-trip cost, and the engine stalled on one cycle for 2 minutes at 09:19. They also called expired Kite sessions a live-money risk while the engine is in paper mode, and guessed at a file that doesn't exist. It still never edits anything.
 
 ## Backtest results
 
