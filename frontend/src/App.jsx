@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import { useAppState } from "./api";
+import { API_BASE, useAppState } from "./api";
+import LoadState from "./components/LoadState";
 import { useAlerts } from "./useAlerts";
-import Header from "./components/Header";
+import StatusBar, { Sidebar } from "./components/Header";
 import LiveLog from "./components/LiveLog";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
@@ -22,8 +23,16 @@ function Page({ children }) {
   return <main className="page" key={location.pathname}>{children}</main>;
 }
 
+function Connecting() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t); }, []);
+  return slow
+    ? <LoadState error={`can't reach the engine at ${API_BASE}. Is the backend running? This page keeps retrying`} />
+    : <LoadState label="Connecting to the engine…" />;
+}
+
 function AppRoutes({ state }) {
-  if (!state) return <Page><p className="empty">Connecting…</p></Page>;
+  if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
       <Route path="/" element={<Page><Overview state={state} /></Page>} />
@@ -47,11 +56,14 @@ function Shell() {
   useAlerts(state);
   const [liveLogOpen, setLiveLogOpen] = useState(false);
   return (
-    <>
-      <Header state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
-      <AppRoutes state={state} />
+    <div className="app">
+      <Sidebar state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
+      <div className="app-main">
+        <StatusBar state={state} />
+        <AppRoutes state={state} />
+      </div>
       <LiveLog state={state} open={liveLogOpen} onClose={() => setLiveLogOpen(false)} />
-    </>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiJson } from "../api";
+import { useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { num } from "../format";
 import SymLink from "../components/SymLink";
 
@@ -51,21 +51,8 @@ function toneOf(x) {
 }
 
 export default function JevBook() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => apiJson("/api/jev-book")
-      .then((d) => { if (alive) { setData(d); setError(null); } })
-      .catch((e) => { if (alive) setError(e.message); });
-    load();
-    const t = setInterval(load, 30000);
-    return () => { alive = false; clearInterval(t); };
-  }, []);
-
-  if (error) return <p className="empty">Couldn't load the Jev book: {error}</p>;
-  if (!data) return <p className="empty">Loading…</p>;
+  const { data, error, reload } = useApi("/api/jev-book", 30000);
+  if (!data) return <LoadState error={error} onRetry={reload} />;
 
   const day = data.last_day;
   const unavailable = day && day.status === "jev_unavailable";
