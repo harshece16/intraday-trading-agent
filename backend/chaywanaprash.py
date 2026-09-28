@@ -137,7 +137,8 @@ def _ask_cli(user_content, run=None):
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     # The findings go in on stdin: they are too long to be safe as an argument.
     proc = (run or subprocess.run)(cmd, input=user_content, capture_output=True, text=True, env=env,
-               timeout=config.CHAYWANAPRASH.get("cli_timeout_s", 240), cwd=tempfile.gettempdir())
+                                   timeout=config.CHAYWANAPRASH.get("cli_timeout_s", 240),
+                                   cwd=tempfile.gettempdir())
     try:
         data = json.loads(proc.stdout)
     except ValueError:
@@ -168,7 +169,7 @@ def _ask_llm(findings):
 
 def analyze(hours=None, persist=True):
     """Runs one research pass: real stats always; an LLM-written analysis
-    of them too, if a key is configured and today's budget allows.
+    of them too, if an LLM is available and today's budget allows.
     Returns {"llm_used": bool, "narrative": str|None, "findings": {...},
     "note": str|None}. Never raises for a missing key or a spent budget —
     only for something actually going wrong while it should have run."""
