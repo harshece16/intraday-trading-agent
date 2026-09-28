@@ -41,7 +41,8 @@ backend/data/momentum_book.log
 backend/data/jev_book_state.json
 backend/.typesafe_key.json
 
-# Kronos, vendored for research look L38 only (docs/research/prereg-kronos-feature-ic.md).
+# Kronos, vendored for research look L40 only (docs/research/prereg-kronos-feature-ic.md).
 # Third-party code and model weights; cloned by hand at the pinned commit, never committed.
 backend/research/kronos_vendor/
 backend/research/kronos_rows_*.jsonl
+backend/research/.kvenv/

@@ -1,4 +1,4 @@
-"""Research look L38 — does a zero-shot Kronos forecast rank the next intraday move?
+"""Research look L40 — does a zero-shot Kronos forecast rank the next intraday move?
 
 Pre-registered: docs/research/prereg-kronos-feature-ic.md (commit 0657a0e, amendment 1
 in 61e4832), both before this file was written. Background:
@@ -16,7 +16,7 @@ Order enforced here, as the prereg fixes it:
   then ONE IC pass: per-session rank IC, partial IC given the last hour's return,
   quintile spread in bp, t across sessions, BH q=0.10 over the family of three.
 
-Measurement only. No strategy, no backtest, no trial (count stays at 119). Nothing
+Measurement only. No strategy, no backtest, no trial (count stays at 125). Nothing
 in the live path imports this (tests/test_research_splits.py). torch and the vendored
 Kronos repo are imported lazily, inside the forecaster, so the pure functions below
 are testable without either.
@@ -72,8 +72,8 @@ BAR_MINUTES = 5
 HERE = os.path.dirname(os.path.abspath(__file__))
 VENDOR = os.environ.get("KRONOS_VENDOR", os.path.join(HERE, "kronos_vendor"))
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(HERE)), "docs", "research", "data")
-OUT = os.path.join(OUT_DIR, "kronos_l38_result.json")
-ROWS = os.path.join(HERE, "kronos_rows_l38.jsonl")
+OUT = os.path.join(OUT_DIR, "kronos_l40_result.json")
+ROWS = os.path.join(HERE, "kronos_rows_l40.jsonl")
 MEMBERSHIP_CSV = os.path.join(HERE, "data", "nifty100_membership.csv")
 
 

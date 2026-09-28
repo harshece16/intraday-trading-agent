@@ -1,4 +1,4 @@
-# Pre-registration — does a zero-shot Kronos forecast rank the next intraday move? (research look L38; a trial only if it clears)
+# Pre-registration — does a zero-shot Kronos forecast rank the next intraday move? (research look L40, written as L38 and renumbered on merge, see Amendment 2; a trial only if it clears)
 
 **Written 2026-09-28, before any Kronos forecast has been computed on project data.** Background and sources: `research/kronos-research-2026-09-28.md`. This fixes the model, data, features, targets, statistics and gate so the measurement cannot be shaped by its result. It runs at the user's direction ("let's go with Kronos", 2026-09-28); the independent reviewer reads this draft before code is written.
 
@@ -6,7 +6,7 @@
 
 ## 1. Hypothesis
 
-A K-line foundation model pre-trained on other markets, used zero-shot on NIFTY 100 five-minute bars, produces a forecast whose cross-sectional rank predicts the signed return over the next 15, 30 or 60 minutes by more than the round trip costs. The 119 trials so far measured hand-coded functions of the same bars at ≈ 0 R before friction (§69); this is a different function class on the same information, and the expected answer, from §69 and the TSFM literature, is **no**.
+A K-line foundation model pre-trained on other markets, used zero-shot on NIFTY 100 five-minute bars, produces a forecast whose cross-sectional rank predicts the signed return over the next 15, 30 or 60 minutes by more than the round trip costs. The trials so far (125 of record; 119 when this was drafted on an older copy) measured hand-coded functions of the same bars at ≈ 0 R before friction (§69); this is a different function class on the same information, and the expected answer, from §69 and the TSFM literature, is **no**.
 
 ## 2. Model, fixed
 
@@ -61,7 +61,7 @@ Per feature × matched horizon, exactly as `research/step2_feature_ic.py` and `p
 
 If a feature clears, the trial is pre-registered separately in the existing search harness (`research/strategy_search.py` conventions: 16.63 bp cost, next-bar fills, both halves, DSR at the trial count then standing), and confirmed once on the confirmation sample named in §3 before anything reaches even the review queue.
 
-**If nothing clears:** the finding is that a bar-trained foundation model, zero-shot, does not rank NIFTY 100 intraday moves past cost, and with §69 this closes the "nonlinear ML on price bars" line. Research look L38, no trial spent.
+**If nothing clears:** the finding is that a bar-trained foundation model, zero-shot, does not rank NIFTY 100 intraday moves past cost, and with §69 this closes the "nonlinear ML on price bars" line. Research look L40, no trial spent.
 
 ## 9. Stage 0 — checks before any IC is computed, in this order, each a halt if it fails
 
@@ -80,7 +80,7 @@ One run of the IC pass. A re-run is allowed only for a crash before any statisti
 
 ## 11. Trial accounting
 
-Research look **L38**. Trials remain **119**. If the gate clears, the trial that follows has its own pre-registration and its own number.
+Research look **L40**. Trials remain **125**. If the gate clears, the trial that follows has its own pre-registration and its own number.
 
 ## 12. What needs the user's decision (per the reviewer's limits)
 
@@ -91,3 +91,9 @@ Research look **L38**. Trials remain **119**. If the gate clears, the trial that
 ## Amendments
 
 1. **2026-09-28, before any code, per reviewer Entry 19.** §7 now states that the partial-IC-given-m60 condition is a validity check on an already-cleared feature and sits outside the BH family of three, rather than leaving that implicit. No threshold, feature, target or window changed.
+2. **2026-09-28, on merging to main, before any Kronos forecast has been computed on project data.** No design change. This pre-registration was drafted on a copy of the repository 23 commits behind `main`, so four facts it states were stale:
+   - **Numbering.** `L38` is taken on `main` by 3i Part B and `L39` by PEAD Stage A. This look is **L40**. The title, §1, §8 and §11 were edited to say so. Reviewer Entry 19 and the research notes keep the name L38 as written.
+   - **Trial count.** The count of record is **125**, not 119 (§1 and §11 edited).
+   - **The 2026 held-out window** has been spent once, on 2026-09-26, for the momentum family. Spending it for this family would be a separate owner decision, as §12 already says.
+   - **The follow-up trial, if the gate clears,** is judged by the family-level bar the owner chose on 2026-09-26 (`decision-2026-09-26-overnight-and-significance.md`): family "foundation-model price forecast", N_family ≥ 2, two-sided Bonferroni t, corrected DSR ≥ 0.95 at N_family, both halves and the last three years positive. This replaces §8's "DSR at the trial count then standing". The gate for this look (§8) is unchanged.
+

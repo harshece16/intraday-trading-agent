@@ -1,5 +1,7 @@
 # Kronos, researched — what the model is, what its own issue tracker says, what independent tests found, and how it will be tested here
 
+> **Numbering note (added on merge, 2026-09-28):** the look this note calls L38 is **L40** on `main`; L38 was already taken by 3i Part B. The trial count of record is 125, not 119.
+
 **2026-09-28. Research note. No code was run against project data; no trial or research look was spent.** Companion to `docs/research/prereg-kronos-feature-ic.md` (research look L38), which fixes the test before any of it is run.
 
 ## 1. Sources, and what this session could and could not reach

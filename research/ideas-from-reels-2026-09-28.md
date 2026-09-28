@@ -1,5 +1,7 @@
 # Ideas from the reels (2026-09-28) — what each one is, where it would plug in, and what it is worth here
 
+> **Numbering note (added on merge, 2026-09-28):** the look this note calls L38 is **L40** on `main`; L38 was already taken by 3i Part B. The trial count of record is 125, not 119.
+
 The owner shared 14 Instagram screenshots: Kronos, TradingAgents, a
 "price range" reel, Awesome Systematic Trading, Agent-Reach, OpenAlice /
 "Krypt Trader", a set of Claude Code dev tools (Ponytail, Graphify, RTK,

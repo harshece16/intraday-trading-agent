@@ -1,4 +1,4 @@
-"""Research look L38 (docs/research/prereg-kronos-feature-ic.md): the pure parts.
+"""Research look L40 (docs/research/prereg-kronos-feature-ic.md): the pure parts.
 
 Everything here runs without torch, the vendored Kronos repo or the candle cache,
 which is also the point of the first test: the module must not pull either in at
