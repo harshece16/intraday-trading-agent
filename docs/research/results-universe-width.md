@@ -245,10 +245,12 @@ excess is +0.54% a month (t 0.67) against A′'s +0.78% (t 1.13).
    a pre-registered forward test runs on, so whether and when is the owner's
    decision. The recommendation is before the first rebalance, in its own
    PR. **Decided by the owner on 2026-09-28 and fixed in PR #181.** The fill
-   rules of trial 126 are not in the paper book (#180).
-3. **The paper book's forward band** expects +0.82% a month, trial 120's
-   figure. A′ says +0.71%. Keeping 0.82 makes the band stricter. Changing it
-   is the owner's decision.
+   rules of trial 126 were added on the owner's decision of 2026-09-29
+   (#180, README section 99).
+3. **The paper book's forward band** expected +0.82% a month, trial 120's
+   figure. A′ says +0.71%. Keeping 0.82 made the band stricter. **The owner
+   decided on 2026-09-29 to use A′'s figures**, 0.71% and 3.89%, because the
+   book now runs A′'s configuration.
 4. **A test of ranks beyond 400 needs a new pre-registration** with a floor
    set by a rule that uses no return, new ledger numbers counted in the same
    family, the fill rules and slippage table unchanged, and these

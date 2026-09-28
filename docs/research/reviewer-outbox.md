@@ -1,3 +1,15 @@
+## Note for the record — the paper book has trial 126's fill rules and band, by the owner's decisions (PR #191). Not a research step; no review requested.
+
+**2026-09-29.** The owner chose, from a list, to add the waiting-order fill
+rules to the paper book (#180) and to change the band's expected figure to
++0.71% a month. Both were done before the book's first rebalance. The band
+uses trial 126's mean and standard deviation, 0.71% and 3.89%; this loosens
+the floor from −14.0% to −14.8% at six months. Run over 2010-02 to 2025-11 the
+paper book's code gives trial 126's monthly values to within 7e-16, with the
+same holdings and the same counts of waiting orders. No new return was read:
+the comparison is against trial 126's saved series. Nothing dated 2026 was
+read. A second dated note is in `prereg-3i-momentum-corrected-data.md`.
+
 ## Note for the record — the paper book's loader is repaired, by the owner's decision (PR #181). Not a research step; no review requested.
 
 **2026-09-28.** Entry 24 filed the loader fix as the owner's decision. The

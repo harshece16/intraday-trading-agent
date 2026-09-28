@@ -550,16 +550,22 @@ The forward paper run of trial 120. The loader and ranking are copies of the
 research code, because live code may not import `research/`. Parity tests
 hold the copies to the same answers. Since 2026-09-28 the loader is a copy
 of the research loader's repaired panel (#175, #177, #178): it reads
-trade-for-trade rows, consolidations and corrected dividend amounts. The
-fills are still the simple ones: every order fills at the close (#180).
+trade-for-trade rows, consolidations and corrected dividend amounts. Since
+2026-09-29 the fills are trial 126's (#180): an order waits when the stock is
+locked at its band or did not trade. Run over 2010 to 2025, the book equals
+trial 126 month by month.
 
 | Function | Behaviour |
 | --- | --- |
 | `build_panel()` | Merges the bhavcopy folders, reads the EQ, BE and BZ series, follows renames, drops fund units, and applies splits, bonuses, consolidations, rights, demergers and dividends backward to build total-return closes. Each chain also carries `eq`, its EQ rows alone |
 | `ranked_universe()` | Chosen from EQ rows only: stocks with at least 250 sessions, an EQ print that day and a raw close of ₹20 or more, sorted by median traded value over 126 sessions |
 | `scores()` | `mean((c1/c7 − 1)/σ, (c1/c13 − 1)/σ)`, with closes at month-ends 1, 7 and 13 months back and σ from up to 252 daily changes |
-| `target_book()` | Keep a holding while it ranks in the top 30. Fill to 15 from the top |
-| `process_session()` | One session: rebalance on a month turn, mark to market, check the band |
+| `ranking()` | The universe, the names by score, and each name's rank |
+| `target_book()` | What the rebalance would be if every order filled. Keep a holding while it ranks in the top 30. Fill to 15 from the top |
+| `lock()`, `why_not()` | Whether a row closed locked at a price band, and why an order cannot fill today |
+| `rebalance()` | The month-turn decision: drop open orders, sell what can be sold, count vacancies, fix each buy's amount, buy |
+| `work_orders()` | Try the open orders of one book. A buy is cancelled after five sessions |
+| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band |
 | `band_threshold(n, mean, sd)` | `n × mean − 2 × sd × √n` |
 | `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out |
 | `maybe_start_evening_job()` | The engine hook. Never raises |
@@ -600,11 +606,13 @@ State file `backend/data/momentum_book_state.json`:
 ```text
 version, created, status, status_reason, capital,
 last_processed, latest_session, updated_at, rebalances,
-book   {cash, positions {SYM: {symbol, fill_date, amount, fill_price}}}
-bench  {cash, positions {SYM: {symbol, fill_date, amount}}}
+book   {cash, positions {SYM: {symbol, fill_date, amount, fill_price}},
+        orders [{side, symbol, placed, amount, waiting}]}
+bench  {cash, positions {SYM: {symbol, fill_date, amount}}, orders [...]}
 nav          [{date, book, bench}]
 month_points [{date, book, bench}]
-trades       [{date, side, symbol, value, cost}]
+trades       [{date, side, symbol, value, cost, ordered?, series?, reason?}]
+fills        {waited_buy_locked, waited_sell_locked, buys_cancelled, ...}
 excess_months, cumulative_excess, band_floor     (after the first month turn)
 ```
 
