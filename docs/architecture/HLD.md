@@ -147,7 +147,7 @@ flowchart TB
 | Subsystem | Responsibility | Key modules | State today |
 | --- | --- | --- | --- |
 | **Engine core** | Tick loop, phases, the only order path, square-off, kill switch | `trading_engine`, `state`, `engine_lock`, `stop_watcher` | Running |
-| **Scanner** | Rank the NIFTY 100, pick up to 25 to watch, set the market bias | `scanner`, `universe`, `sectoral_indices`, `seasonality` | Running |
+| **Scanner** | Score the NIFTY 100, set the market bias, and fix the day's 25 most-traded eligible stocks as the watchlist | `scanner`, `universe`, `sectoral_indices`, `seasonality` | Running |
 | **Setup describer** | Build a plan (entry, stop, target, reward-to-risk) from the Varsity checklist | `trader_brain`, `indicators`, `candlestick_patterns`, `market_structure` | Describes only; no longer decides |
 | **Gates** | Confidence, risk, sector, market bias, liquidity | `confidence`, `evaluation`, `risk_manager`, `liquidity`, `costs` | Confidence gate blocks every automatic entry |
 | **Review queue** | Offer near-miss setups to the owner; replay what approval would have done | `review_queue` | Off until switched on; the only entry route that can fill |

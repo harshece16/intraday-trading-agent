@@ -421,7 +421,12 @@ export default function Overview({ state: s }) {
       </section>
 
       <h2 className="h">Today's picks</h2>
-      <p className="sub">The stocks Trader Sahab is actively watching for an entry, ranked by scan score. <a className="more" href="/screener">See the full ranked list →</a></p>
+      <p className="sub">
+        {sc?.selection?.mode === "liquidity"
+          ? "Today's list is the most-traded eligible stocks, chosen once before trading and kept all day. It is chosen for low trading cost, not as a prediction. Cards are ordered by scan score. "
+          : "The stocks Trader Sahab is actively watching for an entry, ranked by scan score. "}
+        <a className="more" href="/screener">See the full list →</a>
+      </p>
       {picks.length ? (
         <div className="grid3">{picks.map((r) => <PickCard key={r.symbol} s={s} r={r} held={held} />)}</div>
       ) : (

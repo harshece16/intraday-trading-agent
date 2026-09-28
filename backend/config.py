@@ -130,6 +130,19 @@ SCANNER = {
     # beyond the old top-6 are, by definition, lower-conviction than the
     # ones that used to be the whole list.
     "active_count": 25,
+    # How the active_count stocks are chosen (README section 91):
+    #   "liquidity" - the most-traded eligible stocks by 20-day average turnover,
+    #                 chosen once per session and kept all day. One rule, known
+    #                 before the open; the cheapest names to trade; every stock
+    #                 watched for the whole session.
+    #   "score"     - the old list: best final_score first, re-chosen every scan.
+    #                 Its ranking was measured to carry no information (README
+    #                 sections 37 and 52), and it rotated about 50 names a day.
+    # Scores, sides and reasons are still computed and shown in both modes.
+    "selection": "liquidity",
+    # Fix the day's list only once the scan has data for this share of the
+    # universe, so one missing download can't drop a stock for the whole day.
+    "freeze_min_coverage": 0.9,
     "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
     # Raised alongside active_count — this is what selects which candidates

@@ -82,9 +82,14 @@ export default function Screener({ state: s }) {
   }
 
   const list = groups[tab];
+  const byLiquidity = s.scanner?.selection?.mode === "liquidity";
   const intro = {
-    trading: "Trader Sahab checks these for entries every 30 seconds.",
-    watch: "Ranked candidates that didn't make the active list.",
+    trading: byLiquidity
+      ? `${s.scanner.selection.rule} Trader Sahab checks these for entries every 30 seconds.`
+      : "Trader Sahab checks these for entries every 30 seconds.",
+    watch: byLiquidity
+      ? "Eligible stocks outside today's list. They are scored and shown, but not watched for entries."
+      : "Ranked candidates that didn't make the active list.",
     skipped: "Filtered out today, with the reason.",
   }[tab];
   let shown = sortRows(list, sort);
