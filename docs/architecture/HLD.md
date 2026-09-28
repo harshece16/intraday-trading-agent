@@ -271,7 +271,7 @@ flowchart LR
     LD -->|no| LR["Refuse the entry"]
 ```
 
-The scanner always uses yfinance, even when Kite is connected.
+The scanner uses Kite's quotes for today's prices when Kite is connected, and the delayed feed when it is not (README §101). Daily bars and the bars of earlier sessions come from yfinance, completed from NSE's own daily files.
 
 ## 7. The books
 

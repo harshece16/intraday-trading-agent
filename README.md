@@ -107,7 +107,7 @@ going live is the owner's decision alone.
 - **Starts in PAPER mode, F&O starts disabled.** No real orders until you
   click LIVE and set up Kite; no options orders until you also separately
   turn F&O on from the Portfolio page.
-- **Data caveats:** yfinance is ~15 minutes delayed. The NSE feeds are the
+- **Data caveats:** yfinance is ~15 minutes delayed. The scanner uses it only when Kite is not connected (§101). The NSE feeds are the
   JSON endpoints behind nseindia.com's own pages, not a documented API, so
   they can change or rate-limit. Google News RSS is unofficial. Kite Connect
   gives F&O OHLC + open interest, not implied volatility — this app solves
@@ -3730,7 +3730,7 @@ A file that cannot be read is treated as unknown. It excludes nothing, and the p
 **What this does not do.**
 
 - It does not make the intraday side profitable. No selection rule tested here predicts direction after costs (§51, §69, §91). These are tradability and data fixes.
-- The scanner's intraday numbers still come from the delayed feed. Its gap is the open of that feed's first bar, which is not NSE's opening price: on 20 stock-days checked against the bhavcopy the gap differed by 0.3 points or more on 7 (#193).
+- When this section was written the scanner's intraday numbers still came from the delayed feed. Its gap was the open of that feed's first bar, which is not NSE's opening price: on 20 stock-days checked against the bhavcopy the gap differed by 0.3 points or more on 7 (#193). §101 moves the scanner to live prices.
 - The 2% distance from a band is a judgement, not a measured figure.
 
 **Two running tests take the list as input.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 6 and `prereg-orderbook.md` amendment 3. Amendment 3 also corrects amendment 2, which had described the list as fixed before the open.
@@ -3738,6 +3738,47 @@ A file that cannot be read is treated as unknown. It excludes nothing, and the p
 **Checked.** The pre-market read and a scan were run from this code against NSE's live files and the delayed feed on 2026-09-29; the pages were checked in the browser on a read-only preview.
 
 Files: `backend/scanner.py`, `backend/nse_feed.py`, `backend/trading_engine.py`, `backend/config.py`, `backend/tests/test_scanner_guards.py`, `frontend/src/components/ListNotes.jsx`, `frontend/src/pages/Screener.jsx`, `Overview.jsx`, `PreMarket.jsx`.
+
+### 101. The scanner reads live prices
+
+**Owner's decision, 2026-09-29.** This is the second part of the scanner fixes. §100 was the first.
+
+**The problem.** The scanner took every price from a feed about 15 minutes late, even with Kite connected. A scan at 09:45 described the market of about 09:30. Its gap was also not NSE's opening gap, because the delayed feed's first bar does not open at NSE's opening price (#193).
+
+**The change.** When Kite is connected, each scan sends one quote request for the whole universe and gets, for every stock: the last price, NSE's opening price, the day's volume, and the day's average traded price (VWAP).
+
+| Number on the Screener | Before | Now, with Kite connected |
+| --- | --- | --- |
+| Last price, change | About 15 minutes late | Live |
+| Gap | The delayed feed's first bar over the previous close | NSE's opening price over the previous close |
+| Relative volume | Finished delayed bars against the same bars on up to 4 earlier sessions | The day's volume to the second, against the average traded by that minute of the day on the earlier sessions |
+| VWAP | Worked out from delayed bars | The exchange's average traded price |
+| Opening range | From delayed bars, known at about 09:45 | For the day's list, from live bars at 09:30. For other stocks, from delayed bars as before |
+| NIFTY's change and position against its open | Delayed | Live |
+| Bars for the checklist read of the day's list | Delayed | Live |
+| Price band for the near-band guard | Worked out from the previous close | The exchange's own limit for the day |
+
+Daily bars and the bars of earlier sessions still come from the delayed feed, which is complete for past sessions.
+
+**When Kite is not connected**, or its quotes cannot be read, the scanner works as it did, on the delayed feed, and the Screener says so with the reason. Live prices can be switched off with `SCANNER["live_feed"]`.
+
+**Requests.** One quote request a scan, and 25 requests for bars every five minutes. Historical requests are now spaced 0.35 seconds apart across the whole engine, so the scanner and the engine's own tick cannot send more than Kite allows between them.
+
+**Checked on the real data**, after the close, with Kite connected, on the session of 2026-09-28:
+
+| Check | Result |
+| --- | --- |
+| Gap of RELIANCE, HDFCBANK, TCS, INFY | −0.65%, −0.54%, +0.86%, +0.18%: NSE's own, to two decimals. The delayed feed gave −0.51%, −0.41%, +0.72%, +0.15% |
+| Live against delayed over 100 stocks | The gap differs by a median of 0.14 points and at most 0.78. The day's change is the same. One stock's side differs |
+| One quote request for 102 instruments | 0.07 seconds |
+
+**Not checked yet: a live session.** The quotes were read after the close, when they hold the day's final values. How the scan behaves between 09:15 and 15:30 has been tested on made-up quotes only. It has to be watched on a live session before it is relied on.
+
+**What this does not do.** It does not make the intraday side profitable. No selection rule tested here predicts direction after costs. This makes the scanner's numbers current and correct, which any later test of them needs.
+
+**Two running tests.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 7 (the scanner row Jev sees is now built from live prices) and `prereg-orderbook.md` amendment 4 (no effect on the samples).
+
+Files: `backend/scanner.py`, `backend/data_provider.py`, `backend/config.py`, `backend/tests/test_scanner_live_feed.py`, `frontend/src/components/ListNotes.jsx`.
 
 ## Backtest results
 

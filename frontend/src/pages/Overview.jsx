@@ -9,7 +9,7 @@ import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import Chart from "../components/Chart";
 import ReviewQueue from "../components/ReviewQueue";
-import { fixedText } from "../components/ListNotes";
+import { feedText, fixedText } from "../components/ListNotes";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 
@@ -420,7 +420,7 @@ export default function Overview({ state: s }) {
       <h2 className="h" style={{ marginTop: 40 }}>Today's picks</h2>
       <p className="sub">
         {sc?.selection?.mode === "liquidity"
-          ? `Today's list is the most-traded eligible stocks, chosen once and kept all day. ${fixedText(sc.selection)} It is chosen for low trading cost, not as a prediction. Cards are ordered by scan score. `
+          ? `Today's list is the most-traded eligible stocks, chosen once and kept all day. ${fixedText(sc.selection)} It is chosen for low trading cost, not as a prediction. Cards are ordered by scan score. ${feedText(sc.feed)} `
           : "The stocks Trader Sahab is actively watching for an entry, ranked by scan score. "}
         <Link className="more" to="/screener">See the full list →</Link>
       </p>

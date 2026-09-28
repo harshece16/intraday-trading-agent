@@ -410,7 +410,7 @@ and open positions are not restored after a restart
 `Scanner.run()` runs in its own thread, one scan at a time.
 
 1. **Universe.** The NIFTY 100 from `backend/data/nifty100.csv`, refreshed from NSE archives when older than 7 days.
-2. **Prices.** Two batched yfinance downloads: a year of daily bars and five days of 5-minute bars. The scanner never uses Kite. `complete_daily()` adds the last completed session from NSE's equity bhavcopy and index closing file when the daily bars do not have it yet (#192).
+2. **Prices.** Two batched yfinance downloads: a year of daily bars and five days of 5-minute bars. When Kite is connected, one `kite_quotes()` request then gives today's prices for the whole universe: last price, NSE's opening price, volume and average traded price. `live_day()` decides which session the quotes describe, and `live_metrics()` replaces the delayed bars' figures for every stock that has traded. The day's list also gets live 5-minute bars for its checklist read. With no Kite, or no readable quotes, the delayed bars are used and the result says why. `complete_daily()` adds the last completed session from NSE's equity bhavcopy and index closing file when the daily bars do not have it yet (#192).
 3. **Side feeds.** Results calendar, corporate actions, market catalysts, FII and DII flows, large deals, market breadth, and two guard files: the F&O ban list and the price-band list.
 4. **Profile.** `daily_profile()` uses only bars strictly before the session and needs at least 60.
 5. **Market bias.** See the table below.

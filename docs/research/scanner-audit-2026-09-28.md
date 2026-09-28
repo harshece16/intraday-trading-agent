@@ -14,8 +14,9 @@ quoted from the file named beside it.
 > Done in README section 100: the day's list is fixed before the open, on
 > data through the last completed session; the F&O ban, price-band,
 > trade-for-trade and surveillance guards. Two defects were found on the way
-> (#192, #193). Still to do: the scanner's move to live prices, and the side
-> no longer set by the old score.
+> (#192, #193). Done in README section 101: the scanner reads live prices
+> from Kite when it is connected. Still to do: the side no longer set by the
+> old score, and the shadow log of section 6.
 
 ## Verdict
 

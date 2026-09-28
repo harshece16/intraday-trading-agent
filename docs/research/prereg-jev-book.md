@@ -211,3 +211,35 @@ scanner to live prices will get its own note.
 **How the record is read:** as before. The guards can only remove a name from
 the list; they were not made to improve Jev's score.
 
+---
+
+# Clarification 7 — 2026-09-29, written before the change is deployed
+
+**What had been seen:** as in clarification 6.
+
+**The change**, from the first session after it is deployed (the date is
+added below once it is live). README §101.
+
+**The scanner row Jev sees is built from live prices.** Until now the
+scanner's numbers for the day (last price, change, gap, relative volume, VWAP
+side) came from a feed about 15 minutes late. At the 09:45 round Jev's
+snapshot therefore described the market of about 09:30. From this change the
+row comes from one live Kite quote. The gap is measured from NSE's opening
+price; the delayed feed's was not, and differed by 0.3 points or more on 7 of
+20 stock-days checked (#193). The scanner's side and reasons are worked out
+from those numbers, so they can differ from what the delayed feed would have
+given.
+
+**What this does not change:** Jev's fills have been live Kite prices since
+clarification 3, so no recorded fill is affected. The list, the three
+questions, the cost, the comparison with the scanner's side, the pass rule
+and the kill rule are unchanged.
+
+**How the record is read:** rounds before the change were judged on a
+snapshot about 15 minutes old, and rounds after it on a current one. The
+verdict is reported for all rounds, and for the rounds after the change
+alone. The change was made because the delayed numbers were wrong, not to
+improve Jev's score; it could move the score either way.
+
+If Kite is not connected at 09:45 the round is skipped, as before.
+
