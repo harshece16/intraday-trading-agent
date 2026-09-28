@@ -4,6 +4,10 @@
 increase from 100 to all stocks not just 100 and if our first pick is wrong
 then whole analysis is useless".
 
+**Reworded on 2026-09-28 after reviewer entry 20** (seven statements that
+claimed more than the sources show; listed in the pre-registration's
+amendment 1).
+
 This note is a reading of outside evidence and of trading frictions. It
 computes no strategy return from project data. The test that follows from it
 is pre-registered in `prereg-universe-width.md`.
@@ -13,16 +17,17 @@ is pre-registered in `prereg-universe-width.md`.
 | Book | Picks from | Picks | Evidence for the rule |
 | --- | --- | --- | --- |
 | Intraday scanner (`backend/scanner.py`) | NIFTY 100 | the 25 most-traded, fixed for the day (README section 91) | None. No intraday rule tested here has an edge after costs |
-| Paper momentum book (`backend/momentum_book.py`) | every NSE equity share, ranked by traded value; the 200 most-traded | 15, monthly | Trial 120 passed; confirmed on ranks 201–400 (L38) and on 8 held-out months of 2026 |
+| Paper momentum book (`backend/momentum_book.py`) | every NSE equity share, ranked by traded value; the 200 most-traded | 15, monthly | Trial 120 passed; the same rule worked as a separate book on ranks 201–400 (L38); the 8 held-out months of 2026 had the same sign (a sign check, t 1.08, and 2026 was partly seen) |
 
 So the two books have different answers.
 
-- **Intraday.** Widening was measured already. On 113 F&O stocks outside the
-  NIFTY 100 the one real intraday effect was worth 0.26× of its cost (L26),
-  the intraday return was negative on average (L27), and those stocks cleared
-  the reward-to-risk gate less often than the NIFTY 100, even at zero cost
-  (L34). Less-traded stocks also cost more to trade. A wider list cannot fix
-  a rule that has no edge on any list, so this is not re-tested.
+- **Intraday.** One wider list was measured: 113 F&O stocks outside the
+  NIFTY 100. There the one real intraday effect was worth 0.26× of its cost
+  (L26) and the intraday return was negative on average (L27). Those stocks
+  also cleared the reward-to-risk gate less often than the NIFTY 100, even
+  at zero cost (L34), though the ledger calls that proxy weak evidence.
+  Less-traded stocks cost more to trade. On the two lists measured no rule
+  cleared costs, so a third list is not tested here.
 - **Delivery.** The rule already starts from all listed shares and keeps the
   200 most-traded. Whether 200 is the right cut is an open question, and it
   can be tested on stocks no test here has read. That is what the
@@ -30,13 +35,15 @@ So the two books have different answers.
 
 ## Short answer from the two sweeps
 
-1. Momentum shows up in every size tier studied in India, so the choice of
-   universe is not what makes or breaks the rule.
+1. In published backtests, which are gross of costs, momentum shows up in
+   every size tier studied in India. Whether it survives costs in
+   less-traded stocks is the question the pre-registered test asks.
 2. Backtests say a wider universe earns more (one study: about 35% a year
    from the top 750 against 25% from the top 200), with more volatility and
    much longer recoveries.
 3. The live record does not agree so far. NSE's three wider momentum indices
-   launched in 2023–24 trail their parent indices by 2 to 6 points a year.
+   launched in 2023–24 trail their parent indices by 2 to 6 points a year
+   (to 31 August 2026; 3 to 7 points to 30 June 2026).
    Their live periods are short (2.2 to 2.7 years) and include the 2024–25
    momentum slump.
 4. "All stocks" is not tradable. Beyond about rank 1,500 by traded value,
@@ -58,7 +65,8 @@ So the two books have different answers.
   tier: traded value, number of trades, days with no trade, band locks,
   series membership, and two spread estimators built from daily high, low
   and last price. Ranks 1 to 1,892. No momentum score and no strategy return
-  was computed. Script: `data/stock-picking-sweep/tiers_2025_descriptive.py`.
+  was computed. Script and its printed output:
+  `data/stock-picking-sweep/tiers_2025_descriptive.py` and `.out.txt`.
 - Nothing dated 2026 was read from project data.
 
 ---
@@ -71,7 +79,7 @@ Read-only. No repo file changed, no `backend/research` script run, no return com
 
 ### Bottom line
 
-The evidence supports widening to about the 400 most-traded stocks, which the project has already confirmed on its own data (ranks 201–400: +1.00%/month net, t 3.31; `docs/research/results-3i-momentum-corrected-data.md`). It supports *testing* ranks 401–800, not adopting them, and it does not support "all stocks". Backtests say wider is better: about 35%/yr from the top 750 against 25% from the top 200 in one long study, and NSE's own mid- and small-cap momentum backtests show 6–7 pp/yr over their parents. The live record says otherwise so far. NSE's large/mid-cap momentum index is about 2 pp/yr ahead of its parent over six live years, the mid-cap one is level over four, and the three wider-tier indices launched in 2023–24 trail their parents by 2–7 pp/yr. Those wider windows are only 2–2.7 years and contain the 2024–25 momentum slump, so they do not show small-cap momentum is absent; they show the backtested premium has not been earned live. In the one survivorship-corrected academic table, small-cap winners earned no more than large-cap winners, with more volatility. The owner's worry is partly answered: momentum appears in every tier tested, so the universe is not what makes or breaks the signal. Cautions: spreads and circuit locks are unmeasured here, drawdowns deepen with width, and nothing below is a forecast or a promise of profit.
+On the project's own data the rule also worked as a separate book on ranks 201–400 (+1.00%/month net, t 3.31; `docs/research/results-3i-momentum-corrected-data.md`). No single book picking from ranks 1–400 has been run. It supports *testing* ranks 401–800, not adopting them, and it does not support "all stocks". Backtests say wider is better: about 35%/yr from the top 750 against 25% from the top 200 in one long study, and NSE's own mid- and small-cap momentum backtests show 6–7 pp/yr over their parents. The live record says otherwise so far. NSE's large/mid-cap momentum index is about 2 pp/yr ahead of its parent over six live years, the mid-cap one is level over four, and the three wider-tier indices launched in 2023–24 trail their parents by 2–6 pp/yr to 31 August 2026 (3–7 to 30 June). Those wider windows are only 2–2.7 years and contain the 2024–25 momentum slump, so they do not show small-cap momentum is absent; they show the backtested premium has not been earned live. In the one survivorship-corrected academic table, small-cap winners earned no more than large-cap winners, with more volatility. The owner's worry is not answered by these sources: they show momentum in every tier in gross backtests, and whether it survives costs in less-traded tiers is what the pre-registered test asks. Cautions: spreads and circuit locks are unmeasured here, drawdowns deepen with width, and nothing below is a forecast or a promise of profit.
 
 ### Evidence
 
@@ -158,11 +166,11 @@ Sweep date 2026-09-28. Read-only on the repo. "Own calc" means a throwaway scrip
 
 ### Bottom line
 
-A Rs 1-10 lakh delivery book can trade honestly down to about **rank 800-1,000 by median daily traded value** (Rs 3-6 crore a day in H2 2025), where a Rs 70,000 order is about 0.2% of a day's turnover. Size is never the constraint at this capital; **spread, price-band locks and surveillance moves to trade-for-trade are**. My judgement for per-leg slippage on closing-window fills of small orders: **5 bp (ranks 1-200), 15 bp (201-400), 25 bp (401-600), 40 bp (601-1,000), 75 bp (1,001-1,500), exclude beyond 1,500**. These are judgements, not measurements: the only tiered order-book evidence found is from 2010, and daily-data spread estimators proved too noisy to set levels. At the book's 273% one-sided turnover (`docs/research/results-3i-momentum-corrected-data.md`), every extra 10 bp per leg costs about 0.55% a year, so 75 bp per leg is roughly 4% a year. "All stocks" is not honest: below rank 1,500 about 13% of stock-days have no trade and half the names spent part of 2025 in trade-for-trade.
+A Rs 1-10 lakh delivery book can trade honestly down to about **rank 800-1,000 by median daily traded value** (Rs 3-6 crore a day in H2 2025), where a Rs 70,000 order is about 0.2% of a day's turnover. Size is never the constraint at this capital; **spread, price-band locks and surveillance moves to trade-for-trade are**. My judgement for per-leg slippage on closing-window fills of small orders: **5 bp (ranks 1-200), 15 bp (201-400), 25 bp (401-600), 40 bp (601-1,000), 75 bp (1,001-1,500), exclude beyond 1,500**. These are judgements, not measurements: the only tiered order-book evidence found is from 2010, and daily-data spread estimators proved too noisy to set levels. At 273% one-sided turnover, which is Part B's (the running book's is 213%; `docs/research/results-3i-momentum-corrected-data.md`), every extra 10 bp per leg costs about 0.55% a year, so 75 bp per leg is roughly 4% a year. "All stocks" is not honest: below rank 1,500 about 13% of stock-days have no trade and half the names spent part of 2025 in trade-for-trade.
 
 ### Table 1. Cost by tier
 
-Tier = rank by 126-session median traded value, price >= Rs 20, EQ series, as `momentum_3i.py:87` ranks. 1,892 names qualified on 2025-12-31.
+Tier = rank by 126-session median traded value, price >= Rs 20, EQ series, close to how `momentum_3i.py:87` ranks. The script applies no 250-session rule and does not chain symbol changes. 1,892 names qualified on 2025-12-31.
 
 | Tier | Daily traded value, H2 2025 (own calc) | Spread / impact evidence | Per-leg slippage, base / stress (bp) | Source | Confidence |
 | --- | --- | --- | --- | --- | --- |

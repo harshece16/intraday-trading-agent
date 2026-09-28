@@ -1,7 +1,8 @@
 # Read-only descriptive statistics from the repo's 2025 bhavcopies (all before the
 # held-out start 2026-01-02). No strategy return is computed. Nothing is written to the repo.
 import zipfile, io, csv, os, re, math, statistics as st, collections, glob, json, sys
-D = "/Users/harshgupta/Projects/webapp/backend/data/bhav_daily"
+# From the repo root. SAHAB_RESEARCH_DATA points a worktree at the main checkout's cache.
+D = os.path.join(os.environ.get("SAHAB_RESEARCH_DATA") or os.path.join("backend", "data"), "bhav_daily")
 ETF = re.compile(r"(BEES|ETF|IETF|CASE)$")
 files = sorted(f for f in glob.glob(os.path.join(D, "2025*.zip")))
 days = []

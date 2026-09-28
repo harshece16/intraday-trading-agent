@@ -282,3 +282,206 @@ stage 0 and every part. Both are committed after this file. Nothing on the
 live path imports them. One run per part, in the order stage 0, A′, B′, T3,
 T4, T5, W. A crash before a statistic is printed may be fixed and re-run with
 both recorded.
+
+---
+
+# Amendment 1 — 2026-09-28, after reviewer entry 20, before any run
+
+**State when this was written.** Pre-registration `1e53917`. Code `946cc31`
+was committed after it and before the review. No part has run and no
+repaired panel has been built. One software check has run: the refactored
+loader rebuilt 3i's panel with its default arguments and matched the cached
+panel with 0 differences over 4,215 sessions and 2,883 chains. It read
+nothing new. The 2025 descriptive script was run a second time to save its
+printed output; the figures match the sweep note.
+
+The code in `946cc31` is not approved. It is brought into line with this
+amendment in a later commit. Where this amendment and the text above
+disagree, the amendment governs.
+
+## 1. What counts, and the ledger numbers (C2, C3)
+
+| Part | Ledger |
+| --- | --- |
+| Stage 0 | Look L41 |
+| A′ | **Trial 126** |
+| B′ | Look L42 |
+| T3, T4, T5 | Looks L43, L44, L45 |
+| W | **Trial 127** |
+
+- **A′ is a counted trial.** It changes the price panel and the fill model,
+  so it is not an identical configuration. The declared fix for #175 is the
+  pricing of BE and BZ rows (H1, H2). H3 and H4 are new fill assumptions.
+- **N_family = 10**, by the owner's rule of 2026-09-26, which counts every
+  configuration and every look that tested the mechanism against a pass
+  rule: trials 118, 119, 120; L38; A′ and B′; T3, T4, T5; W.
+- **W, criterion 1:** t ≥ **2.807** (two-sided 5%, Bonferroni across 10).
+  **Criterion 2:** Deflated Sharpe ≥ 0.95 at **N = 10**.
+- A′ is judged by trial 120's own six criteria, as written above. Its t is
+  also reported against 2.807.
+
+## 2. K is fixed now (C4, option a)
+
+**K = 800.** W picks from E-wide ranks 1 to 800. The sweep recommended 800
+as the floor before any return was read, and NSE's own NIFTY 500 rules stop
+at rank 800.
+
+- If stage 0 shows W at K = 800 would have fewer than 120 monthly returns,
+  K = 600. If that would too, K = 400. This is decided from list sizes only.
+- **Criterion 8, new:** every tier inside K confirms. For K = 800 that is T3
+  and T4.
+- T5 is reported and changes nothing.
+- Criterion 6 stays at t ≥ 1.65.
+
+## 3. Thresholds (C1)
+
+The code uses 2.13 and 1.65, as written. It had 2.128 and 1.645.
+
+## 4. Halves (C5)
+
+The sentence "the first half takes the extra month" was wrong. **A part with
+n monthly returns puts the first floor(n/2) in the first half.** A return is
+labelled by the rebalance month that ends it. For n = 189 this is 3i's
+split: 94 returns to 2017-12, then 95 from 2018-01.
+
+This rule serves the tiers, W's criterion 3 on its own months, and criterion
+6 on the months W and A′ have in common. Criterion 7 uses the common months.
+
+## 5. Order of operations on the fill session (C6)
+
+On session f, sells that can fill are filled first. A holding whose sell is
+carried stays in the book and counts as held. Vacancies are 15 minus the
+names held. Each buy's rupee amount is fixed on f as cash after f's filled
+sells divided by vacancies, and does not change while the buy is carried.
+Cash never goes below zero. Proceeds of a sell that fills after f stay in
+cash until the next rebalance. The benchmark follows the same sequence.
+
+## 6. Small definitions (C7)
+
+- A row with zero traded value is "no trade": no fill under H2, and not a
+  traded day under S2. Eligibility and ranking keep 3i's definition, a row
+  with a close, so the E-3i lists can match 3i's.
+- H3 uses the close, high, low and previous close as printed.
+- A buy is tried on f and on the five sessions after it.
+- Ties break as in 3i's code. Monthly value is measured at the close of f.
+
+## 7. H3 for low-priced stocks (C8)
+
+Below about ₹17 one tick is wider than the 0.30-point window, so a lock
+could be missed. A stock is ≥ ₹20 when bought, not when sold. Added: where
+the printed previous close is below ₹20, a row is also locked if the close
+is at the day's high (low) and within ₹0.05 of previous close × (1 + L)
+(1 − L).
+
+## 8. Known limits, added (C9, C10)
+
+- **H5.** Whether a chain has ended is known from the whole panel, not at t.
+  A chain that stops near the end of 2025 cannot be told from a suspension.
+  The base case flatters failures. Every ended chain that was held is
+  reported: month, last series, last close, base and stress proceeds.
+- **H6.** The last row charges 0.75% where the sweep's own table says
+  "exclude". The stress figures for ranks beyond 600 sit below the top of
+  the 2010 ranges the sweep cites. Stress means twice base. It is not an
+  upper bound. Reported for each part: the count and turnover share of fills
+  charged at the last row, and the slippage per side at which the base
+  result would be zero.
+
+## 9. Stage 0 (C11, C12, C13, C15, C16)
+
+- **Gates 5 and 6** cover every chain that is in E-wide ranks 1–1,000 or
+  E-3i ranks 1–1,000 at the month-end before. The ₹1 crore floor is dropped.
+  "One-day" means row to row, so a jump across a gap in trading is listed.
+- **Consolidations.** The loader applies none, and an unadjusted
+  consolidation looks like a very large gain to a momentum rank. The
+  repaired panel applies "consolidation from Rs a to Rs b", b > a, as prices
+  before the ex-date × (b/a). The default panel is unchanged.
+- **Gate 3** is evaluated for ranks 1–200 and ranks 201–400 separately, each
+  at 99.5%.
+- **At most two rounds** of fix and re-run. No rule under Eligibility,
+  Honest fills or the pass criteria changes after any stage-0 output or any
+  part's result has been seen.
+- **Also reported:** for each tier, the member-months that were inside the
+  universes trial 120 and L38 read that month; the share of tier
+  member-months that belong to chains ever ranked 1–400; and how many
+  member-months in ranks 1–200 and 201–400 fail S1, S2 or S3.
+
+## 10. What the tiers are, in plain words (C15)
+
+The rank claim is true on the repaired panel by construction. It is not
+exactly true of what trial 120 and L38 read, because gate 3 lets 0.5% of
+member-months differ. "Unseen stocks" is replaced by **"stock-months not
+read"**, and stage 0 reports the exceptions.
+
+The tiers share their calendar months with trial 120 and L38. The monthly
+excess of those two correlates 0.37, so the tiers are new stocks in old
+months, not independent samples.
+
+## 11. Criterion 6 (C16)
+
+**Added to "What had been seen"**, from the recorded series of trial 120 and
+L38:
+
+- L38's book minus trial 120's book: +0.50% a month, t 1.42, positive in
+  both halves. Sharpe 0.314 against 0.282.
+- Ranks 201–400 equal-weighted beat the 200 most-traded equal-weighted by
+  0.31% a month (t 1.64).
+
+So the bound of 1.65 sits just above a known 1.42 for the nearest comparison
+that exists.
+
+| Asymmetry between W and A′ | Direction |
+| --- | --- |
+| W pays slippage by rank; A′ pays a flat 0.05% | Against W, about 0.5% a year for each 10 bp a side |
+| W applies screens S1 to S3 inside ranks 1–200; A′ does not | Unknown; stage 0 counts the names affected |
+| Less-traded stocks returned more over these months | For W, about 3.8% a year between the two 200-stock lists |
+
+- W minus A′ is reported in two parts: the difference in excess over each
+  book's own benchmark, and the difference between the benchmarks.
+- If criterion 6 passes and the difference in excess is zero or less, the
+  result is recorded as: "the wider universe returned more in this sample;
+  the rule did not add more there".
+- "A 400-stock list beats the 200-stock list" is replaced by "the screened
+  wide book beat the running book on the selection sample".
+
+**Power, stated now.** With the spread seen between the two recorded books,
+criterion 6 needs +0.58% a month, and 80% power needs about 0.87%. A tier
+needs +0.64% a month to confirm, and 80% power needs 0.90% (1.13% for a tier
+with 120 months). A miss is weak evidence of absence.
+
+## 12. Falsification branches (C14) — replaces the table above
+
+| Tiers inside K | W | Meaning | Action |
+| --- | --- | --- | --- |
+| any | fails any of 1 to 5 | The wide book does not clear the family bar | FAIL |
+| one or more fails | any | The rule is not shown to hold across the wider list | FAIL (criterion 8). No re-run with other costs, screens or holdings |
+| all confirm | fails 6 or 7 | The effect reaches less-traded stocks; a wider book is not shown to beat the running one | No change |
+| all confirm | passes 1 to 8 | The screened wide book beat the running book on the selection sample | A recommendation to the owner (section 13) |
+| A′ or B′ fails 3i's rule | any | 3i did not survive honest fills | 3i's results file is amended. If W passes, nothing goes to a sleeve. The owner decides |
+
+## 13. What a pass allows (O1) — replaces the section above
+
+**A recommendation only.** The owner's decision of 2026-09-26 requires a
+held-out confirmation before any paper deployment, and this family's 2026
+look was spent on Part A. A paper sleeve, its forward band and any 2026
+check are the owner's decisions.
+
+## 14. The sample named in the entry-timing sweep (O2)
+
+Ranks 401–600 were named there for a later trial. The owner's request of
+2026-09-28, to research picking from more stocks, cannot be answered without
+reading returns on those ranks. That request is read as the choice to spend
+the sample here, and the owner is told so with the result. A later
+frog-in-the-pan trial can still run its paired test on these ranks, and must
+disclose that the base rule was read first.
+
+## 15. Wording elsewhere (C17, C18)
+
+- The sentence at the top, "widening did not help", is replaced by: "on the
+  one wider list measured, no rule cleared costs; L34's proxy is weak
+  evidence by the ledger's own note".
+- Seven statements in the sweep note claimed more than its sources show.
+  They are reworded in the same commit as this amendment.
+- The ledger gains a held-out exposure row for the published 2026 index
+  returns the sweep read, a row for the 2025 descriptive read with the
+  script's printed output, and a note that ranks 401–600 stop being unread
+  for the base rule once T3 runs.
