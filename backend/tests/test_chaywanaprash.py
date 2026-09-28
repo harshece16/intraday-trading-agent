@@ -12,9 +12,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import json
+from types import SimpleNamespace
+
+import pytest
+
 import chaywanaprash
 import config
 import database
+import research_desk
+
+
+@pytest.fixture(autouse=True)
+def no_cli(monkeypatch):
+    """No test may reach the real `claude` binary on the machine running it."""
+    monkeypatch.setattr(research_desk, "_cli_binary", lambda: None)
 
 
 def test_analyze_without_api_key_returns_real_stats_no_fake_narrative(monkeypatch):
@@ -90,3 +102,51 @@ def test_record_and_read_chaywanaprash_report():
     assert reports[0]["narrative"] == "test narrative"
     assert reports[0]["findings"] == {"a": 1}
     assert reports[0]["llm_used"] is True
+
+
+def _cli_reply(**over):
+    body = {"is_error": False, "result": "1. Fix the thing.", "usage": {"input_tokens": 7, "output_tokens": 3}}
+    body.update(over)
+    return SimpleNamespace(stdout=json.dumps(body), stderr="", returncode=0)
+
+
+def test_cli_is_used_when_there_is_no_api_key(monkeypatch):
+    monkeypatch.setattr(config, "CHAYWANAPRASH", {**config.CHAYWANAPRASH, "enabled": True, "llm_backend": "auto"})
+    monkeypatch.setattr(config, "NEWS", {**config.NEWS, "anthropic_api_key": ""})
+    monkeypatch.setattr(research_desk, "_cli_binary", lambda: "/fake/claude")
+    monkeypatch.setattr(chaywanaprash, "_budget", {"date": None, "used": 0})
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    seen = {}
+
+    def fake_run(cmd, **kw):
+        seen.update(cmd=cmd, **kw)
+        return _cli_reply()
+    monkeypatch.setattr(chaywanaprash.subprocess, "run", fake_run)
+
+    result = chaywanaprash.analyze(hours=24, persist=False)
+
+    assert result["llm_used"] is True
+    assert result["narrative"] == "1. Fix the thing."
+    assert seen["cmd"][0] == "/fake/claude"
+    assert "checklist_blockers" in seen["input"]  # the real findings went in
+    assert "ANTHROPIC_API_KEY" not in seen["env"]  # so the CLI uses the plan login
+
+
+def test_auto_falls_back_to_cli_when_the_api_call_fails(monkeypatch):
+    monkeypatch.setattr(config, "CHAYWANAPRASH", {**config.CHAYWANAPRASH, "llm_backend": "auto"})
+    monkeypatch.setattr(config, "NEWS", {**config.NEWS, "anthropic_api_key": "bad-key"})
+    monkeypatch.setattr(research_desk, "_cli_binary", lambda: "/fake/claude")
+
+    def bad_api(content):
+        raise RuntimeError("401 invalid x-api-key")
+    monkeypatch.setattr(chaywanaprash, "_ask_api", bad_api)
+    monkeypatch.setattr(chaywanaprash, "_ask_cli", lambda content: ("from the cli", 1, 2))
+
+    assert chaywanaprash.backends() == ["anthropic_api", "claude_cli"]
+    assert chaywanaprash._ask_llm({"x": 1}) == ("from the cli", 1, 2)
+
+
+def test_cli_error_is_not_turned_into_a_narrative(monkeypatch):
+    monkeypatch.setattr(research_desk, "_cli_binary", lambda: "/fake/claude")
+    with pytest.raises(RuntimeError):
+        chaywanaprash._ask_cli("x", run=lambda cmd, **kw: _cli_reply(is_error=True, result="Not logged in"))
