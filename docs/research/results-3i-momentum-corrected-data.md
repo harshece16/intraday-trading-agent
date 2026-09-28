@@ -1,5 +1,22 @@
 # 3i results — slow momentum in delivery on corrected data. **Part A PASSES (trial 120); Part B CONFIRMS on unseen stocks (L38); the 2026 held-out sign CONFIRMS.** Paper positional book authorised by the pre-registration.
 
+> **Note added 2026-09-28 (`results-universe-width.md`).** These figures
+> stand as recorded. A re-run on repaired prices with honest fills (trial
+> 126) gives less: **+0.71% a month, t 2.51, CAGR 20.6%** for Part A, and
+> +0.91%, t 3.00 for Part B. Both still meet the rules written here. Three
+> things about the data below were not known when this was written:
+>
+> - The price loader read the EQ series only (#175). A held stock that moved
+>   to trade-for-trade was sold at its last EQ close, and 743 corporate
+>   actions were applied with a different factor, 42 of them on stocks
+>   inside the 400 most-traded. Most are demergers applied ten sessions
+>   late.
+> - Stage 0 here listed one-day drops only. Two of the nine demerger
+>   residuals are upward: PIRPHYTO +51.0% (2011-12-23) and SINTEX +44.4%
+>   (2017-05-25).
+> - Part A bought SINTEX at the 2017-08 and 2017-09 rebalances, while its
+>   six-month return still held that +44.4%.
+
 **2026-09-26.** Pre-registration `prereg-3i-momentum-corrected-data.md`
 (`1dc0501`), code `890dfba`, amendment 1 and loader fixes `3fbe5ed` (after
 stage-0 run 1, before any return was read), stage 0 run 2 output, Part A

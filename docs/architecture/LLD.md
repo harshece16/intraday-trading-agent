@@ -789,11 +789,13 @@ enforces it.
 | `smc_mtf.py` | Smart Money multi-timeframe setup | Trial 117 |
 | `event_study.py`, `results_direction.py` | Do filings and results move stocks past cost? | L35, L36 |
 | `slow_momentum.py` | Slow momentum in delivery | Trials 118, 119 |
-| `nse_prices.py` | Prices adjusted with NSE's corporate actions | 3i, ranker, PEAD |
+| `nse_prices.py` | Prices adjusted with NSE's corporate actions. `load(wide=True)` is the repaired panel: it also reads trade-for-trade rows, consolidations and corrected dividend amounts (#175, #177, #178) | 3i, ranker, PEAD; the repaired panel for trials 126, 127 |
 | `momentum_3i.py` | Slow momentum on corrected data | Trial 120, L38, the held-out look |
 | `pead_events.py`, `pead_stage_a.py` | Post-earnings drift | L39 |
 | `ranker.py` | A 14-input ranking model | Trials 121, 122 |
 | `overnight_data.py`, `overnight_etf.py` | The overnight premium in an ETF | Trials 124, 125 |
+| `momentum_width.py` | Does the momentum rule survive honest fills, and is a wider book better? | L41, trial 126, L42, trial 127; L43 to L45 not taken |
+| `panel_differences.py`, `width_report.py` | Every corporate action that differs between the two price panels, and which of them a book held | Reports; no return read |
 | `kronos_feature_ic.py` | Does a zero-shot Kronos forecast rank the next 15 to 60 minutes? Needs its own environment (`requirements-kronos.txt`) | L40, pre-registered, not run |
 
 Backtest harnesses outside `research/`: `backtester.py`,
