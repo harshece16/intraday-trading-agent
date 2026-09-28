@@ -653,3 +653,171 @@ Nine of the 67 jumps fall on a demerger date where the loader did apply a
 factor and the adjusted return is still beyond ±30% (ADANIENT 2015,
 ZEEMEDIA 2010, SINTEX 2017 and six others). The demerger rule is 3i's and
 is not changed here. The list is in the stage-0 output.
+
+---
+
+# Amendment 4 — 2026-09-28, after reviewer entries 22 and 23, before any return is read
+
+Stage 0 has passed (run 2). No other part has run. The simulator, the
+universes, the lock rule, the slippage table and the pass rules stay as they
+are at `3d210ce`. This amendment is text, one ledger row and one script that
+reads no return.
+
+## 1. What A′ and B′ measure (G1, G2) — replaces amendment 3, section 3
+
+A′ and B′ run trial 120's and L38's rules on the repaired panel with the
+honest-fill rules. The repaired panel differs from the default panel in the
+rows it holds and in **743 corporate-action factors, 42 of them on stocks
+inside the 400 most-traded** at the month-end before. A′ and B′ measure the
+repaired panel and the fill rules together, and cannot say how much comes
+from each.
+
+Wherever this document says a result "did not survive honest fills", read
+"did not survive the repaired panel with honest fills".
+
+| Cause | Actions | Inside ranks 1–400 |
+| --- | --- | --- |
+| The stock was in trade-for-trade on its ex-date, so the default panel applied the action at the next EQ row | 640 | 36 |
+| Not applied in the default panel: no EQ row on or after the ex-date, or refused on a stale price | 81 | 1 |
+| Not applied in the repaired panel: refused on the price of the ex-date itself | 3 | 1 |
+| The previous close is a trade-for-trade row's | 9 | 0 |
+| The repaired panel's reading or bounds (amendments 1 and 3) | 10 | 4 |
+
+The first four follow from pricing BE and BZ rows, which has been the
+declared fix since the first commit. The fifth follows from amendments 1 and
+3. The list and the script that builds it are
+`data/momentum_width_panel_differences.json` and
+`backend/research/panel_differences.py`.
+
+**No decomposition run (G5).** A run with the repaired panel and 3i's fills,
+or with 3i's panel and honest fills, would be a second backtest of the same
+rule and a counted trial. Two versions of A′ are a forking path. A′ keeps
+its one run.
+
+## 2. The demerger rule in the repaired panel (F1, G10)
+
+In the repaired panel the demerger rule is 3i's with 0.01 in place of 0.05,
+both where the open ratio is chosen and where a ratio is accepted.
+KESORAMIND's factor is 0.0500, the open ratio, so the moved window edge
+decided it. Amendment 3, section 5, said the rule was unchanged; it is
+changed in that one number.
+
+## 3. Known limits, added (G3, G6, G7, G10)
+
+- **Demergers.** The series assumes the value that left, the previous close
+  less the ex-date open, was put back into the parent at the ex-date open. A
+  holder could not do that. In the repaired panel the trade-for-trade
+  sessions that follow are real moves of the parent, applied to the whole
+  position.
+
+  | Demergers the default panel applied late | n | Mean | Median | Lowest | Highest | Beyond ±10% |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Inside ranks 1–400 | 30 | +1.6% | −0.6% | −45.9% (GFLLIMITED 2019) | +77.3% (SUVEN 2020) | 16 |
+  | Outside | 77 | −5.5% | −3.7% | −54.6% | +75.2% | 41 |
+
+  The figure is what the repaired panel credits a holder with over the
+  default panel, in the ten or so sessions after the ex-date. Inside ranks
+  1–400 it has no direction (14 of 30 positive) and a wide spread. Gate 6
+  cannot see it, because each day's move is small.
+- **Three actions the repaired panel refuses** that the default panel
+  applied: ARROWTEX 2011 (rights), FRETAIL 2017 and DALMIASUG 2025
+  (demergers). On the ex-date's own prices 3i's written rule refuses them.
+  No rule was added.
+- **Four chains have an older name in the repaired panel:** LFIC is
+  LAKSHMIFIN, PILANIINVS is PILANIINV, ESSENTIA is INTEGRA, KEEPLEARN is
+  DALALSTCOM. Same ISIN, more rows. None is ever inside E-3i ranks 1–400 or
+  inside W's universe.
+- **Late application.** An action is applied at the chain's first row on or
+  after the ex-date, however late. In the repaired panel 15 actions are
+  applied more than 7 sessions late, the latest by 539 sessions (TCPLTD).
+  None is inside ranks 1–400.
+
+## 4. What is known in advance (F3, G4)
+
+From the recorded holdings and the list. A name counts if a recorded book
+held it in the ex-date's month or the month either side.
+
+| Book | Name and ex-date | Difference on the name | On a 15-name book |
+| --- | --- | --- | --- |
+| Trial 120 | FRETAIL 2017-11-29 | −5.5% | about −0.37 points |
+| L38 | AARTIIND 2019-07-03 | −3.5% | about −0.23 points |
+| L38 | GSKCONS 2011-03-11 | −2.4% | about −0.16 points |
+| L38 | STAR 2024-12-06 | +9.7% | about +0.65 points |
+| L38 | AURUM 2020-12-23 | a loss of 98.8% removed | about +6.6 points |
+
+- The other rows on a held name move it by 0.02% or less.
+- So the factors move trial 120's book by about −0.4 points over the whole
+  run, and L38's by about +6.9, of which AURUM is 6.6. **The AURUM fix is
+  forced by gate 6 and moves B′ in the favourable direction**, by about
+  +0.035% a month on the mean. L38's return labelled 2020-12 was +1.99%
+  against a benchmark of +5.94%.
+- Everything else reaches A′ and B′ through the signal, the benchmark and
+  the fills. That direction is not known.
+- The list also shows the stale-price effect. Trial 120 held ATGL when it
+  moved to trade-for-trade in June 2021: last EQ close 1,640.85,
+  trade-for-trade close a week later 1,318.05.
+
+## 5. W's 138 months (F4, F5)
+
+**Seen already**, from the recorded series, labels 2014-06 to 2025-11:
+
+| Quantity | Value |
+| --- | --- |
+| L38's book minus trial 120's book | +0.35% a month, sd 5.17%, t 0.79 |
+| The same, by half | −0.09% then +0.78% |
+| Monthly Sharpe, trial 120 against L38 | 0.326 against 0.323 |
+| Ranks 201–400 equal-weighted minus the top 200 | +0.33% a month, t 1.35 |
+| Trial 120's excess on these months | +1.03% a month, t 3.10 |
+| L38's excess on these months | +1.05% a month, t 2.89 |
+
+On these months the nearest recorded comparison fails the both-halves part
+of criterion 6 and does not pass criterion 7.
+
+**Power at 138 months.** Criterion 6 needs +0.68% a month and 80% power
+needs 1.02%, at a standard deviation of 4.81%. At the sub-period's 5.17%
+they are 0.73% and 1.10%.
+
+**W's universe is not only stock-months already read.** E-wide ranks 1–400
+fills the places of screened names with names from E-3i ranks beyond 400. Of
+W's 55,600 member-months, 192 (0.35%) have an E-3i rank above 400; the
+deepest is rank 419. Two sentences in amendment 3, section 4, are corrected:
+
+- "A pass would rest only on stock-months trial 120 or L38 already read"
+  becomes "A pass would rest on stock-months trial 120 or L38 already read,
+  except 0.35% of them".
+- "No return on ranks beyond 400 is read" becomes "No tier beyond rank 400
+  is run. W reads 192 member-months with an E-3i rank of 401 to 419".
+
+## 6. What does not change (F6, F7)
+
+- **N_family stays 10** and the bound stays 2.807, although T3 to T5 do not
+  run. Lowering them would change a pass criterion after stage-0 output.
+- The T3, T4 and T5 commands are invoked once each, after B′ and before W,
+  to write "not testable" records, because W's command reads the three
+  files. They build lists and return before any simulation. **L43 to L45 are
+  not taken.**
+
+## 7. Ledger (F8)
+
+`trials.md` gains the row for L41: two runs, run 1 failed gate 6 on two
+jumps, run 2 passed, no strategy return read. It records that L43 to L45
+were not taken and why.
+
+## 8. With the results (G8, F10, F11)
+
+- For each part, every action on the list whose chain the book held on the
+  ex-date or in the ten sessions after, with the difference on the name and
+  the points on the book. Read from the saved holdings. No re-run.
+- For each part, whether any of the nine demerger residuals was held on its
+  date or bought in the twelve months after. A note goes to 3i's results
+  file: two of the nine are upward (PIRPHYTO +51.0%, SINTEX +44.4%), 3i's
+  stage 0 listed drops only, and trial 120 bought SINTEX at the 2017-08 and
+  2017-09 rebalances while its six-month score still held the +44.4%.
+- Why MONNETISPA 2018, the second consolidation row #177 names, was not
+  applied.
+- The break-even figure is "added slippage per side".
+- Known limit of gate 6: it takes membership at the month-end before the
+  jump, so a jump after a gap longer than a month is not listed.
+- For any later test beyond rank 400: DVL's two jumps (+171% and +126%, on
+  days with ₹13 lakh and ₹2 lakh traded) are kept as real prices and are not
+  credible one-day returns for a banded stock.
