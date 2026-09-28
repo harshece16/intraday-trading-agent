@@ -493,7 +493,7 @@ def test_a_consolidation_is_applied_in_the_repaired_panel_only(tmp_path, monkeyp
     ("Bonus 1:1", [("bonus", 2.0)]),
 ])
 def test_parse_purpose_with_consolidations(purpose, expected):
-    got = npx.parse_purpose(purpose, 10, consolidations=True)
+    got = npx.parse_purpose(purpose, 10, repaired=True)
     assert [k for k, _ in got] == [k for k, _ in expected]
     assert [v for _, v in got] == pytest.approx([v for _, v in expected])
     assert npx.parse_purpose(purpose, 10) == [a for a in expected if a[0] != "consolidation"]
@@ -506,3 +506,32 @@ def test_consolidations_are_listed_with_their_ratio_and_who_they_touch():
     out = mw.consolidations(events, unis, held={"CCC"})
     assert [(o["symbol"], o["ratio"], o["inside_ranks_1_to_400"], o["held_by_this_book"]) for o in out] == [
         ("AAA", 10.0, True, False), ("CCC", 3.03, False, True)]
+
+
+@pytest.mark.parametrize("purpose,fv,old,new", [
+    ("Annual General Meeting / Div. Of Rs. 1.50/- Per Equity Share Of Rs. 10/- Each.", 10, 11.5, 1.5),
+    ("Interim Div. Of Re. 0.70/- Per Equity Share Re.1/- Each", 1, 1.7, 0.7),
+    ("Annual General Meeting And Dividend Rs.50/- Per Share (Special Dividend Rs.25/- Per Share And "
+     "Final Dividend Rs.25/- Per Share)", 10, 100.0, 50.0),
+    ("Dividend-Rs.8.50 Per Share (Including Special Dividend Of Rs.2/- Per Share).", 1, 10.5, 8.5),
+    ("Interim Dividend Rs 6/- Per Share 9purpose Revised)", 2, 15.0, 6.0),
+    ("Interim Dividend - Rs 17 Per Share Special Dividend - Rs 15 Per Share", 5, 32.0, 32.0),
+    ("First Interim Dividend Rs.2/- Per Share (Purpose Revised)", 2, 2.0, 2.0),
+    ("Dividend-150%", 2, 3.0, 3.0),
+    ("Agm/Div-Rs.2.50 Per Share", 10, 2.5, 2.5),
+    ("Dividend (Rs 5 Per Share)", 10, 5.0, 5.0),
+])
+def test_the_repaired_panel_reads_a_dividend_without_face_values_or_remarks(purpose, fv, old, new):
+    assert npx.parse_purpose(purpose, fv) == [("dividend", pytest.approx(old))]
+    assert npx.parse_purpose(purpose, fv, repaired=True) == [("dividend", pytest.approx(new))]
+
+
+def test_the_repaired_panel_applies_a_dividend_of_nearly_the_whole_price(tmp_path, monkeypatch):
+    bhav, ca = _cache(tmp_path, monkeypatch)
+    with open(os.path.join(ca, "ca_2025.csv"), "a", encoding="utf-8") as fh:
+        fh.write('"BBB","B Ltd","EQ","Interim Dividend - Rs 199 Per Share","10","05-Mar-2025","","",""\n')
+    _, wide, meta, events = npx.build(bhav_dir=bhav, ca_dir=ca, wide=True)
+    assert [e[2] for e in events if e[0] == "BBB"] == ["dividend"]
+    assert wide["BBB"]["close"][1] == pytest.approx(201 * (1 - 199 / 201))
+    _, narrow, meta, events = npx.build(bhav_dir=bhav, ca_dir=ca)
+    assert not [e for e in events if e[0] == "BBB"] and meta["actions_applied"]["rejected"] == 1

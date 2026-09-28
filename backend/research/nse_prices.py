@@ -21,8 +21,10 @@ never loaded unless asked. Data only: nothing here reads a forward return.
 (prereg-universe-width.md): it also keeps trade-for-trade rows (series BE and
 BZ) and each row's high, low, printed previous close and series, so a held
 stock that leaves the EQ series is still priced. It also applies share
-consolidations, which the default panel does not. The default output is
-unchanged, value for value, so trial 120 stays reproducible.
+consolidations (#177), reads dividend amounts without face values or
+bracketed remarks (#178), and accepts a dividend up to the whole price and a
+demerger down to 1% of it. The default output is unchanged, value for
+value, so trial 120 stays reproducible.
 """
 
 import csv
@@ -147,6 +149,18 @@ RX_PCT = re.compile(_NUM + r"\s*%")
 RX_DIV_BARE = re.compile(r"\bdiv(?!ision)\w*\.?\s*[-:]?\s*" + _NUM, re.I)
 RX_NUM = re.compile(_NUM)
 RX_CONSOLIDATION = re.compile(r"consolidat", re.I)
+# The repaired panel's reading of a dividend amount (#178):
+RX_RS_WORD = re.compile(r"\b(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)       # not the "re 9" inside "Share 9purpose"
+RX_FACE_VALUE = re.compile(r"(?:\bof\s+)?\b(?:rs|re)\.?\s*-?\s*" + _NUM + r"\s*(?:/-)?\s*each\b", re.I)
+RX_REMARK = re.compile(r"\([^)]*\)?")                                # a bracketed remark, closed or not
+RX_DIVIDEND = re.compile(r"\bdiv(?!ision)", re.I)
+
+# Bounds on what the loader will apply. 3i's panel keeps its own; the repaired
+# panel's are wider because two real actions fell outside them (stage 0, run 1).
+DIVIDEND_MAX_SHARE = 0.9          # of the previous close
+DEMERGER_MIN_RATIO = 0.05
+REPAIRED_DIVIDEND_MAX_SHARE = 1.0
+REPAIRED_DEMERGER_MIN_RATIO = 0.01
 
 
 def _split_ratio(text):
@@ -177,14 +191,28 @@ def _consolidation_ratio(text):
     return None
 
 
-def parse_purpose(purpose, face_value, consolidations=False):
+def _dividend_text(text):
+    """The text the repaired panel reads a dividend from: a face value ("Of
+    Rs. 10/- Each") is not a dividend, and a bracketed remark repeats or
+    breaks down an amount already given."""
+    text = RX_FACE_VALUE.sub(" ", text)
+    bare = RX_REMARK.sub(" ", text)
+    for clause in re.split(r"/(?!-)|;|\band\b|&|\+", bare, flags=re.I):
+        if RX_DIVIDEND.search(clause) and (RX_RS_WORD.search(clause) or RX_PCT.search(clause)
+                                           or RX_DIV_BARE.search(clause)):
+            return bare
+    return text
+
+
+def parse_purpose(purpose, face_value, repaired=False):
     """Actions in one corporate-action row: a list of (kind, value) with kind in
     split/bonus/rights/demerger/dividend. Unparsed split/bonus/rights text is
-    returned as ('unparsed', text) so stage 0 can count it. The repaired panel
-    asks for consolidations as well; 3i's panel never did."""
+    returned as ('unparsed', text) so stage 0 can count it. repaired=True is
+    the repaired panel's reading: consolidations as well, and dividend amounts
+    without face values or bracketed remarks. 3i's panel never asks for it."""
     text = purpose.replace("–", "-")
     acts = []
-    if consolidations and RX_CONSOLIDATION.search(text):
+    if repaired and RX_CONSOLIDATION.search(text):
         r = _consolidation_ratio(text)
         acts.append(("consolidation", r) if r else ("unparsed", text))
     if RX_SPLIT_KW.search(text):
@@ -207,11 +235,11 @@ def parse_purpose(purpose, face_value, consolidations=False):
         acts.append(("demerger", None))
     if re.search(r"\bdiv(?!ision)", text, re.I):
         total = 0.0
-        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", text, flags=re.I):
+        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", _dividend_text(text) if repaired else text, flags=re.I):
             if not re.search(r"\bdiv(?!ision)", clause, re.I):
                 continue
             pct = RX_PCT.findall(clause)
-            rs = RX_RS.findall(clause)
+            rs = (RX_RS_WORD if repaired else RX_RS).findall(clause)
             if pct and not rs:
                 if face_value:
                     total += sum(float(x) for x in pct) / 100.0 * face_value
@@ -226,7 +254,7 @@ def parse_purpose(purpose, face_value, consolidations=False):
     return acts
 
 
-def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025, consolidations=False):
+def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025, repaired=False):
     """[(symbol, ex_date iso, [(kind, value)...], purpose)] from NSE's yearly CSVs."""
     rows = []
     for path in sorted(glob.glob(os.path.join(ca_dir, "ca_*.csv"))):
@@ -244,7 +272,7 @@ def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025, conso
                     fv = float(r.get("FACE VALUE") or 0)
                 except ValueError:
                     fv = 0.0
-                acts = parse_purpose(r.get("PURPOSE", ""), fv, consolidations)
+                acts = parse_purpose(r.get("PURPOSE", ""), fv, repaired)
                 if acts:
                     rows.append((r["SYMBOL"], ex, acts, r.get("PURPOSE", "")))
     return rows
@@ -358,10 +386,12 @@ def build(include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
               "unparsed": 0, "unparsed_rights": 0, "rejected": 0, "no_chain": 0, "no_session": 0}
     if wide:
         counts["consolidation"] = 0
+    dividend_max = REPAIRED_DIVIDEND_MAX_SHARE if wide else DIVIDEND_MAX_SHARE
+    demerger_min = REPAIRED_DEMERGER_MIN_RATIO if wide else DEMERGER_MIN_RATIO
     events = []   # (chain, row position, kind, factor, ex_date, purpose) for stage-0 checks
     factors = {}  # chain -> {row position: product of factors}
     for sym, ex, acts, purpose in load_corporate_actions(ca_dir, last_year=2026 if include_held_out else 2025,
-                                                         consolidations=wide):
+                                                         repaired=wide):
         canon = canonical(sym, nxt, cache)
         c = chains.get(canon)
         if c is None:
@@ -392,11 +422,11 @@ def build(include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
                 # drop at the open), use CLOSE(ex)/CLOSE(ex-1) instead.
                 op, cl_ex = c["open"][k], c["raw"][k]
                 ratio = op / prev_close if op > 0 and prev_close > 0 else 0
-                if not 0.05 < ratio < 0.98 and prev_close > 0:
+                if not demerger_min < ratio < 0.98 and prev_close > 0:
                     ratio = cl_ex / prev_close
-                f = ratio if 0.05 < ratio < 0.98 else None
+                f = ratio if demerger_min < ratio < 0.98 else None
             elif kind == "dividend":
-                f = 1.0 - value / prev_close if 0 < value < prev_close * 0.9 else None
+                f = 1.0 - value / prev_close if 0 < value < prev_close * dividend_max else None
             if f is None:
                 counts["rejected"] += 1
                 continue

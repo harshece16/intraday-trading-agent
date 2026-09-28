@@ -6,7 +6,7 @@ with honest fills), the tiers T3/T4/T5 (looks L43 to L45) and the wide book
 W (trial 127).
 
 Pre-registration: docs/research/prereg-universe-width.md with amendments 1
-and 2. Every rule here is a transcription of them, and their commits precede
+to 3. Every rule here is a transcription of them, and their commits precede
 this version of the file.
 
 Usage (from backend/):
@@ -735,7 +735,7 @@ def raw_actions(ca_dir):
 def not_applied(purpose, face_value, applied_kinds):
     """True if this row of NSE's file should have moved the price series and
     the loader applied nothing, or less than the row says."""
-    kinds = {k for k, _ in nse_prices.parse_purpose(purpose, face_value, consolidations=True)}
+    kinds = {k for k, _ in nse_prices.parse_purpose(purpose, face_value, repaired=True)}
     if not kinds:
         return bool(RX_PRICE_ACTION.search(purpose))
     return bool(kinds - set(applied_kinds))
