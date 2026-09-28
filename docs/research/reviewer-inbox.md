@@ -6,6 +6,320 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 20 — 2026-09-28 — automated reviewer: `prereg-universe-width.md` ACCEPTED WITH CORRECTIONS — the design is sound and no output exists, but N_family is understated, the tier reads select K while being logged as looks, criterion 6 is partly seen and tilted toward the change, the half split is written backwards, and code was committed before this review came back. No part runs, stage 0 included, until amendment 1 is committed and reviewed. Three items go to the owner.
+
+Reviewed `prereg-universe-width.md` (commit `1e53917`),
+`stock-picking-sweep-2026-09-28.md` and
+`data/stock-picking-sweep/tiers_2025_descriptive.py` against the standing
+rules, `prereg-3i-momentum-corrected-data.md`,
+`results-3i-momentum-corrected-data.md`, `momentum_3i.py`, `nse_prices.py`,
+`trials.md`, `decision-2026-09-26-overnight-and-significance.md` and
+`entry-timing-sweep-2026-09-27.md`. This session had a read-only shell, so
+commit order was checked with `git log`. No earlier entry in this file
+reviewed 3i; its pre-registration, results and ledger rows are used as
+precedent as they stand.
+
+Figures marked "recorded series" were computed by me from the committed
+`momentum_3i_partA.json` and `momentum_3i_partB.json` only. They re-read
+numbers already seen, read no new data and select nothing.
+
+### Verdict: ACCEPTED WITH CORRECTIONS
+
+The structure is right: a data gate that reads no return, the unchanged rule
+on ranks no test has read, honest-fill rules fixed in advance, the burden of
+proof on the change, falsification branches written first, 2026 not read.
+The corrections below are all text amendments. C1 to C6 block any run. The
+rest go in the same amendment.
+
+### §A — Process: code exists, and it already differs from the text
+
+Commit order: `1e53917` 21:58:40 (pre-registration) → `946cc31` 22:09:20
+(`momentum_width.py`, the wide panel in `nse_prices.py`, 26 tests) →
+`5ab777f` 22:14:50 (scanner audit, BUG_LOG rows). The pre-registration
+precedes the code, so that rule is met. The code precedes this review, which
+is not how Entries 14 and 19 sequenced it. No `momentum_width_*.json` exists
+under `docs/research/data/`, and the code commit says nothing has been run
+on real data. I did not look outside the worktree, so I cannot confirm that
+no `nse_prices_wide.pkl` exists in the main checkout's cache. The outbox
+reply must state it.
+
+**C1.** Nothing in this entry approves `946cc31`. No part runs, stage 0
+included, until amendment 1 is committed and reviewed. Code changes follow
+the amendment in a later commit. Where code and text differ today:
+
+| Item | Pre-registration | Code | Which governs |
+| --- | --- | --- | --- |
+| Tier bound | t ≥ 2.13 | `T_TIER = 2.128` | The text. Code to 2.13 |
+| Paired bound | t ≥ 1.65 | `T_PAIRED = 1.645` | The text. Code to 1.65 |
+| Half split | first half takes the extra month | `halves()` gives it to the second | The text is wrong (C5) |
+
+Both code thresholds are looser than the written ones.
+
+### §B — Multiple testing and the ledger
+
+The two bounds are arithmetically right for the N they state: one-sided
+5%/3 is z = 2.128 and two-sided 5%/4 is z = 2.498. Both are normal
+quantiles, as in the owner's decision (2.24, 2.39, 2.58). The N is what is
+wrong.
+
+**C2. N_family = 4 is not the owner's rule.** The decision says N_family is
+"every pre-registered configuration in that family, including earlier
+trials of the same mechanism, plus every research look that tested the same
+mechanism against a pass rule". Counted when W is judged:
+
+| Member | Count |
+| --- | --- |
+| Trials 118, 119, 120 | 3 |
+| L38 (pass rule t ≥ 1.65; the held-out sign check sits in the same row) | 1 |
+| A′ and B′ (each judged against a pass rule) | 2 |
+| T3, T4, T5 (each judged against a pass rule) | 3 |
+| W | 1 |
+| **N_family** | **10** |
+
+Amend criterion 1 to **t ≥ 2.807** and criterion 2 to **DSR at N = 10**.
+The narrowest count I can defend statistically is 7 (three earlier trials,
+three tier reads that select K, W), which gives t ≥ 2.690. Four is below
+both. Choosing 7 over 10 narrows the owner's written rule, so it needs the
+owner (O3). This has teeth: on 189 months the DSR needs a monthly Sharpe of
+about 0.235 (t about 3.2) at N = 10, against about 0.197 (t about 2.7) at
+N = 4. The DSR is the binding criterion at either N.
+
+**C3. A′ is a counted trial.** `trials.md` exempts only "an identical
+configuration". A′ changes the price panel and the fill model. Precedent:
+both runs of the #74 and #40 bug-fix pairs were counted (trials 36–39), so
+were the void run and its re-run (118, 119), and trial 120 is itself "3h's
+exact rules on corrected data". Amend: A′ is trial 126, W is trial 127, B′
+is a look with its own number. Also say that the declared fix for #175 is
+the BE/BZ pricing (H1, H2). H3 and H4 are new fill assumptions, not a bug
+fix.
+
+**C4. The tier reads select W's universe, so they are not looks as
+`trials.md` defines one** ("any read that does not select a strategy").
+L38 selected nothing; these set K. Criterion 6 then tests a book whose
+width was chosen on the same months, and 1.65 does not hold its 5% size.
+Choose one and write it:
+
+- **(a)** Fix K as a number now. W can pass only if every tier inside K
+  confirms. The tiers stay looks, one L-number each. Criterion 6 keeps 1.65.
+- **(b)** Keep the adaptive K. T3, T4 and T5 take trial numbers. Criterion
+  6's bound becomes one-sided Bonferroni across the four possible K,
+  **t ≥ 2.24**.
+
+C2 applies under either.
+
+### §C — Left open
+
+**C5. The half split is written backwards.** Spot-check: both 3i JSON files
+have 189 returns labelled 2010-03 to 2025-11, `half1.n = 94`,
+`half2.n = 95`, split at label 2018-01. "The first half takes the extra
+month" gives 95/94 and moves 2018-01 into the first half. Amend to: "a part
+with n monthly returns puts the first floor(n/2) in the first half; a
+return is labelled by the rebalance month that ends it; for n = 189 this is
+3i's split." State that the same rule serves the tiers, W's criterion 3 on
+W's own months, and criterion 6 on the common months, and that criterion 7
+is computed on the common months.
+
+**C6. Order of operations when a sell is carried.** The text does not say
+how many buys are ordered, for how much, or what funds them when a sale has
+not filled. The code has chosen. Write it: "On session f, sells that can
+fill are filled first. A holding whose sell is carried stays in the book
+and counts as held. Vacancies are 15 minus names held. Each buy's rupee
+amount is fixed on f as cash after f's filled sells divided by vacancies,
+and does not change while carried. Cash never goes below zero. Proceeds of
+a sell that fills after f stay in cash until the next rebalance. The
+benchmark follows the same sequence."
+
+**C7. Small definitions.**
+- A row with zero traded quantity: say whether it is "no row" for H2 and
+  "not traded" for S2. The descriptive script treated it as absent (line
+  80). The code treats any row with a close as traded.
+- H3 uses as-printed close, high, low and previous close, never adjusted.
+- A buy is tried on f and on the five sessions after it.
+- Ties in the liquidity ranking and the score break as in 3i's code.
+- Monthly value is measured on session f, as 3i.
+
+**C8. H3 misses lower locks in low-priced names.** The ±0.30-point window
+covers tick rounding only above about ₹17 (₹0.05 ÷ 0.30%). Names are ≥ ₹20
+when bought, not when sold. A fallen stock at a 2% or 5% lower limit can
+print a return outside the window, so its sell "fills" with no buyers.
+That is the flattering direction. Amend H3 to add, for a printed previous
+close below ₹20, "or the close is within one tick of the band price
+computed from the printed previous close".
+
+**C9. H5.** Add to the known limits: whether a chain has ended is known
+only from the whole selection panel, not at t; a chain that stops near the
+end of 2025 cannot be told from a suspension; the base case (last close)
+flatters failures, as the sweep note says. Report each ended chain a book
+held: month, last series, last close, base and stress proceeds.
+
+**C10. H6.** The last row charges 0.75% to exits beyond rank 1,500 and to
+BE/BZ rows, where the sweep's own table says "exclude" and cites about 290
+bp a leg. For ranks 601 and beyond the stress figures (80, 150 bp) sit
+below the top of the 2010 ranges cited (153, 290 bp). The numbers stay as
+written. Amend the wording: stress is "twice base", not a bound. Report
+the count and turnover share of fills charged at the last row, and each
+part's break-even slippage per side, derived from the base run's turnover
+with no extra run.
+
+**C11. Gates 5 and 6 do not cover the tested universe.**
+- E-wide rank 1,000 can be E-3i rank 1,100 or deeper, outside "the E-3i
+  top 1,000". Cover every chain in E-wide ranks 1–1,000 or E-3i ranks
+  1–1,000 at the month-end before the date.
+- The ₹1 crore floor exempts thin days, where phantom jumps in ranks
+  600–1,000 are likeliest. For those chains list every jump beyond ±30%
+  whatever the traded value.
+- "One-day" skips jumps across a gap (the code requires consecutive
+  sessions, as `momentum_3i.py:348` did). Make it row-to-row.
+- Upward phantoms matter most to a long-only momentum rank. The loader
+  applies no consolidation: `_split_ratio` returns nothing unless the first
+  number exceeds the second.
+
+**C12. Gate 3** compares the set of ranks 1–400. A swap across rank 200
+changes both A′'s and B′'s universe and leaves that set unchanged. Evaluate
+ranks 1–200 and 201–400 separately.
+
+**C13. Stage 0.** Cap fix-and-re-run at two rounds. State that no rule in
+Eligibility, Honest fills or the pass criteria changes after any stage-0
+output or any part's result is seen.
+
+**C14. Falsification table.** Add "W fails any of 1–5: FAIL" and "A′ fails
+and W passes: nothing goes to a sleeve; the owner decides".
+
+### §D — Look-ahead and selection in S1–S3, H3, H5, H6
+
+- S1, S2, S3 use only sessions up to t. No look-ahead. Their thresholds
+  were set after the 2025 descriptive read, which is inside the sample but
+  read no return. Disclosed; acceptable.
+- The start month M0 depends on list sizes at every later month-end. It is
+  a liquidity-only look-ahead in the sample definition. Acceptable because
+  gate 7 fixes and reports it before any return is read.
+- H3 uses the fill session's own prices to decide whether a fill was
+  possible. That is a fill model, not a leak. Gap: C8.
+- H5 uses hindsight to classify. Disclose (C9).
+- H6 uses the rank at t. No look-ahead.
+
+### §E — "A stock at E-wide rank 401 or lower is at E-3i rank 401 or lower"
+
+True on the repaired panel, by construction: E-wide is a subset of E-3i in
+the same order. Not exactly true of "every universe trial 120 and L38 could
+read", because those read the old panel and gate 3 allows 0.5% of
+member-months to differ (up to 380 of 76,000).
+
+**C15.** Amend:
+- The claim holds on the repaired panel. Stage 0 counts, per tier, the
+  member-months that were in trial 120's or L38's recorded universe that
+  month.
+- "Unseen stocks" becomes "stock-months not read". The same companies sat
+  in ranks 1–400 at other dates. Stage 0 reports the share of each tier's
+  member-months from chains ever in E-3i ranks 1–400 during 2010–2025.
+- The tiers share their calendar months with trial 120 and L38. Recorded
+  series: the correlation of Part A's and Part B's monthly excess is 0.37.
+  A tier result is new across stocks, not across time.
+
+### §F — Criterion 6: is the comparison with A′ fair?
+
+| Asymmetry | Direction | Size |
+| --- | --- | --- |
+| Slippage: W pays by rank, A′ pays flat 0.05% even on exits of names that left the top 200 | Penalises W | About 0.5% a year per 10 bp a side at Part B's turnover |
+| Screens: S1 and S2 remove names inside ranks 1–200 that A′ can hold | Unknown | Not measured |
+| Universe return: smaller stocks earned more in this sample | Favours W | Recorded series: ranks 201–400 equal-weighted beat the top 200 by 0.31% a month (t 1.64), about 3.8% a year |
+
+Net, the asymmetry favours the change. It is also partly seen. Recorded
+series: L38's book minus trial 120's book is **+0.50% a month, sd 4.81%,
+t 1.42**, positive in both halves (+0.47%, +0.53%), monthly Sharpe 0.314
+against 0.282. About 60% of that gap is the universe's own return. So
+"the criteria that carry information are 6 and 7" overstates: criterion 7
+and the both-halves part of 6 already hold for the two recorded books, and
+1.65 sits just above a known 1.42.
+
+**C16.** Amend:
+- Add those figures to "What had been seen".
+- Report W minus A′ split into the difference in excess,
+  (W − its benchmark) − (A′ − its benchmark), and the difference in
+  benchmarks. Same runs, no new variant. Report at stage 0 how many E-3i
+  rank 1–200 and 201–400 member-months fail S1 or S2.
+- A pass of 6 with the difference in excess at or below zero is recorded
+  as "the wider universe returned more in this sample; the rule did not
+  add more there". "A 400-stock list beats the 200-stock list" becomes
+  "the screened wide book beat the running book on the selection sample".
+- State the power now. With the recorded paired sd (4.81%; W and A′ share
+  names, so likely lower) and 189 months, t ≥ 1.65 needs +0.58% a month
+  and the smallest difference detectable at 80% power is about 0.87% a
+  month. For a tier at L38's sd (4.16%), t ≥ 2.13 needs +0.64% a month and
+  80% power needs 0.90% (1.13% at 120 months), about the size of the
+  effect in ranks 201–400 before the higher slippage. A miss on either is
+  weak evidence of absence, and K is likely to be understated.
+
+### §G — Claims that overstate, in the sweep note
+
+**C17.** Reword:
+1. "The evidence supports widening to about the 400 most-traded stocks,
+   which the project has already confirmed". L38 ran ranks 201–400 as a
+   separate book against its own benchmark. No single book over 1–400 has
+   run, as the pre-registration itself says.
+2. "Momentum shows up in every size tier studied in India, so the choice
+   of universe is not what makes or breaks the rule". The evidence is
+   gross backtests, the three live wider indices trail, and this is the
+   hypothesis under test.
+3. "A rule that has no edge on any list", and the pre-registration's
+   "widening did not help". Two lists were measured, the second being 113
+   F&O names. L34's own ledger row calls its proxy "weak evidence about
+   the live intraday gate", on a gap of 0.34 points.
+4. "Confirmed … on 8 held-out months": add "sign check, t 1.08, partly
+   seen", as the results file does.
+5. "2 to 6 points" and "2–7 pp/yr" describe the same three indices at two
+   dates. Pick one.
+6. "At the book's 273% one-sided turnover": 273% is Part B's. The running
+   book's is 213%.
+7. "As `momentum_3i.py:87` ranks": the script applies no 250-session rule
+   and chains no symbol changes, so 1,892 and the tier boundaries are
+   approximate.
+
+**C18. Ledger and sources.**
+- Add a held-out exposure row for the sweep's read of published 2026
+  returns of six momentum indices by tier.
+- Log the 2025 descriptive read, and commit the script's printed output
+  beside it. Tables 1 and 2 cannot be checked against any file today.
+- Record that ranks 401–600 stop being unseen for the base rule.
+
+### Spot-checks
+
+| Claim | Source | Result |
+| --- | --- | --- |
+| Ranks 201–400: +1.00% a month, t 3.31, turnover 273% | `momentum_3i_partB.json`: 1.0002%, 3.3089, 272.6% | Match |
+| Trial 120: +0.82%, t 2.91, turnover 213%, cost 0.69% | `momentum_3i_partA.json`: 0.8181%, 2.9088, 212.6%, 0.693% | Match |
+| "The first half takes the extra month … gives 3i's split" | Both files: 94 / 95 | **Wrong** (C5) |
+| 10 bp a leg costs about 0.55% a year | 2 × 2.726 × 0.10% = 0.545% | Match, at Part B's turnover |
+| L26 0.26×, L27 −9.93 bp, L34 93.17% against 92.83% | `trials.md` | Match; L34's caveat omitted (C17.3) |
+| The descriptive script computed no momentum score and no return | All 124 lines read | Confirmed |
+| Line references to `momentum_3i.py` and `nse_prices.py` | As at `1e53917` | Match |
+
+### Needs the owner's decision
+
+- **O1. What a pass allows.** A second paper sleeve is an engine change,
+  and safeguard 3 of the owner's decision makes a held-out confirmation
+  mandatory before any paper deployment. The momentum family's 2026 look
+  is spent, and spending it again is outside my authority. Amend "What a
+  pass allows" to: a pass produces a recommendation to the owner. The
+  sleeve, its forward band and any 2026 check are the owner's.
+- **O2. The earmarked sample.** The sweep note says of ranks 401–600 "the
+  owner must choose which use spends it". No choice is recorded. Ask
+  before T3 runs.
+- **O3. N_family**, only if the main agent wants 7 rather than 10 (C2).
+- For the owner's information: the sweep read published 2026 returns of
+  wide-tier momentum indices, so a later 2026 check of a wide book is
+  partly seen. If A′ fails, the running book already goes to the owner, and
+  its forward band is not changed by this test whatever A′ shows.
+
+### Next step, and where to stop
+
+Write amendment 1 (text only; no look or trial is spent), put O1 and O2 to
+the owner, and bring the amendment back before any code change or run. Then
+the code is brought into line in its own commit, stage 0 runs, and the work
+stops for review before A′.
+
+---
+
 ## Entry 19 — 2026-09-28 — automated reviewer: `prereg-kronos-feature-ic.md` (L38) ACCEPTED — rigorous, consistent with precedent, both open decisions correctly left to the user. Proceed to code, in a separate commit after the prereg.
 
 Reviewed `docs/research/prereg-kronos-feature-ic.md` against the standing
