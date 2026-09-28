@@ -1017,17 +1017,47 @@ class TradingEngine:
 
     def _fno_ltp(self, tradingsymbol):
         if self.state.paper_mode:
-            # No separate paper data feed for options premium — approximate with the last
-            # Black-Scholes premium computed at entry-time IV; good enough for a paper fill,
-            # never used for a live order (live always reads a real quote below).
+            # No paper data feed for options premium; an open paper position is
+            # repriced by _paper_fno_premium(). Live always reads a real quote below.
             return None
         return self._ensure_kite().get_fno_ltp(tradingsymbol)
+
+    def _paper_fno_premium(self, pos):
+        """Paper premium for an open position, or None when it can't be priced
+        this tick. A MODEL price, not a market price: Black-Scholes at the entry
+        IV on the live underlying spot. It ignores changes in implied volatility
+        and the bid-ask spread (#154)."""
+        try:
+            expiry = datetime.strptime(pos["expiry"], "%Y-%m-%d").date()
+            t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
+            strike, vol = pos["strike"], pos["entry_iv"]
+            spot = data_provider.get_ltp(pos["underlying"])
+            if not spot or spot <= 0:
+                raise ValueError(f"spot {spot!r}")
+            premium = options_pricing.price(spot, strike, t_years, vol,
+                                            config.FNO["risk_free_rate_pct"] / 100, pos["is_call"])
+        except Exception as exc:
+            if not pos.get("reprice_failure_logged"):
+                pos["reprice_failure_logged"] = True
+                self.state.log("risk", f"[F&O] can't reprice {pos.get('tradingsymbol')} ({exc}) — stop and target "
+                               "are not checked until the underlying's price is readable again",
+                               symbol=pos.get("underlying"), level="warn")
+            return None
+        pos["reprice_failure_logged"] = False
+        return round(premium, 2)
 
     def _close_fno(self, underlying, reason, note=None):
         pos = self.state.fno_positions.get(underlying)
         if not pos:
             return
-        ltp = self._fno_ltp(pos["tradingsymbol"]) or pos.get("ltp") or pos["entry_premium"]
+        if self.state.paper_mode:
+            ltp = self._paper_fno_premium(pos)
+            if ltp is None:
+                ltp = pos.get("ltp") or pos["entry_premium"]
+                note = ((note + "; ") if note else "") + (
+                    f"no fresh underlying price at exit, booked at the last repriced premium {ltp:.2f}")
+        else:
+            ltp = self._fno_ltp(pos["tradingsymbol"]) or pos.get("ltp") or pos["entry_premium"]
         if not self.state.paper_mode:
             self._ensure_kite().place_fno_order(pos["tradingsymbol"], "SELL", pos["lots"], pos["lot_size"])
         qty = pos["lots"] * pos["lot_size"]
@@ -1052,7 +1082,7 @@ class TradingEngine:
         pos = self.state.fno_positions.get(underlying)
         if not pos:
             return False
-        ltp = self._fno_ltp(pos["tradingsymbol"])
+        ltp = self._paper_fno_premium(pos) if self.state.paper_mode else self._fno_ltp(pos["tradingsymbol"])
         if ltp is None:
             return False
         with self.state.lock:
@@ -1149,6 +1179,8 @@ class TradingEngine:
             "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
             "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "entry_greeks": entry_greeks,
             "entry_charges": entry_charges,
+            # the vol the paper premium was priced at; _paper_fno_premium reprices with it
+            "entry_iv": 0.20 if self.state.paper_mode else (entry_greeks.get("iv_pct") or 0) / 100 or None,
             "max_loss": max_loss, "position_id": position_id,
         }
         with self.state.lock:
