@@ -80,7 +80,7 @@ duration apart.
 5. Holiday notice, once per date.
 6. Session summary, once, on a trading day at or after 15:30.
 7. If closed: `momentum_book.maybe_start_evening_job`.
-8. Pre-market scan on the first tick of each date.
+8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails.
 9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
 11. If open: `jev_book.maybe_decide`. If in the square-off window: `jev_book.maybe_close`.
@@ -410,8 +410,8 @@ and open positions are not restored after a restart
 `Scanner.run()` runs in its own thread, one scan at a time.
 
 1. **Universe.** The NIFTY 100 from `backend/data/nifty100.csv`, refreshed from NSE archives when older than 7 days.
-2. **Prices.** Two batched yfinance downloads: a year of daily bars and five days of 5-minute bars. The scanner never uses Kite.
-3. **Side feeds.** Results calendar, corporate actions, market catalysts, FII and DII flows, large deals, market breadth.
+2. **Prices.** Two batched yfinance downloads: a year of daily bars and five days of 5-minute bars. The scanner never uses Kite. `complete_daily()` adds the last completed session from NSE's equity bhavcopy and index closing file when the daily bars do not have it yet (#192).
+3. **Side feeds.** Results calendar, corporate actions, market catalysts, FII and DII flows, large deals, market breadth, and two guard files: the F&O ban list and the price-band list.
 4. **Profile.** `daily_profile()` uses only bars strictly before the session and needs at least 60.
 5. **Market bias.** See the table below.
 6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index.
@@ -419,7 +419,7 @@ and open positions are not restored after a restart
 8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
 9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
 10. **Selection** (`SCANNER["selection"]`, README §91).
-    - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. `Scanner.day_list_for()` fixes that list once per session, when the scan covers at least 90% of the universe, and keeps it all day. A stock that stops being eligible is dropped, not replaced.
+    - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. The list is fixed before the open by `Scanner.fix_day_list()`, from the pre-market read, and kept all day. If no read ran before the open, `day_list_for()` fixes it at the first scan that covers at least 90% of the universe. A stock that stops being eligible is dropped, not replaced.
     - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
 11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`. The watchlist becomes pinned + active + held.
 
@@ -436,6 +436,9 @@ Risk-on at +2 or more. Risk-off at −2 or less.
 
 | Excluded when | Threshold |
 | --- | --- |
+| In the F&O ban | On NSE's list for the day |
+| Fixed price band | Long only; left alone within 2% of either band |
+| Trade-for-trade or surveillance | Series BE or BZ, or a GSM remark |
 | Price | Below ₹100 |
 | Turnover | 20-day average below ₹50 crore a day |
 | Volatility | Daily ATR below 1.2% of price |

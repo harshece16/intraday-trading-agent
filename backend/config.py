@@ -143,6 +143,16 @@ SCANNER = {
     # Fix the day's list only once the scan has data for this share of the
     # universe, so one missing download can't drop a stock for the whole day.
     "freeze_min_coverage": 0.9,
+    # The day's list is fixed before the open, from daily data, at the first
+    # pre-market read at or after this time on a trading day (README section
+    # 100). If the engine starts later, the first scan of the session fixes it.
+    "fix_list_from": "08:45",
+    # Tradability guards from two NSE files (README section 100): the F&O ban
+    # list, and the price-band list with each stock's series and surveillance
+    # remark. A stock with a fixed band is long-only, and is left alone when
+    # its price is within this many per cent of either band.
+    "guards": True,
+    "near_band_pct": 2.0,
     "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
     # Raised alongside active_count — this is what selects which candidates

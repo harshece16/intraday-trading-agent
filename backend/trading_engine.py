@@ -42,7 +42,7 @@ from kiteconnect.exceptions import TokenException
 from kite_broker import ORDER_FINAL, ORDER_UNKNOWN, OrderNotFilled, OrderUnconfirmed
 from paper_broker import execute_paper_order
 from risk_manager import RiskManager
-from scanner import Scanner, run_premarket
+from scanner import Scanner, run_premarket, selection_mode
 import trader_brain
 import universe
 from state import AppState, _STOP_TARGET_RE, _new_position
@@ -151,6 +151,7 @@ class TradingEngine:
         self._premarket_thread = None
         self._last_premarket_run_date = None
         self._last_premarket_seed_date = None
+        self._list_fix_attempt_ts = 0.0
         self._tick_started_at = None
         self._stall_reported_for = None
         # Symbols whose exit one thread has claimed. Until the tick stream
@@ -424,14 +425,38 @@ class TradingEngine:
     # engine is already watching a real, computed shortlist instead of only
     # pinned/held symbols for the gap before the first live scan completes.
 
-    def request_premarket_scan(self) -> bool:
+    def request_premarket_scan(self, fix_list_for=None) -> bool:
         if self._premarket_thread and self._premarket_thread.is_alive():
             return False
-        self._premarket_thread = threading.Thread(target=self._run_premarket_scan, name="premarket-scan", daemon=True)
+        self._premarket_thread = threading.Thread(target=self._run_premarket_scan, args=(fix_list_for,),
+                                                  name="premarket-scan", daemon=True)
         self._premarket_thread.start()
         return True
 
-    def _run_premarket_scan(self):
+    def should_fix_list(self, now, holiday) -> bool:
+        """True in the window before the open on a trading day, until the
+        day's list is fixed. A failed read is tried again after five minutes."""
+        if not self.scanner or holiday or now.weekday() >= 5 or selection_mode(config.SCANNER) != "liquidity":
+            return False
+        if not config.SCANNER.get("fix_list_from", "08:45") <= now.strftime("%H:%M") < config.MARKET_OPEN:
+            return False
+        if self.scanner.list_fixed_for(now.date().isoformat()):
+            return False
+        return time.time() - self._list_fix_attempt_ts >= 300
+
+    def _fix_day_list(self, session, result):
+        """The pre-market read's shortlist becomes the day's list, and the
+        engine watches it from the open."""
+        if not self.scanner.fix_day_list(session, result["watchlist"]):
+            return
+        held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
+        self.state.set_watchlist(list(dict.fromkeys(
+            list(config.SCANNER.get("pinned", [])) + result["watchlist"] + held)))
+        self.state.log("watchlist", f"The day's list is fixed before the open, from daily data: "
+                                    f"{', '.join(result['watchlist']) or 'nothing qualifies'}. "
+                                    f"It does not change during the session.")
+
+    def _run_premarket_scan(self, fix_list_for=None):
         with self.state.lock:
             self.state.premarket["running"] = True
         try:
@@ -446,6 +471,8 @@ class TradingEngine:
         self._last_premarket_run_date = datetime.now(IST).date()
         picks = ", ".join(result["watchlist"]) or "nothing qualifies yet"
         self.state.log("scan", f"Pre-market read ({result['market']['bias']}): shortlist is {picks}.")
+        if fix_list_for:
+            self._fix_day_list(fix_list_for, result)
         self._maybe_seed_watchlist_from_premarket(result)
 
     def _maybe_seed_watchlist_from_premarket(self, result):
@@ -1620,7 +1647,12 @@ class TradingEngine:
             self.state.log("system", "Chaywanaprash: reviewing the last two weeks of trading and every change "
                                      "merged in that time (proposes only, changes nothing)")
 
-        if self._last_premarket_run_date != now.date() and self.scanner:
+        if self.should_fix_list(now, holiday):
+            # Before the open on a trading day: the read that fixes the
+            # day's list (README section 100).
+            if self.request_premarket_scan(fix_list_for=now.date().isoformat()):
+                self._list_fix_attempt_ts = time.time()
+        elif self._last_premarket_run_date != now.date() and self.scanner:
             # Runs every day, holiday included — it's a read on the last
             # completed session, which is just as valid context on a
             # holiday (planning ahead to the next trading day) as any other.

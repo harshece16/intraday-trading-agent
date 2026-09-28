@@ -172,3 +172,42 @@ scanner's ranking carrying no information and from the list rotating, both
 found in the same review.
 
 **Clarification 5, deploy date.** **Deployed 2026-09-28 at 20:37 IST** (backend restarted from `main` at `f0a1287`). The first session chosen by the new rule is **2026-09-29**. Every session before it used the old rotating list. Jev's first round on the new list is 2026-09-29 at 09:45.
+
+---
+
+# Clarification 6 — 2026-09-29, written before the change is deployed
+
+**What had been seen:** one closed round (2026-09-28), as in clarification 5.
+The 2026-09-29 round had not run when this was written.
+
+**The change**, from the first session after it is deployed (the date is
+added below once it is live). README §100.
+
+1. **The day's list is fixed before the open**, at the first pre-market read
+   at or after 08:45. Until now it was fixed at the first scan of the
+   session. Both use daily data only. So clarification 5 was right about what
+   the list is and wrong about when it was fixed: on 2026-09-29, and on any
+   session before this is deployed, it was fixed at the first scan.
+2. **The daily data runs through the last completed session.** The delayed
+   feed's daily bars can end a session early. When they do, the last session
+   is added from NSE's own files (#192). In-session scans were not affected
+   by this; a read before the open was.
+3. **Guards.** A stock on the F&O ban list, in trade-for-trade, under graded
+   surveillance, or within 2% of a fixed price band is left out of the list.
+   A stock with a fixed price band is scored as a long only, so its row's
+   side is always LONG. Three NIFTY 100 stocks have a fixed band on
+   2026-09-29 (ENRIN, TATACAP, TMCV); none of them is among the 15 most-traded.
+
+**Unchanged:** Jev still takes the first 15 names on the list; the snapshot,
+the three questions, the fills from Kite only, the cost, the comparison with
+the scanner's side, the pass rule and the kill rule.
+
+**Not part of this change:** the scanner's intraday numbers (gap, relative
+volume, VWAP side) still come from the delayed feed. Its gap differs from
+NSE's opening gap by 0.3 points or more on 7 of 20 stock-days checked (#193).
+Jev's fills have used live Kite prices since clarification 3. A move of the
+scanner to live prices will get its own note.
+
+**How the record is read:** as before. The guards can only remove a name from
+the list; they were not made to improve Jev's score.
+

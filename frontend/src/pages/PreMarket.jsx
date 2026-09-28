@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch, apiJson } from "../api";
 import { pct, tone } from "../format";
 import { SidePill, BiasPill } from "../components/Pill";
+import { GuardNotes } from "../components/ListNotes";
 
 const TABS = [
   ["watchlist", "Watchlist"], ["all", "All ranked"], ["avoid", "Avoid"],
@@ -121,6 +122,7 @@ export default function PreMarket({ state: s }) {
           : "Ranked purely on daily-chart facts (trend, relative strength, patterns)."}{" "}
         No invented gap or SGX-Nifty-style pre-open number, since this codebase doesn't have an honest source for one.
       </p>
+      <GuardNotes guards={r.guards} />
       <button className="btn" disabled={refreshing || data.running} onClick={refresh} style={{ marginBottom: 16 }}>
         {(refreshing || data.running) && <span className="spinner" />}
         {refreshing || data.running ? "Refreshing…" : "Refresh"}
