@@ -1344,13 +1344,13 @@
    "id": "MOM-02",
    "area": "momentum",
    "status": "active",
-   "rule": "The momentum universe is the 200 stocks with the highest median traded value over 126 sessions, with at least 250 sessions of history, a raw close of at least Rs 20, and a print on the ranking day.",
-   "why": "Fixes the tradable, liquid universe exactly as pre-registered.",
+   "rule": "The momentum universe is the 200 stocks with the highest median traded value over 126 sessions, with at least 250 sessions of history, a raw close of at least Rs 20, and a print in the EQ series on the ranking day. It is chosen from EQ rows only: a stock in trade-for-trade that day is not eligible, and its trade-for-trade days count as days without a trade.",
+   "why": "Fixes the tradable, liquid universe exactly as pre-registered. Reading trade-for-trade rows for prices (MOM-14) must not change which stocks are eligible.",
    "enforced_in": "backend/momentum_book.py:ranked_universe",
    "config": "MOMENTUM_BOOK.universe = 200",
    "verify": "python momentum_book.py summary; holdings are all large-turnover names",
    "source": "docs/research/prereg-3i-momentum-corrected-data.md",
-   "test": "backend/tests/test_momentum_book.py::test_ranking_matches_research"
+   "test": "backend/tests/test_momentum_book.py::test_the_universe_is_chosen_from_eq_rows_as_research_does"
   },
   {
    "id": "MOM-03",
@@ -1452,15 +1452,17 @@
    "id": "MOM-11",
    "area": "momentum",
    "status": "active",
-   "rule": "Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, rights at TERP, demergers, dividends) into total-return closes, and positions are valued by total-return ratio from the fill date.",
-   "why": "The uncorrected data had produced false signals (the reason for 3i).",
+   "rule": "Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers, dividends) into total-return closes, and positions are valued by total-return ratio from the fill date. A dividend is read without face values or bracketed remarks, and is applied when it is below the previous close. A demerger is applied when it leaves between 1% and 98% of the price.",
+   "why": "The uncorrected data had produced false signals (the reason for 3i). Consolidations, seven dividend amounts and two real actions outside the old bounds were wrong until 2026-09-28 (#177, #178).",
    "enforced_in": "backend/momentum_book.py:build_panel and value_of",
    "config": null,
-   "verify": "Momentum Book page footnote; parity test against research/nse_prices.py",
-   "source": "README §82",
-   "test": "backend/tests/test_momentum_book.py::test_price_adjustment_matches_research",
+   "verify": "Parity test against the repaired panel of research/nse_prices.py; on the real cache the two panels have 0 differences",
+   "source": "README §82, §97",
+   "test": "backend/tests/test_momentum_book.py::test_the_panel_is_the_research_loaders_repaired_panel",
    "issues": [
-    159
+    159,
+    177,
+    178
    ]
   },
   {
@@ -1488,6 +1490,22 @@
    "test": "backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed",
    "issues": [
     159
+   ]
+  },
+  {
+   "id": "MOM-14",
+   "area": "momentum",
+   "status": "active",
+   "rule": "The price panel reads the EQ, BE and BZ series. A holding that moves to trade-for-trade is valued and sold at the price it traded for, not at its last EQ close. When a symbol has more than one of these series on a day, the EQ row is used.",
+   "why": "Read from EQ alone, a holding in trade-for-trade kept a stale price and was sold at it, and 743 corporate actions were applied with a different factor (#175).",
+   "enforced_in": "backend/momentum_book.py:parse_bhavcopy and build_panel",
+   "config": null,
+   "verify": "On the real bhavcopy cache the book's panel equals the research loader's repaired panel row for row (0 differences, 2026-09-28)",
+   "source": "README §97; docs/research/results-universe-width.md",
+   "test": "backend/tests/test_momentum_book.py::test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for",
+   "issues": [
+    175,
+    180
    ]
   },
   {

@@ -170,3 +170,33 @@ kinds of loader defect and one rule gap:
 
 Stage 0 is re-run after this commit; both runs are kept. No forward return
 has been read by either.
+
+---
+
+# Note on the forward paper book — 2026-09-28, before its first rebalance
+
+**Owner's decision, 2026-09-28:** "yes fix the momentum book loader before 1
+october".
+
+The paper book (`backend/momentum_book.py`) had held nothing and recorded no
+return when this was written. Its first rebalance is on the evening of
+2026-10-01.
+
+**What changes.** Its price loader becomes a copy of the research loader's
+repaired panel (`prereg-universe-width.md`; #175, #177, #178): it reads
+trade-for-trade rows, adjusts consolidations, reads seven dividend amounts
+correctly and applies two kinds of action the old bounds refused. On the
+bhavcopy cache to 2025-12-31 the book's panel and the research panel have 0
+differences.
+
+**What does not change.** The universe, the signal, the portfolio rule, the
+costs, the benchmark and the band. The universe is still chosen from EQ rows
+only. The band still expects +0.82% a month with a standard deviation of
+3.87%.
+
+**What the forward test now measures.** The rule on repaired prices with the
+simple fill assumption: every order fills at the close. That is neither
+trial 120's configuration (old prices) nor trial 126's (repaired prices,
+carried orders). Trial 126 gave +0.71% a month. Keeping 0.82% makes the band
+stricter than either figure would. Adding the fill rules, and changing the
+expected figure, are the owner's decisions and have not been made (#180).

@@ -16,7 +16,10 @@ sys.path.insert(0, os.path.join(BACKEND, "research"))
 
 import momentum_book as mb  # noqa: E402
 import momentum_3i as m3  # noqa: E402  (research, for parity only)
+import momentum_width as mw  # noqa: E402  (research, for parity only)
 import nse_prices as npx  # noqa: E402
+
+EQ, BE = 0, 1
 
 
 # --- synthetic data ------------------------------------------------------------------
@@ -51,12 +54,27 @@ PURPOSES = [
     ("Rights 87:38 @ Premium Of Rs 2.50 Per Share", 10), ("Special Dividend - Rs 500/- Per Share", 10),
     ("Final Dividend - Rs 2 Per Share / Special Dividend - Rs 1 Per Share", 1), ("Dividend-150%", 2),
     ("Scheme Of Arrangement", 1), ("Bonus 3:1", 10), ("Annual General Meeting", 10),
+    ("Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share", 10),
+    ("Capital Reduction Rs 10 To Rs 3.30 / Consolidation Rs 3.30 To Rs.10", 10),
+    ("Annual General Meeting / Div. Of Rs. 1.50/- Per Equity Share Of Rs. 10/- Each.", 10),
+    ("Dividend-Rs.8.50 Per Share (Including Special Dividend Of Rs.2/- Per Share).", 1),
+    ("Interim Dividend Rs 6/- Per Share 9purpose Revised)", 2),
+    ("Interim Dividend - Rs 974 Per Share", 10),
 ]
 
 
 @pytest.mark.parametrize("purpose,fv", PURPOSES)
 def test_parse_purpose_matches_research(purpose, fv):
-    assert mb.parse_purpose(purpose, fv) == npx.parse_purpose(purpose, fv)
+    """The book reads corporate actions as the research loader's repaired panel does."""
+    assert mb.parse_purpose(purpose, fv) == npx.parse_purpose(purpose, fv, repaired=True)
+
+
+def test_parse_purpose_reads_what_the_old_loader_got_wrong():
+    assert mb.parse_purpose("Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share", 10) == [
+        ("consolidation", 10.0)]
+    assert mb.parse_purpose("Interim Div. Of Rs.5/- Per Share Of Rs. 10/- Each.", 10) == [("dividend", 5.0)]
+    assert mb.parse_purpose("Dividend-Rs.8.50 Per Share (Including Special Dividend Of Rs.2/- Per Share).", 1) == [
+        ("dividend", 8.5)]
 
 
 def test_parse_purpose_matches_research_on_nse_files_if_present():
@@ -67,7 +85,7 @@ def test_parse_purpose_matches_research_on_nse_files_if_present():
         rows = [{k.strip().strip('"'): v for k, v in r.items() if k} for r in csv.DictReader(fh)]
     for r in rows:
         fv = float(r.get("FACE VALUE") or 0) if (r.get("FACE VALUE") or "").replace(".", "", 1).isdigit() else 0.0
-        assert mb.parse_purpose(r["PURPOSE"], fv) == npx.parse_purpose(r["PURPOSE"], fv), r["PURPOSE"]
+        assert mb.parse_purpose(r["PURPOSE"], fv) == npx.parse_purpose(r["PURPOSE"], fv, repaired=True), r["PURPOSE"]
 
 
 def test_ranking_matches_research():
@@ -81,13 +99,35 @@ def test_ranking_matches_research():
         assert mb.scores(chains, names, sessions, idx) == m3.scores(chains, names, me_idx, months, month, idx)
 
 
+def _with_series(chains, t2t=None):
+    """Give a synthetic panel the series column and the EQ view build_panel makes."""
+    for name, c in chains.items():
+        away = set((t2t or {}).get(name, ()))
+        c["ser"] = [BE if i in away else EQ for i in c["idx"]]
+        keep = [j for j, series in enumerate(c["ser"]) if series == EQ]
+        c["eq"] = {k: [c[k][j] for j in keep] for k in ("idx", "raw", "val")}
+    return chains
+
+
+def test_the_universe_is_chosen_from_eq_rows_as_research_does():
+    sessions, chains = _panel()
+    idx = m3.month_ends(sessions)[-2][1]
+    _with_series(chains, {"S15": [idx], "S16": range(idx - 100, idx - 20)})
+    got = mb.ranked_universe(chains, idx)
+    assert got == [n for _, n in mw.ranked(mw.eq_view(chains), idx)]
+    assert "S15" not in got                    # in trade-for-trade on the ranking day
+    assert "S16" in got and got.index("S16") > got.index("S17")   # its 80 days away count as no trade
+
+
 def _bhav_zip(path, day, rows):
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["SYMBOL", "SERIES", "OPEN", "HIGH", "LOW", "CLOSE", "LAST", "PREVCLOSE", "TOTTRDQTY", "TOTTRDVAL",
                 "TIMESTAMP", "TOTALTRADES", "ISIN"])
-    for sym, op, close, prev in rows:
-        w.writerow([sym, "EQ", op, close, close, close, close, prev, 100, close * 100,
+    for row in rows:
+        sym, op, close, prev = row[:4]
+        series = row[4] if len(row) > 4 else "EQ"
+        w.writerow([sym, series, op, close, close, close, close, prev, 100, close * 100,
                     day.strftime("%d-%b-%Y").upper(), 5, "INE000000001" if sym == "AAA" else ""])
     with zipfile.ZipFile(path, "w") as z:
         z.writestr("b.csv", buf.getvalue())
@@ -108,14 +148,79 @@ def test_price_adjustment_matches_research(tmp_path, monkeypatch):
         '"SYMBOL","COMPANY NAME","SERIES","PURPOSE","FACE VALUE","EX-DATE","RECORD DATE","BOOK CLOSURE START DATE","BOOK CLOSURE END DATE"\n'
         '"AAA","A Ltd","EQ","Bonus 1:1","10","05-Mar-2025","","",""\n'
         '"BBB","B Ltd","EQ","Dividend - Rs 5 Per Share","10","05-Mar-2025","","",""\n', encoding="utf-8")
-    monkeypatch.setattr(npx, "CACHE", str(tmp_path / "p.pkl"))
     monkeypatch.setattr(npx, "HELD_OUT_DIR", str(tmp_path / "none"))
-    r_sessions, r_chains, _, _ = npx.load(refresh=True, bhav_dir=str(bhav), ca_dir=str(ca))
+    r_sessions, r_chains, _, _ = npx.build(bhav_dir=str(bhav), ca_dir=str(ca), wide=True)
     l_sessions, l_chains = mb.build_panel([str(bhav)], ca_dir=str(ca), symbolchange=str(bhav / "symbolchange.csv"))
     assert l_sessions == r_sessions
     for s in ("AAA", "BBB"):
         assert l_chains[s]["close"] == pytest.approx(r_chains[s]["close"])
     assert l_chains["AAA"]["close"][2] / l_chains["AAA"]["close"][1] == pytest.approx(51 / 50.5)   # bonus removed
+
+
+def test_the_panel_is_the_research_loaders_repaired_panel(tmp_path, monkeypatch):
+    """Trade-for-trade rows, a consolidation, a dividend with a face value in
+    its text, and a dividend of nearly the whole price (#175, #177, #178)."""
+    bhav, ca = tmp_path / "bhav", tmp_path / "ca"
+    bhav.mkdir()
+    ca.mkdir()
+    (bhav / "symbolchange.csv").write_text("SM_NAME,SM_KEY_SYMBOL,SM_NEW_SYMBOL,SM_APPLICABLE_FROM\n")
+    days = [datetime.date(2025, 3, d) for d in (3, 4, 5, 6, 7)]
+    prices = {"AAA": [(100, 100, 99, "EQ"), (102, 102, 100, "EQ"), (90, 90, 102, "BE"), (80, 80, 90, "BE"),
+                      (85, 85, 80, "EQ")],                       # a dividend on day 4, while in trade-for-trade
+              "BBB": [(20, 20, 20, "EQ"), (21, 21, 20, "EQ"), (205, 210, 21, "EQ"), (212, 212, 210, "EQ"),
+                      (214, 214, 212, "EQ")],                    # ten shares became one on day 3
+              "CCC": [(500, 500, 499, "EQ"), (510, 510, 500, "EQ"), (12, 12, 510, "EQ"), (13, 13, 12, "EQ"),
+                      (13, 13, 13, "EQ")]}                       # a dividend of Rs 498 on Rs 510 on day 3
+    for i, day in enumerate(days):
+        rows = [(s, p[i][0], p[i][1], p[i][2], p[i][3]) for s, p in prices.items()]
+        if i == 1:
+            rows.insert(0, ("AAA", 555, 555, 100, "BE"))         # both series on one day: EQ wins
+        _bhav_zip(bhav / f"{day.strftime('%d%b%Y').upper()}.zip", day, rows)
+    (ca / "ca_2025.csv").write_text(
+        '"SYMBOL","COMPANY NAME","SERIES","PURPOSE","FACE VALUE","EX-DATE","RECORD DATE","BOOK CLOSURE START DATE","BOOK CLOSURE END DATE"\n'
+        '"AAA","A Ltd","EQ","Div. Of Rs. 9/- Per Equity Share Of Rs. 10/- Each.","10","06-Mar-2025","","",""\n'
+        '"BBB","B Ltd","EQ","Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share","10","05-Mar-2025","","",""\n'
+        '"CCC","C Ltd","EQ","Interim Dividend - Rs 498 Per Share","10","05-Mar-2025","","",""\n', encoding="utf-8")
+    monkeypatch.setattr(npx, "HELD_OUT_DIR", str(tmp_path / "none"))
+    r_sessions, r_chains, _, _ = npx.build(bhav_dir=str(bhav), ca_dir=str(ca), wide=True)
+    l_sessions, l_chains = mb.build_panel([str(bhav)], ca_dir=str(ca), symbolchange=str(bhav / "symbolchange.csv"))
+    assert l_sessions == r_sessions and set(l_chains) == set(r_chains) == {"AAA", "BBB", "CCC"}
+    for s in l_chains:
+        for k in ("idx", "raw", "val", "ser"):
+            assert l_chains[s][k] == r_chains[s][k], (s, k)
+        assert l_chains[s]["close"] == pytest.approx(r_chains[s]["close"])
+    assert l_chains["AAA"]["eq"] == mw.eq_view(r_chains)["AAA"]
+    a = l_chains["AAA"]
+    assert a["ser"] == [EQ, EQ, BE, BE, EQ] and a["raw"] == [100, 102, 90, 80, 85] and a["eq"]["idx"] == [0, 1, 4]
+    assert a["close"][2] == pytest.approx(90 * (1 - 9 / 90))     # Rs 9, not Rs 19, off the trade-for-trade close
+    assert l_chains["BBB"]["close"][:2] == pytest.approx([200.0, 210.0])
+    assert l_chains["CCC"]["close"][1] == pytest.approx(510 * (1 - 498 / 510))
+
+
+def test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for():
+    sessions, chains = _panel()
+    turn = next(i for i in range(330, len(sessions)) if sessions[i][:7] != sessions[i - 1][:7])
+    conf = {**mb.DEFAULTS, "universe": 20, "capital": 1_000_000.0}
+    state = mb.new_state(conf["capital"], sessions[turn - 30])
+    state["last_processed"] = sessions[turn - 30]
+    _with_series(chains)
+    for d in sessions[turn - 29:turn + 1]:
+        mb.process_session(state, chains, sessions, d, conf)
+    held = sorted(state["book"]["positions"])[0]
+    nxt = next(i for i in range(turn + 1, len(sessions)) if sessions[i][:7] != sessions[i - 1][:7])
+    c = chains[held]
+    for j in range(turn + 5, len(c["idx"])):                     # it halves and moves to trade-for-trade
+        c["close"][j] *= 0.5
+        c["raw"][j] *= 0.5
+    _with_series(chains, {held: range(turn + 5, len(sessions))})
+    for d in sessions[turn + 1:nxt + 1]:
+        mb.process_session(state, chains, sessions, d, conf)
+    assert held not in state["book"]["positions"]                # not eligible at the month-end, so sold
+    sale = [t for t in state["trades"] if t["symbol"] == held and t["side"] == "SELL"][0]
+    bought = [t for t in state["trades"] if t["symbol"] == held and t["side"] == "BUY"][0]
+    worth = (bought["value"] - bought["cost"]) * c["close"][nxt] / c["close"][sessions.index(bought["date"])]
+    assert sale["date"] == sessions[nxt] and sale["value"] == pytest.approx(worth, rel=1e-6)
+    assert sale["value"] < 0.75 * bought["value"]                # the fall is in the sale, not hidden
 
 
 # --- the book --------------------------------------------------------------------------

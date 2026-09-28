@@ -9,7 +9,13 @@ mean(r6/sigma, r12/sigma) with the skip-month; hold 15, keep a holding while
 it ranks in the top 30, replace from the top; trade at the next session's
 close; pay Zerodha's delivery charges. The benchmark is the same universe
 equal-weighted. Prices come from NSE's daily bhavcopies, adjusted with NSE's
-own corporate-actions file (splits, bonuses, rights, demergers, dividends).
+own corporate-actions file (splits, bonuses, consolidations, rights,
+demergers, dividends).
+
+The price panel is the repaired one of README section 97: it reads the
+trade-for-trade series (BE, BZ) as well as EQ, so a holding that leaves EQ is
+still priced and sold at what it traded for (#175). The universe is still
+chosen from EQ rows only, as the rule was tested.
 
 It runs as an evening job in its own process (`python momentum_book.py
 daily`), started by the engine after the close, so building the price panel
@@ -21,9 +27,10 @@ excess over the benchmark falls below n x 0.82% - 2 x 3.87% x sqrt(n)
 (n months) — the forward band fixed in the results file.
 
 This module deliberately repeats the loader and ranking code of
-research/nse_prices.py and research/momentum_3i.py instead of importing
-them: live code may not import research (test_research_splits). A parity
-test holds the two copies to the same answers.
+research/nse_prices.py (its repaired panel, `load(wide=True)`) and
+research/momentum_3i.py instead of importing them: live code may not import
+research (test_research_splits). A parity test holds the two copies to the
+same answers.
 """
 
 import argparse
@@ -83,6 +90,12 @@ GST = 0.18
 DP_PER_SELL = 15.34
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 ETF_NAME = re.compile(r"(BEES|ETF|IETF|CASE)$")
+# Series read, in order of preference when a symbol has more than one on a
+# day. BE and BZ are trade-for-trade. SME series are never read.
+SERIES = ("EQ", "BE", "BZ")
+EQ = 0
+DIVIDEND_MAX_SHARE = 1.0      # of the previous close
+DEMERGER_MIN_RATIO = 0.01
 
 
 def cfg():
@@ -191,17 +204,21 @@ def refresh_reference_files(max_age_days=7):
 # --- data: parse (a copy of research/nse_prices.py; parity-tested) -------------------
 
 def parse_bhavcopy(path):
+    """Rows of the EQ, BE and BZ series: (symbol, iso date, open, close,
+    previous close, isin, traded value, position of the series in SERIES)."""
     out = []
+    code = {name: i for i, name in enumerate(SERIES)}
     with zipfile.ZipFile(path) as z, z.open(z.namelist()[0]) as fh:
         for r in csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8", errors="ignore")):
             r = {k.strip(): (v or "").strip() for k, v in r.items() if k}
             if "TckrSymb" in r:
-                if r.get("SctySrs") != "EQ":
+                if r.get("SctySrs") not in code:
                     continue
                 out.append((r["TckrSymb"], r["TradDt"], float(r.get("OpnPric") or 0), float(r["ClsPric"] or 0),
-                            float(r["PrvsClsgPric"] or 0), r.get("ISIN", ""), float(r.get("TtlTrfVal") or 0)))
+                            float(r["PrvsClsgPric"] or 0), r.get("ISIN", ""), float(r.get("TtlTrfVal") or 0),
+                            code[r["SctySrs"]]))
             elif "SYMBOL" in r:
-                if r.get("SERIES") != "EQ":
+                if r.get("SERIES") not in code:
                     continue
                 ts = r["TIMESTAMP"]
                 try:
@@ -209,7 +226,8 @@ def parse_bhavcopy(path):
                 except ValueError:
                     d = datetime.datetime.strptime(ts, "%d-%b-%y").date().isoformat()
                 out.append((r["SYMBOL"], d, float(r.get("OPEN") or 0), float(r["CLOSE"] or 0),
-                            float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0)))
+                            float(r["PREVCLOSE"] or 0), r.get("ISIN", ""), float(r.get("TOTTRDVAL") or 0),
+                            code[r["SERIES"]]))
     return out
 
 
@@ -247,6 +265,37 @@ RX_RS = re.compile(r"(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)
 RX_PCT = re.compile(_NUM + r"\s*%")
 RX_DIV_BARE = re.compile(r"\bdiv(?!ision)\w*\.?\s*[-:]?\s*" + _NUM, re.I)
 RX_NUM = re.compile(_NUM)
+RX_CONSOLIDATION = re.compile(r"consolidat", re.I)
+RX_RS_WORD = re.compile(r"\b(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)       # not the "re 9" inside "Share 9purpose"
+RX_FACE_VALUE = re.compile(r"(?:\bof\s+)?\b(?:rs|re)\.?\s*-?\s*" + _NUM + r"\s*(?:/-)?\s*each\b", re.I)
+RX_REMARK = re.compile(r"\([^)]*\)?")                                # a bracketed remark, closed or not
+RX_DIVIDEND = re.compile(r"\bdiv(?!ision)", re.I)
+
+
+def _consolidation_ratio(text):
+    """'Consolidation ... From Re a To Rs b' with b > a: b/a (#177)."""
+    for clause in re.split(r"/(?!-)|;", text):
+        m = RX_CONSOLIDATION.search(clause)
+        if not m:
+            continue
+        nums = [float(x) for x in RX_NUM.findall(clause[m.end():])]
+        if len(nums) >= 2 and 0 < nums[0] < nums[1]:
+            return nums[1] / nums[0]
+        return None
+    return None
+
+
+def _dividend_text(text):
+    """The text a dividend is read from: a face value ("Of Rs. 10/- Each") is
+    not a dividend, and a bracketed remark repeats or breaks down an amount
+    already given (#178)."""
+    text = RX_FACE_VALUE.sub(" ", text)
+    bare = RX_REMARK.sub(" ", text)
+    for clause in re.split(r"/(?!-)|;|\band\b|&|\+", bare, flags=re.I):
+        if RX_DIVIDEND.search(clause) and (RX_RS_WORD.search(clause) or RX_PCT.search(clause)
+                                           or RX_DIV_BARE.search(clause)):
+            return bare
+    return text
 
 
 def _split_ratio(text):
@@ -264,6 +313,9 @@ def _split_ratio(text):
 def parse_purpose(purpose, face_value):
     text = purpose.replace("–", "-")
     acts = []
+    if RX_CONSOLIDATION.search(text):
+        r = _consolidation_ratio(text)
+        acts.append(("consolidation", r) if r else ("unparsed", text))
     if RX_SPLIT_KW.search(text):
         r = _split_ratio(text)
         acts.append(("split", r) if r else ("unparsed", text))
@@ -283,10 +335,10 @@ def parse_purpose(purpose, face_value):
         acts.append(("demerger", None))
     if re.search(r"\bdiv(?!ision)", text, re.I):
         total = 0.0
-        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", text, flags=re.I):
+        for clause in re.split(r"/(?!-)|;|\band\b|&|\+", _dividend_text(text), flags=re.I):
             if not re.search(r"\bdiv(?!ision)", clause, re.I):
                 continue
-            pct, rs = RX_PCT.findall(clause), RX_RS.findall(clause)
+            pct, rs = RX_PCT.findall(clause), RX_RS_WORD.findall(clause)
             if pct and not rs:
                 if face_value:
                     total += sum(float(x) for x in pct) / 100.0 * face_value
@@ -337,7 +389,10 @@ def etf_symbols(ca_dir=CA_DIR):
 
 
 def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
-    """(sessions, chains): chains[name] = dict(idx, close (total-return adjusted), raw, val)."""
+    """(sessions, chains): chains[name] = dict(idx, close (total-return
+    adjusted), raw, val, ser, eq). ser is each row's series as a position in
+    SERIES. eq holds the EQ rows alone, which is what the universe is chosen
+    from; prices and sales use every row."""
     bhav_dirs = bhav_dirs or BHAV_DIRS
     nxt = symbol_chains(symbolchange or os.path.join(DATA, "bhav_daily", "symbolchange.csv"))
     cache, by_date = {}, {}
@@ -347,20 +402,23 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
                 rows = parse_bhavcopy(p)
             except Exception:
                 continue
-            for sym, day, op, close, prev, isin, val in rows:
+            for sym, day, op, close, prev, isin, val, series in rows:
                 if close > 0:
-                    by_date.setdefault(day, []).append((sym, op, close, isin, val))
+                    by_date.setdefault(day, []).append((sym, op, close, isin, val, series))
     sessions = sorted(by_date)
     chains, owner = {}, {}
     for idx, day in enumerate(sessions):
-        for sym, op, close, isin, val in by_date[day]:
+        # EQ rows first, in file order, so the row kept for a chain on a day
+        # is its EQ row when it has one (the sort is stable)
+        for sym, op, close, isin, val, series in sorted(by_date[day], key=lambda r: r[-1]):
             canon = canonical(sym, nxt, cache)
             if isin:
                 prior = owner.setdefault(isin, canon)
                 if prior != canon:
                     cache[canon] = cache[sym] = prior
                     canon = prior
-            c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "open": [], "val": [], "isins": set()})
+            c = chains.setdefault(canon, {"idx": [], "close": [], "raw": [], "open": [], "val": [], "ser": [],
+                                          "isins": set()})
             if c["idx"] and c["idx"][-1] == idx:
                 continue
             c["idx"].append(idx)
@@ -368,6 +426,7 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
             c["close"].append(close)
             c["open"].append(op)
             c["val"].append(val)
+            c["ser"].append(series)
             if isin:
                 c["isins"].add(isin)
     etfs, aliases = etf_symbols(ca_dir), {}
@@ -392,6 +451,8 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
             f = None
             if kind in ("split", "bonus"):
                 f = 1.0 / value
+            elif kind == "consolidation":
+                f = value
             elif kind == "rights":
                 a, b, price = value
                 terp = (b * prev + a * price) / (a + b) if prev > 0 else 0
@@ -399,11 +460,11 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
             elif kind == "demerger":
                 op, cl = c["open"][k], c["raw"][k]
                 ratio = op / prev if op > 0 and prev > 0 else 0
-                if not 0.05 < ratio < 0.98 and prev > 0:
+                if not DEMERGER_MIN_RATIO < ratio < 0.98 and prev > 0:
                     ratio = cl / prev
-                f = ratio if 0.05 < ratio < 0.98 else None
+                f = ratio if DEMERGER_MIN_RATIO < ratio < 0.98 else None
             elif kind == "dividend":
-                f = 1.0 - value / prev if 0 < value < prev * 0.9 else None
+                f = 1.0 - value / prev if 0 < value < prev * DIVIDEND_MAX_SHARE else None
             if f is not None:
                 per = factors.setdefault(canon, {})
                 per[k] = per.get(k, 1.0) * f
@@ -413,6 +474,9 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
             if j + 1 in per:
                 running *= per[j + 1]
             cl[j] *= running
+    for c in chains.values():
+        keep = [j for j, series in enumerate(c["ser"]) if series == EQ]
+        c["eq"] = {k: [c[k][j] for j in keep] for k in ("idx", "raw", "val")}
     return sessions, chains
 
 
@@ -428,8 +492,12 @@ def close_on_or_before(c, idx):
 
 
 def ranked_universe(chains, idx):
+    """Eligible chains at session idx, most-traded first. Chosen from EQ rows
+    only: a stock in trade-for-trade on the day is not eligible, and its
+    trade-for-trade days count as days without a trade."""
     cands = []
     for name, c in chains.items():
+        c = c.get("eq", c)
         k = rows_before(c, idx)
         if k < MIN_HISTORY or c["idx"][k - 1] != idx or c["raw"][k - 1] < MIN_PRICE:
             continue

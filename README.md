@@ -3603,9 +3603,38 @@ The owner asked (2026-09-28) whether the first pick should come from more stocks
 - That the rule clears today's bar. The momentum family now counts ten tries. At ten, trial 126 would not pass (t 2.51 against 2.807). It is judged on trial 120's criteria because it cannot make a new claim.
 - What slippage really is. The rates are judgements from a 2010 study (#66). The excess stays above zero until about 2 percentage points more per side. Trial 126's pass does not: about 0.02 points more per side would fail it (Deflated Sharpe 0.952 against 0.95).
 
-**For the owner.** The paper book's own loader (`backend/momentum_book.py`) has the same three defects, and its first rebalance is on the evening of 2026-10-01. Fixing it changes the data a pre-registered forward test runs on, so whether and when is the owner's decision. The recommendation is before that date, in its own PR.
+**For the owner.** The paper book's own loader (`backend/momentum_book.py`) had the same three defects. The owner decided on 2026-09-28 to fix it before the first rebalance ([§97](#97-the-paper-momentum-book-now-reads-repaired-prices)).
 
 Files: `docs/research/results-universe-width.md`, `docs/research/stock-picking-sweep-2026-09-28.md`, `backend/research/momentum_width.py`, `backend/research/panel_differences.py`, `backend/research/width_report.py`, `backend/tests/test_momentum_width.py`.
+
+### 97. The paper momentum book now reads repaired prices
+
+**Owner's decision, 2026-09-28:** fix the paper book's loader before its first rebalance on the evening of 2026-10-01.
+
+§96 found three defects in how prices were read. The research loader was repaired there. The paper book has its own copy of the loader, because live code may not import research code, and that copy still had all three.
+
+| Defect | Before | Now |
+| --- | --- | --- |
+| Trade-for-trade rows (#175) | Read the EQ series only. A holding that moved to trade-for-trade kept its last EQ close and was sold at it | Reads EQ, BE and BZ. The holding is valued and sold at what it traded for |
+| Consolidations (#177) | Not adjusted. Ten shares becoming one looked like a tenfold gain | Adjusted |
+| Dividend amounts (#178) | Seven rows overstated; a dividend above 90% of the price and a demerger that left under 5% were refused | Read correctly; both kinds applied |
+
+**What did not change.** The rule is the one that was tested: the 200 most-traded stocks, 15 holdings, monthly. The universe is still chosen from EQ rows only, so a stock in trade-for-trade on the ranking day is not eligible. Costs, the benchmark and the switch-off band are as they were.
+
+**Checked on the real data**, the bhavcopy cache to 2025-12-31:
+
+| Check | Result |
+| --- | --- |
+| The book's panel against the research loader's repaired panel | 0 differences over 4,215 sessions and 3,088 stocks |
+| All 42,809 corporate-action rows, read by both copies | 0 differences |
+| The ranked universe at the last 36 month-ends | The same list, 36 of 36 |
+| A dry run of the book on a temporary state, October to December 2025 | 2 rebalances, 15 holdings, 200 benchmark positions |
+
+The book had held nothing and recorded no return before this change, so its forward record starts on the repaired data.
+
+**What this does not fix (#180).** The paper book still fills every order at the close. The re-run in §96 did not: it carried a buy past a day the stock was locked at its upper band, and a sell past a lower-band lock. So the paper book now runs repaired prices with the old fill assumption, which is neither of the two tested configurations. The band still expects +0.82% a month; the re-run gave +0.71%. Keeping 0.82% makes the band stricter. Both are the owner's decisions.
+
+Files: `backend/momentum_book.py`, `backend/tests/test_momentum_book.py`, `docs/research/prereg-3i-momentum-corrected-data.md` (dated note).
 
 ## Backtest results
 
