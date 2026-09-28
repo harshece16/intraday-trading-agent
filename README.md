@@ -3489,7 +3489,7 @@ The owner said the 25 stocks the scanner picks were wrong and there was too much
 
 Scores, sides and reasons are still computed and shown, and the checklist still reads every watched stock. None of them chooses the list any more. The old ranked list is kept one setting away (`"selection": "score"`).
 
-**Two running tests take this list as input**, so both carry a note written before the change takes effect: `prereg-orderbook.md` Amendment 2 and `prereg-jev-book.md` Clarification 5. The change takes effect on the first session after it is deployed. Neither pass rule changes.
+**Two running tests take this list as input**, so both carry a note written before the change takes effect: `prereg-orderbook.md` Amendment 2 and `prereg-jev-book.md` Clarification 5. The change was deployed on 2026-09-28 at 20:37 IST, so the first session under it is 2026-09-29. Neither pass rule changes.
 
 The flood of review cards is a separate problem (#166), and its fix waits on the owner's choice of a reward-to-risk floor.
 

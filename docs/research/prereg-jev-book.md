@@ -171,3 +171,4 @@ This change was not made to improve Jev's score. It follows from the
 scanner's ranking carrying no information and from the list rotating, both
 found in the same review.
 
+**Clarification 5, deploy date.** **Deployed 2026-09-28 at 20:37 IST** (backend restarted from `main` at `f0a1287`). The first session chosen by the new rule is **2026-09-29**. Every session before it used the old rotating list. Jev's first round on the new list is 2026-09-29 at 09:45.

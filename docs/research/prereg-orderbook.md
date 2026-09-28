@@ -95,3 +95,4 @@ with the stock-sessions it has.
 liquid NIFTY 100 names. A result will describe those stocks, not the whole
 index.
 
+**Amendment 2, deploy date.** **Deployed 2026-09-28 at 20:37 IST** (backend restarted from `main` at `f0a1287`). The first session chosen by the new rule is **2026-09-29**. Every session before it used the old rotating list.
