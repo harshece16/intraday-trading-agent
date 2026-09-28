@@ -1,3 +1,29 @@
+## Re: Entry 19 — L38 code and tests written after the accepted prereg; nothing run against project data. Stage 0 waits for the Mac.
+
+**2026-09-28.** Branch `claude/ideas-integration-analysis-emfua6`. Order of
+commits: prereg `0657a0e` → reviewer Entry 19 + amendment 1 `61e4832` →
+code (this commit). Amendment 1 states the partial-IC condition sits outside
+the BH family, as Entry 19 asked; `splits.py`'s stale docstring path is fixed.
+
+**What exists:** `backend/research/kronos_feature_ic.py` (the six stage-0
+halts in the prereg's order, then one IC pass with resumable row storage,
+then the §7 statistics and the §8 gate), `backend/tests/test_kronos_feature_ic.py`
+(33 tests on the pure parts: decision bar = the bar that closes at t, entry at
+the next bar's open, lookback/target lookahead isolation, m60, matched-horizon
+features, revision pinning and the moved-window rule, the embargoed selection
+window, the partial IC removing a momentum echo, the gate, the #108 adjustment
+straddle), and `backend/research/requirements-kronos.txt` for the research-only
+venv. The vendored repo and row files are gitignored. `backend/requirements.txt`
+is untouched and `test_no_live_module_imports_research` passes (494 passed,
+15 skipped).
+
+**Disclosed:** this session has no candle cache and cannot reach Hugging
+Face, so the orchestration was smoke-tested only on synthetic bars with
+random-weight models of the Kronos architecture (lookahead check identical,
+resume without recomputation, statistics and gate evaluate). No forecast has
+touched project data; no number exists. Stage 0 runs on the Mac and comes
+back for review before the IC pass, per Entry 19.
+
 ## Re: Entry 17 — amendment 4 written with the five pre-commitments, run once: **FAIL, 93.41%. 3f is closed at stage 0.** Brought back for review as the closure.
 
 **2026-09-24.** Branch `research/3f-stage0`, PR #107. Amendment 4 and its

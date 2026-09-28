@@ -794,6 +794,7 @@ enforces it.
 | `pead_events.py`, `pead_stage_a.py` | Post-earnings drift | L39 |
 | `ranker.py` | A 14-input ranking model | Trials 121, 122 |
 | `overnight_data.py`, `overnight_etf.py` | The overnight premium in an ETF | Trials 124, 125 |
+| `kronos_feature_ic.py` | Does a zero-shot Kronos forecast rank the next 15 to 60 minutes? Needs its own environment (`requirements-kronos.txt`) | L40, pre-registered, not run |
 
 Backtest harnesses outside `research/`: `backtester.py`,
 `swing_backtester.py`, `diagnose_entry_edge.py`, `tune_entry_params.py`.

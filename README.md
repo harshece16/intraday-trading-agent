@@ -3501,6 +3501,36 @@ It is now on by default, because it only runs when asked (`POST /api/chaywanapra
 
 **Read its output as leads, not verdicts.** That report and a test run the same morning agreed with the journal on the two findings that matter: 99% of setups fail reward-to-risk because targets at the next support or resistance don't cover the round-trip cost, and the engine stalled on one cycle for 2 minutes at 09:19. They also called expired Kite sessions a live-money risk while the engine is in paper mode, and guessed at a file that doesn't exist. It still never edits anything.
 
+### 93. Kronos, a price-forecasting model, pre-registered as research look L40 (not run yet)
+
+Kronos is an open-source "foundation model" for candlestick data: a transformer pre-trained on bars from many exchanges, which forecasts the next bars of any stock without being trained on it. Posts about it came up in the owner's reels. A cloud session researched it and wrote a pre-registered test, which was merged here on 2026-09-28.
+
+**The question it asks:** at six fixed times each session (09:45 to 13:30), does Kronos's forecast for the next 15, 30 or 60 minutes rank NIFTY 100 stocks by what they actually do next, by more than it costs to trade? It is a measurement, not a strategy. Nothing in the engine can import it, and no trial is spent unless it passes.
+
+| Fixed in advance | |
+| --- | --- |
+| Model | Kronos-small, zero-shot (no training on our data), code and weights pinned to versions dated before the sample |
+| Data | The Kite 5-minute cache, point-in-time NIFTY 100, sessions from 2025-09-01 to 2025-12-31. The 2026 window is not read |
+| Features | The forecast return over the next 15, 30 and 60 minutes, each tested only against its own horizon |
+| Control | The last hour's return, so plain momentum can't pass as a model finding |
+| Gate | A top-minus-bottom quintile spread above 33.26 bp with t > 2 over at least 60 sessions, positive in both halves, surviving multiple-testing correction across the three tests |
+| Stage 0 | Six checks run first, each a halt if it fails: the install matches the authors' own regression test, the model versions predate the sample, a proof that no later bar leaks into a forecast, timing, the price-adjustment check, and coverage |
+
+**What the research found before writing it** (`research/kronos-research-2026-09-28.md`): the paper's own backtest numbers could not be read from the cloud session. The one independent reproduction found Kronos 12 to 22% worse than "tomorrow equals today" on daily prices, with 48–54% direction accuracy. The project's prediction-engine sweep (§79) also found no verified net profit from models like it. **The expected result is a clean negative.** If it clears the gate anyway, the next step is a separately pre-registered trial, judged by the family-level bar (§80), not an engine change.
+
+**Running it is the owner's call.** It needs a separate research environment with PyTorch (about 800 MB), a copy of the third-party Kronos code at a pinned commit, and model weights from Hugging Face. About 50,000 forecasts at roughly 1.2 seconds each come to a night or a weekend of CPU on the Mac. Start it after 15:30 and outside the 19:30 momentum job, so it can't slow the live engine; the engine's watchdog flags any tick over 120 seconds. Stage 0 runs alone first and its results come back for review before the single IC pass:
+
+```bash
+cd backend
+python3 -m venv research/.kvenv
+research/.kvenv/bin/pip install -r requirements.txt -r research/requirements-kronos.txt
+git clone https://github.com/shiyu-coder/Kronos research/kronos_vendor
+git -C research/kronos_vendor checkout 67b630e67f6a18c9e9be918d9b4337c960db1e9a
+research/.kvenv/bin/python -m research.kronos_feature_ic --stage0-only
+```
+
+The pre-registration was drafted on an older copy of the project. Merging it renumbered the look from L38 to L40 and corrected the trial count from 119 to 125 (Amendment 2). Nothing in its design changed.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
