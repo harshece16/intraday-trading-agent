@@ -78,6 +78,10 @@ def _flat(n, price=100.0, series=EQ, start=0):
     (90.0, 100.0, 99.0, 90.0, -1),
     (95.0, 100.0, 99.0, 94.0, 0),
     (105.0, 0.0, 105.0, 101.0, 0),        # no previous close printed
+    (9.55, 10.0, 10.0, 9.55, -1),         # below Rs 20 a tick is wider than the window: -4.5% is the 5% band
+    (9.40, 10.0, 10.0, 9.40, 0),          # two ticks from any band
+    (10.45, 10.0, 10.45, 9.9, 1),
+    (95.5, 100.0, 99.0, 95.5, 0),         # the same move at Rs 100 is not a lock
 ])
 def test_lock(close, prev, high, low, expected):
     assert mw.lock(_chain([(0, close, prev, high, low, EQ)]), 0) == expected
@@ -119,6 +123,24 @@ def test_screen_s2_needs_120_traded_days_of_126():
     assert mw.passes_screens(c, 640, 1e8)                        # the gap has left the window
     c = _chain([r for r in _flat(700) if not 500 <= r[0] < 506])
     assert mw.passes_screens(c, 600, 1e8)                        # 120 of 126
+
+
+def test_a_row_with_no_traded_value_is_not_a_traded_day():
+    c = _chain(_flat(700))
+    for j in range(500, 507):
+        c["val"][j] = 0.0
+    assert mw.screens_failed(c, 600, 1e8) == ["S2"]
+    b = _book()
+    b.order("buy", "X", 0.0, placed=502, amount=1000.0)
+    b.work({"X": c}, 502, _sessions(n=700))
+    assert not b.pos and b.count["carried_buy_no_trade"] == 1
+
+
+def test_screens_failed_names_each_screen():
+    c = _chain(_flat(700))
+    c["ser"][590] = BE
+    assert mw.screens_failed(c, 600, 1.0) == ["S1", "S3"]
+    assert mw.passes_screens(_chain(_flat(700)), 600, 1e8)
 
 
 def test_screen_s3_is_a_floor_on_median_traded_value():
@@ -255,8 +277,11 @@ def test_an_ended_chain_pays_its_last_close_or_nothing_under_stress():
     for stress, chain, proceeds in ((False, ended, 40_000.0), (True, ended, 0.0), (True, clean, 100_000.0)):
         b = mw.Book(0.0, dp=False, stress=stress)
         b.pos["X"] = 1000.0
-        b.sell_ended("X", chain, 0.0)
+        b.sell_ended("X", chain, 0.0, "2020-05")
         assert "X" not in b.pos and b.forced == 1
+        assert b.ended[0]["month"] == "2020-05" and b.ended[0]["ended_in_t2t"] == (chain is ended)
+        assert b.ended[0]["last_series"] == ("BE" if chain is ended else "EQ")
+        assert b.ended[0]["proceeds"] == pytest.approx(b.cash)
         assert b.cash == pytest.approx(proceeds * (1 - m3.STT - m3.NSE_TXN - m3.SEBI
                                                    - m3.GST * (m3.NSE_TXN + m3.SEBI)))
 
@@ -295,12 +320,42 @@ def test_halves_are_3is_for_a_full_run():
     assert mw.series_stats([0.01, 0.02] * 94 + [0.01], months)["second_half_from"] == m3.HALF_SPLIT
 
 
-def test_k_counts_confirming_tiers_outward_and_stops_at_the_first_miss():
-    yes, no = {"CONFIRMS": True}, {"CONFIRMS": False}
-    assert mw.wide_k({"T3": no, "T4": yes, "T5": yes}) == 400
-    assert mw.wide_k({"T3": yes, "T4": no, "T5": yes}) == 600
-    assert mw.wide_k({"T3": yes, "T4": yes, "T5": {"testable": False}}) == 800
-    assert mw.wide_k({"T3": yes, "T4": yes, "T5": yes}) == 1000
+def _lists(sizes):
+    sessions = _sessions(start="2009-01-01", n=4400)
+    months = [m for m, _ in m3.month_ends(sessions) if m >= m3.SELECTION_START]
+    return sessions, {m: {"ewide": ["x"] * sizes(m)} for m in months}
+
+
+def test_k_is_800_unless_the_list_is_too_short_for_120_months():
+    sessions, unis = _lists(lambda m: 900)
+    assert mw.fixed_k(sessions, unis) == 800
+    sessions, unis = _lists(lambda m: 900 if m >= "2017-01" else 650)
+    assert mw.fixed_k(sessions, unis) == 600          # 800 names only from 2017: under 120 months
+    sessions, unis = _lists(lambda m: 450)
+    assert mw.fixed_k(sessions, unis) == 400
+    sessions, unis = _lists(lambda m: 300)
+    assert mw.fixed_k(sessions, unis) is None
+
+
+def test_the_tiers_inside_k():
+    assert mw.tiers_inside(800) == ["T3", "T4"]
+    assert mw.tiers_inside(600) == ["T3"]
+    assert mw.tiers_inside(400) == [] and mw.tiers_inside(None) == []
+
+
+def test_thresholds_are_the_written_ones():
+    assert (mw.T_TIER, mw.T_PAIRED, mw.T_FAMILY, mw.N_FAMILY) == (2.13, 1.65, 2.807, 10)
+
+
+def test_a_fill_at_the_last_slippage_row_is_counted():
+    sessions = _sessions(n=20)
+    c = _chain(_flat(10))
+    b = _book()
+    b.order("buy", "X", 0.0075, placed=1, amount=100_000.0)
+    b.order("buy", "Y", 0.0040, placed=1, amount=100_000.0)
+    b.work({"X": c, "Y": c}, 1, sessions)
+    assert b.count["fills_at_last_slippage_row"] == 1
+    assert mw.book_report(b)["share_of_turnover_at_last_slippage_row"] == pytest.approx(0.5)
 
 
 def test_paired_test_uses_the_months_both_books_have():
@@ -309,13 +364,19 @@ def test_paired_test_uses_the_months_both_books_have():
             "holdings": [{"month": m, "holdings": ["a", "b"]} for m in months[2:]]}
     running = {"months": months, "values": {"strategy": [100 * 1.01 ** i * (1 + 0.001 * (i % 3)) for i in range(12)]},
                "holdings": [{"month": m, "holdings": ["b", "c"]} for m in months]}
+    wide["values"]["benchmark"] = [100 * 1.02 ** i for i in range(10)]
+    running["values"]["benchmark"] = [100 * 1.01 ** i for i in range(12)]
     out = mw.paired_test(wide, running)
     assert out["n"] == 9 and out["mean"] > 0 and out["names_held_in_common_mean"] == 1
+    assert out["difference_in_excess"]["mean"] + out["difference_in_benchmarks"]["mean"] == pytest.approx(out["mean"])
+    assert out["difference_in_benchmarks"]["mean"] == pytest.approx(0.01)
     assert out["smallest_difference_detectable_at_80pct_power"] > 0
 
 
 def test_a_row_the_loader_skipped_is_reported_as_not_applied():
     assert mw.not_applied("Consolidation Of Shares From Re 1 To Rs 10", 10, set())
+    assert not mw.not_applied("Consolidation Of Shares From Re 1 To Rs 10", 10, {"consolidation"})
+    assert mw.not_applied("Capital Reduction", 10, set())
     assert mw.not_applied("Bonus 1:1", 10, {"dividend"})
     assert not mw.not_applied("Bonus 1:1", 10, {"bonus"})
     assert not mw.not_applied("Annual General Meeting", 10, set())
@@ -410,3 +471,38 @@ def test_load_caches_the_two_panels_apart(tmp_path, monkeypatch):
     assert os.path.exists(tmp_path / "p.pkl") and os.path.exists(tmp_path / "p_wide.pkl")
     assert "ser" in wide[1]["AAA"] and "ser" not in narrow[1]["AAA"]
     assert npx.load(bhav_dir=bhav, ca_dir=ca)[1]["AAA"]["raw"] == narrow[1]["AAA"]["raw"]
+
+
+def test_a_consolidation_is_applied_in_the_repaired_panel_only(tmp_path, monkeypatch):
+    bhav, ca = _cache(tmp_path, monkeypatch)
+    with open(os.path.join(ca, "ca_2025.csv"), "a", encoding="utf-8") as fh:
+        fh.write('"BBB","B Ltd","EQ","Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share",'
+                 '"10","05-Mar-2025","","",""\n')
+    _, wide, meta, events = npx.build(bhav_dir=bhav, ca_dir=ca, wide=True)
+    assert meta["actions_applied"]["consolidation"] == 1
+    assert ("BBB", 2, "consolidation", 10.0) == tuple(e[:4] for e in events if e[0] == "BBB")[0]
+    assert wide["BBB"]["close"][:2] == pytest.approx([2000.0, 2010.0]) and wide["BBB"]["close"][2] == 202
+    _, narrow, meta, events = npx.build(bhav_dir=bhav, ca_dir=ca)
+    assert "consolidation" not in meta["actions_applied"] and not [e for e in events if e[0] == "BBB"]
+    assert narrow["BBB"]["close"] == narrow["BBB"]["raw"]
+
+
+@pytest.mark.parametrize("purpose,expected", [
+    ("Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share", [("consolidation", 10.0)]),
+    ("Capital Reduction Rs 10 To Rs 3.30 / Consolidation Rs 3.30 To Rs.10", [("consolidation", 10 / 3.3)]),
+    ("Bonus 1:1", [("bonus", 2.0)]),
+])
+def test_parse_purpose_with_consolidations(purpose, expected):
+    got = npx.parse_purpose(purpose, 10, consolidations=True)
+    assert [k for k, _ in got] == [k for k, _ in expected]
+    assert [v for _, v in got] == pytest.approx([v for _, v in expected])
+    assert npx.parse_purpose(purpose, 10) == [a for a in expected if a[0] != "consolidation"]
+
+
+def test_consolidations_are_listed_with_their_ratio_and_who_they_touch():
+    unis = {"2025-05": {"e3i": ["AAA"] + ["x"] * 500}, "2025-06": {"e3i": ["x"] * 500}}
+    events = [("AAA", 7, "consolidation", 10.0, "2025-06-25", "Consolidation"), ("BBB", 3, "bonus", 0.5, "2025-06-25", "Bonus"),
+              ("CCC", 9, "consolidation", 3.03, "2025-06-02", "Consolidation")]
+    out = mw.consolidations(events, unis, held={"CCC"})
+    assert [(o["symbol"], o["ratio"], o["inside_ranks_1_to_400"], o["held_by_this_book"]) for o in out] == [
+        ("AAA", 10.0, True, False), ("CCC", 3.03, False, True)]

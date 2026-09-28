@@ -20,7 +20,8 @@ never loaded unless asked. Data only: nothing here reads a forward return.
 `load(wide=True)` is the repaired panel of #175
 (prereg-universe-width.md): it also keeps trade-for-trade rows (series BE and
 BZ) and each row's high, low, printed previous close and series, so a held
-stock that leaves the EQ series is still priced. The default output is
+stock that leaves the EQ series is still priced. It also applies share
+consolidations, which the default panel does not. The default output is
 unchanged, value for value, so trial 120 stays reproducible.
 """
 
@@ -145,6 +146,7 @@ RX_RS = re.compile(r"(?:rs|re)\.?\s*-?\s*" + _NUM, re.I)
 RX_PCT = re.compile(_NUM + r"\s*%")
 RX_DIV_BARE = re.compile(r"\bdiv(?!ision)\w*\.?\s*[-:]?\s*" + _NUM, re.I)
 RX_NUM = re.compile(_NUM)
+RX_CONSOLIDATION = re.compile(r"consolidat", re.I)
 
 
 def _split_ratio(text):
@@ -161,12 +163,30 @@ def _split_ratio(text):
     return None
 
 
-def parse_purpose(purpose, face_value):
+def _consolidation_ratio(text):
+    """'Consolidation ... From Re a To Rs b' with b > a: b/a, the number of old
+    shares that became one."""
+    for clause in re.split(r"/(?!-)|;", text):
+        m = RX_CONSOLIDATION.search(clause)
+        if not m:
+            continue
+        nums = [float(x) for x in RX_NUM.findall(clause[m.end():])]
+        if len(nums) >= 2 and 0 < nums[0] < nums[1]:
+            return nums[1] / nums[0]
+        return None
+    return None
+
+
+def parse_purpose(purpose, face_value, consolidations=False):
     """Actions in one corporate-action row: a list of (kind, value) with kind in
     split/bonus/rights/demerger/dividend. Unparsed split/bonus/rights text is
-    returned as ('unparsed', text) so stage 0 can count it."""
+    returned as ('unparsed', text) so stage 0 can count it. The repaired panel
+    asks for consolidations as well; 3i's panel never did."""
     text = purpose.replace("–", "-")
     acts = []
+    if consolidations and RX_CONSOLIDATION.search(text):
+        r = _consolidation_ratio(text)
+        acts.append(("consolidation", r) if r else ("unparsed", text))
     if RX_SPLIT_KW.search(text):
         r = _split_ratio(text)
         acts.append(("split", r) if r else ("unparsed", text))
@@ -206,7 +226,7 @@ def parse_purpose(purpose, face_value):
     return acts
 
 
-def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025):
+def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025, consolidations=False):
     """[(symbol, ex_date iso, [(kind, value)...], purpose)] from NSE's yearly CSVs."""
     rows = []
     for path in sorted(glob.glob(os.path.join(ca_dir, "ca_*.csv"))):
@@ -224,7 +244,7 @@ def load_corporate_actions(ca_dir=CA_DIR, first_year=2008, last_year=2025):
                     fv = float(r.get("FACE VALUE") or 0)
                 except ValueError:
                     fv = 0.0
-                acts = parse_purpose(r.get("PURPOSE", ""), fv)
+                acts = parse_purpose(r.get("PURPOSE", ""), fv, consolidations)
                 if acts:
                     rows.append((r["SYMBOL"], ex, acts, r.get("PURPOSE", "")))
     return rows
@@ -336,9 +356,12 @@ def build(include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
     import bisect
     counts = {"split": 0, "bonus": 0, "rights": 0, "demerger": 0, "dividend": 0,
               "unparsed": 0, "unparsed_rights": 0, "rejected": 0, "no_chain": 0, "no_session": 0}
+    if wide:
+        counts["consolidation"] = 0
     events = []   # (chain, row position, kind, factor, ex_date, purpose) for stage-0 checks
     factors = {}  # chain -> {row position: product of factors}
-    for sym, ex, acts, purpose in load_corporate_actions(ca_dir, last_year=2026 if include_held_out else 2025):
+    for sym, ex, acts, purpose in load_corporate_actions(ca_dir, last_year=2026 if include_held_out else 2025,
+                                                         consolidations=wide):
         canon = canonical(sym, nxt, cache)
         c = chains.get(canon)
         if c is None:
@@ -357,6 +380,8 @@ def build(include_held_out=False, bhav_dir=BHAV_DIR, ca_dir=CA_DIR, wide=False):
             f = None
             if kind in ("split", "bonus"):
                 f = 1.0 / value
+            elif kind == "consolidation":
+                f = value
             elif kind == "rights":
                 a, b, price = value
                 terp = (b * prev_close + a * price) / (a + b) if prev_close > 0 else 0
