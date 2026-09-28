@@ -27,6 +27,7 @@ import os
 import subprocess
 import tempfile
 import threading
+import time
 from datetime import datetime, timezone
 
 import config
@@ -107,13 +108,52 @@ def _allowed():
         return True
 
 
-def _gather_findings(hours):
-    return {
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Rules about the code's hygiene rather than how it trades; left out of the review.
+_NOT_TRADING_AREAS = ("security", "ui", "workflow")
+
+REVIEW_TASK = """This is the fortnightly review of Sahab's Dimaag. `recent_changes` lists \
+every change merged in the window and the platform's rules as they stand now. \
+1. For the changes that touch how stocks are picked, entered, sized or exited, say whether \
+the journal data above shows each one working as intended, or that there is too little data \
+to tell. \
+2. Name rules the data shows never firing, firing on everything, or contradicting each other. \
+3. Propose at most five improvements to the decision rules, each naming the file or rule id it \
+touches and the test that must pass before it ships: net of costs, on both halves of the \
+sample, counted as a new trial. Say plainly when the right move is to change nothing."""
+
+
+def _recent_changes(days):
+    """What changed in the brain over the window: the merged commits, and the
+    rules as they stand (docs/architecture/rules.json)."""
+    out = {"window_days": days}
+    try:
+        proc = subprocess.run(["git", "log", f"--since={days} days ago", "--format=%ad %s", "--date=short"],
+                              cwd=REPO, capture_output=True, text=True, timeout=30)
+        out["merged_changes"] = proc.stdout.splitlines()
+    except Exception as exc:
+        out["merged_changes"] = f"git log unavailable: {exc}"
+    # ponytail: the whole rulebook, since rules.json only began on 2026-09-28;
+    # diff it against the window's start once it has two weeks of history.
+    try:
+        with open(os.path.join(REPO, "docs", "architecture", "rules.json")) as f:
+            out["rules"] = [{k: r.get(k) for k in ("id", "area", "status", "rule")}
+                            for r in json.load(f)["rules"] if r.get("area") not in _NOT_TRADING_AREAS]
+    except Exception as exc:
+        out["rules"] = f"rules.json unavailable: {exc}"
+    return out
+
+
+def _gather_findings(hours, changes=False):
+    findings = {
         "checklist_blockers": database.checklist_blocker_stats(hours),
         "journal_summary": database.journal_summary(),
         "dimag_ki_batti": database.dimag_ki_batti(),
         "recent_warn_error_activity": database.recent_activity_issues(hours),
     }
+    if changes:
+        findings["recent_changes"] = _recent_changes(round(hours / 24))
+    return findings
 
 
 def _ask_api(user_content):
@@ -156,6 +196,7 @@ def _ask_llm(findings):
         "Here is the platform's real data for this window:\n\n"
         + json.dumps(findings, indent=2, default=str)
         + "\n\nAnalyze it and give your prioritized recommendations."
+        + ("\n\n" + REVIEW_TASK if "recent_changes" in findings else "")
     )
     names = backends()
     for i, name in enumerate(names):
@@ -167,14 +208,14 @@ def _ask_llm(findings):
             logger.warning(f"Chaywanaprash: {name} failed ({exc}) — trying {names[i + 1]}")
 
 
-def analyze(hours=None, persist=True):
+def analyze(hours=None, persist=True, changes=False):
     """Runs one research pass: real stats always; an LLM-written analysis
     of them too, if an LLM is available and today's budget allows.
     Returns {"llm_used": bool, "narrative": str|None, "findings": {...},
     "note": str|None}. Never raises for a missing key or a spent budget —
     only for something actually going wrong while it should have run."""
     hours = hours or config.CHAYWANAPRASH.get("lookback_hours", 24)
-    findings = _gather_findings(hours)
+    findings = _gather_findings(hours, changes)
 
     if not _allowed():
         reason = (
@@ -214,3 +255,54 @@ def stats():
         "configured": bool(backends()), "backends": backends(),
         "used_today": used, "daily_limit": config.CHAYWANAPRASH.get("daily_limit", 12),
     }
+
+
+# ---- the fortnightly review, started from the engine tick --------------------
+
+_review = {"date": None}
+
+
+def review_due(now, holiday):
+    """After the close on a trading day, when no two-week review with a
+    narrative is under a week old. One look a day: the answer holds until
+    tomorrow, so the tick doesn't re-read the reports every few seconds and a
+    failed run retries the next trading day."""
+    conf = config.CHAYWANAPRASH
+    if not conf.get("review_every_days") or holiday or now.weekday() >= 5:
+        return False
+    if now.strftime("%H:%M") < conf.get("review_after", "15:40") or _review["date"] == now.date():
+        return False
+    _review["date"] = now.date()
+    hours = conf.get("review_lookback_days", 14) * 24
+    cutoff = time.time() - (conf["review_every_days"] - 0.5) * 86400
+    return not any(r["llm_used"] and (r["lookback_hours"] or 0) >= hours and r["ts"] >= cutoff
+                   for r in database.recent_chaywanaprash_reports(limit=50))
+
+
+def maybe_start_review(now, holiday, log):
+    """Called from the engine tick. Starts the review in its own thread (the
+    CLI takes about 30 s and the tick must not wait) and reports the outcome
+    through `log`, the engine's activity log. Never raises."""
+    try:
+        if not review_due(now, holiday):
+            return False
+        days = config.CHAYWANAPRASH.get("review_lookback_days", 14)
+
+        def work():
+            try:
+                result = analyze(hours=days * 24, changes=True)
+            except Exception as exc:
+                logger.exception("Chaywanaprash: the fortnightly review failed")
+                log("system", f"Chaywanaprash: the fortnightly review failed ({exc})", level="warn")
+                return
+            if result["llm_used"]:
+                log("system", f"Chaywanaprash: the review of the last {days} days is saved. "
+                              "Read it at GET /api/chaywanaprash/reports; it changes nothing by itself")
+            else:
+                log("system", f"Chaywanaprash: the review saved stats only. {result['note']}", level="warn")
+
+        threading.Thread(target=work, name="chaywanaprash-review", daemon=True).start()
+        return True
+    except Exception:
+        logger.exception("Chaywanaprash: could not start the fortnightly review")
+        return False

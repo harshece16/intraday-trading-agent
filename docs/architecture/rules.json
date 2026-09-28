@@ -1293,7 +1293,7 @@
    "id": "INT-08",
    "area": "integration",
    "status": "active",
-   "rule": "Chaywanaprash is read-only. It always returns the real computed journal stats, and adds an LLM narrative only when an LLM is available and today's budget allows: the Anthropic API when ANTHROPIC_API_KEY is set, otherwise the Claude Code CLI with every tool, hook and MCP server switched off. In 'auto' the CLI is also the fallback when the API call fails. It runs only when asked. Every run, with or without the LLM, is saved to chaywanaprash_reports.",
+   "rule": "Chaywanaprash is read-only. It always returns the real computed journal stats, and adds an LLM narrative only when an LLM is available and today's budget allows: the Anthropic API when ANTHROPIC_API_KEY is set, otherwise the Claude Code CLI with every tool, hook and MCP server switched off. In 'auto' the CLI is also the fallback when the API call fails. It runs when asked, and once a week on its own as the fortnightly review (INT-10). Every run, with or without the LLM, is saved to chaywanaprash_reports.",
    "why": "Never fabricate a narrative; a human decides on every change.",
    "enforced_in": "backend/chaywanaprash.py:analyze; backend/chaywanaprash.py:backends; backend/chaywanaprash.py:_ask_cli",
    "config": "CHAYWANAPRASH.enabled = True; llm_backend = 'auto'; daily_limit = 12; lookback_hours = 24",
@@ -1315,6 +1315,18 @@
    "verify": "GET /api/alerts/telegram shows configured, enabled and the last error; POST /api/alerts/telegram/test sends one test message",
    "source": "README §66",
    "test": "backend/tests/test_telegram_alerts.py::test_only_actionable_lines_are_sent"
+  },
+  {
+   "id": "INT-10",
+   "area": "integration",
+   "status": "active",
+   "rule": "Chaywanaprash's fortnightly review runs after the close on a trading day, at most once a day, only when no 14-day report with a narrative is under a week old. It reads 14 days of the journal, every change merged in that time and the trading rules as they stand, and proposes at most five improvements, each with the test that must pass before it ships. It runs off the tick thread and changes nothing.",
+   "why": "The rules change fast; a standing review checks each change against what the journal shows, without letting an LLM edit the decision logic.",
+   "enforced_in": "backend/chaywanaprash.py:review_due; backend/chaywanaprash.py:maybe_start_review; backend/trading_engine.py:_tick_impl",
+   "config": "CHAYWANAPRASH.review_every_days = 7 (0 turns it off); review_lookback_days = 14; review_after = '15:40'",
+   "verify": "After the close, the activity log shows 'Chaywanaprash: reviewing the last two weeks' and then 'the review of the last 14 days is saved'; GET /api/chaywanaprash/reports shows a report with lookback_hours 336",
+   "source": "README §95",
+   "test": "backend/tests/test_chaywanaprash.py::test_review_runs_off_the_tick_thread_and_logs_the_outcome"
   },
   {
    "id": "MOM-01",

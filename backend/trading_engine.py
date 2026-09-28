@@ -26,6 +26,7 @@ import costs
 import data_provider
 import depth_sampler
 import momentum_book
+import chaywanaprash
 import jev_book
 import database
 import telegram_alerts
@@ -1400,6 +1401,10 @@ class TradingEngine:
         if phase == "closed" and momentum_book.maybe_start_evening_job(now, holiday):
             self.state.log("system", "Momentum book: evening job started (fetch today's bhavcopy, mark to market, "
                                      "rebalance on the first session of a month)")
+
+        if phase == "closed" and chaywanaprash.maybe_start_review(now, holiday, self.state.log):
+            self.state.log("system", "Chaywanaprash: reviewing the last two weeks of trading and every change "
+                                     "merged in that time (proposes only, changes nothing)")
 
         if self._last_premarket_run_date != now.date() and self.scanner:
             # Runs every day, holiday included — it's a read on the last
