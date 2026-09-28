@@ -17,7 +17,7 @@ has two jobs that share one codebase:
 2. **Decide what is allowed to run** by testing every idea against a rule
    written down before its data is read.
 
-The second job governs the first. After 125 recorded trials, one strategy has
+The second job governs the first. After 127 recorded trials, one strategy has
 passed (monthly momentum held in delivery), so that is the only strategy with
 a book of its own. The intraday engine still scans, labels setups and
 enforces risk, but its automatic entries are switched off by the evidence
@@ -159,7 +159,7 @@ flowchart TB
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
-| **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 125 trials of record |
+| **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 127 trials of record |
 | **Journal** | Persistence and every read model the dashboard uses | `database` | Running |
 | **Security and ops** | Dashboard key, log redaction, alerts, watchdog | `auth`, `telegram_alerts`, `scripts/` | Running |
 
@@ -326,7 +326,7 @@ flowchart TD
     Own -->|"only the owner"| Real(["Real money"])
 ```
 
-Trials of record: **125**. Passed: **1** (trial 120). Held-out window: spent
+Trials of record: **127**. Passed: **1** (trial 120; re-run on repaired prices as trial 126, it survives narrowly, with a smaller edge). Held-out window: spent
 once, for the momentum family.
 
 ## 9. Security model

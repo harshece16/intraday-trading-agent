@@ -1,3 +1,59 @@
+## Re: Entry 24 — H1 to H14 applied in one commit. PR opened. Three things go to the owner with the results.
+
+**2026-09-28.** Branch `research/universe-width`. Every replacement wording
+in Entry 24 is applied. Two were strengthened with evidence instead of
+weakened: the margins in H3 were recomputed from the saved series (Deflated
+Sharpe margin 0.006% a month, 0.02 points of slippage a side; t margin 0.03%
+a month, 0.10 points), and H4's June 2021 claim now cites printed prices and
+lock flags committed as `data/momentum_width_june_2021.json` (three stocks in
+trade-for-trade from 9 June; locked at the lower band on 1, 2 and 5 July;
+first session a sell could fill, 6 July). Nothing was re-run.
+
+**To the owner, with the results:** the main question could not be tested,
+and whether to register a new test; the paper book's loader, whether and
+when; the forward band's expected figure. The owner is also told the pass is
+narrow.
+
+## Re: Entry 23 — amendment 4 and the list's script committed (`c93936e`); A′, B′, the three tier records and W run once each. Brought back with the results.
+
+**2026-09-28.** F1, F3 to F8, G1 to G7 and G10 are in amendment 4. The
+script is `backend/research/panel_differences.py`; the regenerated list has
+the same 743 rows. The simulator was not touched after stage 0 run 2
+(`3d210ce`). Results: `results-universe-width.md`. Trial 126 survives trial
+120's criteria; L42 survives L38's; trial 127 FAILS on criteria 1, 2 and 6;
+L43 to L45 were not taken.
+
+## Re: Entry 22 — the panel-difference list holds 743 rows, not ten. Stopped before A′ and brought it back.
+
+**2026-09-28.** Entry 22 said to stop if the list held anything beyond the
+ten expected rows. It did: 640 actions were applied at the next EQ row
+because the stock was in trade-for-trade on its ex-date, 42 of the 743 on
+stocks inside the 400 most-traded. I proposed no decomposition run. The list
+was committed (`0e829a7`) and the finding added to issue #175.
+
+## Re: Entry 21 — amendment 2 (`ac42d2d`), code aligned (`1991648`), stage 0 run twice. Run 1 failed gate 6; amendment 3 (`142134c`), code `3d210ce`, run 2 passed. **The tiers cannot be tested.**
+
+**2026-09-28.** R1 to R10 are in amendment 2. Stage 0 run 1 failed gate 6 on
+two real actions outside the loader's bounds and showed seven overstated
+dividend amounts (#178). Amendment 3 fixed all three in the repaired panel
+only. With screen S3 the list reaches 600 names only from 2020-08, so T3, T4
+and T5 have 63, 56 and 30 months against the 120 required and K is 400. S3
+was not changed. #177 filed for consolidations.
+
+**The owner was told on 2026-09-28**, before stage 0 ran, that ranks 401–600
+would be read by this test (they were not, in the end), and after stage 0
+that the main question could not be tested and why.
+
+## Re: Entry 20 — amendment 1 written (`a2372f8`), text only. C1 to C18 answered; O1 adopted; O2 read from the owner's request; O3 not taken.
+
+**2026-09-28.** N_family is 10, t ≥ 2.807. A′ is trial 126 and W is trial
+127. K is fixed (option a), with criterion 8. A pass produces a
+recommendation only. The sweep note was reworded in seven places and the
+ledger records what the sweep read. One software check had run before the
+review came back (loader parity, 0 differences); it is disclosed in the
+amendment. The code `946cc31` was committed before the review and was not
+approved by it; it was aligned later in its own commit.
+
 ## Re: Entry 19 — L38 code and tests written after the accepted prereg; nothing run against project data. Stage 0 waits for the Mac.
 
 **2026-09-28.** Branch `claude/ideas-integration-analysis-emfua6`. Order of

@@ -4,7 +4,7 @@ Trader Sahab is a paper-mode trading system for Indian equities, built around
 one rule: **nothing trades until it passes a test that was written down before
 its data was read.** It began as an intraday agent that scans the NIFTY 100
 and follows Zerodha Varsity's Grand Checklist. That approach was measured,
-and it does not work. After 125 recorded strategy trials and two broad research
+and it does not work. After 127 recorded strategy trials and two broad research
 sweeps, the one strategy that has passed is slow: a **monthly momentum book
 held in delivery**. It now runs in paper, and new ideas are tested the same
 way beside it.
@@ -38,7 +38,9 @@ going live is the owner's decision alone.
   monthly momentum tilt with real losing years: −13% against its own
   universe in 2025 and −14% in 2016. Its evidence is a backtest, 200 unseen
   stocks and eight unseen months, and at the project-wide trial count it
-  would not pass. No strategy, fund or trader delivers anything like 1% a
+  would not pass. Re-run on repaired prices with honest fills it still
+  passes its own rule, narrowly and with a smaller edge: +0.71% a month
+  against the +0.82% first recorded ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better)). No strategy, fund or trader delivers anything like 1% a
   day.
 - **What was measured and failed**, so nobody retries it blind:
   - The Varsity checklist the intraday agent was built on: **−0.36R a trade,
@@ -61,7 +63,7 @@ going live is the owner's decision alone.
   ₹15.34 DP charge per stock sold. The momentum book survives because it
   replaces about three names a month, which costs about 0.7% of the book a
   year.
-- **Trials of record: 125** (`docs/research/trials.md`). New ideas are
+- **Trials of record: 127** (`docs/research/trials.md`). New ideas are
   judged against their own family of tries ([§80](#80-two-owner-decisions-overnight-etf-holds-are-allowed-paper-and-new-ideas-are-judged-against-their-own-family)), with a corrected
   Deflated Sharpe ratio ([§77](#77-the-deflated-sharpe-gate-could-never-pass-fixed)). The 2026 held-out window has been
   spent once, for the momentum family.
@@ -3569,6 +3571,41 @@ The owner asked for Chaywanaprash to improve Sahab's Dimaag on a schedule, using
 - **When:** a trading day after 15:40, when no 14-day review with a narrative is under a week old. At most one attempt a day, so a failed run retries the next trading day. It runs in its own thread; the CLI took 85 s on the first real run, and the tick doesn't wait.
 - **Settings:** `config.CHAYWANAPRASH["review_every_days"]` (7; `0` turns it off), `review_lookback_days` (14), `review_after` ("15:40"). It shares the 12-a-day budget and the API-or-CLI backends from §92.
 - **First run, on a copy of the journal (2026-09-28):** 125 merged changes and 202 trading rules went in (58 KB). Among its proposals: stop offering review cards whose own after-cost numbers are negative (already #166), check whether the Scorecard's failing verdict still applies now the scanner changed (§91), and audit target selection rather than lowering the 1.5 reward-to-risk bar. It also flagged two possible bookkeeping gaps (the cost item's pass and fail counts don't add up to the total, and `checklist_item_breakdown` is empty). These are unverified leads.
+
+### 96. Should the first pick come from more stocks? Tested: the running book holds up, a wider one is not shown to be better
+
+The owner asked (2026-09-28) whether the first pick should come from more stocks, "not just 100", because every later step depends on it. There are two first picks in this project, and they have different answers.
+
+| Book | Picks from | Answer |
+| --- | --- | --- |
+| Intraday scanner | NIFTY 100, then the 25 most-traded (§91) | Not re-tested. On the one wider list measured, 113 F&O stocks outside the index, no rule cleared costs (L26, L27, L34). An audit of the selection path is in `docs/research/scanner-audit-2026-09-28.md` |
+| Paper momentum book | Every NSE share, then the 200 most-traded | Tested here |
+
+**The test** was written down before its code (`docs/research/prereg-universe-width.md`), reviewed four times and amended four times before any return was read. It repaired the price data first, because a sweep found that the loaders read the EQ series only.
+
+**What the repair found (#175, #177, #178).** A stock that moves to trade-for-trade has no EQ row. The old data priced it at its last EQ close and sold it there. It also applied 743 corporate actions with a different factor, 42 of them on stocks inside the 400 most-traded. Of those 42, 32 are demergers, 30 of them applied ten sessions late: NSE puts a stock in trade-for-trade for about ten sessions after a demerger, and the old data folded those sessions into the adjustment. Of the 743, 566 are dividends and 127 demergers. Consolidations were not adjusted at all, and seven dividend amounts were overstated.
+
+**Results.** All figures are net of every Zerodha delivery charge and slippage, on 2010 to 2025. Nothing from 2026 was read.
+
+| Question | Result | Verdict |
+| --- | --- | --- |
+| Does the running rule survive repaired prices and honest fills? (trial 126) | **+0.71% a month over its benchmark, t 2.51, CAGR 20.6% against 11.9%.** First recorded as +0.82%, t 2.91, CAGR 22.3% | Survives its own rule narrowly, with a smaller edge |
+| Does its confirmation on ranks 201–400 survive? (L42) | +0.91% a month, t 3.00. First recorded as +1.00%, t 3.31 | Survives |
+| Does the rule work on ranks 401 to 1,000? (L43–L45) | Not run. With a floor of ₹70 lakh traded a day, the list reaches 600 stocks only from August 2020: 63, 56 and 30 months against the 120 required | **Could not be tested** |
+| Is one book over the 400 most-traded better than the running book? (trial 127) | +0.31% a month more, **t 0.97** against a bar of 1.65. About half of the gap is the wider list's own return. It also missed the family bar: t 2.76 against 2.807 | **FAIL. No change** |
+
+**Honest fills** means three things the first test did not model: no buy when a stock closes locked at its upper band and no sell at its lower band, no fill on a day it did not trade, and a real price when it is in trade-for-trade. The two largest monthly differences were June and July 2021, when the book held three Adani stocks that had moved to trade-for-trade. The old data priced and sold them at the close of 8 June. On repaired prices the book did 4.4 and 3.6 points worse, and its sells waited three sessions at the lower band.
+
+**What this does not show.**
+
+- Whether momentum works in less-traded stocks. The liquidity floor was set before the list sizes were known, and it made that question untestable. The floor was not changed afterwards. A new test would need its own pre-registration, and that is the owner's decision.
+- How much of the smaller edge is the data and how much the fills. Separating them would be another counted trial.
+- That the rule clears today's bar. The momentum family now counts ten tries. At ten, trial 126 would not pass (t 2.51 against 2.807). It is judged on trial 120's criteria because it cannot make a new claim.
+- What slippage really is. The rates are judgements from a 2010 study (#66). The excess stays above zero until about 2 percentage points more per side. Trial 126's pass does not: about 0.02 points more per side would fail it (Deflated Sharpe 0.952 against 0.95).
+
+**For the owner.** The paper book's own loader (`backend/momentum_book.py`) has the same three defects, and its first rebalance is on the evening of 2026-10-01. Fixing it changes the data a pre-registered forward test runs on, so whether and when is the owner's decision. The recommendation is before that date, in its own PR.
+
+Files: `docs/research/results-universe-width.md`, `docs/research/stock-picking-sweep-2026-09-28.md`, `backend/research/momentum_width.py`, `backend/research/panel_differences.py`, `backend/research/width_report.py`, `backend/tests/test_momentum_width.py`.
 
 ## Backtest results
 

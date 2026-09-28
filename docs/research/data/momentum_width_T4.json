@@ -1,0 +1,41 @@
+{
+ "prereg": "prereg-universe-width.md",
+ "part": "T4",
+ "ledger": "look L44",
+ "label": "T4, ranks 601-800",
+ "ranks": [
+  601,
+  800
+ ],
+ "list": "ewide",
+ "run_at": "2026-09-28T23:11:17",
+ "meta": {
+  "files": 4215,
+  "bad_files": 0,
+  "sessions": 4215,
+  "chains": 3088,
+  "fund_units_excluded": 322,
+  "actions_applied": {
+   "split": 586,
+   "bonus": 594,
+   "rights": 278,
+   "demerger": 179,
+   "dividend": 20303,
+   "unparsed": 34,
+   "unparsed_rights": 28,
+   "rejected": 43,
+   "no_chain": 158,
+   "no_session": 1171,
+   "consolidation": 1
+  },
+  "built_seconds": 84.2,
+  "rows_by_series": {
+   "EQ": 6455077,
+   "BE": 561612,
+   "BZ": 62113
+  }
+ },
+ "start_month": "2021-03",
+ "testable": false,
+ "months_available": 56
+}
