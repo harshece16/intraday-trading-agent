@@ -6,6 +6,163 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 23 — 2026-09-28 — automated reviewer: the panel-difference list ACCEPTED. Stopping was right. The 743 rows follow from pricing trade-for-trade rows, which the pre-registration had from its first commit, and nothing inside ranks 1–400 looks like a defect in the repaired panel. The size changes what A′ and B′ can claim, and one known limit on demergers must be written down. No decomposition run. After amendment 4 and the list's script are committed, A′, B′, the tier records and W may run without a further stop.
+
+Reviewed `momentum_width_panel_differences.json` (commit `0e829a7`): the
+summary, every row inside ranks 1–400, all of causes 3 and 5, the
+demergers, splits and bonuses of cause 2, and scans of all 743 rows for
+late application, extreme factors and series. Figures marked "recorded
+holdings" come from the committed `momentum_3i_partA.json` and
+`momentum_3i_partB.json`. No return was read.
+
+### State, checked
+
+| Claim | Check | Result |
+| --- | --- | --- |
+| Nothing but stage 0 has run | `docs/research/data/` | Stage-0 files and the list only |
+| The code has not changed since stage 0 run 2 | `git diff b295add HEAD -- backend` | Empty |
+| 743 rows, 42 inside ranks 1–400 | Rows recounted by cause, kind and flag | Match |
+| The list agrees with the panels' own counts | 85 newly applied less 3 no longer applied = 82 = 21,941 − 21,859 | Match |
+| 30 demergers inside ranks 1–400, about 10 sessions late | `applied_on` against `ex_date` | Match |
+| The script that built the list is committed | Search of `backend/` and the data folder | **Not found** (G9) |
+
+### Verdict
+
+Accepted, with corrections for amendment 4. I agree with the reading:
+causes 1 to 4 are the written rules seeing more rows, and cause 5 is
+amendments 1 and 3. The size is news, and it changes two things.
+
+### The four questions
+
+| # | Question | Ruling |
+| --- | --- | --- |
+| 1 | May A′ run once this is written down? | Yes. Required wording is G1 to G4 |
+| 2 | Does cause 3 need a rule? | No. It is 3i's written rule and its 0.98 ceiling, applied to the ex-date's own prices. A factor above 1 would give the demerged business a negative value. Report the three rows (G6) |
+| 3 | Is the renaming of four chains acceptable? | Yes. Same ISIN, more rows. Gate 3 compares names and found 100%, so none of the four was ever inside E-3i ranks 1–400. Recorded holdings: neither book ever held one (G7) |
+| 4 | Anything that looks like a defect in the repaired panel? | Nothing inside ranks 1–400. Three notes: G3, G9, G10 |
+
+### The decomposition
+
+**No decomposition run.** It would be a second backtest of the same rule
+and a counted trial, and two A-variants are a forking path: whichever read
+better could be told as the result. A′ keeps its one run. If the owner
+later asks which part moved the result, that is a separate pre-registered
+look, counted in the family, and it cannot change A′'s verdict.
+
+### What the list shows about demergers
+
+For a demerger followed by trade-for-trade, the repaired panel credits a
+holder with (default factor ÷ repaired factor) − 1 more than the default
+panel did, over the ten or so sessions after the ex-date.
+
+| Demergers of cause 1 | n | Mean | Median | Lowest | Highest | Beyond ±10% |
+| --- | --- | --- | --- | --- | --- | --- |
+| Inside ranks 1–400 | 30 | +1.6% | −0.6% | −45.9% (GFLLIMITED 2019) | +77.3% (SUVEN 2020) | 16 |
+| Outside | 77 | −5.5% | −3.7% | −54.6% | +75.2% | 41 |
+
+Inside ranks 1–400 there is no direction (14 of 30 positive). The spread
+is large. These are real moves of the parent's price. What a holder could
+not do is what the series assumes: put the value that left back into the
+parent at the ex-date open. For a stub such as SUVEN, where 5% of the
+price stayed, the series applies the stub's +77% to the whole position.
+Gate 6 cannot see any of this, because each day's move is small.
+
+### What is known in advance
+
+Recorded holdings against the list. A name counts if a recorded book held
+it in the ex-date's month or the month after.
+
+| Book | Name and ex-date | Difference on the name | On a 15-name book |
+| --- | --- | --- | --- |
+| Trial 120 | FRETAIL 2017-11-29 (cause 3) | −5.5% | about −0.37 points |
+| L38 | AARTIIND 2019-07-03 | −3.5% | about −0.23 points |
+| L38 | STAR 2024-12-06 | +9.7% | about +0.65 points |
+| L38 | AURUM 2020-12-23 | a loss of 98.8% removed | about +6.6 points (Entry 22, F3) |
+
+Ten other rows touch a held name, each by 0.02% or less. So the factors
+move trial 120's book by about −0.4 points over the whole run and L38's by
+about +7.0, of which AURUM is 6.6. Everything else reaches A′ and B′
+through the signal, the benchmark and the fills, and its direction is not
+known.
+
+The list also shows the stale-price effect that A′ exists to measure.
+Trial 120 held ATGL when it moved to trade-for-trade in June 2021: its
+last EQ close was 1,640.85 and its trade-for-trade close a week later was
+1,318.05. That effect is not estimated here.
+
+### Corrections for amendment 4
+
+From Entry 22, still due: F1, F3, F4, F6, F7, F8. F5 is settled by the
+count given (192 of 55,600 member-months, 0.35%, deepest rank 419); write
+it in. F9 is replaced by G8. F10 and F11 come with the results.
+
+**G1. What A′ and B′ measure.** Replace amendment 3, section 3, with: "A′
+and B′ run trial 120's and L38's rules on the repaired panel with the
+honest-fill rules. The repaired panel differs from the default panel in
+the rows it holds and in 743 corporate-action factors, 42 of them on
+stocks inside the 400 most-traded at the month-end before. A′ and B′
+measure the repaired panel and the fill rules together, and cannot say how
+much comes from each." Wherever the text says a result "did not survive
+honest fills", write "did not survive the repaired panel with honest
+fills".
+
+**G2. The counts by cause.** Add the five-row table from the list's
+summary. Say that causes 1 to 4 follow from pricing BE and BZ rows, and
+cause 5 from amendments 1 and 3.
+
+**G3. Known limit, demergers.** Add: "For a demerger the series assumes
+the value that left, the previous close less the ex-date open, was put
+back into the parent at the ex-date open. A holder could not do that. In
+the repaired panel the trade-for-trade sessions that follow are real moves
+of the parent, applied to the whole position." Add the table above.
+
+**G4. What is known in advance.** Add the table above and the two
+paragraphs under it.
+
+**G5. No decomposition run**, with the reason above.
+
+**G6. Cause 3.** Name the three rows (ARROWTEX 2011, FRETAIL 2017,
+DALMIASUG 2025) and say no rule was added.
+
+**G7. Renamed chains.** Name the four. State, from the lists, whether any
+of them is ever inside W's universe.
+
+**G8. With the results, in place of F9.** For each part, list every action
+on the list whose chain the book held on the ex-date or in the ten
+sessions after, with the difference on the name and the points on the
+book. Read the saved holdings against the list. No re-run.
+
+**G9. Commit the script that built the list.** The file's counts, cause
+labels and rank flags cannot be reproduced from the tree today.
+
+**G10. Small.**
+- KESORAMIND's repaired factor is 0.0500, which is the open ratio. So the
+  moved window edge decided it, not only the acceptance bound. F1's
+  wording stands.
+- Known limit: an action is applied at the chain's first row on or after
+  the ex-date, however late. In the repaired panel 19 rows are applied
+  more than 7 days late, the latest by 785 days (TCPLTD). None is inside
+  ranks 1–400.
+
+**No change to the simulator before the runs.** `simulate`, `Book`,
+`universes`, `lock`, `slippage` and the pass rules stay as they are at
+`3d210ce`. Reporting goes in a separate script.
+
+### Needs the owner's decision
+
+Nothing new. The message that the main question could not be tested is
+still due (Entry 22).
+
+### Next step, and where to stop
+
+1. Commit amendment 4 (F1, F3 to F8, G1 to G7, G10) and the script (G9).
+2. Run A′, then B′, then the three tier records, then W. One invocation
+   each. No further stop before them.
+3. Stop for review with the outputs, the results file, G8's report and
+   the ledger rows. Do not re-run any part.
+
+---
+
 ## Entry 22 — 2026-09-28 — automated reviewer: stage 0 (L41) ACCEPTED, run 2 passes all six gates. Amendments 2 and 3 ACCEPTED WITH CORRECTIONS. The three loader fixes are legitimate; one is written less exactly than the code applies it. The tiers are not testable and must not be run, and S3 stays. A′, B′ and W may run once amendment 4 and a panel-difference list are committed. Nothing waits on the owner for these runs.
 
 Reviewed amendments 2 and 3, `momentum_width_stage0_run1.json` and
