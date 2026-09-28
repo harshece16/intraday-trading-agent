@@ -194,8 +194,6 @@ The checklist and sizing read only finished candles. Stops, the plan re-check an
 <details>
 <summary><code>ENT-10</code> <b>Active</b> — No signal until the window holds at least 80 bars (lookback 250) and every indicator (ATR, EMA20/50, RSI, MACD, BB, ADX, stochastic) is computable.</summary>
 
-No signal until the window holds at least 80 bars (lookback 250) and every indicator (ATR, EMA20/50, RSI, MACD, BB, ADX, stochastic) is computable.
-
 | | |
 | --- | --- |
 | **Why** | Indicators need history; no read on thin data. |
@@ -224,8 +222,6 @@ A side passes only if all six required items pass: candlestick pattern, stop at 
 <details>
 <summary><code>ENT-12</code> <b>Active</b> — The pattern's range must be between 0.3x and 3.0x ATR, or the pattern item fails as an abnormal candle.</summary>
 
-The pattern's range must be between 0.3x and 3.0x ATR, or the pattern item fails as an abnormal candle.
-
 | | |
 | --- | --- |
 | **Why** | Varsity: don't trade tiny or abnormally long candles (stop too far). |
@@ -238,8 +234,6 @@ The pattern's range must be between 0.3x and 3.0x ATR, or the pattern item fails
 
 <details>
 <summary><code>ENT-13</code> <b>Active</b> — The stop sits at the pattern's extreme (no buffer) and is widened to at least 1.0 ATR from the entry.</summary>
-
-The stop sits at the pattern's extreme (no buffer) and is widened to at least 1.0 ATR from the entry.
 
 | | |
 | --- | --- |
@@ -271,8 +265,6 @@ The stop item needs a support (long) or resistance (short) level on the right si
 <details>
 <summary><code>ENT-15</code> <b>Active</b> — Volume item: the last finished bar's volume must exceed 1.0x its 10-bar average.</summary>
 
-Volume item: the last finished bar's volume must exceed 1.0x its 10-bar average.
-
 | | |
 | --- | --- |
 | **Why** | Varsity compares volume with its 10-period average. |
@@ -285,8 +277,6 @@ Volume item: the last finished bar's volume must exceed 1.0x its 10-bar average.
 
 <details>
 <summary><code>ENT-16</code> <b>Active</b> — Trend item: the 15-min trend (5m resampled x3, EMA20/50) agrees, or is flat with no opposing structure, or Brooks' always-in direction agrees.</summary>
-
-Trend item: the 15-min trend (5m resampled x3, EMA20/50) agrees, or is flat with no opposing structure, or Brooks' always-in direction agrees.
 
 | | |
 | --- | --- |
@@ -317,8 +307,6 @@ Target = the nearest S/R level beyond the entry (>0.1 ATR away) within 3 ATR tha
 <details>
 <summary><code>ENT-18</code> <b>Active</b> — News veto: sentiment &lt;= -0.5 blocks new longs and (in checklist mode) exits an open long; sentiment &gt;= +0.5 blocks new shorts and exits an open short.</summary>
 
-News veto: sentiment &lt;= -0.5 blocks new longs and (in checklist mode) exits an open long; sentiment >= +0.5 blocks new shorts and exits an open short.
-
 | | |
 | --- | --- |
 | **Why** | Strongly negative/positive news is a catalyst veto. |
@@ -348,8 +336,6 @@ Before an automatic entry, the plan is re-checked at the live price: the price m
 <details>
 <summary><code>ENT-20</code> <b>Active</b> — No new longs while the market bias is risk-off; no new shorts while it is risk-on.</summary>
 
-No new longs while the market bias is risk-off; no new shorts while it is risk-on.
-
 | | |
 | --- | --- |
 | **Why** | Don't fight the market-wide context. |
@@ -363,8 +349,6 @@ No new longs while the market bias is risk-off; no new shorts while it is risk-o
 
 <details>
 <summary><code>ENT-21</code> <b>Active</b> — An entry is blocked if the latest scan marks the stock excluded or favours the opposite side for it today.</summary>
-
-An entry is blocked if the latest scan marks the stock excluded or favours the opposite side for it today.
 
 | | |
 | --- | --- |
@@ -409,8 +393,6 @@ A review card is offered only when exactly one required checklist item failed, o
 <details>
 <summary><code>ENT-24</code> <b>Active</b> — Each (stock, side) gets at most one review card per session, remembered across restarts from manual_reviews.</summary>
 
-Each (stock, side) gets at most one review card per session, remembered across restarts from manual_reviews.
-
 | | |
 | --- | --- |
 | **Why** | A setup hovering near the bar all afternoon is asked about once. |
@@ -423,8 +405,6 @@ Each (stock, side) gets at most one review card per session, remembered across r
 
 <details>
 <summary><code>ENT-25</code> <b>Active</b> — A review card expires 300 s after it is offered and can no longer be approved.</summary>
-
-A review card expires 300 s after it is offered and can no longer be approved.
 
 | | |
 | --- | --- |
@@ -491,8 +471,6 @@ If MACD/RSI don't confirm, news contradicts (score x side &lt; -0.15) or fundame
 <details>
 <summary><code>RSK-02</code> <b>Active</b> — Size = (1% of capital) / stop distance, where the stop distance is the structural stop, else 1.5 x ATR(14), else 0.8% of price.</summary>
 
-Size = (1% of capital) / stop distance, where the stop distance is the structural stop, else 1.5 x ATR(14), else 0.8% of price.
-
 | | |
 | --- | --- |
 | **Why** | Van Tharp Percent Risk / Percent Volatility models. |
@@ -506,8 +484,6 @@ Size = (1% of capital) / stop distance, where the stop distance is the structura
 
 <details>
 <summary><code>RSK-03</code> <b>Active</b> — One position's notional is capped at 33% of capital (₹33,000 on ₹1,00,000).</summary>
-
-One position's notional is capped at 33% of capital (₹33,000 on ₹1,00,000).
 
 | | |
 | --- | --- |
@@ -538,8 +514,6 @@ Size reductions (checklist size factor x VIX multiplier) are applied before roun
 <details>
 <summary><code>RSK-05</code> <b>Active</b> — When India VIX &gt;= 20, every new position is sized at 0.5x until the next scan says otherwise.</summary>
 
-When India VIX >= 20, every new position is sized at 0.5x until the next scan says otherwise.
-
 | | |
 | --- | --- |
 | **Why** | Elevated volatility: reduce exposure. |
@@ -568,8 +542,6 @@ Daily loss limit: once today's net realized P&L is &lt;= -2% of capital (-₹2,0
 
 <details>
 <summary><code>RSK-07</code> <b>Active</b> — At most 3 open positions, counting cash and F&amp;O together.</summary>
-
-At most 3 open positions, counting cash and F&O together.
 
 | | |
 | --- | --- |
@@ -652,8 +624,6 @@ Liquidity gate before every entry: refuse if the spread > 6 bp (2x modelled slip
 <details>
 <summary><code>EXE-02</code> <b>Active</b> — If no order-book depth can be read, a paper entry proceeds (recorded as 'unchecked') but a live entry is refused.</summary>
 
-If no order-book depth can be read, a paper entry proceeds (recorded as 'unchecked') but a live entry is refused.
-
 | | |
 | --- | --- |
 | **Why** | Never place a real order on a book nobody looked at. |
@@ -667,8 +637,6 @@ If no order-book depth can be read, a paper entry proceeds (recorded as 'uncheck
 
 <details>
 <summary><code>EXE-03</code> <b>Active</b> · known gap #155 — Live equity orders are NSE, MIS (intraday), MARKET, with market_protection = 1%.</summary>
-
-Live equity orders are NSE, MIS (intraday), MARKET, with market_protection = 1%.
 
 | | |
 | --- | --- |
@@ -700,8 +668,6 @@ The engine starts in PAPER. Live is set only via POST /api/mode, which returns 4
 <details>
 <summary><code>EXE-05</code> <b>Active</b> — The engine thread and an API approval can't both enter the same stock: _entering and a position check guard every entry; a busy symbol is refused.</summary>
 
-The engine thread and an API approval can't both enter the same stock: _entering and a position check guard every entry; a busy symbol is refused.
-
 | | |
 | --- | --- |
 | **Why** | Approvals and engine ticks share one order path. |
@@ -714,8 +680,6 @@ The engine thread and an API approval can't both enter the same stock: _entering
 
 <details>
 <summary><code>EXE-06</code> <b>Active</b> — In live mode, approving a card places no order unless the request carries confirm_live = true.</summary>
-
-In live mode, approving a card places no order unless the request carries confirm_live = true.
 
 | | |
 | --- | --- |
@@ -781,8 +745,6 @@ Exactly one thread may close a position: every exit (stop, target, brain exit, s
 <details>
 <summary><code>EXT-04</code> <b>Active</b> — From 15:08 to 15:30 IST, every tick closes all open cash positions (at the live price, or the average price if unreadable) and all F&amp;O positions.</summary>
 
-From 15:08 to 15:30 IST, every tick closes all open cash positions (at the live price, or the average price if unreadable) and all F&O positions.
-
 | | |
 | --- | --- |
 | **Why** | Beat Zerodha's 15:12 MIS auto square-off (₹50 + GST per order) for closing-auction stocks. |
@@ -811,8 +773,6 @@ In checklist mode the only brain exit is the news veto. Exits are otherwise the 
 
 <details>
 <summary><code>EXT-06</code> <b>Off by default</b> — Step trailing stop (after N x R profit, move the stop up 1R at a time) exists but is disabled.</summary>
-
-Step trailing stop (after N x R profit, move the stop up 1R at a time) exists but is disabled.
 
 | | |
 | --- | --- |
@@ -846,8 +806,6 @@ Slippage and charges applied to every fill and every test.
 <details>
 <summary><code>CST-01</code> <b>Active</b> — The stop distance must be at least 1.0x the round-trip cost (0.1663% of price), both on the finished bar and again at the live entry price.</summary>
 
-The stop distance must be at least 1.0x the round-trip cost (0.1663% of price), both on the finished bar and again at the live entry price.
-
 | | |
 | --- | --- |
 | **Why** | Below 1x a stop-out is worse than 2R by construction (TMPV lost 4.33R in 38 s). |
@@ -861,8 +819,6 @@ The stop distance must be at least 1.0x the round-trip cost (0.1663% of price), 
 
 <details>
 <summary><code>CST-02</code> <b>Active</b> · known gap #155 · known gap #66 — Every fill (paper or live) is booked 3 bp against the trade and charged Zerodha's intraday tariff; realized P&amp;L is net of both legs' charges.</summary>
-
-Every fill (paper or live) is booked 3 bp against the trade and charged Zerodha's intraday tariff; realized P&L is net of both legs' charges.
 
 | | |
 | --- | --- |
@@ -879,8 +835,6 @@ Every fill (paper or live) is booked 3 bp against the trade and charged Zerodha'
 
 <details>
 <summary><code>CST-03</code> <b>Active</b> · known gap #66 — The checklist's round-trip cost is derived from config.COSTS at the largest notional the cap allows, not typed in: 0.1663% today.</summary>
-
-The checklist's round-trip cost is derived from config.COSTS at the largest notional the cap allows, not typed in: 0.1663% today.
 
 | | |
 | --- | --- |
@@ -1025,8 +979,6 @@ Which stocks are watched, and the market bias.
 <details>
 <summary><code>SCN-01</code> <b>Active</b> — The scanner's daily and 5-minute data always come from yfinance in one batched request each, never from Kite, even when a Kite session is live.</summary>
 
-The scanner's daily and 5-minute data always come from yfinance in one batched request each, never from Kite, even when a Kite session is live.
-
 | | |
 | --- | --- |
 | **Why** | Batched free data for about 110 tickers; the per-tick engine path is where Kite is used. |
@@ -1068,8 +1020,6 @@ The scanner runs every 5 minutes while the market phase is open or in the square
 <details>
 <summary><code>SCN-04</code> <b>Active</b> — A stock is excluded (AVOID) if its last close is below ₹100, its 20-day average turnover is below ₹50 cr/day, or its daily ATR is below 1.2% of price.</summary>
 
-A stock is excluded (AVOID) if its last close is below ₹100, its 20-day average turnover is below ₹50 cr/day, or its daily ATR is below 1.2% of price.
-
 | | |
 | --- | --- |
 | **Why** | Intraday trades need liquidity and enough range to beat costs. |
@@ -1096,8 +1046,6 @@ A stock with results due today or on the next weekday (NSE event calendar), or w
 
 <details>
 <summary><code>SCN-06</code> <b>Active</b> — Every stock is scored once as a long and once as a mirrored short (when allow_shorts), and the stronger side is kept as the row's side.</summary>
-
-Every stock is scored once as a long and once as a mirrored short (when allow_shorts), and the stronger side is kept as the row's side.
 
 | | |
 | --- | --- |
@@ -1156,8 +1104,6 @@ Market bias is scored from the NIFTY trend, its day change (±0.3%), holding abo
 
 <details>
 <summary><code>SCN-10</code> <b>Active</b> — TRIN (whole-exchange breadth), the Union Budget-day note, and bulk/block deals are shown as context and never add points.</summary>
-
-TRIN (whole-exchange breadth), the Union Budget-day note, and bulk/block deals are shown as context and never add points.
 
 | | |
 | --- | --- |
@@ -1282,8 +1228,6 @@ Only one yfinance download() runs at a time in the whole process. Waiting for th
 <details>
 <summary><code>DAT-05</code> <b>Active</b> — Kite historical-data calls in the live batch fetch use at most 3 concurrent workers, with submissions after the third staggered by about 0.33 s.</summary>
 
-Kite historical-data calls in the live batch fetch use at most 3 concurrent workers, with submissions after the third staggered by about 0.33 s.
-
 | | |
 | --- | --- |
 | **Why** | Kite's historical endpoint allows about 3 requests per second; bursting causes 429s. |
@@ -1395,8 +1339,6 @@ Kite login, NSE, news, language models, alerts.
 
 <details>
 <summary><code>INT-01</code> <b>Active</b> — A Kite login that starts but gets no /kite/callback within 120 s is reported as stalled, with the registered redirect URL shown.</summary>
-
-A Kite login that starts but gets no /kite/callback within 120 s is reported as stalled, with the registered redirect URL shown.
 
 | | |
 | --- | --- |
@@ -1541,8 +1483,6 @@ The paper run of the one strategy that passed.
 <details>
 <summary><code>MOM-01</code> <b>Paper only</b> — The momentum book is paper only: it holds positions in a JSON state file and places no order through any broker.</summary>
 
-The momentum book is paper only: it holds positions in a JSON state file and places no order through any broker.
-
 | | |
 | --- | --- |
 | **Why** | The 3i strategy has to pass a forward paper run before real money is considered. |
@@ -1571,8 +1511,6 @@ The momentum universe is the 200 stocks with the highest median traded value ove
 
 <details>
 <summary><code>MOM-03</code> <b>Active</b> — Fund units and ETFs are excluded from the panel: any ISIN starting INF, any symbol in eq_etfseclist.csv, or any name ending BEES/ETF/IETF/CASE.</summary>
-
-Fund units and ETFs are excluded from the panel: any ISIN starting INF, any symbol in eq_etfseclist.csv, or any name ending BEES/ETF/IETF/CASE.
 
 | | |
 | --- | --- |
@@ -1777,8 +1715,6 @@ A Jev round starts once per trading day at the first open-phase tick at or after
 <details>
 <summary><code>JEV-03</code> <b>Active</b> — Jev is asked about at most the first 15 stocks on the scanner's active list, in scanner order.</summary>
 
-Jev is asked about at most the first 15 stocks on the scanner's active list, in scanner order.
-
 | | |
 | --- | --- |
 | **Why** | The pre-registered shortlist size. |
@@ -1841,8 +1777,6 @@ If Jev can't be reached or no key is stored, the day is recorded as 'jev_unavail
 <details>
 <summary><code>JEV-07</code> <b>Active</b> — Kite-only fills: Jev entries and exits come only from Kite's live last traded price (live_ltp), never from the delayed yfinance fallback.</summary>
 
-Kite-only fills: Jev entries and exits come only from Kite's live last traded price (live_ltp), never from the delayed yfinance fallback.
-
 | | |
 | --- | --- |
 | **Why** | A delayed fill against live headlines would leak information in Jev's favour (#151). |
@@ -1855,8 +1789,6 @@ Kite-only fills: Jev entries and exits come only from Kite's live last traded pr
 
 <details>
 <summary><code>JEV-08</code> <b>Active</b> · known gap #158 — If Kite isn't connected when the round is due, the day is recorded as 'no_live_prices', Jev is not asked, and the day does not count as a session.</summary>
-
-If Kite isn't connected when the round is due, the day is recorded as 'no_live_prices', Jev is not asked, and the day does not count as a session.
 
 | | |
 | --- | --- |
@@ -1918,8 +1850,6 @@ Scoring: net_bp = sign x move_bp - the engine's intraday round trip at Rs 1,00,0
 
 <details>
 <summary><code>JEV-12</code> <b>Active</b> — Kill rule: after at least 100 buy/short decisions, if the cumulative net t-stat is below -2, the book switches itself off and runs no more rounds.</summary>
-
-Kill rule: after at least 100 buy/short decisions, if the cumulative net t-stat is below -2, the book switches itself off and runs no more rounds.
 
 | | |
 | --- | --- |
@@ -2110,8 +2040,6 @@ The trader agent may only reuse the checklist's own entry, stop and target (with
 <details>
 <summary><code>DSK-06</code> <b>Active</b> — The portfolio manager's rating is withheld (status 'ungrounded') if no grounded evidence remains to support it.</summary>
 
-The portfolio manager's rating is withheld (status 'ungrounded') if no grounded evidence remains to support it.
-
 | | |
 | --- | --- |
 | **Why** | A rating with nothing behind it is not logged as evidence. |
@@ -2219,8 +2147,6 @@ Selection runs use only sessions dated before HELD_OUT_START. The boundary is on
 <details>
 <summary><code>RES-04</code> <b>Active</b> — The bhavcopy loaders drop held-out sessions unless the caller passes include_held_out.</summary>
 
-The bhavcopy loaders drop held-out sessions unless the caller passes include_held_out.
-
 | | |
 | --- | --- |
 | **Why** | Once the cache held 2026 files, nothing stopped a selection run from reading them. |
@@ -2234,8 +2160,6 @@ The bhavcopy loaders drop held-out sessions unless the caller passes include_hel
 
 <details>
 <summary><code>RES-05</code> <b>Active</b> — 2026 bhavcopies live in a separate folder that selection code never reads.</summary>
-
-2026 bhavcopies live in a separate folder that selection code never reads.
 
 | | |
 | --- | --- |
@@ -2264,8 +2188,6 @@ The 2026 held-out window is spent only with the owner's say-so. The reviewer can
 
 <details>
 <summary><code>RES-07</code> <b>Active</b> — Log every read of data dated on or after HELD_OUT_START in the held-out exposure log, whether or not a statistic was computed.</summary>
-
-Log every read of data dated on or after HELD_OUT_START in the held-out exposure log, whether or not a statistic was computed.
 
 | | |
 | --- | --- |
@@ -2335,8 +2257,6 @@ Measurements that select no strategy are research looks. They are logged individ
 <details>
 <summary><code>RES-12</code> <b>Active</b> — A replication of an identical, already-counted configuration is logged and not counted.</summary>
 
-A replication of an identical, already-counted configuration is logged and not counted.
-
 | | |
 | --- | --- |
 | **Why** | Recovering a trade list is not a new attempt at an edge. |
@@ -2349,8 +2269,6 @@ A replication of an identical, already-counted configuration is logged and not c
 <details>
 <summary><code>RES-13</code> <b>Active</b> — A void run still counts as a trial.</summary>
 
-A void run still counts as a trial.
-
 | | |
 | --- | --- |
 | **Why** | Its result was seen, so the denominator must grow. |
@@ -2362,8 +2280,6 @@ A void run still counts as a trial.
 
 <details>
 <summary><code>RES-14</code> <b>Active</b> — An overstated trial count is never corrected downward.</summary>
-
-An overstated trial count is never corrected downward.
 
 | | |
 | --- | --- |
@@ -2391,8 +2307,6 @@ Amendments are appended to the pre-registration, dated, and state what had been 
 <details>
 <summary><code>RES-16</code> <b>Active</b> — Data gates are coded as halts and run before any forward return is read.</summary>
 
-Data gates are coded as halts and run before any forward return is read.
-
 | | |
 | --- | --- |
 | **Why** | A gate coded as a report let a judgement be made after the ICs were seen. |
@@ -2405,8 +2319,6 @@ Data gates are coded as halts and run before any forward return is read.
 
 <details>
 <summary><code>RES-17</code> <b>Active</b> — Where possible, a cheap measurement gates the expensive backtest, and the trial is spent only if the measurement clears.</summary>
-
-Where possible, a cheap measurement gates the expensive backtest, and the trial is spent only if the measurement clears.
 
 | | |
 | --- | --- |
@@ -2421,8 +2333,6 @@ Where possible, a cheap measurement gates the expensive backtest, and the trial 
 <details>
 <summary><code>RES-18</code> <b>Active</b> — No live module may import from backend/research.</summary>
 
-No live module may import from backend/research.
-
 | | |
 | --- | --- |
 | **Why** | Research code changes fast and is not held to engine standards. |
@@ -2435,8 +2345,6 @@ No live module may import from backend/research.
 
 <details>
 <summary><code>RES-19</code> <b>Active</b> — Live code that needs research logic carries its own copy, and a parity test holds the two to the same answers.</summary>
-
-Live code that needs research logic carries its own copy, and a parity test holds the two to the same answers.
 
 | | |
 | --- | --- |
@@ -2451,8 +2359,6 @@ Live code that needs research logic carries its own copy, and a parity test hold
 <details>
 <summary><code>RES-20</code> <b>Active</b> — Features use only data available before the decision time, proved by recomputing on truncated series.</summary>
 
-Features use only data available before the decision time, proved by recomputing on truncated series.
-
 | | |
 | --- | --- |
 | **Why** | A sentence asserting no lookahead is not evidence. |
@@ -2465,8 +2371,6 @@ Features use only data available before the decision time, proved by recomputing
 
 <details>
 <summary><code>RES-21</code> <b>Active</b> — Universe filters use the price as printed that day, not the split-adjusted price.</summary>
-
-Universe filters use the price as printed that day, not the split-adjusted price.
 
 | | |
 | --- | --- |
@@ -2481,8 +2385,6 @@ Universe filters use the price as printed that day, not the split-adjusted price
 
 <details>
 <summary><code>RES-22</code> <b>Active</b> — Returns must be capturable: entry after the signal bar, not the opening print or the closing auction.</summary>
-
-Returns must be capturable: entry after the signal bar, not the opening print or the closing auction.
 
 | | |
 | --- | --- |
@@ -2528,8 +2430,6 @@ Setting min_confidence_to_trade to 0 is a research-run override only. The live d
 <details>
 <summary><code>RES-25</code> <b>Active</b> — Held-out confirmation is mandatory before paper deployment: same sign, inside the band written in the pre-registration.</summary>
 
-Held-out confirmation is mandatory before paper deployment: same sign, inside the band written in the pre-registration.
-
 | | |
 | --- | --- |
 | **Why** | It is the price of the easier family-level bar. |
@@ -2542,8 +2442,6 @@ Held-out confirmation is mandatory before paper deployment: same sign, inside th
 
 <details>
 <summary><code>RES-26</code> <b>Active</b> — A forward paper book carries a pre-registered band and switches itself off on a breach.</summary>
-
-A forward paper book carries a pre-registered band and switches itself off on a breach.
 
 | | |
 | --- | --- |
@@ -2587,8 +2485,6 @@ Each completed step goes to the reviewer before the next begins. The reviewer wr
 <details>
 <summary><code>RES-29</code> <b>Active</b> — The reviewer never suggests loosening a gate, tuning a parameter or re-testing a variant to rescue a failed hypothesis.</summary>
 
-The reviewer never suggests loosening a gate, tuning a parameter or re-testing a variant to rescue a failed hypothesis.
-
 | | |
 | --- | --- |
 | **Why** | A positive result produced by searching is a failure even if the numbers look good. |
@@ -2616,8 +2512,6 @@ Overnight holds are limited to liquid Nifty 50 ETFs in delivery, in paper, after
 <details>
 <summary><code>RES-31</code> <b>Active</b> — Every write-up states survivorship bias, the contamination of the held-out window, and which universe and cost model were used.</summary>
 
-Every write-up states survivorship bias, the contamination of the held-out window, and which universe and cost model were used.
-
 | | |
 | --- | --- |
 | **Why** | Today's index membership applied to history flatters long-only results. |
@@ -2635,8 +2529,6 @@ The gates a result must clear.
 
 <details>
 <summary><code>EVL-01</code> <b>Active</b> — A new hypothesis must show net-of-cost |t| above the two-sided Bonferroni bound at 5% across its family size.</summary>
-
-A new hypothesis must show net-of-cost \|t\| above the two-sided Bonferroni bound at 5% across its family size.
 
 | | |
 | --- | --- |
@@ -2698,8 +2590,6 @@ The DSR luck baseline uses the null-consistent Sharpe dispersion 1/sqrt(n-1) unl
 <details>
 <summary><code>EVL-05</code> <b>Retired</b> — The old DSR default sharpe_std = |SR| / 2 is withdrawn.</summary>
 
-The old DSR default sharpe_std = \|SR\| / 2 is withdrawn.
-
 | | |
 | --- | --- |
 | **Why** | A synthetic edge with t near 71 scored 0.0 under it. |
@@ -2714,8 +2604,6 @@ The old DSR default sharpe_std = \|SR\| / 2 is withdrawn.
 <details>
 <summary><code>EVL-06</code> <b>Retired</b> — The project-wide DSR at the full trial count is no longer the pass gate for pre-registrations dated 2026-09-26 or later.</summary>
 
-The project-wide DSR at the full trial count is no longer the pass gate for pre-registrations dated 2026-09-26 or later.
-
 | | |
 | --- | --- |
 | **Why** | It needed roughly t >= 4.3 and was dominated by unrelated intraday searches. |
@@ -2728,8 +2616,6 @@ The project-wide DSR at the full trial count is no longer the pass gate for pre-
 
 <details>
 <summary><code>EVL-07</code> <b>Active</b> — The net result must be positive in both halves of the selection sample.</summary>
-
-The net result must be positive in both halves of the selection sample.
 
 | | |
 | --- | --- |
@@ -2744,8 +2630,6 @@ The net result must be positive in both halves of the selection sample.
 <details>
 <summary><code>EVL-08</code> <b>Active</b> — The net result must be positive over the most recent three years of the selection sample.</summary>
 
-The net result must be positive over the most recent three years of the selection sample.
-
 | | |
 | --- | --- |
 | **Why** | A decayed edge fails. |
@@ -2758,8 +2642,6 @@ The net result must be positive over the most recent three years of the selectio
 
 <details>
 <summary><code>EVL-09</code> <b>Active</b> — A strategy needs a minimum sample: at least 100 round trips or trades, and at least 500 nights for the overnight test.</summary>
-
-A strategy needs a minimum sample: at least 100 round trips or trades, and at least 500 nights for the overnight test.
 
 | | |
 | --- | --- |
@@ -2790,8 +2672,6 @@ A raw positive backtest is not a pass. Every gate in the pre-registered rule mus
 <details>
 <summary><code>EVL-11</code> <b>Active</b> — The trial count of record is the larger of the CLI run log and the highest trial number in the ledger.</summary>
 
-The trial count of record is the larger of the CLI run log and the highest trial number in the ledger.
-
 | | |
 | --- | --- |
 | **Why** | The log said 34 while the ledger said 119, so the Scorecard deflated for too few tries. |
@@ -2805,8 +2685,6 @@ The trial count of record is the larger of the CLI run log and the highest trial
 
 <details>
 <summary><code>EVL-12</code> <b>Retired</b> — When the JSON log and trials.md disagree, the JSON is the source of truth for the count.</summary>
-
-When the JSON log and trials.md disagree, the JSON is the source of truth for the count.
 
 | | |
 | --- | --- |
@@ -2852,8 +2730,6 @@ Cross-sectional statistics are computed per session and tested across sessions, 
 <details>
 <summary><code>EVL-15</code> <b>Active</b> — Multiple comparisons are corrected across the stated family: Benjamini-Hochberg at q = 0.10, with raw and Bonferroni shown alongside.</summary>
 
-Multiple comparisons are corrected across the stated family: Benjamini-Hochberg at q = 0.10, with raw and Bonferroni shown alongside.
-
 | | |
 | --- | --- |
 | **Why** | Ten tests at 5% produce a false positive by chance. |
@@ -2866,8 +2742,6 @@ Multiple comparisons are corrected across the stated family: Benjamini-Hochberg 
 
 <details>
 <summary><code>EVL-16</code> <b>Active</b> — The Scorecard and DSR report 'not enough data' below their minimum sample and never a fabricated number.</summary>
-
-The Scorecard and DSR report 'not enough data' below their minimum sample and never a fabricated number.
 
 | | |
 | --- | --- |
@@ -2915,8 +2789,6 @@ Every HTTP route except /kite/callback (and CORS preflight OPTIONS) requires the
 
 <details>
 <summary><code>SEC-03</code> <b>Active</b> — The key comparison is constant-time (hmac.compare_digest) and refuses everything when no key is configured or none is supplied.</summary>
-
-The key comparison is constant-time (hmac.compare_digest) and refuses everything when no key is configured or none is supplied.
 
 | | |
 | --- | --- |
@@ -3006,8 +2878,6 @@ Secret and runtime files are gitignored and never committed: the Kite session, t
 <details>
 <summary><code>SEC-09</code> <b>Active</b> — CORS only allows the local dashboard origins, unless the CORS_ALLOWED_ORIGINS env var is set.</summary>
 
-CORS only allows the local dashboard origins, unless the CORS_ALLOWED_ORIGINS env var is set.
-
 | | |
 | --- | --- |
 | **Why** | A wildcard origin plus a trading-control API was flagged by review. |
@@ -3079,8 +2949,6 @@ Never print or log a key or a Kite token. The dashboard key travels in the X-Api
 
 <details>
 <summary><code>SEC-14</code> <b>Active</b> — Research reads the live journal read-only and adds nothing to the live order path.</summary>
-
-Research reads the live journal read-only and adds nothing to the live order path.
 
 | | |
 | --- | --- |
@@ -3163,8 +3031,6 @@ One failing cycle or symbol never stops the engine: tick() catches everything; p
 <details>
 <summary><code>OPS-05</code> <b>Active</b> — Tick watchdog: checked every 15 s; a tick running over 120 s dumps every thread's stack to the log once and raises an error activity.</summary>
 
-Tick watchdog: checked every 15 s; a tick running over 120 s dumps every thread's stack to the log once and raises an error activity.
-
 | | |
 | --- | --- |
 | **Why** | A stalled tick means stops and entries aren't checked. |
@@ -3178,8 +3044,6 @@ Tick watchdog: checked every 15 s; a tick running over 120 s dumps every thread'
 
 <details>
 <summary><code>OPS-06</code> <b>Active</b> — Kite-session-expired alert: the first is immediate; repeats wait 15 min, then double up to a 4 h cap; a reconnect resets it to loud.</summary>
-
-Kite-session-expired alert: the first is immediate; repeats wait 15 min, then double up to a 4 h cap; a reconnect resets it to loud.
 
 | | |
 | --- | --- |
@@ -3272,8 +3136,6 @@ After the close (>= 15:30) on a trading day, log one end-of-session summary line
 <details>
 <summary><code>OPS-12</code> <b>Active</b> — Every checklist read, signal, blocked entry and fill is journaled (checklist_evals, signals, activity, trades), whether or not it traded.</summary>
 
-Every checklist read, signal, blocked entry and fill is journaled (checklist_evals, signals, activity, trades), whether or not it traded.
-
 | | |
 | --- | --- |
 | **Why** | The journal is the evidence base for every research verdict. |
@@ -3302,8 +3164,6 @@ On weekends and on the dates in holidays.NSE_HOLIDAYS_2026, the market phase is 
 <details>
 <summary><code>OPS-14</code> <b>Active</b> — On shutdown the backend stops any ngrok tunnel it started and releases its journal lock.</summary>
 
-On shutdown the backend stops any ngrok tunnel it started and releases its journal lock.
-
 | | |
 | --- | --- |
 | **Why** | Never leave the backend on the internet, or the journal locked, after exit. |
@@ -3330,8 +3190,6 @@ Schema changes are additive and idempotent. CREATE IF NOT EXISTS runs on every c
 
 <details>
 <summary><code>OPS-16</code> <b>Active</b> — Book state files are written atomically: the JSON goes to a .tmp file and is then moved into place with os.replace.</summary>
-
-Book state files are written atomically: the JSON goes to a .tmp file and is then moved into place with os.replace.
 
 | | |
 | --- | --- |
@@ -3375,8 +3233,6 @@ Never commit straight to main. Branch as type/short-description off main.
 <details>
 <summary><code>WFL-02</code> <b>Active</b> — Commit messages use a Conventional Commit prefix and keep a prose body that explains why.</summary>
 
-Commit messages use a Conventional Commit prefix and keep a prose body that explains why.
-
 | | |
 | --- | --- |
 | **Why** | A scannable type without losing the reasoning. |
@@ -3419,8 +3275,6 @@ CI must be green before merge. CI runs the full backend pytest suite on Python 3
 <details>
 <summary><code>WFL-05</code> <b>Active</b> — Merge by squash, one commit on main per logical change.</summary>
 
-Merge by squash, one commit on main per logical change.
-
 | | |
 | --- | --- |
 | **Why** | It keeps main readable and matching the PR title. |
@@ -3432,8 +3286,6 @@ Merge by squash, one commit on main per logical change.
 
 <details>
 <summary><code>WFL-06</code> <b>Active</b> — A user-visible change adds a new numbered section to README.md.</summary>
-
-A user-visible change adds a new numbered section to README.md.
 
 | | |
 | --- | --- |
@@ -3461,8 +3313,6 @@ Every confirmed bug gets a GitHub issue (label bug, or documentation) with evide
 <details>
 <summary><code>WFL-08</code> <b>Active</b> — A bug fix adds or updates a regression test for the specific behaviour.</summary>
 
-A bug fix adds or updates a regression test for the specific behaviour.
-
 | | |
 | --- | --- |
 | **Why** | The same bug must not return unnoticed. |
@@ -3475,8 +3325,6 @@ A bug fix adds or updates a regression test for the specific behaviour.
 
 <details>
 <summary><code>WFL-09</code> <b>Active</b> — Backend code stays compatible with Python 3.9: no 'X | Y' type hints and no match statements.</summary>
-
-Backend code stays compatible with Python 3.9: no 'X \| Y' type hints and no match statements.
 
 | | |
 | --- | --- |
@@ -3520,8 +3368,6 @@ Tests never touch the live journal or send alerts. Every test runs against a tem
 <details>
 <summary><code>WFL-12</code> <b>Active</b> — Shared reviewer channel files are committed on their own and never left on an unmerged branch.</summary>
 
-Shared reviewer channel files are committed on their own and never left on an unmerged branch.
-
 | | |
 | --- | --- |
 | **Why** | Reviewer Entry 5 was lost that way. |
@@ -3551,8 +3397,6 @@ The dashboard keeps the key in localStorage['dashboardApiKey']. A ?key= on the d
 
 <details>
 <summary><code>UI-02</code> <b>Active</b> — The Momentum Book and Jev Book pages are read-only: they only GET their summaries every 60 s, and no button on them changes book state.</summary>
-
-The Momentum Book and Jev Book pages are read-only: they only GET their summaries every 60 s, and no button on them changes book state.
 
 | | |
 | --- | --- |

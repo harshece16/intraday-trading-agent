@@ -229,8 +229,9 @@ def build_md(cat):
                 r["id"], STATUS_WORD[r["status"]], html.escape(gaps, quote=False),
                 html.escape(first_sentence(r["rule"]), quote=False)))
             w("")
-            w(md(r["rule"]))
-            w("")
+            if first_sentence(r["rule"]) != r["rule"].strip():
+                w(md(r["rule"]))            # the summary was shortened; give the whole rule
+                w("")
             w("| | |")
             w("| --- | --- |")
             if r.get("why"):
