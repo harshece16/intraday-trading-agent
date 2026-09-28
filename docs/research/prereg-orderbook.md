@@ -64,3 +64,33 @@ minutes and gone within thirty (see
 it would be a new pre-registration. The 33.26 bp hurdle, the
 Benjamini–Hochberg family of 15 and the ≥ 15-session requirement are
 unchanged.
+
+---
+
+# Amendment 2 — 2026-09-28, after the first full session was recorded and before any `depth_samples` row has been joined to a return
+
+**What had been seen:** row counts only. On 2026-09-28 the watchlist
+rotated with the scanner: 51 stocks were sampled at least once, and only 10
+met the 90% coverage rule of Amendment 1. No feature has been computed and
+no sample has been joined to a return.
+
+**The change:** from 2026-09-29 the engine's watchlist is fixed for each
+session. It is the 25 eligible NIFTY 100 stocks with the highest 20-day
+average turnover, chosen before the open from daily data and kept all day
+(README §91). A stock that becomes ineligible during the day is dropped and
+not replaced. The choice uses no price move, order-book reading or return.
+
+**Why:** a rotating list leaves most stock-sessions unusable, which cuts the
+test's sample by more than half. A fixed list gives up to 25 whole-session
+stocks a day. The most-traded names also have the tightest spreads, which is
+where a book signal would be cheapest to trade.
+
+**Unchanged:** the five features, the three horizons, the 15-session
+requirement, the 90% coverage rule, the 33.26 bp hurdle and the
+Benjamini–Hochberg family of 15. The 2026-09-28 session stays in the sample
+with the stock-sessions it has.
+
+**A consequence to state now:** the stocks in the sample become the most
+liquid NIFTY 100 names. A result will describe those stocks, not the whole
+index.
+
