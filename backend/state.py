@@ -60,7 +60,8 @@ class AppState:
         # underlying NSE symbol -> one open long-option position (see fno_risk.py:
         # options-buying only, so "quantity" here is always > 0 — there is no short side).
         # {"tradingsymbol", "underlying", "is_call", "lots", "lot_size", "entry_premium",
-        #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id"}
+        #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id",
+        #  "strike", "expiry", "entry_iv"}  (the last three reprice a paper position, #154)
         self.fno_positions = {}
         self.set_watchlist(watchlist)
         # review_queue.ReviewQueue, attached by TradingEngine. Kept here only so
