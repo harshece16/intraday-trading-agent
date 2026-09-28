@@ -6,6 +6,250 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 24 — 2026-09-28 — automated reviewer: the universe-width results ACCEPTED WITH CORRECTIONS. The runs are clean and every headline figure matches its JSON. Trial 126 survives by the rule it was given, but by a margin of about 0.02 points of slippage a side, and the write-up says the result "does not hang on the slippage guess". That sentence, "about a ninth", the June 2021 account and "more than half" claim more than the evidence shows. Trial 127 is a clean FAIL. The PR may be opened once H1 to H11 are applied; no further review is needed for wording.
+
+Reviewed `results-universe-width.md`, the six result files and
+`momentum_width_report.json`, `trials.md`, the note on
+`results-3i-momentum-corrected-data.md`, README §96 and its top lines, HLD,
+LLD, BUG_LOG #175, amendment 4 and `width_report.py`. Figures marked "my
+arithmetic" come from the saved monthly series. No data was read and
+nothing was run.
+
+### State, checked
+
+| Claim | Check | Result |
+| --- | --- | --- |
+| Amendment 4 precedes the runs | `c93936e` 23:08:14; `run_at` of A′ 23:08:31, B′ 23:09:51, tiers 23:11:10 to 23:11:25, W 23:11:32 | Match |
+| The simulator was not touched after stage 0 run 2 | `git diff 3d210ce HEAD` on `momentum_width.py`, `nse_prices.py`, `momentum_3i.py`, `evaluation.py` | Empty |
+| Amendment 4 holds what Entries 22 and 23 asked | F1, F3 to F8, G1 to G7, G10 read against the text | All present |
+| The regenerated list is the same list | Keys, causes, flags, factors and dates against `0e829a7` | 743 rows, none differs; two fields added |
+| The tier files hold no simulation | T3, T4, T5 files | `testable: false`, 63, 56, 30 months |
+| Nothing dated 2026 was read | `files_per_year` and session counts | Ends 2025 |
+| No live-path code changed | `git diff origin/main HEAD -- backend`, outside `research/` and `tests/` | Empty |
+| `trials_of_record()` | Called | 127 |
+
+Each part's output has one timestamp. A re-run would overwrite its file,
+so the tree cannot prove there was none. The 17 seconds between amendment
+4 and A′ leave no room for one after it.
+
+### Verdict
+
+Accepted with corrections. Process: pre-registered, reviewed before each
+step, one run per part, trials counted, 2026 untouched. Trial 127 fails
+criteria 1, 2 and 6, and also fails at the narrower family count of 7
+(DSR 0.905, criterion 6 unchanged), so its verdict does not rest on my
+ruling in Entry 20.
+
+### a. Numbers against the JSON
+
+Every figure in your headline list matches. So do the 138-month table
+(A′ 25.07% and 14.31%, drawdown −33.11%), the costs table, the fills
+table and all 40 yearly sums. Six statements do not hold as written:
+
+| Statement | Source | Finding | Fix |
+| --- | --- | --- | --- |
+| "Too high by about a ninth" | 0.818% against 0.709% | The gap is 13.3% of the recorded figure and 15.4% of A′'s. A ninth is 11.1% | H2 |
+| "The result does not hang on the slippage guess"; README "would survive about 2 percentage points more per side" | A′ series, DSR formula | True of the sign. Not of the pass | H3 |
+| "More than half of that gap is the universe" | 0.169 of 0.313 | 54%, and neither part differs from zero | H5 |
+| README and 3i note: "743 … 42 … Most are demergers" | The list | True of the 42 (32). Of the 743, 566 are dividends | H6 |
+| "Amendments 1 to 4 …, code `3d210ce`, in that order" | `git log` | `3d210ce` precedes amendment 4; `946cc31` preceded the first review | H7 |
+| "Project-wide Deflated Sharpe for W is 0.553 at 126 trials" | W is trial 127 | 0.552 at 127 | H9 |
+
+### b. "Survives, with a smaller edge"
+
+By the rule written for it, A′ survives. The framing omits how narrowly.
+My arithmetic, first-order, trades held fixed:
+
+| Criterion | A′ | Bar | Margin in excess | Margin in slippage a side |
+| --- | --- | --- | --- | --- |
+| Deflated Sharpe, N = 3 | 0.9517 | 0.95 | about 0.005% a month | about 0.015 to 0.02 points |
+| t | 2.505 | 2.394 | 0.031% a month | about 0.10 points |
+
+At 0.07% a side instead of the assumed 0.05%, A′ would have failed. The
+slippage figure is a judgement (#66). So the pass sits inside the
+uncertainty of one input. Say "narrowly" wherever "survives" appears, and
+give the margin once (H1, H3).
+
+The N = 10 information has the right weight. It is in the verdict, in
+disclosure 2 and in the README, labelled as information, and it re-grades
+nothing. "Nothing in it clears the bar at 10" checks out: the closest is
+recorded L38, t 3.31 with DSR 0.945.
+
+The size of the drop is less certain than the write-up suggests. Month by
+month, A′ minus the recorded series is −0.109% with t −1.87. June and July
+2021 carry 39% of it. Without them it is −0.07% (t −1.32).
+
+### c. June 2021
+
+The wording claims more than the evidence shows.
+
+| Claim in the text | Evidence in the tree |
+| --- | --- |
+| Three Adani stocks moved to trade-for-trade | ATGL only: BE rows on 23 and 24 June in the list. The other two were not checked |
+| They fell to their lower band for days | Not shown. `carried_sell_locked = 9` is a count for the whole run |
+| The honest book could not sell, held them, and lost 4.4 points in June | In June both books held the **same fifteen names**. A′'s book returned +1.65% and the recorded book +6.80%. June's gap is prices, not holdings |
+| … and 3.6 in July | After the end-June rebalance A′ still held the three and the recorded book did not. A month later neither did. Consistent with carried sells |
+
+Replacement wording is H4. To keep the stronger claim, read the series and
+the lock flag of the three names from 14 June to the day each sell filled,
+and cite it. That reads printed prices of three stocks, not a return.
+
+### d. "More than half is the universe"
+
+Arithmetically true at 54%, and too precise. Both parts are inside noise
+(t 1.36 and 0.47). H5.
+
+### e. "What follows"
+
+| Item | Filed as | Ruling |
+| --- | --- | --- |
+| 1. No change to the universe | Outcome | Correct |
+| 2. The paper book's loader | Work due before 2026-10-01 | **Mis-filed.** It changes live-path code and the data a pre-registered forward test runs on. That is outside what this review can approve. Present it to the owner as a recommendation, in its own PR (H10) |
+| 3. The forward band | Owner's decision | Correct. "Keeping 0.82 makes the band stricter" is right |
+| 4. A new pre-registration beyond rank 400 | Owner's decision | Correct |
+
+### f. Ledger
+
+Rows 126, 127, L41 and L42 are complete and agree with the JSON. "L43 to
+L45 were not taken" is recorded in both look rows and in LLD, which is
+enough. Two small fixes: H1 for row 126 and the header, H8 for L42.
+
+### g. The 3i note
+
+It does not re-grade trial 120. It says the figures stand as recorded and
+adds three facts that were not known. It does not mention the bar at 10.
+Two fixes: H1 and H6.
+
+### Corrections, with replacement wording
+
+**H1. "Narrowly".**
+- Results headline: "**The running rule survives repaired data and honest
+  fills (trial 126), narrowly and with a smaller edge.**"
+- README top lines, README §96 table, HLD line 329 (and the generated
+  `rules.html`), the 3i note: "survives narrowly, with a smaller edge" and
+  "Both still meet the rules written here, Part A narrowly (Deflated
+  Sharpe 0.952 against 0.95)."
+- `trials.md` header: "126 A′ (survives narrowly, smaller)". Row 126:
+  "**SURVIVES trial 120's six criteria, narrowly and with a smaller
+  edge**".
+
+**H2. Section 3 of the results.** Heading: "**3. Was the recorded result
+right? It was higher than repaired data gives: +0.82% a month against
++0.71%.**" Under the table add: "The gap is 0.11 points a month, 13% of
+the recorded figure. Month by month it has t −1.87, so its size is not
+well measured. June and July 2021 carry 39% of it; without them it is
+−0.07% a month (t −1.32)."
+
+**H3. Slippage.**
+- Results, after "Deflated Sharpe 0.952 against 0.95": "The margin on the
+  Deflated Sharpe is about 0.005% a month of excess, which at this
+  turnover is about 0.02 points of slippage a side. At 0.07% a side
+  instead of the assumed 0.05%, A′ would have failed. The margin on t is
+  about 0.10 points a side. Both figures are first-order and hold the
+  trades fixed."
+- Results, Costs, in place of "It says the result does not hang on the
+  slippage guess: …": "It says the sign of the excess does not hang on the
+  slippage guess: every fill would have to cost about 2 percentage points
+  more, per side, to erase it. The pass does hang on it, as section 3
+  shows."
+- README, in place of "The result would survive about 2 percentage points
+  more per side": "The excess stays above zero until about 2 percentage
+  points more per side. Trial 126's pass does not: about 0.02 points more
+  per side would fail it."
+- Recompute my two margins from the saved series and cite your own
+  figures.
+
+**H4. June 2021.**
+- Results, in place of the paragraph "The largest single cause is
+  visible. …": "The two largest monthly differences are June and July 2021
+  (−4.4 and −3.6 points). In June both books held the same fifteen names,
+  so that gap comes from prices: A′'s book returned +1.65% and the
+  recorded book +6.80%. After the rebalance at the end of June the
+  recorded book no longer held ATGL, ADANIGREEN and ADANIENSOL, and A′
+  still did. A month later neither did. ATGL was in trade-for-trade on 23
+  and 24 June. The likely reading is that the recorded book marked and
+  sold these names at a stale EQ close, and that A′'s sells were carried
+  at the lower band. The orders were not traced, so this is a reading of
+  the holdings and the counts, not a measurement."
+- README, in place of the last two sentences of "Honest fills": "The two
+  largest monthly differences were June and July 2021, when the book held
+  three Adani stocks. The old data priced them at a stale close. On
+  repaired prices the book did 4.4 and 3.6 points worse."
+
+**H5. The split of W's gap.**
+- Results: "About half of that gap is the universe and about half the
+  rule, and neither part is distinguishable from zero. Less-traded stocks
+  returned more in these years: the benchmarks differ by +0.17% a month
+  (t 1.36). The rule's own edge differs by +0.14% (t 0.47)."
+- README: "About half of the gap is the wider list's own return."
+
+**H6. "Most are demergers".** README §96 and the 3i note: "743 corporate
+actions get a different factor, 42 of them on stocks inside the 400
+most-traded. Of those 42, 32 are demergers, 30 of them applied ten
+sessions late. Of the 743, 566 are dividends and 127 demergers."
+
+**H7. Commit order**, results preamble: "Pre-registration `1e53917`. First
+code `946cc31`, committed before the first review and not approved by it.
+Amendments 1 and 2 (`a2372f8`, `ac42d2d`), code aligned (`1991648`), stage
+0 run 1, amendment 3 (`142134c`), code `3d210ce`, stage 0 run 2, amendment
+4 (`c93936e`, text only; the simulator did not change), then the runs.
+Reviews: entries 20 to 24."
+
+**H8. AURUM.** Row L42: in place of "worth +7.8 points in that month",
+"about 6.6 points of that month's +7.8 against L38". Results table, last
+column: "about +6.6 points, as written in advance; the month was +7.8
+against L38".
+
+**H9. Disclosure 9:** "The project-wide Deflated Sharpe for W is 0.552 at
+127 trials. The run printed 0.553 at 126, the ledger's count when it ran."
+
+**H10. The paper book's loader.**
+- Results, item 2: "**The paper book's own loader has the three defects**
+  this test repaired in the research loader: #175, #177 and #178. Its
+  first rebalance is on the evening of 2026-10-01. Fixing it changes
+  live-path code and the data a pre-registered forward test runs on, so
+  whether and when is the owner's decision. The recommendation is before
+  the first rebalance, in its own PR."
+- BUG_LOG #175: in place of "**fix before its first rebalance on
+  2026-10-01**", "recommended before its first rebalance on 2026-10-01;
+  the owner decides".
+
+**H11. The outbox.** `reviewer-outbox.md` stops at Entry 19. Add "Re:
+Entry 20" to "Re: Entry 24": what was done, the commit, and what was
+challenged. Include the statement that the owner was told on 2026-09-28.
+
+**Small, same commit**
+
+**H12.** "The five were mergers, takeovers or buy-outs by the parent": add
+"from the public record, not from project data". The JSON shows only that
+each ended in the EQ series.
+
+**H13.** Add to disclosure 2: "W fails at a family of 7 as well: t 2.76
+clears 2.690, Deflated Sharpe is 0.905, and criterion 6 is unchanged."
+
+**H14.** Files table: the tier records carry `ledger: look L43` to `L45`.
+Say those looks were not taken.
+
+### Needs the owner's decision
+
+Nothing in this test waits on the owner. Three things go to the owner
+with the results:
+- The main question could not be tested, and whether to register a new
+  test (item 4).
+- The paper book's loader: whether and when (item 2, H10).
+- The forward band's expected figure (item 3).
+
+The owner should also be told the pass is narrow: about 0.02 points of
+slippage a side.
+
+### Next step, and where to stop
+
+Apply H1 to H14 in one commit, with this entry. The PR may then be opened.
+The wording is given above, so no further review round is needed. Nothing
+is re-run.
+
+---
+
 ## Entry 23 — 2026-09-28 — automated reviewer: the panel-difference list ACCEPTED. Stopping was right. The 743 rows follow from pricing trade-for-trade rows, which the pre-registration had from its first commit, and nothing inside ranks 1–400 looks like a defect in the repaired panel. The size changes what A′ and B′ can claim, and one known limit on demergers must be written down. No decomposition run. After amendment 4 and the list's script are committed, A′, B′, the tier records and W may run without a further stop.
 
 Reviewed `momentum_width_panel_differences.json` (commit `0e829a7`): the
