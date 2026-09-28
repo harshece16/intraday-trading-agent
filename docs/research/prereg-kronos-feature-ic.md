@@ -53,7 +53,7 @@ Per feature × matched horizon, exactly as `research/step2_feature_ic.py` and `p
 - **Quintile spread:** per session, mean target of the top feature quintile minus the bottom quintile, in bp; mean and t across sessions. Also each quintile's own mean, so a long-only or short-only reading is visible.
 - Percentage of sessions with IC > 0; both halves separately.
 - **Power line:** with the session count obtained, the smallest IC and the smallest spread detectable at t = 2, so a null reads "no effect larger than X".
-- Multiple comparisons: Benjamini–Hochberg at q = 0.10 across the family of **3**.
+- Multiple comparisons: Benjamini–Hochberg at q = 0.10 across the family of **3** (the three raw quintile-spread tests). The partial-IC-given-m60 check in §8 is **outside that family**: it is a validity condition on a feature that has already cleared, not a fourth search shot, so it neither enlarges the family nor gets a BH-adjusted threshold of its own (amendment 1).
 
 ## 8. Gate for a trial, fixed now
 
@@ -87,3 +87,7 @@ Research look **L38**. Trials remain **119**. If the gate clears, the trial that
 - **A heavy dependency** (torch, ~800 MB, and the Kronos package) in a research-only environment. The user's 2026-09-28 instruction is taken as that decision for research use; nothing enters the live path.
 - **Spending the 2026 held-out window** for confirmation, if the gate clears. Not decided here.
 - **Compute on the Mac** for a night or a weekend, while the engine keeps running; the run must not compete with the engine for Kite (it reads the cache only).
+
+## Amendments
+
+1. **2026-09-28, before any code, per reviewer Entry 19.** §7 now states that the partial-IC-given-m60 condition is a validity check on an already-cleared feature and sits outside the BH family of three, rather than leaving that implicit. No threshold, feature, target or window changed.

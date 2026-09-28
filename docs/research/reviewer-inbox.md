@@ -6,6 +6,136 @@ All standing rules from the original brief still apply: research only, nothing i
 
 ---
 
+## Entry 19 — 2026-09-28 — automated reviewer: `prereg-kronos-feature-ic.md` (L38) ACCEPTED — rigorous, consistent with precedent, both open decisions correctly left to the user. Proceed to code, in a separate commit after the prereg.
+
+Reviewed `docs/research/prereg-kronos-feature-ic.md` against the standing
+rules, `research/kronos-research-2026-09-28.md`, `research/ideas-from-reels-2026-09-28.md`,
+`docs/research/prereg-orderbook.md` (the sibling look this one copies
+conventions from), `docs/research/trials.md`, `README.md` §69–§76, and
+`backend/research/splits.py` / `backend/tests/test_research_splits.py`.
+No Bash/git-log access in this session, so I could not independently confirm
+`0657a0e` (prereg) precedes `41c10db` (ideas note) or that nothing else was
+committed between them — noted, not treated as a defect, since `Glob` for
+`backend/research/kronos*` returns nothing, consistent with "no code exists
+yet." Same limitation Entry 18 recorded.
+
+### Spot-checks against source
+
+- `splits.HELD_OUT_START = "2026-01-02"`, `UNSEEN_AFTER = "2026-09-20"`,
+  `EMBARGO_SESSIONS = 5` (`backend/research/splits.py:30-40`) match §3 and
+  §12 exactly — the selection window (2025-09-01 → 2025-12-31, minus a
+  5-session embargo) sits entirely before the held-out boundary and the
+  5-session embargo is the project's one standing constant, not a new
+  number invented for this look.
+- 33.26 bp = 2 × 16.63 bp checks out, and 16.63 bp matches
+  `docs/research/event_study_result.json` (`"hurdle_bp": 16.63`) and
+  `prereg-orderbook.md`'s identical two-leg/single-leg framing — this
+  prereg is copying the live figure, not the older 16.60 bp rounding used
+  in phase-2 docs (3b, entry7-d, the literature sweep). Both figures are
+  in circulation in this repo already; L38 picked the more precise,
+  currently-used one. Not a defect, just flagged so it isn't mistaken for
+  drift later.
+- `kite_history.load(symbol, interval, days)` and `kite_history.fetch_runs(interval)`
+  (`backend/kite_history.py:200,236`) and `nifty100_membership.set_asof(snaps, date)`
+  (`backend/research/nifty100_membership.py:287`) exist with the signatures
+  the prereg assumes. `tests/test_research_splits.py::test_no_live_module_imports_research`
+  is real and does what §2 claims (parses every live-path module's imports,
+  not a grep). The file is at `backend/tests/`, not `tests/` as the prereg's
+  path shorthand and `splits.py`'s own stale docstring both say — a
+  pre-existing repo-wide looseness, not something to fix here.
+- Trial count 119 and look number L38 are both correct: `trials.md`'s
+  header states 119 as of 2026-09-25 evening, and the last logged look is
+  L36; L37 (order book) is registered but has no results yet (needs 15
+  sessions from 2026-09-25, not reached), so L38 does not collide with it.
+
+### Why this clears every standing rule
+
+- **Pre-registration first.** Written before any forecast touched project
+  data, no code exists, states its own falsification condition ("the
+  expected answer ... is no") rather than a hoped-for one.
+- **One run.** §10 states it plainly; stage 0 (§9) is six ordered halts —
+  including a genuine regression test against the Kronos repo's own
+  numbers (MSE 0.008979/0.003741) to prove the inference path is the
+  authors' — all of which happen *before* the IC pass, none of which reads
+  a feature-target relationship.
+- **Trial accounting.** Correctly a research look, not a trial, unless it
+  clears; §11 says so and reserves a fresh number for the trial if it does.
+- **Per-session statistics.** §7 computes rank IC and quintile spread per
+  session, then mean/se/t across sessions — "never pooled," matching
+  `step2_feature_ic.py` and L37's convention exactly, not a new invention.
+- **Money, not significance.** The gate (§8) requires the quintile spread
+  to clear 33.26 bp two-leg at t > 2 in both halves, BH-corrected across
+  the 3-test family, **and** a positive partial IC against last-60-minute
+  momentum (m60) — directly answering the "proxies get partial ICs" rule.
+  The long-short design is explicitly chosen so the project's own measured
+  negative intraday drift cancels in rank, and top/bottom quintile means
+  are reported separately so a long-only reading stays visible (§6, §7).
+  A single-side pass alone does not earn a trial (§8) — correctly stricter
+  than the money bar requires, not looser.
+- **Tradable targets.** Entry is the open of the bar *after* the decision
+  bar, never the decision bar itself, never the auction (§6). Six decision
+  times end at 13:30 so no result can inherit §72's "two in three entries
+  after 14:00" problem.
+- **Lookahead and data.** Only closed bars enter the lookback (§42's own
+  rule, cited correctly); zero-shot only, explicitly because fine-tuning's
+  normalisation leaked pre-April-2026 (issue #227, correctly read from the
+  vendored code rather than trusted from a summary); a lookahead
+  bit-identity proof is stage-0 step 3; point-in-time NIFTY 100 membership
+  via `set_asof` handles survivorship; the Kite adjustment-step problem
+  (#108) gets its own stage-0 check. The contamination problem (undisclosed
+  training cutoff) is handled by pinning to the latest HF revision
+  predating 2025-09-01, with an explicit void condition if none exists —
+  better than most of this project's earlier looks, which had no
+  comparable external-corpus contamination risk to handle.
+- **Claims match evidence.** The background note (`kronos-research-2026-09-28.md`)
+  is unusually careful about what it could and couldn't verify (a table of
+  verified-vs-snippet sources), reads the leak issue (#199) from the code
+  rather than the issue title, and states plainly that its own repo's demo
+  backtest has no transaction costs and isn't intraday. Nothing here
+  overclaims Kronos's prior.
+
+### What needs the user's decision — already correctly handled, not open
+
+- **Heavy dependency (torch + Kronos package).** The user's own 2026-09-28
+  instruction ("let's go with kronos, research more around it") is the
+  decision, not the main agent's or mine — §12 states this correctly and
+  keeps it out of `backend/requirements.txt`, backed by the isolation test.
+  I have no authority to grant this and don't need to: the user already
+  did, directly, for research use only.
+- **Spending the 2026 held-out window.** Explicitly not spent, explicitly
+  deferred to a future decision if the gate clears (§3, §12). Correct — I
+  would have rejected this prereg if it had tried to decide that now.
+- **Compute on the Mac.** Reads the existing cache only, no new Kite
+  downloads, does not compete with the engine (§12, confirmed by
+  `kite_history.load`/`fetch_runs` being read-only cache accessors). No
+  live-path, credential, or order-path involvement anywhere in the
+  document.
+
+### Minor notes, non-blocking
+
+- The partial-IC-vs-m60 check inside the gate is not itself covered by the
+  BH correction (only the 3 raw-IC/quintile tests are, §7). That's
+  defensible — it's a validity check on a candidate that already survived
+  the search, not one more shot at significance — but the results file
+  should say so in one sentence rather than leave it implicit, so a later
+  reader doesn't mistake it for an uncorrected extra test.
+- `splits.py`'s docstring still names a nonexistent `tests/test_research_isolation.py`
+  where the real file is `backend/tests/test_research_splits.py`. Not
+  introduced by this prereg and not blocking; worth a one-line fix
+  whenever that file is next touched.
+
+### Next step, and where to stop
+
+Accepted as written. The next step is `backend/research/kronos_feature_ic.py`
+and its tests, committed separately after the prereg, per the task's own
+plan. Stop for review again after stage 0 is run and recorded (before the
+IC pass) if the main agent wants a checkpoint there, and in any case after
+the one IC pass completes and the results file is written — that is where
+the gate decision (trial or no trial) gets checked against §8 as written,
+not re-derived.
+
+---
+
 ## Entry 18 — 2026-09-24 — automated reviewer: amendment 4 ACCEPTED — all five pre-commitments were honoured, the run was genuine, and the closure is correctly stated. 3f stays closed at stage 0.
 
 Reviewed `results-3f-stage0.md` §7 (and §6 for context), the "Amendment 4" and
