@@ -519,6 +519,12 @@ def save_kite_session(access_token: str) -> None:
 # optional and isn't something this code can do for you.
 KITE_MARKET_PROTECTION_PCT = 1
 
+# After a live order is sent, how long to wait for Kite to report it finished
+# before cancelling whatever hasn't filled, and how often to ask (#155). The
+# wait runs on the thread that sent the order, so it holds up the tick.
+KITE_FILL_DEADLINE_S = 5
+KITE_FILL_POLL_S = 0.25
+
 # Whether to use Kite for market data (real-time) instead of yfinance
 # (~15-min delayed). Only takes effect once KITE_API_KEY/KITE_ACCESS_TOKEN
 # are set — falls back to yfinance automatically otherwise. See

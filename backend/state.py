@@ -294,7 +294,7 @@ class AppState:
 
     def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None,
                      charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None,
-                     realized_gross=None):
+                     realized_gross=None, signal_price=None, order_id=None):
         """`realized` is net of both legs' charges; `realized_gross` is the same
         figure before them, and `charges` stays this one leg's own charges, so
         summing the column over every row still gives the day's total (#21)."""
@@ -305,6 +305,7 @@ class AppState:
             "reason": reason, "note": note, "realized": realized,
             "realized_gross": realized_gross, "charges": charges,
             "initial_risk": initial_risk, "r_multiple": r_multiple,
+            "signal_price": signal_price, "order_id": order_id,
         }
         with self.lock:
             self.trades.insert(0, trade)
