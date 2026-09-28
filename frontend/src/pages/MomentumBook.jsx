@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiJson } from "../api";
+import { useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { money, num, tone } from "../format";
 import SymLink from "../components/SymLink";
 
@@ -38,21 +38,8 @@ function NavChart({ nav }) {
 }
 
 export default function MomentumBook() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => apiJson("/api/momentum-book")
-      .then((d) => { if (alive) { setData(d); setError(null); } })
-      .catch((e) => { if (alive) setError(e.message); });
-    load();
-    const t = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(t); };
-  }, []);
-
-  if (error) return <p className="empty">Couldn't load the momentum book: {error}</p>;
-  if (!data) return <p className="empty">Loading…</p>;
+  const { data, error, reload } = useApi("/api/momentum-book", 60000);
+  if (!data) return <LoadState error={error} onRetry={reload} />;
 
   const [pillClass, label, blurb] = STATUS[data.status] || ["neutral", data.status, ""];
   const excess = data.cumulative_excess;

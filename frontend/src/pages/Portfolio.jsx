@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch, apiJson } from "../api";
+import LoadState from "../components/LoadState";
 import { money, num, pct, tone } from "../format";
 import { ConfidencePill } from "../components/Pill";
 
@@ -132,9 +133,11 @@ function PcrSection() {
 export default function Portfolio({ state: s }) {
   const [p, setP] = useState(null);
   const [fno, setFno] = useState(null);
+  const [pErr, setPErr] = useState(null);
 
   async function refresh() {
-    try { setP(await apiJson("/api/portfolio")); } catch (e) {}
+    setPErr(null);
+    try { setP(await apiJson("/api/portfolio")); } catch (e) { setPErr(e.message); }
     try { setFno(await apiJson("/api/fno/status")); } catch (e) {}
   }
 
@@ -150,10 +153,12 @@ export default function Portfolio({ state: s }) {
     refresh();
   }
 
-  if (!p) return <p className="empty">Loading portfolio…</p>;
+  if (!p) return <LoadState error={pErr} onRetry={refresh} label="Loading portfolio…" />;
 
   return (
     <>
+      <h2 className="h">Portfolio</h2>
+      <p className="sub">What the account holds right now, F&amp;O settings, and today's P&amp;L.</p>
       {p.error && <div className="tax">{p.error}</div>}
       {p.kite_connected && p.margins ? (
         <>

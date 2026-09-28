@@ -3531,6 +3531,35 @@ research/.kvenv/bin/python -m research.kronos_feature_ic --stage0-only
 
 The pre-registration was drafted on an older copy of the project. Merging it renumbered the look from L38 to L40 and corrected the trial count from 119 to 125 (Amendment 2). Nothing in its design changed.
 
+### 94. The dashboard, reorganised: a sidebar, one status bar, and loads that say when they fail
+
+The dashboard had grown to ten pages in one flat row of underlined tabs, under a
+header holding nine controls. Overview opened with setup notes, the controls and a
+30-row table of expired review cards before it ever said what the market was doing.
+Most pages swallowed a failed request and sat on "Loading…" for good.
+
+- **Sidebar navigation, grouped by question.** *Today*: Overview, Pre-market, Day
+  plan. *Market*: Screener, Technical analysis. *Strategies*: Momentum book, Jev book.
+  *Your book*: Portfolio, Trades, Journal. Screener shows how many picks are
+  active, and Portfolio how many positions are open. Live log and browser alerts
+  are at the foot. On a phone the sidebar becomes a scrolling strip across the top.
+- **One status bar.** Session, invested, realized and open P&L, the Kite chip, the
+  entry pause and the Paper/Live switch. A red line runs along the top while live.
+- **Overview in reading order.** The market read comes first. Then the trading
+  controls, with capital, F&O, alerts and the Scorecard in one row. Then the review
+  queue, with earlier cards folded under "Earlier today", then picks, positions,
+  activity, and charts last.
+- **Loads that fail say so.** `useApi()` (in `api.js`) and `LoadState` replace the
+  `.catch(() => {})` pattern on Day plan, Portfolio, Journal, Technical analysis,
+  Momentum book and Jev book. A failure shows the reason and a **Try again** button.
+  `apiJson()` now treats an HTTP error as an error instead of data. If the engine
+  can't be reached, the app says so after 8 seconds instead of "Connecting…" forever.
+- **Bug fixed ([#172](https://github.com/harshece16/intraday-trading-agent/issues/172)).**
+  With no engine state (backend down or restarting), the mode switch showed
+  **Live** pressed, in red. It now shows neither until the engine answers.
+
+No backend or trading behaviour changed.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

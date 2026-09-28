@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { apiJson } from "../api";
+import { useState } from "react";
+import { useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { money, num, pct, tone, dateLabel, clock } from "../format";
 import { SidePill } from "../components/Pill";
 
@@ -58,24 +59,14 @@ function OutcomeTrades({ trades }) {
 export default function DayPlan() {
   const [capitalInput, setCapitalInput] = useState("5000");
   const [capital, setCapital] = useState(5000);
-  const [data, setData] = useState(null);
-
-  async function load(c) {
-    try { setData(await apiJson(`/api/day-plan?capital=${encodeURIComponent(c)}`)); } catch (e) { /* backend not reachable yet */ }
-  }
-
-  useEffect(() => {
-    load(capital);
-    const id = setInterval(() => load(capital), 20000);
-    return () => clearInterval(id);
-  }, [capital]);
+  const { data, error, reload } = useApi(`/api/day-plan?capital=${encodeURIComponent(capital)}`, 20000);
 
   function applyCapital() {
     const v = parseFloat(capitalInput);
     if (v > 0) setCapital(v);
   }
 
-  if (!data) return <><h2 className="h">Day Plan</h2><p className="empty">Loading…</p></>;
+  if (!data) return <><h2 className="h">Day Plan</h2><LoadState error={error} onRetry={reload} /></>;
   const { plan: p, outcome: o } = data;
 
   return (
