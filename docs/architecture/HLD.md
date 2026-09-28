@@ -385,9 +385,10 @@ affects today's paper operation with automatic entries off.
 
 | Issue | Gap | Matters when |
 | --- | --- | --- |
-| [#155](https://github.com/harshece16/intraday-trading-agent/issues/155) | Live fills are booked at the modelled price, not Kite's executed price | Before going live |
-| [#156](https://github.com/harshece16/intraday-trading-agent/issues/156) | A live position is unwatched after a restart | Before going live |
-| [#154](https://github.com/harshece16/intraday-trading-agent/issues/154) | Paper F&O stops and targets can never fire | Before enabling F&O |
+| [#186](https://github.com/harshece16/intraday-trading-agent/issues/186) | Live F&O orders are booked at the quoted premium, not Kite's executed price | Before enabling F&O live |
+| [#187](https://github.com/harshece16/intraday-trading-agent/issues/187) | Open F&O positions are not restored after a restart | Before enabling F&O |
+| [#189](https://github.com/harshece16/intraday-trading-agent/issues/189) | Paper index options probably never reprice | Before enabling F&O |
+| [#188](https://github.com/harshece16/intraday-trading-agent/issues/188) | The order-book sampler drops levels 2 to 5 | Before slippage ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)) can be measured |
 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) | F&O entries skip several cash entry rules | Before enabling F&O |
 | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) | Jev book: interrupted rounds and the live-price gate | Now, for the test's record |
 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) | Momentum book: silent data gaps and a skippable rebalance | Before 1 Oct |

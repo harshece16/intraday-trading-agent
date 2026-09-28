@@ -143,13 +143,14 @@ the API and the WebSocket read it through `snapshot()`.
 
 ### 2.4 Restart recovery
 
-`_rehydrate_open_positions()` restores a position only if it belongs to the
-**current mode** and has a **single leg** today. The stop and target come
-from the last "Stop X, target Y" text in the entry note. Entry charges are
-carried over.
+`_rehydrate_open_positions()` restores a position that has a **single leg**
+today: a paper leg when the engine is in Paper, a live leg always. The stop
+and target come from the last "Stop X, target Y" text in the entry note.
+Entry charges are carried over.
 
-A restart always comes back in Paper, so a live position is not restored
-([#156](https://github.com/harshece16/intraday-trading-agent/issues/156)).
+A restart always comes back in Paper. A restored live position keeps
+`live: True`, so its exit is a real order, and `_verify_live_position()`
+checks it against Kite's positions before any order is sent.
 
 ### 2.5 Engine lock (`engine_lock.py`)
 
@@ -394,10 +395,15 @@ phase and only with Kite credentials.
 | Exits | Premium −40% or +80%; every position closed at 15:08 | `_check_fno_stop_take`, `_close_fno` |
 | Pricing | Black-Scholes-Merton price, Greeks and an implied-volatility solve by bisection | `options_pricing` |
 
-Known gaps: paper stops and targets can never fire
-([#154](https://github.com/harshece16/intraday-trading-agent/issues/154)),
-and the entry path skips several cash rules
-([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)).
+In paper the premium is a model price, repriced each tick by
+`_paper_fno_premium` from the underlying's live price.
+
+Known gaps: the entry path skips several cash rules
+([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)),
+live orders book at the quoted premium
+([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)),
+and open positions are not restored after a restart
+([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)).
 
 ## 7. Scanner
 

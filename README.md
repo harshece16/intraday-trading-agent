@@ -3636,6 +3636,37 @@ The book had held nothing and recorded no return before this change, so its forw
 
 Files: `backend/momentum_book.py`, `backend/tests/test_momentum_book.py`, `docs/research/prereg-3i-momentum-corrected-data.md` (dated note).
 
+### 98. Live orders are booked at what Kite executed, a live position survives a restart, and paper option stops fire
+
+The owner asked for the gaps between the engine and a real account to be closed before live trading is ever switched on. Four changes, all verified against a stand-in for Kite: **no live order has ever been placed, and none was placed to test these.**
+
+**Live fills come from Kite ([#155](https://github.com/harshece16/intraday-trading-agent/issues/155)).** A live order used to be booked as filled in full at the modelled price, and Kite's answer was never read. The engine now waits for Kite to report the order finished and books the quantity and average price Kite executed.
+
+| Kite says | The engine |
+| --- | --- |
+| Complete | Books Kite's quantity and price. The journal row records the signal price, the order id and the slippage in bp |
+| Rejected or cancelled, nothing filled | Books nothing, raises an error-level alert, and reports the entry as blocked, so the day's one entry in that stock isn't spent |
+| Part filled | After 5 s cancels the rest and books what filled. A part-filled exit leaves the rest open and watched |
+| Nothing (Kite can't be read) | Books nothing and sends no other order in that stock, then asks Kite again every tick and books or drops the order |
+
+A checklist entry's stop and target are chart levels, so they don't move with the fill. Risk per share is measured from the price paid. The wait runs on the thread that sent the order, so a slow Kite can hold the tick for about 10 s.
+
+**A live position stays watched ([#156](https://github.com/harshece16/intraday-trading-agent/issues/156)).** Each position now carries whether it is real money, set by the order that opened it, and its closing order goes where that says. After a restart, which always comes back in Paper, today's open live positions are restored with their stops and targets and the live log raises an error-level alert. Before any order is sent for one, Kite's positions are read: if Kite holds nothing, the position is dropped and no order is sent, because a closing order would open a new position the other way. The same flag fixes a second defect found on the way: switching modes with a position open sent its exit to the wrong place, so a paper position's stop would have placed a real order after a switch to Live. Positions in Kite that today's journal doesn't know are still only reported, and block new entries in that stock; the engine doesn't adopt them.
+
+**Paper option stops and targets fire ([#154](https://github.com/harshece16/intraday-trading-agent/issues/154)).** An open paper option is repriced every tick with Black-Scholes from the underlying's live price, and that premium drives the stop, the target and the 15:08 square-off. It is a model price: it ignores changes in implied volatility and the bid-ask spread, and uses a fixed 20% volatility. Options stay switched off.
+
+**Slippage has a measurement script, and the 3 bp stays ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)).** `backend/research/measure_real_slippage.py` reads the recorded order book. Its first run, on 2026-09-28:
+
+| Stocks, by order-book depth | Median cost per leg | 90th percentile |
+| --- | --- | --- |
+| Most liquid third | 0.84 bp | 2.09 bp |
+| Middle third | 1.04 bp | 2.08 bp |
+| Least liquid third | 1.41 bp | 2.32 bp |
+
+That is from 34,338 book samples over **2 sessions**, which is too little to change the cost model, and they are snapshots of the book, not fills. Against the signal price the cost was higher: a median of 1.7 bp and a 90th percentile of 7.2 bp over 79 matched signals, of which one was a full pass. The script says so itself and recommends nothing.
+
+Four new defects were filed: live option orders still book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)), open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)), the order-book sampler doesn't store levels 2 to 5, which #66 needs ([#188](https://github.com/harshece16/intraday-trading-agent/issues/188)), and paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189), not verified against Kite).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
@@ -3920,8 +3951,8 @@ key on each call, so no restart is needed.
 
 - Every intraday rule, in cash equity or F&O, is net-negative in backtests. The one pass is the monthly delivery momentum book ([§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026)), and it runs in paper only.
 - **Known gaps, filed while the design was mapped (2026-09-28).** None affects today's paper operation with automatic entries off.
-  - Before going live: live fills are booked at the modelled price, not Kite's ([#155](https://github.com/harshece16/intraday-trading-agent/issues/155)); a live position is unwatched after a restart ([#156](https://github.com/harshece16/intraday-trading-agent/issues/156)); slippage has never been measured ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)).
-  - Before enabling options: paper stops and targets can never fire ([#154](https://github.com/harshece16/intraday-trading-agent/issues/154)); options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)).
+  - Before going live: slippage has never been measured from real fills ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66); a first reading from the order book is in §98). Live fills booked at the modelled price and a live position unwatched after a restart were fixed in §98, untested against a real order.
+  - Before enabling options: options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)); live option orders book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)); open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)); paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189)).
   - For the paper books: [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) (Jev book) and [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) (momentum book).
   - Housekeeping: [#160](https://github.com/harshece16/intraday-trading-agent/issues/160), [#161](https://github.com/harshece16/intraday-trading-agent/issues/161), [#162](https://github.com/harshece16/intraday-trading-agent/issues/162), [#163](https://github.com/harshece16/intraday-trading-agent/issues/163).
 - **Square-off time (#78, fixed).** Zerodha auto-squares MIS positions in F&O-eligible stocks at 15:12 and charges ₹50 + GST per order. The engine squares off at **15:08**.
