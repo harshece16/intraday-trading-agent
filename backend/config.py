@@ -200,7 +200,13 @@ NEWS = {
 # heavier on-demand call, not hundreds of small per-headline ones. Shares
 # NEWS['anthropic_api_key'] rather than duplicating the key.
 CHAYWANAPRASH = {
-    "enabled": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    # It only ever runs when asked (POST /api/chaywanaprash/analyze), so it is
+    # on whenever there is something to call.
+    "enabled": True,
+    # "auto" uses the Anthropic API when ANTHROPIC_API_KEY is set, and the
+    # Claude Code CLI (`claude -p`, billed to your Claude plan) otherwise or
+    # when the API call fails. Or pick one: "anthropic_api" / "claude_cli".
+    "llm_backend": "auto",
     "daily_limit": 12,
     "lookback_hours": 24,
 }
