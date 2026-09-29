@@ -158,6 +158,11 @@ average turnover, fixed for the day, in turnover order. The Jev book still
 takes the first 15 names on that list, so from then on Jev judges the 15
 most-traded eligible NIFTY 100 stocks each day.
 
+**Live from the session of 2026-09-29.** The backend was restarted with this
+change on 2026-09-28 at 21:17 IST. On 2026-09-29 the list was fixed at the
+first scan of the session, at 09:15:38, and did not change until the close.
+The 09:45 round of 2026-09-29 was the first on that list.
+
 **Unchanged:** the snapshot Jev sees, including the scanner's side and
 reasons; the three questions; the fills from Kite only; the cost; the
 comparison with the scanner's own side; the pass rule; the kill rule.
@@ -182,6 +187,11 @@ The 2026-09-29 round had not run when this was written.
 
 **The change**, from the first session after it is deployed (the date is
 added below once it is live). README §100.
+
+**Live from the session of 2026-09-30.** The backend was restarted with this
+change on 2026-09-29 at 18:08:47 IST, after the close, with no position open.
+The 09:45 round of 2026-09-29 ran before it, on a list fixed at the first scan
+of the session.
 
 1. **The day's list is fixed before the open**, at the first pre-market read
    at or after 08:45. Until now it was fixed at the first scan of the
@@ -220,6 +230,11 @@ the list; they were not made to improve Jev's score.
 **The change**, from the first session after it is deployed (the date is
 added below once it is live). README §101.
 
+**Live from the session of 2026-09-30.** The backend was restarted with this
+change on 2026-09-29 at 18:08:47 IST, after the close, with no position open.
+It went live together with the fix for the hole in the daily bars (#196). The
+09:45 round of 2026-09-29 ran before both, on the delayed feed.
+
 **The scanner row Jev sees is built from live prices.** Until now the
 scanner's numbers for the day (last price, change, gap, relative volume, VWAP,
 side) came from the delayed feed. From this change the row comes from one live
@@ -254,4 +269,9 @@ alone. The change was made because the delayed numbers were wrong, not to
 improve Jev's score; it could move the score either way.
 
 If Kite is not connected at 09:45 the round is skipped, as before.
+
+**A note on the record of 2026-09-29.** The restart chose that session's list
+again at 18:09, after the round had closed at 15:08, and put HINDALCO in place
+of TVSMOTOR (#198). The round was asked about the list as it stood at 09:45.
+A scan recorded after 18:09 does not show that list.
 

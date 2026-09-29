@@ -3799,6 +3799,19 @@ Daily bars and the bars of earlier sessions still come from the delayed feed, wh
 - **The daily bars kept a hole at the last session (#196), fixed here.** During a session the delayed feed's daily bars already end with today's bar, and for 16 of the 100 stocks they had no bar for 2026-09-28. The repair from §100 looked only at the last bar and skipped them, so those stocks' gap and day's change were measured from the close of 2026-09-25. It now looks for the session by date and puts NSE's bar in its place. With the fix, no stock's day change was off by 0.3 points or more on either feed.
 - **The sector trend check has been off for 61 of the 100 stocks since 2026-09-16 (#197), not fixed.** The delayed feed serves one daily bar for six of the eight sector indices. The check needs 51 and is skipped without saying so. It covers Financial Services, Automobile, FMCG, Metals, Power, Oil and Gas, and Realty. The day's list is chosen by turnover, so the 25 stocks traded are the same; the side and the score shown for a stock are affected.
 
+**Deployed** on 2026-09-29 at 18:08 IST, by a backend restart after the close, with no position open. The same restart brought §98 and §100 live. The first session on all three is 2026-09-30.
+
+| Checked after the restart | Result |
+| --- | --- |
+| Code running | The tree of the merged commit, which is the tree the tests ran on (816 passed) |
+| First scan | 100 of 100 rows on live prices, with the ban list and the price bands read |
+| Paper mode, Kite login, capital, pause switch, positions | As before the restart |
+| Review queue | The restart switched it off, as it always does. It was switched back on, as it was before |
+| Momentum book | Shows the +0.71% band. The running backend had shown +0.82% until the restart |
+| Screener, Overview, Pre-market and Momentum book pages | Read in the browser, with no error in the console |
+
+**Found by the deploy (#198, not fixed).** The day's list is held in memory, so the restart chose the list for 2026-09-29 again and put HINDALCO in place of TVSMOTOR. Nothing was affected, because the market was closed. A restart inside a session would change the list part-way through the day.
+
 **What this does not do.** It does not make the intraday side profitable. No selection rule tested here predicts direction after costs. This makes the scanner's numbers current and correct, which any later test of them needs.
 
 **Two running tests.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 7 (the scanner row Jev sees is now built from live prices) and `prereg-orderbook.md` amendment 4 (no effect on the samples).
