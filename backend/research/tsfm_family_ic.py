@@ -156,6 +156,9 @@ class TimesFM25(Forecaster):
                                                                  t.pop(pre + "value." + kind)], 0)
             return t
         tt.load_file = fused
+        # torch.compile needs Triton, which Windows lacks; run the same graph eagerly.
+        import torch._dynamo
+        torch._dynamo.config.disable = True
         self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained(local_dir)
         self.model.compile(timesfm.ForecastConfig(max_context=k.LOOKBACK, max_horizon=128, normalize_inputs=True,
                                                   use_continuous_quantile_head=True, force_flip_invariance=True,
