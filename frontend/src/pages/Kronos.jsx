@@ -173,7 +173,7 @@ function ShadowDay({ day }) {
   if (!day) {
     return (
       <p className="empty">
-        No shadow day yet. The shadow writes <code>backend/data/kronos_shadow_&lt;date&gt;.json</code> every quarter hour of a
+        No shadow day yet. The shadow writes <code>backend/data/kronos_shadow_&lt;date&gt;.json</code> every five minutes of a
         session while it runs; the page picks it up on its next refresh.
       </p>
     );
@@ -274,6 +274,12 @@ export default function Kronos() {
   const day = showingToday ? data.today : picked.data;
   // The backend sends today's day when there is one, else the latest; say which.
   const todayHeading = data.today && data.today.date !== data.date_today ? "Latest shadow day" : "Today's shadow";
+  // Once the look's one pass has failed at every horizon, the shadow is a record of a failed model, and says so.
+  const horizons = look.result?.status === "DONE" ? Object.values(look.result.horizons || {}) : [];
+  const failedTest = horizons.length > 0 && horizons.every((h) => h.passes === false);
+  const spreads = horizons.map((h) => h.spread?.mean).filter((v) => typeof v === "number");
+  const bestGap = { bp: spreads.length ? Math.max(...spreads).toFixed(1) : "?", sessions: horizons[0]?.sessions ?? "?" };
+  const twoLeg = look.result?.constants?.two_leg_bp ?? 33.26;
 
   return (
     <>
@@ -300,8 +306,16 @@ export default function Kronos() {
       <ResultTable result={look.result} />
 
       <h3 style={{ marginTop: 24 }}>{showingToday ? todayHeading : `Shadow day ${pickedDate}`}
+        {failedTest && <span className="pill short" style={{ marginLeft: 10, verticalAlign: "middle" }}>Kronos shadow: failed test L40 (record only, not a signal)</span>}
         {!showingToday && <button className="more" style={{ marginLeft: 10 }} onClick={() => setPickedDate(null)}>Back to the latest day</button>}
       </h3>
+      {failedTest && (
+        <p className="muted" style={{ marginTop: -4 }}>
+          Zero-shot Kronos failed its pre-registered test on {bestGap.sessions} past sessions at 15, 30 and 60 minutes (best
+          top-minus-bottom gap {bestGap.bp} bp before costs, {twoLeg} bp needed). Its live forecasts are recorded for comparison;
+          nothing reads them to trade.
+        </p>
+      )}
       {!showingToday && !picked.data ? <LoadState error={picked.error} onRetry={picked.reload} /> : <ShadowDay day={day} />}
 
       <h3 style={{ marginTop: 24 }}>Days</h3>
