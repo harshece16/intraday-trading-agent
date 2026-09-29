@@ -8,7 +8,14 @@ while true; do
   echo "KRONOS LOOK L40 — run of record on the PC (RTX 3060 Ti, three samples a forecast)      $(date '+%a %d %b %H:%M:%S')"
   echo "prereg: docs/research/prereg-kronos-feature-ic.md (amendment 4)   branch: research/kronos-l40-run   PR #200"
   echo "------------------------------------------------------------------------------------"
-  $PC 'powershell -NoProfile -ExecutionPolicy Bypass -File tail.ps1 -N 14 -Task KronosPass' 2>/dev/null | grep -v "symlink\|warnings.warn\|Xet Storage\|UserWarning\|^gpu line" | cut -c1-120 || echo "PC not reachable right now"
+  echo "WHAT IT DOES: for each of 43,362 stock-times (100 stocks x 6 times a day x 79 sessions, Sep-Dec 2025), Kronos reads the last 512"
+  echo "five-minute bars and writes 12 forecast bars. Three draws are averaged. Each row below is one such forecast, in basis points of the last close."
+  echo "AT THE END: the forecasts are ranked against what the stocks actually did next (15, 30, 60 min), and the pre-registered pass rule is applied."
+  echo
+  $PC 'powershell -NoProfile -ExecutionPolicy Bypass -File pass_status.ps1' 2>/dev/null | cut -c1-150 || echo "PC not reachable right now"
+  echo
+  echo "PC log, last lines:"
+  $PC 'powershell -NoProfile -ExecutionPolicy Bypass -File tail.ps1 -N 5 -Task KronosPass' 2>/dev/null | grep -v "symlink\|warnings.warn\|Xet Storage\|UserWarning\|^gpu line\|^--- log" | cut -c1-150
   echo
   echo "------------------------------------------------------------------------------------"
   if [ -f "$SHPID" ] && kill -0 "$(cat $SHPID)" 2>/dev/null; then
