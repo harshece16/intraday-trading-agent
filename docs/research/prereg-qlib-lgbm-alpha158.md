@@ -53,3 +53,26 @@ Training runs once; a refit only for a crash or a declared bug before freezing, 
 ## 8. Trial accounting
 
 Research look **L47**. No trial is spent unless it clears.
+
+## Amendments
+
+1. **2026-09-30, 02:17 IST, after the independent review of the L47 code (head 61bf565, NOT APPROVED, two blocking findings) and before stage 0 or any training.** No L47 number exists on project data. The review's findings are fixed as follows.
+   - **B2, the port and Qlib's handling of infinite values.** Qlib runs Mean, Sum, Std, Corr, Max, Min, Quantile, Rank and the IdxMax/IdxMin apply through pandas' rolling functions, and pandas (`Window._prep_values`) treats +inf and -inf as missing. The port now does the same. This matters for CORD: `Log($volume/Ref($volume, 1)+1)` is +inf after a zero-volume bar. That pair is now skipped, as in Qlib, instead of turning the whole window NaN. The inputs to Corr's 2e-5 std masks are treated the same way. Slope, Rsquare and Resi are unchanged: Qlib's Cython sees their raw input, the close. The §6.3 hand calculation now treats non-finite values as missing, as pandas does.
+   - **B2, undefined correlations.** Corr is NaN when the paired values of either input are all equal, because the correlation is undefined there. Qlib's mask catches that case unless a skipped pair hides it. When it does not, pandas returns a value that depends on its version: ±inf under pandas 2.3.3, and 0 or about 1e-5 under 3.0.6 (both measured on synthetic bars). The port's NaN is filled with 0 by §3's normaliser.
+   - **B2, float error.** Where both are finite, the port's Corr differs from pandas' only by pandas' float error (its mean(xy) − mean(x)·mean(y) cancels): on synthetic bars, up to 1.7e-4 (CORD5, windows with few pairs) and 7e-7 (CORR10), falling to about 6e-9 at 20 bars and 1.2e-9 at 30 bars. §6.3's 1e-9 check requires the exact value. Stage 0 now records this comparison on the project's bars as information, not as a check: CORR and CORD against Qlib's own pandas computation, counted by kind, with the number of zero-volume bars.
+   - **B1, one-run holes.**
+     - The scoring pass writes `l47_result.json` with status STARTED once every refusal has passed and before any bar or target is read. It refuses to run if that file exists with any status, unless the owner gives `--owner-approved-rescore "<reason>"`, which is recorded.
+     - Training refuses, even with `--refit-reason`, once `l47_frozen.json` is committed, or once `l47_result.json`, `l47_rows.jsonl` or `l47_rows.jsonl.tmp` exists: no refit after freezing (§7).
+     - Training writes `l47_train_started.json` (time and environment) before the first `lgb.train`. Any earlier attempt (that marker, a model file, or an uncommitted frozen record) needs `--refit-reason`, which is recorded.
+   - **Determinism.** LightGBM runs with `force_col_wise = true`. This is an execution option, not a model hyperparameter. LightGBM's documentation asks for it (or `force_row_wise`) with `deterministic = true`, because otherwise a timing test at construction chooses the histogram layout.
+   - **Extra refusals before scoring:**
+     - `l47_stage0.json` must be committed and its SHA-256 must equal the one `l47_frozen.json` recorded at training.
+     - All six L46 results must exist with a final status (DONE or VOID); a missing one means L46 has not finished.
+     - lightgbm must be installed.
+   - **Extra halts after loading, before any target is scored:**
+     - The adjustment-dropped stock-sessions must equal L40's (`kronos_l40_result.json`, `stage0.adjustment.dropped_stock_sessions`).
+     - When L40's rows file of record is given (`--l40-rows`; the PC script passes it), the per-session stock-time counts must equal its counts.
+   - **Information in the result:** each horizon's best iteration, the distinct predictions per session (median, min), and the share of stock-times tied across the harness's quintile cut points. The harness is unchanged.
+   - **PC script:** it checks that the clone is on `research/overnight-2026-09-30` before pulling. It pins lightgbm 4.7.0, pandas 3.0.6, numpy 2.4.6 and scipy 1.17.1, the versions installed. It re-checks that no L46 model is running immediately before each mode runs.
+
+   Nothing in the features, labels, split, model parameters, test or gate changes. B2 makes the port match Qlib, which is what §2 already says.
