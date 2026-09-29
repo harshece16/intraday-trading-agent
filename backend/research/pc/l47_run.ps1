@@ -30,7 +30,7 @@ if ($Mode -eq "install") {
   Say "L47 INSTALL started: Python 3.11 environment at ${venv} (lightgbm, pandas, numpy, scipy; CPU only)"
   if (-not (Test-Path $py)) { $null = Run "create the environment" "py" @("-3.11", "-m", "venv", $venv) }
   $null = Run "upgrade pip" $py @("-m", "pip", "install", "--upgrade", "pip", "--progress-bar", "off", "-q")
-  $code = Run "install lightgbm pandas numpy scipy" $py @("-m", "pip", "install", "--progress-bar", "off", "-q", "lightgbm", "pandas", "numpy", "scipy")
+  $code = Run "install lightgbm pandas numpy scipy, pinned" $py @("-m", "pip", "install", "--progress-bar", "off", "-q", "lightgbm==4.7.0", "pandas==3.0.6", "numpy==2.4.6", "scipy==1.17.1")
   $null = Run "record the versions" $py @("-c", "import sys, platform, lightgbm, pandas, numpy, scipy; print('python', sys.version.split()[0], platform.machine(), '| lightgbm', lightgbm.__version__, '| pandas', pandas.__version__, '| numpy', numpy.__version__, '| scipy', scipy.__version__)")
   Say "L47 INSTALL finished (pip exit ${code})"
   Set-Content -Path $marker -Value "install exit ${code}"
@@ -38,13 +38,18 @@ if ($Mode -eq "install") {
 }
 
 if (-not (Test-Path $py)) { Say "L47 ${Mode} refused: no environment at ${venv}; run install first"; Set-Content -Path $marker -Value "refused: no venv"; exit 2 }
-$l46 = @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*tsfm_family_ic*" })
-if ($l46.Count -gt 0) {
-  Say "L47 ${Mode} refused: an L46 model is running (pid $($l46[0].ProcessId)); decision D2b keeps L47 off the PC until L46 has finished"
-  Set-Content -Path $marker -Value "refused: L46 running"
-  exit 2
+function Stop-IfL46Running {
+  $l46 = @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*tsfm_family_ic*" })
+  if ($l46.Count -gt 0) {
+    Say "L47 ${Mode} refused: an L46 model is running (pid $($l46[0].ProcessId)); decision D2b keeps L47 off the PC until L46 has finished"
+    Set-Content -Path $marker -Value "refused: L46 running"
+    exit 2
+  }
 }
+Stop-IfL46Running
 if (-not (Test-Path (Join-Path $HOME "l46_all.done"))) { Say "note: no l46_all.done marker, but no L46 process is running either" }
+$current = (@(& git -C $repo rev-parse --abbrev-ref HEAD) -join "").Trim()
+if ($current -ne $branch) { Say "L47 ${Mode} refused: the clone is on '${current}', not ${branch}"; Set-Content -Path $marker -Value "refused: wrong branch"; exit 2 }
 
 # Update the clone from the bundle. An untracked file the bundle now adds (a result written
 # here and committed on the Mac) would block the fast-forward: it is moved aside first, then
@@ -82,9 +87,14 @@ $env:PYTHONUNBUFFERED = "1"
 $env:KRONOS_CANDLE_DB = Join-Path $HOME "kite_cache\kite_history.db"
 $outs = @{ "stage0" = "l47_stage0.json"; "train" = "l47_frozen.json"; "score" = "l47_result.json" }
 $out = Join-Path $repo ("docs\research\data\" + $outs[$Mode])
+$pyargs = @("-m", "research.qlib_alpha158_l47", $Mode)
+# L40's rows file of record (the PC run); score checks its per-session stock-time counts
+$l40rows = Join-Path $HOME "intraday-trading-agent\backend\research\kronos_rows_l40.jsonl"
+if ($Mode -eq "score" -and (Test-Path $l40rows)) { $pyargs += @("--l40-rows", $l40rows) }
+Stop-IfL46Running
 Say "=== L47 ${Mode} started (candle cache ${env:KRONOS_CANDLE_DB}) ==="
 Push-Location (Join-Path $repo "backend")
-$code = Run "L47 ${Mode}" $py @("-m", "research.qlib_alpha158_l47", $Mode)
+$code = Run "L47 ${Mode}" $py $pyargs
 Pop-Location
 if (Test-Path $out) {
   $status = & $py -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('status', 'written'))" $out
