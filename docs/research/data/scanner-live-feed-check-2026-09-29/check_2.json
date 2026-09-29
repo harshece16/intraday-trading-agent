@@ -1,0 +1,239 @@
+{
+ "kite_active": true,
+ "started": "13:56:16",
+ "durations": {
+  "live_first_scan_of_a_process": {
+   "seconds": 43.9,
+   "parts": {
+    "download_batch": 6.19,
+    "kite_quotes": 0.13,
+    "complete_daily": 0.03,
+    "load_guards": 0.19,
+    "get_candles_batch": 8.77,
+    "get_sentiment": 16.7,
+    "get_fundamentals": 9.78
+   }
+  },
+  "delayed_after_it": {
+   "seconds": 5.5,
+   "parts": {
+    "download_batch": 5.43,
+    "complete_daily": 0.0,
+    "load_guards": 0.0,
+    "get_sentiment": 0.0,
+    "get_fundamentals": 0.0
+   }
+  },
+  "engine_running_now": 9.9,
+  "live_with_everything_cached": {
+   "seconds": 13.8,
+   "parts": {
+    "download_batch": 4.96,
+    "kite_quotes": 0.07,
+    "complete_daily": 0.0,
+    "load_guards": 0.0,
+    "get_candles_batch": 8.61,
+    "get_sentiment": 0.0,
+    "get_fundamentals": 0.0
+   }
+  }
+ },
+ "engine_scan": {
+  "finished": "14:00:26",
+  "quotes_read": "14:00:27",
+  "waited_s": 196,
+  "session": "2026-09-29",
+  "rows": 100,
+  "list": 25
+ },
+ "live_scan": {
+  "feed": {
+   "prices": "live",
+   "rows_live": 100,
+   "rows_delayed": 0,
+   "quotes_at": "2026-09-29T14:00:32+05:30",
+   "why_delayed": null
+  },
+  "quotes_read_after": "14:00:41",
+  "session": "2026-09-29",
+  "rows": 100,
+  "nifty": {
+   "ltp": 22664.7,
+   "chg_pct": -0.51,
+   "trend": "down",
+   "above_open": false
+  },
+  "engine_nifty": {
+   "ltp": 22666.35,
+   "chg_pct": -0.5,
+   "trend": "down",
+   "above_open": false
+  }
+ },
+ "engine_price_off_by_bp": {
+  "median": 0.0,
+  "p90": 2.9,
+  "max": 10.6,
+  "n": 100
+ },
+ "live_price_off_by_bp": {
+  "median": 2.2,
+  "p90": 7.6,
+  "max": 34.2,
+  "n": 100
+ },
+ "gap_error_points": {
+  "engine": {
+   "median": 0.138,
+   "max": 2.566,
+   "off_by_0_3_or_more": 23,
+   "off_by_0_3_or_more_on_its_list": 5,
+   "n": 100
+  },
+  "live": {
+   "median": 0.002,
+   "max": 0.005,
+   "off_by_0_3_or_more": 0,
+   "n": 100
+  },
+  "worst_engine_rows": [
+   {
+    "symbol": "JINDALSTEL",
+    "nse_gap": -0.18,
+    "engine_gap": -2.75,
+    "live_gap": -0.18,
+    "on_list": false
+   },
+   {
+    "symbol": "TORNTPHARM",
+    "nse_gap": 0.32,
+    "engine_gap": -2.21,
+    "live_gap": 0.32,
+    "on_list": false
+   },
+   {
+    "symbol": "BOSCHLTD",
+    "nse_gap": 0.27,
+    "engine_gap": -2.25,
+    "live_gap": 0.27,
+    "on_list": false
+   },
+   {
+    "symbol": "SIEMENS",
+    "nse_gap": -0.42,
+    "engine_gap": -2.75,
+    "live_gap": -0.42,
+    "on_list": false
+   },
+   {
+    "symbol": "TVSMOTOR",
+    "nse_gap": -0.49,
+    "engine_gap": -2.1,
+    "live_gap": -0.49,
+    "on_list": true
+   },
+   {
+    "symbol": "INDIGO",
+    "nse_gap": -0.09,
+    "engine_gap": -1.56,
+    "live_gap": -0.09,
+    "on_list": false
+   }
+  ]
+ },
+ "vwap_off_nse_by_bp": {
+  "engine": {
+   "median": 1.0,
+   "p90": 3.1,
+   "max": 9.1,
+   "n": 100
+  },
+  "live": {
+   "median": 0.0,
+   "p90": 0.1,
+   "max": 0.7,
+   "n": 100
+  }
+ },
+ "relative_volume": {
+  "live_median": 1.63,
+  "engine_median": 1.58,
+  "difference_p10_median_p90": [
+   0.01,
+   0.03,
+   0.07
+  ],
+  "live_blank": 0
+ },
+ "sides_that_differ_engine_to_live": [
+  [
+   "CIPLA",
+   "SHORT",
+   "LONG",
+   false
+  ],
+  [
+   "BOSCHLTD",
+   "SHORT",
+   "LONG",
+   false
+  ],
+  [
+   "TATACAP",
+   "SHORT",
+   "LONG",
+   false
+  ]
+ ],
+ "score_differs_by": {
+  "median": 0.1,
+  "p90": 7.1,
+  "max": 27.2
+ },
+ "exclusions_that_differ": [],
+ "list": {
+  "engine_only": [],
+  "shadow_only": [],
+  "note": "The shadow fixed its list at its own first scan this afternoon, the engine at 09:15."
+ },
+ "guards": {
+  "off": false,
+  "ban": {
+   "trade_date": "2026-09-29",
+   "count": 2,
+   "in_universe": []
+  },
+  "bands": {
+   "banded": [
+    "ENRIN",
+    "TATACAP",
+    "TMCV"
+   ],
+   "not_eq": [],
+   "surveillance": []
+  }
+ },
+ "selection": {
+  "mode": "liquidity",
+  "fixed": true,
+  "fixed_at": 1790670632.836107,
+  "fixed_when": "at the first scan of the session"
+ },
+ "bars_of_the_list": {
+  "listed": 25,
+  "with_bars": 25,
+  "from_kite": 25,
+  "fell_back_to_delayed": [],
+  "last_bar": [
+   "14:00"
+  ],
+  "opening_range_known": 16
+ },
+ "rows_by_feed": {
+  "live": 100,
+  "delayed": 0
+ },
+ "warnings": [],
+ "engine_activity_mentions_of_the_request_limit": 1,
+ "finished": "14:00:41"
+}

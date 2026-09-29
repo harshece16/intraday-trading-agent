@@ -107,7 +107,7 @@ going live is the owner's decision alone.
 - **Starts in PAPER mode, F&O starts disabled.** No real orders until you
   click LIVE and set up Kite; no options orders until you also separately
   turn F&O on from the Portfolio page.
-- **Data caveats:** yfinance is ~15 minutes delayed. The scanner uses it only when Kite is not connected (§101). The NSE feeds are the
+- **Data caveats:** yfinance is a delayed feed, and how far behind it runs is not known exactly. The scanner takes today's prices from it only when Kite is not connected (§101). The NSE feeds are the
   JSON endpoints behind nseindia.com's own pages, not a documented API, so
   they can change or rate-limit. Google News RSS is unofficial. Kite Connect
   gives F&O OHLC + open interest, not implied volatility — this app solves
@@ -3743,17 +3743,17 @@ Files: `backend/scanner.py`, `backend/nse_feed.py`, `backend/trading_engine.py`,
 
 **Owner's decision, 2026-09-29.** This is the second part of the scanner fixes. §100 was the first.
 
-**The problem.** The scanner took every price from a feed about 15 minutes late, even with Kite connected. A scan at 09:45 described the market of about 09:30. Its gap was also not NSE's opening gap, because the delayed feed's first bar does not open at NSE's opening price (#193).
+**The problem.** The scanner took today's prices from the delayed feed, even with Kite connected. Its gap was not NSE's opening gap, because that feed's first bar does not open at NSE's opening price (#193). How far behind the feed runs is not known exactly, so the scanner depended on something it could not check.
 
 **The change.** When Kite is connected, each scan sends one quote request for the whole universe and gets, for every stock: the last price, NSE's opening price, the day's volume, and the day's average traded price (VWAP).
 
 | Number on the Screener | Before | Now, with Kite connected |
 | --- | --- | --- |
-| Last price, change | About 15 minutes late | Live |
+| Last price, change | From the delayed feed | Live |
 | Gap | The delayed feed's first bar over the previous close | NSE's opening price over the previous close |
 | Relative volume | Finished delayed bars against the same bars on up to 4 earlier sessions | The day's volume to the second, against the average traded by that minute of the day on the earlier sessions |
 | VWAP | Worked out from delayed bars | The exchange's average traded price |
-| Opening range | From delayed bars, known at about 09:45 | For the day's list, from live bars at 09:30. For other stocks, from delayed bars as before |
+| Opening range | From delayed bars | For the day's list, from live bars at 09:30. For other stocks, from delayed bars as before |
 | NIFTY's change and position against its open | Delayed | Live |
 | Bars for the checklist read of the day's list | Delayed | Live |
 | Price band for the near-band guard | Worked out from the previous close | The exchange's own limit for the day |
@@ -3772,7 +3772,32 @@ Daily bars and the bars of earlier sessions still come from the delayed feed, wh
 | Live against delayed over 100 stocks | The gap differs by a median of 0.14 points and at most 0.78. The day's change is the same. One stock's side differs |
 | One quote request for 102 instruments | 0.07 seconds |
 
-**Not checked yet: a live session.** The quotes were read after the close, when they hold the day's final values. How the scan behaves between 09:15 and 15:30 has been tested on made-up quotes only. It has to be watched on a live session before it is relied on.
+**Checked on a live session**, 2026-09-29 between 13:53 and 14:15. The new scanner ran in its own process on a throwaway journal, beside the running one, and both were compared with Kite's quotes. It ran nine scans on live prices.
+
+| Check | Result |
+| --- | --- |
+| Rows on live prices | 100 of 100 in each of the six scans where it was recorded |
+| Bars for the day's list | 25 of 25 from Kite, ending on the current bar, in each of the four scans where it was counted |
+| Gap, against NSE's open over its previous close | Largest error 0.005 points. The running scanner was off by 0.3 points or more on 23 stocks, 5 of them on the day's list, and by 2.57 at most |
+| Day's change | Within 0.10 points of a quote read seconds later. The running scanner was off by 0.3 points or more on 16 stocks, and by 2.53 at most (#196) |
+| VWAP, against the exchange's | Within 0.7 basis points. The running scanner: a median of 1.0 and at most 9.1 |
+| Relative volume | A median of 1.63, against 1.58 on the running scanner. For 8 stocks in 10 the two differ by 0.01 to 0.07 |
+| Side | Differs from the running scanner on 3 stocks (SIEMENS, CIPLA, TATACAP), none on the day's list |
+| Requests to Kite, with a scan and a tick's bars fetched at the same moment | 50 requests, never closer than 0.35 seconds, 3 at most in any second, none refused |
+| Time for a scan | 14 to 15 seconds, against 10 to 15 for the running scanner. 22 seconds when a tick fetches its bars at the same moment, and that tick's bars then take 16 seconds in place of 9 |
+| First scan after a restart | 46 to 49 seconds, 26 of them on news and fundamentals, which is not new |
+
+**What the check did not show.**
+
+- **The last price was not newer.** In that half hour the delayed feed's newest price was within a median of 0.8 basis points of Kite's, read at the same moment, and at most 7.4. What this change gives is the right gap, the right day's change and the exchange's own VWAP, and a scanner that no longer depends on how late that feed runs. It did not give a newer price on this session.
+- **One reading is unexplained.** In one scan one stock's live price was 34 basis points from a quote read 9 seconds later. The stock was not recorded. In the other scans the largest difference was 10.
+- **The open has not been checked**: the first scan at 09:15 and the opening range at 09:30.
+- **The scanner ran beside the engine, not inside it.** The request spacing was tested in one process with a tick's bar fetch, which is the same code the engine runs, but not in the engine itself.
+
+**Found by the check.**
+
+- **The daily bars kept a hole at the last session (#196), fixed here.** During a session the delayed feed's daily bars already end with today's bar, and for 16 of the 100 stocks they had no bar for 2026-09-28. The repair from §100 looked only at the last bar and skipped them, so those stocks' gap and day's change were measured from the close of 2026-09-25. It now looks for the session by date and puts NSE's bar in its place. With the fix, no stock's day change was off by 0.3 points or more on either feed.
+- **The sector trend check has been off for 61 of the 100 stocks since 2026-09-16 (#197), not fixed.** The delayed feed serves one daily bar for six of the eight sector indices. The check needs 51 and is skipped without saying so. It covers Financial Services, Automobile, FMCG, Metals, Power, Oil and Gas, and Realty. The day's list is chosen by turnover, so the 25 stocks traded are the same; the side and the score shown for a stock are affected.
 
 **What this does not do.** It does not make the intraday side profitable. No selection rule tested here predicts direction after costs. This makes the scanner's numbers current and correct, which any later test of them needs.
 

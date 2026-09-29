@@ -165,8 +165,11 @@ class _Points:
 
 def complete_daily(daily, today_iso):
     """Add the last completed session to the daily bars where the delayed
-    feed has not published it yet, from NSE's own daily files. Returns the
-    number of series completed and the date they now run through."""
+    feed has not published it, from NSE's own daily files. The session is
+    looked for by date: during a session the feed already carries today's
+    bar and can still lack yesterday's (#196), so the missing bar goes in its
+    place, before any later one. Returns the number of series completed and
+    the date they now run through."""
     try:
         last = nse_feed.last_session(datetime.fromisoformat(today_iso).date())
     except Exception:
@@ -174,13 +177,18 @@ def complete_daily(daily, today_iso):
         return 0, None
     added = 0
     for ticker, bars in daily.items():
-        if not bars or _date(bars[-1]) >= last["date"]:
+        if not bars:
             continue
+        at = len(bars)
+        while at > 0 and _date(bars[at - 1]) > last["date"]:
+            at -= 1
+        if at == 0 or _date(bars[at - 1]) == last["date"]:
+            continue   # nothing before the session to join it to, or it is there
         bar = last["indices"].get(ticker)
         if bar is None and ticker.endswith(".NS"):
             bar = last["stocks"].get(ticker[:-3])
         if bar:
-            bars.append(dict(bar))
+            bars.insert(at, dict(bar))
             added += 1
     return added, last["date"]
 

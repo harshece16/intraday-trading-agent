@@ -901,8 +901,8 @@
    "id": "SCN-01",
    "area": "scanner",
    "status": "active",
-   "rule": "When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance, about 15 minutes late) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21).",
-   "why": "A scan on a feed 15 minutes late describes what has already happened. The delayed feed's first bar is also not NSE's opening price, so the gap was wrong by 0.3 points or more on 7 of 20 stock-days checked (#193).",
+   "rule": "When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21).",
+   "why": "How late the delayed feed runs is not known exactly, and its first bar is not NSE's opening price. On the live session of 2026-09-29 the running scanner's gap was off by 0.3 points or more on 23 of 100 stocks (#193, #196); its last price was not late.",
    "enforced_in": "backend/scanner.py:Scanner.run, fetch_live_quotes, live_day, live_metrics; backend/data_provider.py:kite_quotes",
    "config": "SCANNER.live_feed = True",
    "verify": "Screener page: 'Prices are live from Kite as of HH:MM'; /api/scanner feed",
@@ -1084,15 +1084,16 @@
    "id": "SCN-21",
    "area": "scanner",
    "status": "active",
-   "rule": "When the daily bars do not yet hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. If that fails, the pre-market read says which session it ranked on.",
-   "why": "The delayed feed's daily bars end a session early for hours after the close, so a read before the open ranked on data one session old (#192).",
+   "rule": "When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. The session is looked for by date, so it is added in its place when the bars already end with today's. If that fails, the pre-market read says which session it ranked on.",
+   "why": "The delayed feed's daily bars end a session early for hours after the close, so a read before the open ranked on data one session old (#192). During the next session they can carry today's bar and still lack yesterday's: 16 of 100 stocks on 2026-09-29 (#196).",
    "enforced_in": "backend/scanner.py:complete_daily; backend/nse_feed.py:last_session",
    "config": null,
    "verify": "Pre-market page: 'Ranked on the <date> close'; /api/premarket result.daily",
    "source": "README §100",
    "test": "backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched",
    "issues": [
-    192
+    192,
+    196
    ]
   },
   {

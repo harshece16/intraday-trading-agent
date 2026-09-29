@@ -136,8 +136,8 @@ the sample holds.
 **What had been seen:** row counts only, as in amendment 2.
 
 **The change**, from the first session after it is deployed. README §101.
-The scanner reads today's prices from live Kite quotes in place of a feed
-about 15 minutes late.
+The scanner reads today's prices from live Kite quotes in place of the
+delayed feed.
 
 **Effect on this test: none on the samples, a small one on requests.**
 

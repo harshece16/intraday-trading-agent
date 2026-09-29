@@ -33,7 +33,7 @@ Companions: [High-Level Design](HLD.md) · [Low-Level Design](LLD.md) · [Knowle
 | [Exits and square-off](#exits-and-square-off) | 7 | 6 | 5 | – |
 | [Costs](#costs) | 4 | 3 | 4 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) |
 | [Options (F&O)](#options-fo) | 7 | 0 | 1 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) [#189](https://github.com/harshece16/intraday-trading-agent/issues/189) |
-| [Scanner](#scanner) | 23 | 22 | 13 | [#192](https://github.com/harshece16/intraday-trading-agent/issues/192) [#193](https://github.com/harshece16/intraday-trading-agent/issues/193) |
+| [Scanner](#scanner) | 23 | 22 | 13 | [#192](https://github.com/harshece16/intraday-trading-agent/issues/192) [#193](https://github.com/harshece16/intraday-trading-agent/issues/193) [#196](https://github.com/harshece16/intraday-trading-agent/issues/196) |
 | [Market data](#market-data) | 12 | 12 | 11 | – |
 | [External services](#external-services) | 10 | 9 | 7 | [#160](https://github.com/harshece16/intraday-trading-agent/issues/160) |
 | [Momentum book](#momentum-book) | 15 | 15 | 13 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) [#175](https://github.com/harshece16/intraday-trading-agent/issues/175) [#177](https://github.com/harshece16/intraday-trading-agent/issues/177) [#178](https://github.com/harshece16/intraday-trading-agent/issues/178) [#180](https://github.com/harshece16/intraday-trading-agent/issues/180) |
@@ -1011,11 +1011,11 @@ Which stocks are watched, and the market bias.
 <details>
 <summary><code>SCN-01</code> <b>Active</b> · known gap #193 — When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume…</summary>
 
-When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance, about 15 minutes late) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21).
+When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21).
 
 | | |
 | --- | --- |
-| **Why** | A scan on a feed 15 minutes late describes what has already happened. The delayed feed's first bar is also not NSE's opening price, so the gap was wrong by 0.3 points or more on 7 of 20 stock-days checked (#193). |
+| **Why** | How late the delayed feed runs is not known exactly, and its first bar is not NSE's opening price. On the live session of 2026-09-29 the running scanner's gap was off by 0.3 points or more on 23 of 100 stocks (#193, #196); its last price was not late. |
 | **Enforced in** | `backend/scanner.py:Scanner.run, fetch_live_quotes, live_day, live_metrics; backend/data_provider.py:kite_quotes` |
 | **Setting** | `SCANNER.live_feed = True` |
 | **How to check** | Screener page: 'Prices are live from Kite as of HH:MM'; /api/scanner feed |
@@ -1229,18 +1229,19 @@ A stock with a fixed price band is long-only: it is never scored or traded as a 
 </details>
 
 <details>
-<summary><code>SCN-21</code> <b>Active</b> · known gap #192 — When the daily bars do not yet hold the last completed session, it is added from NSE's equity bhavcopy and index closing file.</summary>
+<summary><code>SCN-21</code> <b>Active</b> · known gap #192 · known gap #196 — When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file.</summary>
 
-When the daily bars do not yet hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. If that fails, the pre-market read says which session it ranked on.
+When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. The session is looked for by date, so it is added in its place when the bars already end with today's. If that fails, the pre-market read says which session it ranked on.
 
 | | |
 | --- | --- |
-| **Why** | The delayed feed's daily bars end a session early for hours after the close, so a read before the open ranked on data one session old (#192). |
+| **Why** | The delayed feed's daily bars end a session early for hours after the close, so a read before the open ranked on data one session old (#192). During the next session they can carry today's bar and still lack yesterday's: 16 of 100 stocks on 2026-09-29 (#196). |
 | **Enforced in** | `backend/scanner.py:complete_daily; backend/nse_feed.py:last_session` |
 | **How to check** | Pre-market page: 'Ranked on the &lt;date> close'; /api/premarket result.daily |
 | **Test** | `backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched` |
 | **Source** | README §100 |
 | **Known gap** | [#192](https://github.com/harshece16/intraday-trading-agent/issues/192) |
+| **Known gap** | [#196](https://github.com/harshece16/intraday-trading-agent/issues/196) |
 
 </details>
 
