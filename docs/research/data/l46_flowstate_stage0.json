@@ -1,0 +1,207 @@
+{
+ "stage0": {
+  "look": "L46",
+  "model": "flowstate",
+  "repo": "ibm-granite/granite-timeseries-flowstate-r1",
+  "output_used": "median quantile",
+  "started": "2026-09-30T02:03:19.317534",
+  "argv": [
+   "--model",
+   "flowstate"
+  ],
+  "prereg": "docs/research/prereg-tsfm-family.md",
+  "environment": {
+   "python": "3.11.9",
+   "machine": "AMD64",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "torch": "2.11.0+cu126",
+   "numpy": "2.4.6",
+   "transformers": "5.17.0",
+   "tsfm_public": "0.3.9",
+   "huggingface_hub": "1.33.0",
+   "cuda": true,
+   "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  },
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "revisions": {
+   "commits": [
+    [
+     "05effc6cb39ee16dce9dd0064ed1a76e4b8ff464",
+     "2026-04-29T14:31:21+00:00"
+    ],
+    [
+     "debb0bedf8ae68e1892271b2c95b1c6935c38a04",
+     "2026-04-29T14:12:13+00:00"
+    ],
+    [
+     "503d8279c7ab610ca7016907160f5b7a60232b79",
+     "2026-04-24T06:12:03+00:00"
+    ],
+    [
+     "8502bfa5f16487776f807fdf133a6cc08ac8898e",
+     "2026-03-20T06:59:27+00:00"
+    ],
+    [
+     "533ab8df33c1b6ed85dc901da26826632fe2d3c5",
+     "2025-09-11T16:42:00+00:00"
+    ],
+    [
+     "189d2170beaa4de3f27f2b88a17387b0ef1d2114",
+     "2025-09-10T16:45:15+00:00"
+    ]
+   ],
+   "with_weights": [
+    "05effc6cb39ee16dce9dd0064ed1a76e4b8ff464",
+    "debb0bedf8ae68e1892271b2c95b1c6935c38a04",
+    "503d8279c7ab610ca7016907160f5b7a60232b79",
+    "8502bfa5f16487776f807fdf133a6cc08ac8898e",
+    "533ab8df33c1b6ed85dc901da26826632fe2d3c5"
+   ],
+   "picked": [
+    "533ab8df33c1b6ed85dc901da26826632fe2d3c5",
+    "2025-09-11T16:42:00+00:00"
+   ],
+   "moved_window": {
+    "start": "2025-09-11",
+    "sessions": 70,
+    "void": false
+   }
+  },
+  "smoke": {
+   "ok": true,
+   "first": [
+    103.565,
+    103.4134,
+    103.1471,
+    102.9349
+   ]
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "ASIANPAINT",
+    "idx": 19637,
+    "identical": true
+   },
+   {
+    "symbol": "HYUNDAI",
+    "idx": 20311,
+    "identical": true
+   },
+   {
+    "symbol": "BAJFINANCE",
+    "idx": 22313,
+    "identical": true
+   },
+   {
+    "symbol": "PFC",
+    "idx": 18992,
+    "identical": true
+   },
+   {
+    "symbol": "HYUNDAI",
+    "idx": 19393,
+    "identical": true
+   },
+   {
+    "symbol": "BOSCHLTD",
+    "idx": 18410,
+    "identical": true
+   },
+   {
+    "symbol": "AMBUJACEM",
+    "idx": 18353,
+    "identical": true
+   },
+   {
+    "symbol": "MAZDOCK",
+    "idx": 21854,
+    "identical": true
+   },
+   {
+    "symbol": "TORNTPHARM",
+    "idx": 22040,
+    "identical": true
+   },
+   {
+    "symbol": "UNITDSPR",
+    "idx": 22754,
+    "identical": true
+   },
+   {
+    "symbol": "JSWSTEEL",
+    "idx": 22997,
+    "identical": true
+   },
+   {
+    "symbol": "LODHA",
+    "idx": 19685,
+    "identical": true
+   },
+   {
+    "symbol": "ASIANPAINT",
+    "idx": 19262,
+    "identical": true
+   },
+   {
+    "symbol": "DIVISLAB",
+    "idx": 19562,
+    "identical": true
+   },
+   {
+    "symbol": "CGPOWER",
+    "idx": 20138,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 21938,
+    "identical": true
+   },
+   {
+    "symbol": "UNITDSPR",
+    "idx": 21638,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 19112,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCLIFE",
+    "idx": 23249,
+    "identical": true
+   },
+   {
+    "symbol": "DIVISLAB",
+    "idx": 22949,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per": 0.00335912823677063,
+   "est_hours_total": 0.03597626341581345
+  },
+  "coverage": {
+   "sessions": 70,
+   "first_half": 35,
+   "second_half": 35,
+   "stock_times": 38556,
+   "sessions_below_min_stocks": []
+  },
+  "samples": 38556
+ },
+ "status": "STAGE0_DONE"
+}

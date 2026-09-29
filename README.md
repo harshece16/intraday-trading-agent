@@ -3869,6 +3869,21 @@ The owner asked (2026-09-29) for more prediction tools, libraries and agents tha
 
 Every test would be pre-registered first, and the expected result for each is a null. Nothing reaches the engine without a pass, a trial and confirmation.
 
+### 104. The night of 2026-09-29: eight forecasting models and 75 combinations tested, none pays
+
+The owner asked, before going to sleep, for Kronos to be added if it passed, for other models to be tested if it did not, and for combinations with candlestick rules to be tried. Every step was pre-registered before its result could be seen, decisions were taken by a decision agent against a written charter, and every decision is logged (`docs/research/decisions/log-2026-09-30.md`; the morning summary is `docs/research/decisions/morning-note-2026-09-30.md`). The heavy work ran on the owner's PC (an RTX 3060 Ti), reached over SSH; the trading Mac was left alone.
+
+| Test | What it asked | Result |
+| --- | --- | --- |
+| **L40, Kronos** (§93) | Does its forecast rank the next 15, 30 or 60 minutes past cost? | **Fail.** Best top-minus-bottom gap +1.6 bp against 33.26 bp |
+| **L46, six more foundation models** (Chronos-Bolt, TimesFM-2.5, Moirai 2.0, FlowState, TiRex, Sundial) | The same question, the same rule | **Fail, 18 of 18.** Gaps −2.3 to +0.5 bp; 16 of 18 negative |
+| **L47, a model trained on our own bars** (Qlib's LightGBM on its 158 standard factors) | The same question, trained on 2024-09 to 2025-08 | **Fail.** Gaps 0.0 to +0.5 bp |
+| **Trials 128–202, 75 combinations** of those forecasts with candlestick patterns | Does any combination earn more than it costs? | **None.** Every one loses after costs; the best loses 13.8 bp a trade. The patterns alone earn about zero before costs over 5,074 trades |
+
+**What this means.** Nothing is added to Trader Sahab. Some of the models rank the next hour a little better or worse than chance with statistical significance, but the effect is at most a few basis points against a round trip of 16.63 bp a leg. This is the project's standing finding again, measured eight more ways: at this horizon and these costs, the entry signal is not the binding constraint. The trial count of record is now 202. Kronos's live shadow still runs today as a labelled record on the Kronos page.
+
+Results: `results-kronos-feature-ic.md`, `results-tsfm-family.md`, `results-qlib-lgbm-alpha158.md`, `results-combo-search.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

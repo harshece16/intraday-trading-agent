@@ -1,0 +1,2316 @@
+{
+ "stage0": {
+  "look": "L47",
+  "prereg": "docs/research/prereg-qlib-lgbm-alpha158.md",
+  "qlib_commit": "be725493eb1a6bbb42bf11b37aa7669f59610ff1",
+  "started": "2026-09-30T02:24:56.510260+05:30",
+  "argv": [
+   "stage0"
+  ],
+  "candle_db": "C:\\Users\\harsh\\kite_cache\\kite_history.db",
+  "environment": {
+   "python": "3.11.9",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "machine": "AMD64",
+   "cpu_count": 16,
+   "numpy": "2.4.6",
+   "pandas": "3.0.6",
+   "lightgbm": "4.7.0",
+   "scipy": "1.17.1",
+   "git_head": "e15837f92dc42f582416ad9040339120aa279d12",
+   "module_dirty": false,
+   "module_sha256": "dfd1df76ab293b5f32ae4dc164ac7c5b08e58cb70403411f91bd31e7b1f60075"
+  },
+  "1_features": {
+   "count": 157,
+   "unique": true,
+   "qlib_commit": "be725493eb1a6bbb42bf11b37aa7669f59610ff1",
+   "dropped": [
+    "VWAP0"
+   ],
+   "names": [
+    "KMID",
+    "KLEN",
+    "KMID2",
+    "KUP",
+    "KUP2",
+    "KLOW",
+    "KLOW2",
+    "KSFT",
+    "KSFT2",
+    "OPEN0",
+    "HIGH0",
+    "LOW0",
+    "ROC5",
+    "ROC10",
+    "ROC20",
+    "ROC30",
+    "ROC60",
+    "MA5",
+    "MA10",
+    "MA20",
+    "MA30",
+    "MA60",
+    "STD5",
+    "STD10",
+    "STD20",
+    "STD30",
+    "STD60",
+    "BETA5",
+    "BETA10",
+    "BETA20",
+    "BETA30",
+    "BETA60",
+    "RSQR5",
+    "RSQR10",
+    "RSQR20",
+    "RSQR30",
+    "RSQR60",
+    "RESI5",
+    "RESI10",
+    "RESI20",
+    "RESI30",
+    "RESI60",
+    "MAX5",
+    "MAX10",
+    "MAX20",
+    "MAX30",
+    "MAX60",
+    "MIN5",
+    "MIN10",
+    "MIN20",
+    "MIN30",
+    "MIN60",
+    "QTLU5",
+    "QTLU10",
+    "QTLU20",
+    "QTLU30",
+    "QTLU60",
+    "QTLD5",
+    "QTLD10",
+    "QTLD20",
+    "QTLD30",
+    "QTLD60",
+    "RANK5",
+    "RANK10",
+    "RANK20",
+    "RANK30",
+    "RANK60",
+    "RSV5",
+    "RSV10",
+    "RSV20",
+    "RSV30",
+    "RSV60",
+    "IMAX5",
+    "IMAX10",
+    "IMAX20",
+    "IMAX30",
+    "IMAX60",
+    "IMIN5",
+    "IMIN10",
+    "IMIN20",
+    "IMIN30",
+    "IMIN60",
+    "IMXD5",
+    "IMXD10",
+    "IMXD20",
+    "IMXD30",
+    "IMXD60",
+    "CORR5",
+    "CORR10",
+    "CORR20",
+    "CORR30",
+    "CORR60",
+    "CORD5",
+    "CORD10",
+    "CORD20",
+    "CORD30",
+    "CORD60",
+    "CNTP5",
+    "CNTP10",
+    "CNTP20",
+    "CNTP30",
+    "CNTP60",
+    "CNTN5",
+    "CNTN10",
+    "CNTN20",
+    "CNTN30",
+    "CNTN60",
+    "CNTD5",
+    "CNTD10",
+    "CNTD20",
+    "CNTD30",
+    "CNTD60",
+    "SUMP5",
+    "SUMP10",
+    "SUMP20",
+    "SUMP30",
+    "SUMP60",
+    "SUMN5",
+    "SUMN10",
+    "SUMN20",
+    "SUMN30",
+    "SUMN60",
+    "SUMD5",
+    "SUMD10",
+    "SUMD20",
+    "SUMD30",
+    "SUMD60",
+    "VMA5",
+    "VMA10",
+    "VMA20",
+    "VMA30",
+    "VMA60",
+    "VSTD5",
+    "VSTD10",
+    "VSTD20",
+    "VSTD30",
+    "VSTD60",
+    "WVMA5",
+    "WVMA10",
+    "WVMA20",
+    "WVMA30",
+    "WVMA60",
+    "VSUMP5",
+    "VSUMP10",
+    "VSUMP20",
+    "VSUMP30",
+    "VSUMP60",
+    "VSUMN5",
+    "VSUMN10",
+    "VSUMN20",
+    "VSUMN30",
+    "VSUMN60",
+    "VSUMD5",
+    "VSUMD10",
+    "VSUMD20",
+    "VSUMD30",
+    "VSUMD60"
+   ]
+  },
+  "data": {
+   "max_ts_read": 1767261300,
+   "max_time_read_ist": "2026-01-01T15:25:00",
+   "symbols_with_bars": 100,
+   "sessions": {
+    "window": [
+     "2024-09-20",
+     "2025-08-14",
+     225
+    ],
+    "train": [
+     "2024-09-20",
+     "2025-06-12",
+     180
+    ],
+    "purge": [
+     "2025-06-13",
+     "2025-06-16",
+     "2025-06-17",
+     "2025-06-18",
+     "2025-06-19"
+    ],
+    "validation": [
+     "2025-06-20",
+     "2025-08-14",
+     40
+    ]
+   },
+   "rows": {
+    "train": 720406,
+    "validation": 163760,
+    "train_by_horizon": {
+     "f15": 720406,
+     "f30": 720406,
+     "f60": 720406
+    },
+    "validation_by_horizon": {
+     "f15": 163760,
+     "f30": 163760,
+     "f60": 163760
+    }
+   },
+   "members_per_date": [
+    100,
+    100
+   ]
+  },
+  "2_lookahead": {
+   "stock_times": 240,
+   "by_segment": {
+    "train": 80,
+    "validation": 80,
+    "test": 80
+   },
+   "all_identical": true,
+   "checks": [
+    {
+     "segment": "train",
+     "symbol": "INDIGO",
+     "time": "2024-10-10T12:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "JSWSTEEL",
+     "time": "2025-01-03T10:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BANKBARODA",
+     "time": "2024-10-23T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ONGC",
+     "time": "2025-02-21T12:50:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ABB",
+     "time": "2025-01-02T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HDFCBANK",
+     "time": "2024-10-31T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BOSCHLTD",
+     "time": "2024-10-07T10:10:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SHRIRAMFIN",
+     "time": "2025-02-12T11:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "UNITDSPR",
+     "time": "2025-04-17T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "MOTHERSON",
+     "time": "2025-04-29T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BHARTIARTL",
+     "time": "2025-01-28T10:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "TCS",
+     "time": "2025-01-30T11:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "TORNTPHARM",
+     "time": "2024-10-10T12:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "PNB",
+     "time": "2024-11-22T13:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJAJHLDNG",
+     "time": "2024-11-12T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "PIDILITIND",
+     "time": "2025-01-29T11:30:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "NTPC",
+     "time": "2025-04-28T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ICICIBANK",
+     "time": "2025-01-28T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BOSCHLTD",
+     "time": "2024-12-26T11:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DIVISLAB",
+     "time": "2024-11-26T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "M&M",
+     "time": "2024-09-20T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "M&M",
+     "time": "2025-03-06T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DRREDDY",
+     "time": "2024-10-24T10:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DRREDDY",
+     "time": "2025-05-13T10:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ETERNAL",
+     "time": "2025-02-12T09:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "JSWSTEEL",
+     "time": "2024-10-17T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "GAIL",
+     "time": "2024-09-23T12:35:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HINDUNILVR",
+     "time": "2025-01-21T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SIEMENS",
+     "time": "2025-03-11T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJFINANCE",
+     "time": "2024-10-29T13:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DMART",
+     "time": "2024-10-08T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HCLTECH",
+     "time": "2024-10-25T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "LTM",
+     "time": "2025-06-05T13:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ULTRACEMCO",
+     "time": "2024-11-14T11:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "WIPRO",
+     "time": "2024-11-08T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "VEDL",
+     "time": "2024-09-27T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DRREDDY",
+     "time": "2025-01-13T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "NTPC",
+     "time": "2025-03-04T13:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DLF",
+     "time": "2025-05-02T13:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ITC",
+     "time": "2025-03-24T10:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJFINANCE",
+     "time": "2025-01-02T12:10:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "JSWSTEEL",
+     "time": "2025-03-20T10:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BOSCHLTD",
+     "time": "2024-10-04T12:35:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "KOTAKBANK",
+     "time": "2025-01-17T09:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "VBL",
+     "time": "2025-01-31T10:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "RECLTD",
+     "time": "2025-04-09T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DIVISLAB",
+     "time": "2025-03-25T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "LT",
+     "time": "2024-12-11T10:55:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "INDIGO",
+     "time": "2025-05-15T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BRITANNIA",
+     "time": "2025-05-27T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HDFCLIFE",
+     "time": "2025-04-15T09:45:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ADANIPORTS",
+     "time": "2025-04-29T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "APOLLOHOSP",
+     "time": "2025-01-21T12:30:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SIEMENS",
+     "time": "2024-09-25T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJAJHLDNG",
+     "time": "2025-02-19T11:30:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HAL",
+     "time": "2025-05-29T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "NTPC",
+     "time": "2025-04-07T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "TATASTEEL",
+     "time": "2025-03-05T13:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJAJFINSV",
+     "time": "2025-06-12T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "CHOLAFIN",
+     "time": "2025-04-17T13:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ICICIBANK",
+     "time": "2025-05-27T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "UNITDSPR",
+     "time": "2025-06-05T12:35:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "HDFCLIFE",
+     "time": "2025-05-12T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "KOTAKBANK",
+     "time": "2025-03-26T11:35:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "CGPOWER",
+     "time": "2025-04-09T11:05:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DLF",
+     "time": "2025-06-06T10:35:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "GODREJCP",
+     "time": "2025-02-28T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "DMART",
+     "time": "2025-02-11T10:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ADANIENT",
+     "time": "2025-04-04T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "BAJAJ-AUTO",
+     "time": "2024-10-03T11:30:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ASIANPAINT",
+     "time": "2025-05-29T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "INDIGO",
+     "time": "2024-12-02T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ABB",
+     "time": "2024-10-22T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "TATAPOWER",
+     "time": "2025-03-26T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SUNPHARMA",
+     "time": "2025-06-03T11:50:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SHREECEM",
+     "time": "2025-01-01T12:30:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "TATACONSUM",
+     "time": "2024-11-27T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "SHREECEM",
+     "time": "2025-01-28T13:00:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ADANIPOWER",
+     "time": "2025-01-29T11:15:00",
+     "identical": true
+    },
+    {
+     "segment": "train",
+     "symbol": "ADANIGREEN",
+     "time": "2025-04-24T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "CANBK",
+     "time": "2025-07-25T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TECHM",
+     "time": "2025-06-26T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "GRASIM",
+     "time": "2025-07-31T10:35:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SUNPHARMA",
+     "time": "2025-07-24T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "CANBK",
+     "time": "2025-08-11T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "WIPRO",
+     "time": "2025-07-21T11:35:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIGREEN",
+     "time": "2025-06-23T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TECHM",
+     "time": "2025-07-08T10:00:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "M&M",
+     "time": "2025-08-12T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "NESTLEIND",
+     "time": "2025-06-27T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "PNB",
+     "time": "2025-07-23T10:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SHRIRAMFIN",
+     "time": "2025-06-20T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "JINDALSTEL",
+     "time": "2025-07-22T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TITAN",
+     "time": "2025-07-10T12:10:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIENSOL",
+     "time": "2025-07-25T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "VBL",
+     "time": "2025-08-07T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "PFC",
+     "time": "2025-08-05T09:55:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TRENT",
+     "time": "2025-06-25T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "HDFCBANK",
+     "time": "2025-07-16T11:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ETERNAL",
+     "time": "2025-08-04T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "HAL",
+     "time": "2025-07-10T13:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SUNPHARMA",
+     "time": "2025-08-07T12:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIGREEN",
+     "time": "2025-08-01T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "APOLLOHOSP",
+     "time": "2025-07-07T11:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TMPV",
+     "time": "2025-07-03T12:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TECHM",
+     "time": "2025-08-07T10:55:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "CGPOWER",
+     "time": "2025-07-30T11:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BAJAJ-AUTO",
+     "time": "2025-07-24T10:35:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "PNB",
+     "time": "2025-07-31T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "WIPRO",
+     "time": "2025-06-24T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TORNTPHARM",
+     "time": "2025-06-20T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TATAPOWER",
+     "time": "2025-07-02T12:00:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BAJAJ-AUTO",
+     "time": "2025-07-31T10:30:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ZYDUSLIFE",
+     "time": "2025-07-08T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TITAN",
+     "time": "2025-06-23T10:55:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ASIANPAINT",
+     "time": "2025-07-14T11:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ULTRACEMCO",
+     "time": "2025-07-22T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "UNITDSPR",
+     "time": "2025-07-15T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "AXISBANK",
+     "time": "2025-07-29T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BAJAJHLDNG",
+     "time": "2025-07-28T13:10:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIPORTS",
+     "time": "2025-06-20T09:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ULTRACEMCO",
+     "time": "2025-06-30T13:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIPOWER",
+     "time": "2025-08-14T11:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "HDFCBANK",
+     "time": "2025-06-26T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BAJAJ-AUTO",
+     "time": "2025-08-05T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SUNPHARMA",
+     "time": "2025-07-22T12:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "IRFC",
+     "time": "2025-06-27T12:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BOSCHLTD",
+     "time": "2025-06-27T10:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "VBL",
+     "time": "2025-07-29T12:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BRITANNIA",
+     "time": "2025-06-20T11:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BEL",
+     "time": "2025-08-07T10:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SHREECEM",
+     "time": "2025-07-24T10:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "HINDUNILVR",
+     "time": "2025-06-26T12:20:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TVSMOTOR",
+     "time": "2025-08-07T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "JSWSTEEL",
+     "time": "2025-07-25T13:00:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TATACONSUM",
+     "time": "2025-06-23T12:55:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SHREECEM",
+     "time": "2025-07-18T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "DLF",
+     "time": "2025-07-14T12:45:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "RELIANCE",
+     "time": "2025-08-01T10:35:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "DIVISLAB",
+     "time": "2025-06-24T10:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BAJAJ-AUTO",
+     "time": "2025-08-08T13:20:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "BRITANNIA",
+     "time": "2025-07-21T11:20:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "M&M",
+     "time": "2025-07-28T11:35:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ASIANPAINT",
+     "time": "2025-07-22T10:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "AMBUJACEM",
+     "time": "2025-06-23T11:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "MARUTI",
+     "time": "2025-07-04T11:30:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "CHOLAFIN",
+     "time": "2025-07-28T12:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "CANBK",
+     "time": "2025-06-26T10:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ASIANPAINT",
+     "time": "2025-07-03T10:30:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ADANIENT",
+     "time": "2025-07-23T12:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "AMBUJACEM",
+     "time": "2025-07-11T09:50:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "TATASTEEL",
+     "time": "2025-06-27T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "GAIL",
+     "time": "2025-06-25T12:10:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SHRIRAMFIN",
+     "time": "2025-08-06T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "INFY",
+     "time": "2025-07-24T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "COALINDIA",
+     "time": "2025-08-07T11:15:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "SHREECEM",
+     "time": "2025-07-17T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "HINDUNILVR",
+     "time": "2025-07-03T11:00:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "PFC",
+     "time": "2025-07-16T12:05:00",
+     "identical": true
+    },
+    {
+     "segment": "validation",
+     "symbol": "ITC",
+     "time": "2025-07-24T13:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "JSWSTEEL",
+     "time": "2025-09-15T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BOSCHLTD",
+     "time": "2025-11-21T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SIEMENS",
+     "time": "2025-12-22T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "IOC",
+     "time": "2025-12-04T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SHREECEM",
+     "time": "2025-10-28T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BHARTIARTL",
+     "time": "2025-11-25T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "UNITDSPR",
+     "time": "2025-10-30T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "CIPLA",
+     "time": "2025-10-09T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TITAN",
+     "time": "2025-12-09T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "LODHA",
+     "time": "2025-11-12T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "MOTHERSON",
+     "time": "2025-11-10T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ASIANPAINT",
+     "time": "2025-11-19T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BRITANNIA",
+     "time": "2025-09-04T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ONGC",
+     "time": "2025-11-26T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ADANIENT",
+     "time": "2025-12-11T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ITC",
+     "time": "2025-10-27T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ONGC",
+     "time": "2025-09-05T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ONGC",
+     "time": "2025-09-26T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ICICIBANK",
+     "time": "2025-09-09T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "MOTHERSON",
+     "time": "2025-09-16T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ADANIGREEN",
+     "time": "2025-12-18T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "CHOLAFIN",
+     "time": "2025-09-23T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SHRIRAMFIN",
+     "time": "2025-09-12T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "INFY",
+     "time": "2025-09-03T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SHREECEM",
+     "time": "2025-10-23T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SHREECEM",
+     "time": "2025-09-17T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TATAPOWER",
+     "time": "2025-10-01T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BRITANNIA",
+     "time": "2025-09-25T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "IRFC",
+     "time": "2025-11-14T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SBILIFE",
+     "time": "2025-09-11T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BANKBARODA",
+     "time": "2025-11-18T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SUNPHARMA",
+     "time": "2025-11-24T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "JSWSTEEL",
+     "time": "2025-09-23T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ETERNAL",
+     "time": "2025-11-27T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TCS",
+     "time": "2025-09-19T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "IRFC",
+     "time": "2025-09-17T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BAJFINANCE",
+     "time": "2025-09-01T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "HDFCLIFE",
+     "time": "2025-10-07T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SBILIFE",
+     "time": "2025-12-22T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "GRASIM",
+     "time": "2025-10-07T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "DRREDDY",
+     "time": "2025-10-24T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "INDIGO",
+     "time": "2025-11-13T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "HDFCBANK",
+     "time": "2025-10-06T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "LTM",
+     "time": "2025-10-03T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "AMBUJACEM",
+     "time": "2025-09-02T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SBILIFE",
+     "time": "2025-09-18T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BAJAJFINSV",
+     "time": "2025-09-26T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "DMART",
+     "time": "2025-11-10T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SBILIFE",
+     "time": "2025-12-03T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "DMART",
+     "time": "2025-12-17T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ADANIENT",
+     "time": "2025-10-15T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "DMART",
+     "time": "2025-09-19T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "HDFCBANK",
+     "time": "2025-12-05T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TATASTEEL",
+     "time": "2025-10-16T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "GAIL",
+     "time": "2025-11-11T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BAJAJFINSV",
+     "time": "2025-12-15T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TORNTPHARM",
+     "time": "2025-10-13T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "INDHOTEL",
+     "time": "2025-12-16T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BAJAJFINSV",
+     "time": "2025-11-24T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "IRFC",
+     "time": "2025-10-06T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TATACONSUM",
+     "time": "2025-12-23T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SOLARINDS",
+     "time": "2025-11-13T13:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BPCL",
+     "time": "2025-11-19T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SIEMENS",
+     "time": "2025-12-10T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BPCL",
+     "time": "2025-12-19T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "POWERGRID",
+     "time": "2025-12-08T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "RELIANCE",
+     "time": "2025-09-02T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "LTM",
+     "time": "2025-10-07T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ADANIGREEN",
+     "time": "2025-12-18T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "HCLTECH",
+     "time": "2025-09-25T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TECHM",
+     "time": "2025-09-30T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "RECLTD",
+     "time": "2025-09-16T12:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "IRFC",
+     "time": "2025-09-24T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "LT",
+     "time": "2025-12-19T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ETERNAL",
+     "time": "2025-11-17T10:25:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "SBILIFE",
+     "time": "2025-09-30T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "BOSCHLTD",
+     "time": "2025-11-17T11:10:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "TRENT",
+     "time": "2025-11-25T09:40:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "VBL",
+     "time": "2025-09-25T11:55:00",
+     "identical": true
+    },
+    {
+     "segment": "test",
+     "symbol": "ABB",
+     "time": "2025-12-05T09:40:00",
+     "identical": true
+    }
+   ]
+  },
+  "3_hand_calculation": {
+   "stock_times": 5,
+   "tolerance": 1e-09,
+   "families": [
+    [
+     "KMID",
+     "KLEN",
+     "KMID2",
+     "KUP",
+     "KUP2",
+     "KLOW",
+     "KLOW2",
+     "KSFT",
+     "KSFT2"
+    ],
+    [
+     "OPEN",
+     "HIGH",
+     "LOW"
+    ],
+    [
+     "ROC"
+    ],
+    [
+     "MA"
+    ],
+    [
+     "STD"
+    ],
+    [
+     "BETA",
+     "RSQR",
+     "RESI"
+    ],
+    [
+     "MAX",
+     "MIN",
+     "QTLU",
+     "QTLD"
+    ],
+    [
+     "RANK",
+     "RSV"
+    ],
+    [
+     "IMAX",
+     "IMIN",
+     "IMXD"
+    ],
+    [
+     "CORR",
+     "CORD"
+    ],
+    [
+     "CNTP",
+     "CNTN",
+     "CNTD"
+    ],
+    [
+     "SUMP",
+     "SUMN",
+     "SUMD"
+    ],
+    [
+     "VMA",
+     "VSTD",
+     "WVMA"
+    ],
+    [
+     "VSUMP",
+     "VSUMN",
+     "VSUMD"
+    ]
+   ],
+   "checks": [
+    {
+     "segment": "train",
+     "symbol": "PNB",
+     "time": "2025-05-14T09:40:00",
+     "features_checked": 157,
+     "mismatches": []
+    },
+    {
+     "segment": "train",
+     "symbol": "INFY",
+     "time": "2025-05-16T09:50:00",
+     "features_checked": 157,
+     "mismatches": []
+    },
+    {
+     "segment": "validation",
+     "symbol": "HINDUNILVR",
+     "time": "2025-08-04T12:10:00",
+     "features_checked": 157,
+     "mismatches": []
+    },
+    {
+     "segment": "validation",
+     "symbol": "HINDUNILVR",
+     "time": "2025-07-21T13:25:00",
+     "features_checked": 157,
+     "mismatches": []
+    },
+    {
+     "segment": "test",
+     "symbol": "TITAN",
+     "time": "2025-09-23T11:55:00",
+     "features_checked": 157,
+     "mismatches": []
+    }
+   ],
+   "corr_against_qlibs_pandas_information_only": {
+    "CORR5": {
+     "both_finite": 2322577,
+     "max_abs_diff_both_finite": 0.0001223342556510021,
+     "undefined_port_nan": 318,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORR10": {
+     "both_finite": 2323449,
+     "max_abs_diff_both_finite": 0.0003479287714852619,
+     "undefined_port_nan": 8,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORR20": {
+     "both_finite": 2323561,
+     "max_abs_diff_both_finite": 1.0714879683515477e-07,
+     "undefined_port_nan": 100,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORR30": {
+     "both_finite": 2323608,
+     "max_abs_diff_both_finite": 6.070561198168178e-08,
+     "undefined_port_nan": 36,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORR60": {
+     "both_finite": 2323684,
+     "max_abs_diff_both_finite": 3.2548508610563687e-09,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORD5": {
+     "both_finite": 2322870,
+     "max_abs_diff_both_finite": 3.368086598509734e-08,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORD10": {
+     "both_finite": 2323360,
+     "max_abs_diff_both_finite": 8.028761100398185e-09,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORD20": {
+     "both_finite": 2323460,
+     "max_abs_diff_both_finite": 4.972842693184987e-10,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORD30": {
+     "both_finite": 2323505,
+     "max_abs_diff_both_finite": 2.255388653615853e-10,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "CORD60": {
+     "both_finite": 2323577,
+     "max_abs_diff_both_finite": 3.107847312833201e-11,
+     "undefined_port_nan": 0,
+     "undefined_pandas_inf": 0,
+     "other": 0
+    },
+    "zero_volume_bars": 37
+   }
+  },
+  "4_purge": {
+   "last_label_end": "2025-08-14",
+   "first_l40_session": "2025-09-01",
+   "sessions_between": 9,
+   "train_last": "2025-06-12",
+   "validation_first": "2025-06-20",
+   "purge_sessions": [
+    "2025-06-13",
+    "2025-06-16",
+    "2025-06-17",
+    "2025-06-18",
+    "2025-06-19"
+   ],
+   "train_validation_gap": 5,
+   "train_label_gap_to_validation": 5,
+   "normaliser_fit_on_training_only": true,
+   "normaliser": {
+    "median": [
+     0.0,
+     0.002064505469786872,
+     0.0,
+     0.00043876086622379555,
+     0.22222222222170734,
+     0.00046310589688171853,
+     0.23376623376620217,
+     0.0,
+     0.0,
+     1.0,
+     1.0008943699412423,
+     0.9991225504533491,
+     1.0000864154959803,
+     1.0001275727164485,
+     1.0001769285208775,
+     1.00014652014652,
+     1.000251556506875,
+     1.0000393139758548,
+     1.0000707207762887,
+     1.0001131886375019,
+     1.0001327707623688,
+     1.000106740904597,
+     0.0011647262041633347,
+     0.0017209313468057662,
+     0.0026484561481651204,
+     0.0034315099504046293,
+     0.004948594136804317,
+     -1.872943198143799e-05,
+     -1.6437399402426604e-05,
+     -9.999278480985187e-06,
+     -6.22963534491722e-06,
+     -2.024713239947728e-06,
+     0.5,
+     0.43211880847367784,
+     0.44367132022556655,
+     0.449536391290296,
+     0.47649099828269414,
+     0.0,
+     -1.1953270281815194e-05,
+     -3.1614989750851e-05,
+     -7.361126437255912e-05,
+     -8.79865309452816e-05,
+     1.0021954709572234,
+     1.0033898305084745,
+     1.0053840201698896,
+     1.0071241168248104,
+     1.0100958247775496,
+     0.9979370241046651,
+     0.9968488294926259,
+     0.9950025747172713,
+     0.9933350357757448,
+     0.9901960784313727,
+     1.0005117527098897,
+     1.0010246541554475,
+     1.0017348301833728,
+     1.0022818791946309,
+     1.0033566622867203,
+     0.9995786516853933,
+     0.9991426821800367,
+     0.9985112966707126,
+     0.9979975222921084,
+     0.9968313805249881,
+     0.6,
+     0.5,
+     0.5,
+     0.5,
+     0.5,
+     0.48648648648622017,
+     0.48275862068940156,
+     0.48051948051945237,
+     0.48148148148129927,
+     0.48991801264436174,
+     0.4,
+     0.4,
+     0.4,
+     0.43333333333333335,
+     0.5333333333333333,
+     0.6,
+     0.5,
+     0.45,
+     0.43333333333333335,
+     0.5333333333333333,
+     0.0,
+     -0.1,
+     -0.05,
+     0.0,
+     0.016666666666666666,
+     0.03817315625943459,
+     0.045199143024034785,
+     0.05317163883264852,
+     0.05315831013009421,
+     0.035789324787344284,
+     0.028154031370759093,
+     0.034544452593944334,
+     0.04012518678602809,
+     0.04167055763936037,
+     0.03785634706349205,
+     0.4,
+     0.5,
+     0.5,
+     0.4666666666666667,
+     0.48333333333333334,
+     0.4,
+     0.5,
+     0.5,
+     0.5,
+     0.48333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     -0.016666666666666663,
+     0.49019607843128515,
+     0.4936708860759338,
+     0.4960937499999837,
+     0.4981132075471645,
+     0.4984608826877131,
+     0.5095057034220147,
+     0.5062499999999698,
+     0.5038817474993682,
+     0.5018820577164299,
+     0.5015391173122841,
+     -0.019011406844105086,
+     -0.012499999999999845,
+     -0.007763494998744644,
+     -0.003764115432875496,
+     -0.0030782346245710156,
+     1.1506166530649224,
+     1.3148633329570854,
+     1.5586582119309678,
+     1.7278513510326627,
+     1.8679070182034523,
+     0.41691161677034494,
+     0.6381460975230782,
+     0.9763694433422173,
+     1.2558675084893722,
+     1.6678861190881151,
+     0.9370530796844737,
+     1.1132062673780623,
+     1.3490986262804592,
+     1.548887333594962,
+     1.997527753060191,
+     0.4777674338526031,
+     0.47962384222358534,
+     0.4879595662889677,
+     0.49260126571549906,
+     0.5002449681060285,
+     0.5222314934216523,
+     0.5203761577764148,
+     0.5120404337110323,
+     0.507398734284501,
+     0.4997550318939715,
+     -0.044462986843304714,
+     -0.04075231555282936,
+     -0.024080867422064597,
+     -0.014797468569001862,
+     0.0004899362120569936
+    ],
+    "std": [
+     0.001278103449758644,
+     0.001093934108190761,
+     0.6779569449826758,
+     0.00048153928130493265,
+     0.24124356167373368,
+     0.0004669785569079469,
+     0.23875636363789624,
+     0.0015158814294982934,
+     0.808690909092038,
+     0.0012781616036700943,
+     0.0008362878659527498,
+     0.0008099315310603565,
+     0.002992796635318459,
+     0.004611541420505311,
+     0.007389574380241535,
+     0.009771412158142041,
+     0.014438352937949947,
+     0.001389025864614909,
+     0.002235873756204026,
+     0.0036195191455202433,
+     0.004815835851147278,
+     0.00797016964396979,
+     0.0007568699357098845,
+     0.0010553615158250796,
+     0.0016061438153570167,
+     0.0020244474948168346,
+     0.002881216613010946,
+     0.0006670501792750416,
+     0.0004914874810865226,
+     0.00039494996460051455,
+     0.00034983920723673874,
+     0.0002685902016505832,
+     0.43333298444418106,
+     0.41155452035104584,
+     0.40048128715104975,
+     0.3928233367604503,
+     0.3811941431679997,
+     0.0006633557061807208,
+     0.0012588274998146345,
+     0.0021206724175633807,
+     0.002862324161403589,
+     0.004546405821744578,
+     0.0019533371127235465,
+     0.003007952948454492,
+     0.004768355254638384,
+     0.006230190433580857,
+     0.008714902752017258,
+     0.0018904677338296458,
+     0.0029257365128220335,
+     0.004703708273101514,
+     0.006212188600584292,
+     0.008890616345673707,
+     0.0012086773392468032,
+     0.002035642667905161,
+     0.003312211765163287,
+     0.004394571415104477,
+     0.007135713721366402,
+     0.00118427345162031,
+     0.0020093204418150205,
+     0.003277637285913818,
+     0.004399166595913617,
+     0.007259142712995175,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.4942000000014826,
+     0.5189100000014825,
+     0.39068513513640646,
+     0.38869381338862447,
+     0.39279272727418063,
+     0.39398722222391713,
+     0.39641737432779145,
+     0.2965200000014826,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.42007000000148254,
+     0.5930400000014825,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.4447800000014826,
+     0.44478000000148255,
+     0.8895600000014825,
+     0.7413000000014826,
+     0.7413000000014826,
+     0.6918800000014825,
+     0.6671700000014825,
+     0.7018722734674616,
+     0.49659523277779916,
+     0.4166639920943327,
+     0.40555675209995756,
+     0.4186920652796877,
+     0.724018801581744,
+     0.5040742897154149,
+     0.3666531755804903,
+     0.30455093102155606,
+     0.22798610045488688,
+     0.29652000000148254,
+     0.14826000000148257,
+     0.14826000000148257,
+     0.09884000000148258,
+     0.07413000000148258,
+     0.29652000000148254,
+     0.14826000000148257,
+     0.07413000000148266,
+     0.09884000000148258,
+     0.07413000000148258,
+     0.29652000000148254,
+     0.29652000000148254,
+     0.22239000000148262,
+     0.19768000000148256,
+     0.12355000000148265,
+     0.2996506787345962,
+     0.20706354430497886,
+     0.15124105663636708,
+     0.12775494838609525,
+     0.09728140525860282,
+     0.29983143104239857,
+     0.2069462500016085,
+     0.15124386389082833,
+     0.12775305745750568,
+     0.09728140525860303,
+     0.5990675343681453,
+     0.4138925000014242,
+     0.30248183901978926,
+     0.2555061149135139,
+     0.19456281051572324,
+     0.519742786288323,
+     0.7095763834993362,
+     0.9568261452038701,
+     1.1181353933370477,
+     1.2753554853507825,
+     0.27218150895980164,
+     0.48964279878792816,
+     0.7831558380586566,
+     1.0037891918148905,
+     1.2814260534620576,
+     0.34725217568509265,
+     0.3704053523627078,
+     0.44330437820089735,
+     0.5259966419097256,
+     0.7148393740966615,
+     0.1607844339295774,
+     0.08017585139226628,
+     0.03982434220273432,
+     0.026472173482031968,
+     0.00893658020747077,
+     0.16078524503856942,
+     0.08017585139226645,
+     0.03982434220273424,
+     0.02647217348203201,
+     0.008936580207470811,
+     0.3215620733802855,
+     0.16035170278305,
+     0.07964868440398597,
+     0.0529443469625814,
+     0.017873160413458957
+    ],
+    "fit_rows": 720406,
+    "fit_first": "2024-09-20",
+    "fit_last": "2025-06-12"
+   },
+   "max_time_read_ist": "2026-01-01T15:25:00",
+   "read_before": "2026-01-02",
+   "training_nan_fraction": {
+    "ROC10": 0.0005899451142827795,
+    "ROC20": 0.0017698353428483382,
+    "ROC30": 0.0029497255714138974,
+    "ROC60": 0.0054274950514015706,
+    "RSQR5": 0.0004580750299136876,
+    "RSQR10": 0.00011243659825154149,
+    "RSQR20": 4.303129068886156e-05,
+    "RSQR30": 8.328636907521591e-06,
+    "CORR5": 0.00046085124221619477,
+    "CORR10": 0.00011243659825154149,
+    "CORR20": 4.303129068886156e-05,
+    "CORR30": 8.328636907521591e-06,
+    "CORD5": 0.00029844282251952374,
+    "CORD10": 0.0001013317490415127,
+    "CORD20": 3.886697223510076e-05,
+    "CORD30": 5.552424605014394e-06
+   },
+   "training_inf_count": {}
+  },
+  "5_adjustment": {
+   "training_window": {
+    "fetch_runs": [
+     {
+      "date": "2026-09-20",
+      "spans": 1302
+     }
+    ],
+    "boundaries": {},
+    "dropped_stock_sessions": {},
+    "dropped_count": 0
+   },
+   "test_window": {
+    "fetch_runs": [
+     {
+      "date": "2026-09-20",
+      "spans": 1302
+     }
+    ],
+    "boundaries": {},
+    "dropped_stock_sessions": {},
+    "dropped_count": 0
+   }
+  },
+  "6_l40_sample": {
+   "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+   "sessions_with_data": 78,
+   "stock_times": 43362,
+   "expected": [
+    78,
+    43362
+   ]
+  },
+  "7_positive_control": {
+   "stock_times": 21360,
+   "m60_mismatches": [],
+   "m60_worst_abs_diff_bp": 1.1226575225009583e-12,
+   "horizons": {
+    "f15": {
+     "sessions": 40,
+     "spread_mean_bp": 57.2218018526792,
+     "spread_t": 53.94168931027588,
+     "spread_over_bar": 1.7204390214275167,
+     "halves_mean_bp": [
+      55.96789551536081,
+      58.47570818999759
+     ],
+     "ic_mean": 1.0,
+     "passes": true
+    },
+    "f30": {
+     "sessions": 40,
+     "spread_mean_bp": 79.554295731223,
+     "spread_t": 48.083752859092,
+     "spread_over_bar": 2.3918910322075466,
+     "halves_mean_bp": [
+      76.59471797964899,
+      82.51387348279701
+     ],
+     "ic_mean": 1.0,
+     "passes": true
+    },
+    "f60": {
+     "sessions": 40,
+     "spread_mean_bp": 110.77690543804648,
+     "spread_t": 46.75211575142272,
+     "spread_over_bar": 3.330634559171572,
+     "halves_mean_bp": [
+      106.3072528061044,
+      115.24655806998855
+     ],
+     "ic_mean": 1.0,
+     "passes": true
+    }
+   },
+   "passes": true
+  },
+  "seconds": 139,
+  "finished": "2026-09-30T02:27:15.695534+05:30"
+ },
+ "status": "STAGE0_DONE"
+}

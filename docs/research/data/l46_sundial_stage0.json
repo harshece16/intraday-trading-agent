@@ -1,0 +1,512 @@
+{
+ "stage0": {
+  "look": "L46",
+  "model": "sundial",
+  "repo": "thuml/sundial-base-128m",
+  "output_used": "mean of 3 samples",
+  "started": "2026-09-30T02:18:19.028076",
+  "argv": [
+   "--model",
+   "sundial"
+  ],
+  "prereg": "docs/research/prereg-tsfm-family.md",
+  "environment": {
+   "python": "3.11.9",
+   "machine": "AMD64",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "torch": "2.14.0+cu126",
+   "numpy": "2.4.6",
+   "transformers": "4.40.1",
+   "huggingface_hub": "0.36.2",
+   "cuda": true,
+   "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  },
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "revisions": {
+   "commits": [
+    [
+     "3212e42564493f520593e5414af4367fc4b49226",
+     "2026-03-09T05:52:00+00:00"
+    ],
+    [
+     "102b961424c4780dd0e885f15e37d9811f6a30dc",
+     "2026-03-09T05:51:13+00:00"
+    ],
+    [
+     "19ca81acdd6840a0cbbcf72635bdcbd4f19d15e7",
+     "2026-03-09T05:49:49+00:00"
+    ],
+    [
+     "7ea292e6d270d9ddb6ea770694f220e945f28a44",
+     "2026-03-09T05:48:48+00:00"
+    ],
+    [
+     "1fa7dd71dc7d11a5ffef73348b4b46b582dffc1d",
+     "2026-02-25T04:49:51+00:00"
+    ],
+    [
+     "6b0133d3a7ba9c513ad67993f9227142c4664a42",
+     "2025-10-09T06:27:10+00:00"
+    ],
+    [
+     "f7432cff85ebbc576c6d5cca6ae89ddd1e72eaf4",
+     "2025-09-25T04:03:17+00:00"
+    ],
+    [
+     "749e0a62e62658e557143fa5396a29ed4573e416",
+     "2025-09-25T04:02:19+00:00"
+    ],
+    [
+     "bc34f98b807e7d9ad89d8455e2056bd5e62a0556",
+     "2025-09-12T08:25:08+00:00"
+    ],
+    [
+     "2f40cf7dd765a0eb63b1773c20cc8f61341d13d2",
+     "2025-08-08T02:57:51+00:00"
+    ],
+    [
+     "a1b1746937fdbafb1c63ca160d9ed17d7b88d039",
+     "2025-07-21T01:25:39+00:00"
+    ],
+    [
+     "1cb07e76fc4e76a074a278f56fa4d8dd30639895",
+     "2025-06-19T11:24:36+00:00"
+    ],
+    [
+     "b9e3d4432b5f7326d7ac2caa9539303f57fe3609",
+     "2025-06-08T15:53:47+00:00"
+    ],
+    [
+     "6b4dba9b7ef1a9ae451b2a8e6d784312f42fedd1",
+     "2025-06-08T15:37:03+00:00"
+    ],
+    [
+     "436a26a63c26931095c865f7a4643db8558ee53f",
+     "2025-06-08T15:33:57+00:00"
+    ],
+    [
+     "886f38b822f132e32d66e99df93fb0fc913aea2c",
+     "2025-06-06T03:13:18+00:00"
+    ],
+    [
+     "cc81559b065e0f3a11aceeaed68036ef50dc8af5",
+     "2025-06-02T18:36:38+00:00"
+    ],
+    [
+     "5ee1f54afa6c8f6f1dce6f92c719b8a7531feb06",
+     "2025-05-29T09:17:41+00:00"
+    ],
+    [
+     "fee7f6a9d60dc4b6d8ec50a84b9e1e55dea739d4",
+     "2025-05-29T09:17:19+00:00"
+    ],
+    [
+     "a2ef1aa6ee22b69fbb520f27e86658a408135d09",
+     "2025-05-28T08:32:05+00:00"
+    ],
+    [
+     "5c54fbb4681b1c63710421b98a93b58817784bda",
+     "2025-05-26T10:53:13+00:00"
+    ],
+    [
+     "3f8c15af272cf56c9bbc8c2dfb31fe6f1973f327",
+     "2025-05-26T07:47:06+00:00"
+    ],
+    [
+     "6a609af9405a59c29770d29a6375df54adc2c85b",
+     "2025-05-26T07:38:22+00:00"
+    ],
+    [
+     "e82b52ef44980ae1d247cbde5c798df17a6b34fe",
+     "2025-05-23T04:16:34+00:00"
+    ],
+    [
+     "4c7d4fae537caa5b807f3d78e770d1aba3c179cb",
+     "2025-05-23T04:16:13+00:00"
+    ],
+    [
+     "c1b14dd36d22c57bb35fc386525f902d264ca66f",
+     "2025-05-22T16:20:28+00:00"
+    ],
+    [
+     "df911f9a0e19e7df34c402350f64d975a25071b3",
+     "2025-05-22T15:40:34+00:00"
+    ],
+    [
+     "e543d6cbf36012bd7c9c886af28fb49165c6031c",
+     "2025-05-22T13:24:46+00:00"
+    ],
+    [
+     "68c260394e819d6458701332f919aa996f447bf6",
+     "2025-05-22T13:24:25+00:00"
+    ],
+    [
+     "0f52eab072f27d47eb3feddfd1ee45ed594015fa",
+     "2025-05-22T13:23:14+00:00"
+    ],
+    [
+     "b7b11fd7f889aef81f8c1711ed1fc622b01f02d8",
+     "2025-05-22T13:18:17+00:00"
+    ],
+    [
+     "30176218481324858528a1d6117426926bab124b",
+     "2025-05-22T07:06:09+00:00"
+    ],
+    [
+     "e38e114fb8ee51f67d717188b8f3e413cd993107",
+     "2025-05-22T07:02:48+00:00"
+    ],
+    [
+     "03a967dd675f0dea6229fdee1bc89e4eb310df19",
+     "2025-05-19T12:30:27+00:00"
+    ],
+    [
+     "9a0921f2af8b93e63a9d358ef5bed265c283e1bb",
+     "2025-05-17T11:50:03+00:00"
+    ],
+    [
+     "6135aa37a98bdcf6b3dae42e17f6c38d4bfe0e7e",
+     "2025-05-17T11:28:55+00:00"
+    ],
+    [
+     "58cebf820e41369a6d1c3798d01b5b4e890a4d57",
+     "2025-05-17T07:11:23+00:00"
+    ],
+    [
+     "225f921168f09d4a00e7626ed20cf882c73f2764",
+     "2025-05-17T07:11:07+00:00"
+    ],
+    [
+     "dc4fa9195c680e6da7e8f6f78d85eed33ea696f7",
+     "2025-05-17T07:07:14+00:00"
+    ],
+    [
+     "1f38e436b15d6226f382e926f9070ff8fa1b1633",
+     "2025-05-17T07:05:31+00:00"
+    ],
+    [
+     "ab94bccf8846346bce8bbcec837a5f432125c888",
+     "2025-05-17T07:04:52+00:00"
+    ],
+    [
+     "ae47cd9283c971b72ffbc506d90b58a4620e0810",
+     "2025-05-17T07:03:56+00:00"
+    ],
+    [
+     "1be1d5c52b963620e9bb1b59f2e5ceaad0b00cd4",
+     "2025-05-17T06:53:29+00:00"
+    ],
+    [
+     "b7834498c3d34b9f21f35277f41bc793d7893d13",
+     "2025-05-16T08:20:57+00:00"
+    ],
+    [
+     "328c66dea79e1fc99c4c915a5c2a5ecbf54afeca",
+     "2025-05-16T08:19:14+00:00"
+    ],
+    [
+     "83576b32cda9846a68aee4a2133d3744c231b1ee",
+     "2025-05-16T08:00:18+00:00"
+    ],
+    [
+     "5fee532569e91bb18b798201dd1832a6d5295ba8",
+     "2025-05-16T07:59:03+00:00"
+    ],
+    [
+     "e04c00d999b8560c9abee9c367a939c727b65243",
+     "2025-05-16T07:57:41+00:00"
+    ],
+    [
+     "db0410a38042b34f26fc87e42dfc8849fdbcd4a5",
+     "2025-05-16T07:42:06+00:00"
+    ],
+    [
+     "38bd05ae9afaf04dc84e6cfe36afbf37f6590565",
+     "2025-05-16T07:40:50+00:00"
+    ],
+    [
+     "ddbaf840471c31c49839bb9272cd483926a7878b",
+     "2025-05-16T06:59:31+00:00"
+    ],
+    [
+     "02d93edb6afb62c158077d3d4ac51d816a09b36c",
+     "2025-05-16T06:58:21+00:00"
+    ],
+    [
+     "98fb9bd2b29cb9a4b567027ef1113f31539481c7",
+     "2025-05-16T06:39:38+00:00"
+    ],
+    [
+     "2c9370e99d6bcb50dd5c6807d839b8e47e46345c",
+     "2025-05-15T09:21:20+00:00"
+    ],
+    [
+     "13b432646ae0f4b83fb5d2bdc22b99a9c74bb1c8",
+     "2025-05-15T08:53:07+00:00"
+    ],
+    [
+     "980c6c0b891b4182d32e97f7860bf4829ac50da1",
+     "2025-05-15T08:52:27+00:00"
+    ],
+    [
+     "1f5ec5fddc15dafff167cce7ce12dc5c5403e14b",
+     "2025-05-15T08:25:00+00:00"
+    ],
+    [
+     "e04dafa1148262f3d38a0ee8341e7d9e62ae6e03",
+     "2025-05-14T15:23:31+00:00"
+    ],
+    [
+     "510ebf25ff5b0dedfc1baa03fd668a2e50b5adb9",
+     "2025-05-14T14:18:09+00:00"
+    ],
+    [
+     "4635542c79b3988028a3ff8ec9484fa62fde2258",
+     "2025-05-14T14:17:25+00:00"
+    ],
+    [
+     "5eb4f7d6b34e33383abdd548b66da13d01481020",
+     "2025-05-14T13:44:41+00:00"
+    ],
+    [
+     "6e85e886a58b955952eeef1fcc2e7aea8386425b",
+     "2025-05-14T12:50:45+00:00"
+    ],
+    [
+     "2f40c01135063b80567e3ebdc71a636fb9d846f1",
+     "2025-05-14T12:49:41+00:00"
+    ],
+    [
+     "b2779c72f107c1a295b9239eed99bbd229b9cf21",
+     "2025-05-14T06:46:55+00:00"
+    ],
+    [
+     "1be58f2da6f41d74b7a39f3898238591fa58c764",
+     "2025-05-14T06:43:59+00:00"
+    ],
+    [
+     "637963f77c3a34601e4871682250d399b7d3a92b",
+     "2025-05-14T06:43:23+00:00"
+    ],
+    [
+     "8f6e3aaad499d1011b6f53df20d1b8715a42b9e5",
+     "2025-05-14T06:40:48+00:00"
+    ],
+    [
+     "665f60b55779d7d1f285b29ff23b338f06682d85",
+     "2025-05-14T06:36:17+00:00"
+    ],
+    [
+     "5db41f5d4f3efb41f386d7eacbf7a8a78eb5b2fc",
+     "2025-05-13T12:53:52+00:00"
+    ]
+   ],
+   "with_weights": [
+    "3212e42564493f520593e5414af4367fc4b49226",
+    "102b961424c4780dd0e885f15e37d9811f6a30dc",
+    "19ca81acdd6840a0cbbcf72635bdcbd4f19d15e7",
+    "7ea292e6d270d9ddb6ea770694f220e945f28a44",
+    "1fa7dd71dc7d11a5ffef73348b4b46b582dffc1d",
+    "6b0133d3a7ba9c513ad67993f9227142c4664a42",
+    "f7432cff85ebbc576c6d5cca6ae89ddd1e72eaf4",
+    "749e0a62e62658e557143fa5396a29ed4573e416",
+    "bc34f98b807e7d9ad89d8455e2056bd5e62a0556",
+    "2f40cf7dd765a0eb63b1773c20cc8f61341d13d2",
+    "a1b1746937fdbafb1c63ca160d9ed17d7b88d039",
+    "1cb07e76fc4e76a074a278f56fa4d8dd30639895",
+    "b9e3d4432b5f7326d7ac2caa9539303f57fe3609",
+    "6b4dba9b7ef1a9ae451b2a8e6d784312f42fedd1",
+    "436a26a63c26931095c865f7a4643db8558ee53f",
+    "886f38b822f132e32d66e99df93fb0fc913aea2c",
+    "cc81559b065e0f3a11aceeaed68036ef50dc8af5",
+    "5ee1f54afa6c8f6f1dce6f92c719b8a7531feb06",
+    "fee7f6a9d60dc4b6d8ec50a84b9e1e55dea739d4",
+    "a2ef1aa6ee22b69fbb520f27e86658a408135d09",
+    "5c54fbb4681b1c63710421b98a93b58817784bda",
+    "3f8c15af272cf56c9bbc8c2dfb31fe6f1973f327",
+    "6a609af9405a59c29770d29a6375df54adc2c85b",
+    "e82b52ef44980ae1d247cbde5c798df17a6b34fe",
+    "4c7d4fae537caa5b807f3d78e770d1aba3c179cb",
+    "c1b14dd36d22c57bb35fc386525f902d264ca66f",
+    "df911f9a0e19e7df34c402350f64d975a25071b3",
+    "e543d6cbf36012bd7c9c886af28fb49165c6031c",
+    "68c260394e819d6458701332f919aa996f447bf6",
+    "0f52eab072f27d47eb3feddfd1ee45ed594015fa",
+    "b7b11fd7f889aef81f8c1711ed1fc622b01f02d8",
+    "30176218481324858528a1d6117426926bab124b",
+    "e38e114fb8ee51f67d717188b8f3e413cd993107",
+    "03a967dd675f0dea6229fdee1bc89e4eb310df19",
+    "9a0921f2af8b93e63a9d358ef5bed265c283e1bb",
+    "6135aa37a98bdcf6b3dae42e17f6c38d4bfe0e7e",
+    "58cebf820e41369a6d1c3798d01b5b4e890a4d57",
+    "225f921168f09d4a00e7626ed20cf882c73f2764",
+    "dc4fa9195c680e6da7e8f6f78d85eed33ea696f7",
+    "1f38e436b15d6226f382e926f9070ff8fa1b1633",
+    "ab94bccf8846346bce8bbcec837a5f432125c888",
+    "ae47cd9283c971b72ffbc506d90b58a4620e0810",
+    "1be1d5c52b963620e9bb1b59f2e5ceaad0b00cd4",
+    "b7834498c3d34b9f21f35277f41bc793d7893d13",
+    "328c66dea79e1fc99c4c915a5c2a5ecbf54afeca",
+    "83576b32cda9846a68aee4a2133d3744c231b1ee",
+    "5fee532569e91bb18b798201dd1832a6d5295ba8",
+    "e04c00d999b8560c9abee9c367a939c727b65243",
+    "db0410a38042b34f26fc87e42dfc8849fdbcd4a5",
+    "38bd05ae9afaf04dc84e6cfe36afbf37f6590565",
+    "ddbaf840471c31c49839bb9272cd483926a7878b",
+    "02d93edb6afb62c158077d3d4ac51d816a09b36c",
+    "98fb9bd2b29cb9a4b567027ef1113f31539481c7",
+    "2c9370e99d6bcb50dd5c6807d839b8e47e46345c",
+    "13b432646ae0f4b83fb5d2bdc22b99a9c74bb1c8",
+    "980c6c0b891b4182d32e97f7860bf4829ac50da1",
+    "1f5ec5fddc15dafff167cce7ce12dc5c5403e14b",
+    "e04dafa1148262f3d38a0ee8341e7d9e62ae6e03",
+    "510ebf25ff5b0dedfc1baa03fd668a2e50b5adb9",
+    "4635542c79b3988028a3ff8ec9484fa62fde2258",
+    "5eb4f7d6b34e33383abdd548b66da13d01481020",
+    "6e85e886a58b955952eeef1fcc2e7aea8386425b",
+    "2f40c01135063b80567e3ebdc71a636fb9d846f1"
+   ],
+   "picked": [
+    "2f40cf7dd765a0eb63b1773c20cc8f61341d13d2",
+    "2025-08-08T02:57:51+00:00"
+   ],
+   "moved_window": null
+  },
+  "smoke": {
+   "ok": true,
+   "first": [
+    103.5635,
+    103.4385,
+    103.2938,
+    103.2339
+   ]
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19412,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 21890,
+    "identical": true
+   },
+   {
+    "symbol": "BAJAJHLDNG",
+    "idx": 18701,
+    "identical": true
+   },
+   {
+    "symbol": "M&M",
+    "idx": 20804,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 20972,
+    "identical": true
+   },
+   {
+    "symbol": "BEL",
+    "idx": 17960,
+    "identical": true
+   },
+   {
+    "symbol": "ADANIPOWER",
+    "idx": 19478,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 21179,
+    "identical": true
+   },
+   {
+    "symbol": "SOLARINDS",
+    "idx": 20003,
+    "identical": true
+   },
+   {
+    "symbol": "TATASTEEL",
+    "idx": 18017,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 17810,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 19010,
+    "identical": true
+   },
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19037,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 19562,
+    "identical": true
+   },
+   {
+    "symbol": "BPCL",
+    "idx": 22838,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 21938,
+    "identical": true
+   },
+   {
+    "symbol": "TATAPOWER",
+    "idx": 22763,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 19112,
+    "identical": true
+   },
+   {
+    "symbol": "GRASIM",
+    "idx": 20999,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 22949,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per": 0.004558398723602295,
+   "est_hours_total": 0.054905912625789643
+  },
+  "coverage": {
+   "sessions": 79,
+   "first_half": 39,
+   "second_half": 40,
+   "stock_times": 43362,
+   "sessions_below_min_stocks": []
+  },
+  "samples": 43362
+ },
+ "status": "STAGE0_DONE"
+}

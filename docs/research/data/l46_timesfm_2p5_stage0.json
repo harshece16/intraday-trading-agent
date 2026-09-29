@@ -1,0 +1,276 @@
+{
+ "stage0": {
+  "look": "L46",
+  "model": "timesfm_2p5",
+  "repo": "google/timesfm-2.5-200m-pytorch",
+  "output_used": "point forecast",
+  "started": "2026-09-30T00:55:31.292480",
+  "argv": [
+   "--model",
+   "timesfm_2p5"
+  ],
+  "prereg": "docs/research/prereg-tsfm-family.md",
+  "environment": {
+   "python": "3.11.9",
+   "machine": "AMD64",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "torch": "2.14.0+cu126",
+   "numpy": "2.4.6",
+   "timesfm": "installed",
+   "huggingface_hub": "2.0.0",
+   "cuda": true,
+   "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  },
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "revisions": {
+   "commits": [
+    [
+     "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
+     "2025-10-02T17:21:38+00:00"
+    ],
+    [
+     "139be6c968844aaa53c250c01d2db45c84399400",
+     "2025-10-01T23:39:20+00:00"
+    ],
+    [
+     "e8ebf27bfd556f9d7a69de062fa096ec02c22b89",
+     "2025-10-01T23:06:04+00:00"
+    ],
+    [
+     "816f64fb93ae11b0245ff2ddb96c58ddcf99423b",
+     "2025-10-01T23:05:15+00:00"
+    ],
+    [
+     "2d1b32066b7f3950c45913d4a3849f3c75cb0312",
+     "2025-10-01T22:23:27+00:00"
+    ],
+    [
+     "fdcc8eb915bfdc94709bc6abd1a20d23a997234f",
+     "2025-10-01T22:18:41+00:00"
+    ],
+    [
+     "d418f3e8a8fa79d655b391c158f0ee8d68fe68c9",
+     "2025-10-01T22:16:35+00:00"
+    ],
+    [
+     "a6e2c7cdf5f478e552410974e26d6ffc9afc08a6",
+     "2025-09-29T16:37:04+00:00"
+    ],
+    [
+     "ef46453a325d11867c6e304e21cf0632d0fa654f",
+     "2025-09-26T16:59:35+00:00"
+    ],
+    [
+     "9a657df611eb69fe205b97526afac8e3cc4c3658",
+     "2025-09-25T20:29:44+00:00"
+    ],
+    [
+     "26233fffa726cf3259addc2f2fedbbeaf420a79f",
+     "2025-09-15T20:40:37+00:00"
+    ],
+    [
+     "3099d9193d488a2e695bad50c9246b15f79e5d39",
+     "2025-09-15T17:37:34+00:00"
+    ],
+    [
+     "2b518f0fc9945bbb41b2b8b4b9b4caa337ba83ea",
+     "2025-09-12T05:38:19+00:00"
+    ],
+    [
+     "03674287e8d77d0d8dc00c223fe03e326dc3c111",
+     "2025-09-12T04:20:58+00:00"
+    ],
+    [
+     "bbf56d4410bbd4dfc70f90941851c1e76472d26e",
+     "2025-09-12T00:49:08+00:00"
+    ],
+    [
+     "b0b31f648778a82e76499a6103286fd9fa5132ad",
+     "2025-09-12T00:46:59+00:00"
+    ],
+    [
+     "295319dbdc75b5205e139b284c4e14bcb56ced38",
+     "2025-09-12T00:36:27+00:00"
+    ],
+    [
+     "910b4d31044af4d8b599d23945c1a8227cb22d7a",
+     "2025-09-05T07:11:59+00:00"
+    ],
+    [
+     "d35e0e4561f6d764412182e244b34776ad44d3d0",
+     "2025-09-02T19:44:38+00:00"
+    ],
+    [
+     "eae42bc14a61ff40643c6994737c421abfa57763",
+     "2025-09-02T18:55:46+00:00"
+    ]
+   ],
+   "with_weights": [
+    "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
+    "139be6c968844aaa53c250c01d2db45c84399400",
+    "e8ebf27bfd556f9d7a69de062fa096ec02c22b89",
+    "816f64fb93ae11b0245ff2ddb96c58ddcf99423b",
+    "2d1b32066b7f3950c45913d4a3849f3c75cb0312",
+    "fdcc8eb915bfdc94709bc6abd1a20d23a997234f",
+    "d418f3e8a8fa79d655b391c158f0ee8d68fe68c9",
+    "a6e2c7cdf5f478e552410974e26d6ffc9afc08a6",
+    "ef46453a325d11867c6e304e21cf0632d0fa654f",
+    "9a657df611eb69fe205b97526afac8e3cc4c3658",
+    "26233fffa726cf3259addc2f2fedbbeaf420a79f",
+    "3099d9193d488a2e695bad50c9246b15f79e5d39",
+    "2b518f0fc9945bbb41b2b8b4b9b4caa337ba83ea",
+    "03674287e8d77d0d8dc00c223fe03e326dc3c111",
+    "bbf56d4410bbd4dfc70f90941851c1e76472d26e",
+    "b0b31f648778a82e76499a6103286fd9fa5132ad",
+    "295319dbdc75b5205e139b284c4e14bcb56ced38",
+    "910b4d31044af4d8b599d23945c1a8227cb22d7a",
+    "d35e0e4561f6d764412182e244b34776ad44d3d0"
+   ],
+   "picked": [
+    "d35e0e4561f6d764412182e244b34776ad44d3d0",
+    "2025-09-02T19:44:38+00:00"
+   ],
+   "moved_window": {
+    "start": "2025-09-02",
+    "sessions": 77,
+    "void": false
+   }
+  },
+  "smoke": {
+   "ok": true,
+   "first": [
+    103.5873,
+    103.4204,
+    103.2932,
+    103.2197
+   ]
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 20624,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCLIFE",
+    "idx": 21740,
+    "identical": true
+   },
+   {
+    "symbol": "BAJAJHLDNG",
+    "idx": 20663,
+    "identical": true
+   },
+   {
+    "symbol": "MAXHEALTH",
+    "idx": 19217,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCLIFE",
+    "idx": 20822,
+    "identical": true
+   },
+   {
+    "symbol": "BEL",
+    "idx": 20372,
+    "identical": true
+   },
+   {
+    "symbol": "ADANIPOWER",
+    "idx": 20390,
+    "identical": true
+   },
+   {
+    "symbol": "LODHA",
+    "idx": 23279,
+    "identical": true
+   },
+   {
+    "symbol": "TATACONSUM",
+    "idx": 19403,
+    "identical": true
+   },
+   {
+    "symbol": "TECHM",
+    "idx": 18017,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 19010,
+    "identical": true
+   },
+   {
+    "symbol": "ITC",
+    "idx": 20369,
+    "identical": true
+   },
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 20249,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 23024,
+    "identical": true
+   },
+   {
+    "symbol": "BRITANNIA",
+    "idx": 19976,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 23138,
+    "identical": true
+   },
+   {
+    "symbol": "TCS",
+    "idx": 22613,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 20324,
+    "identical": true
+   },
+   {
+    "symbol": "HAL",
+    "idx": 20399,
+    "identical": true
+   },
+   {
+    "symbol": "CIPLA",
+    "idx": 20699,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per": 0.09222219109535218,
+   "est_hours_total": 1.0834570417185625
+  },
+  "coverage": {
+   "sessions": 77,
+   "first_half": 38,
+   "second_half": 39,
+   "stock_times": 42294,
+   "sessions_below_min_stocks": []
+  },
+  "samples": 42294
+ },
+ "status": "STAGE0_DONE"
+}
