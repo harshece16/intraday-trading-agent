@@ -1,0 +1,121 @@
+{
+ "at": "14:04:05",
+ "seconds": 46.0,
+ "feed": {
+  "prices": "live",
+  "rows_live": 100,
+  "rows_delayed": 0,
+  "quotes_at": "2026-09-29T14:03:25+05:30",
+  "why_delayed": null
+ },
+ "between_the_two_quotes": 73,
+ "within_3bp_of_either": 91,
+ "furthest": [
+  {
+   "symbol": "TMPV",
+   "row": 277.35,
+   "before": 277.55,
+   "after": 277.6,
+   "bp_from_before": -7.2,
+   "bp_from_after": -9.0,
+   "between": false,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:18",
+   "last_trade_after": "14:04:04"
+  },
+  {
+   "symbol": "INDHOTEL",
+   "row": 714.0,
+   "before": 714.5,
+   "after": 714.95,
+   "bp_from_before": -7.0,
+   "bp_from_after": -13.3,
+   "between": false,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:14",
+   "last_trade_after": "14:04:04"
+  },
+  {
+   "symbol": "HYUNDAI",
+   "row": 2051.4,
+   "before": 2050.2,
+   "after": 2050.0,
+   "bp_from_before": 5.9,
+   "bp_from_after": 6.8,
+   "between": false,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:17",
+   "last_trade_after": "14:04:02"
+  },
+  {
+   "symbol": "UNITDSPR",
+   "row": 1373.7,
+   "before": 1374.5,
+   "after": 1372.0,
+   "bp_from_before": -5.8,
+   "bp_from_after": 12.4,
+   "between": true,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:18",
+   "last_trade_after": "14:04:03"
+  },
+  {
+   "symbol": "SOLARINDS",
+   "row": 19220.0,
+   "before": 19240.0,
+   "after": 19230.0,
+   "bp_from_before": -10.4,
+   "bp_from_after": -5.2,
+   "between": false,
+   "on_list": true,
+   "feed": "live",
+   "last_trade_before": "14:03:17",
+   "last_trade_after": "14:03:57"
+  },
+  {
+   "symbol": "UNIONBANK",
+   "row": 170.03,
+   "before": 170.16,
+   "after": 169.96,
+   "bp_from_before": -7.6,
+   "bp_from_after": 4.1,
+   "between": true,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:18",
+   "last_trade_after": "14:04:02"
+  },
+  {
+   "symbol": "ADANIGREEN",
+   "row": 1253.2,
+   "before": 1252.7,
+   "after": 1252.6,
+   "bp_from_before": 4.0,
+   "bp_from_after": 4.8,
+   "between": false,
+   "on_list": false,
+   "feed": "live",
+   "last_trade_before": "14:03:18",
+   "last_trade_after": "14:04:04"
+  },
+  {
+   "symbol": "KOTAKBANK",
+   "row": 406.05,
+   "before": 406.2,
+   "after": 406.2,
+   "bp_from_before": -3.7,
+   "bp_from_after": -3.7,
+   "between": false,
+   "on_list": true,
+   "feed": "live",
+   "last_trade_before": "14:03:17",
+   "last_trade_after": "14:04:04"
+  }
+ ],
+ "listed_bars_from_kite": 25,
+ "warnings": []
+}

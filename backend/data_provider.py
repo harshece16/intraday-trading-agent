@@ -51,6 +51,14 @@ _KITE_INTERVAL_MAP = {
 # for more 429s that a symbol would then fall back to yfinance for anyway.
 _KITE_HISTORICAL_MAX_WORKERS = 3
 
+# One gap between the starts of any two historical-data requests, whoever
+# makes them. The engine's tick and the scanner each pace their own batch;
+# without a shared gap two batches running together would send six a second.
+_KITE_HISTORICAL_MIN_GAP = 0.35
+_kite_historical_lock = threading.Lock()
+_kite_historical_last = [0.0]
+KITE_QUOTE_CHUNK = 400          # Kite's full quote takes up to 500 instruments a call
+
 _kite_client = None
 _instrument_token_cache = {}  # tradingsymbol -> instrument_token, fetched once per process
 
@@ -314,6 +322,60 @@ def _days_from_period(period: str) -> int:
     return int(period[:-1]) if period.endswith("d") else 5
 
 
+def _wait_for_kite_historical(clock=time.monotonic, sleep=time.sleep):
+    """Hold this request until _KITE_HISTORICAL_MIN_GAP has passed since the
+    last one started, in any thread."""
+    with _kite_historical_lock:
+        wait = _kite_historical_last[0] + _KITE_HISTORICAL_MIN_GAP - clock()
+        if wait > 0:
+            sleep(wait)
+        _kite_historical_last[0] = clock()
+
+
+def _iso_ist(value):
+    """Kite gives exchange times as naive IST datetimes."""
+    if not value:
+        return None
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value.replace(" ", "T"))
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=IST)
+    return value.isoformat()
+
+
+def kite_quotes(symbols, indices=("NIFTY 50", "INDIA VIX")) -> dict:
+    """Kite's full quote for many NSE stocks and indices in one request:
+    {name: {ltp, open, high, low, prev_close, volume, vwap, last_trade, at,
+    lower_limit, upper_limit}}. `open` is NSE's opening price, `prev_close`
+    the previous session's close, `vwap` the day's average traded price.
+    Empty when Kite is not connected or the request fails: the caller then
+    uses the delayed feed."""
+    if not kite_data_active():
+        return {}
+    names = list(dict.fromkeys(list(symbols) + list(indices)))
+    out = {}
+    try:
+        kite = _get_kite()
+        for i in range(0, len(names), KITE_QUOTE_CHUNK):
+            chunk = names[i:i + KITE_QUOTE_CHUNK]
+            for key, q in kite.quote([f"NSE:{n}" for n in chunk]).items():
+                ohlc = q.get("ohlc") or {}
+                out[key.split(":", 1)[1]] = {
+                    "ltp": float(q.get("last_price") or 0), "open": float(ohlc.get("open") or 0),
+                    "high": float(ohlc.get("high") or 0), "low": float(ohlc.get("low") or 0),
+                    "prev_close": float(ohlc.get("close") or 0), "volume": int(q.get("volume") or 0),
+                    "vwap": float(q.get("average_price") or 0),
+                    "last_trade": _iso_ist(q.get("last_trade_time")), "at": _iso_ist(q.get("timestamp")),
+                    "lower_limit": float(q.get("lower_circuit_limit") or 0),
+                    "upper_limit": float(q.get("upper_circuit_limit") or 0),
+                }
+    except Exception as exc:  # noqa: BLE001 - any failure means "use the delayed feed"
+        _note_kite_failure(exc)
+        logger.warning(f"Kite quotes failed ({exc}); the scanner falls back to the delayed feed")
+        return {}
+    return out
+
+
 def _get_intraday_candles_kite(symbol: str, interval: str, period: str):
     kite = _get_kite()
     token = _instrument_token(symbol)
@@ -321,6 +383,7 @@ def _get_intraday_candles_kite(symbol: str, interval: str, period: str):
     to_date = datetime.now()
     from_date = to_date - timedelta(days=_days_from_period(period))
 
+    _wait_for_kite_historical()
     rows = kite.historical_data(token, from_date, to_date, kite_interval)
     return [
         {

@@ -129,3 +129,26 @@ should rise, because the sampler has the list from 09:15. Sessions before and
 after the change differ in that, and the write-up will say how many of each
 the sample holds.
 
+---
+
+# Amendment 4 — 2026-09-29, before any `depth_samples` row has been joined to a return, written before the change is deployed
+
+**What had been seen:** row counts only, as in amendment 2.
+
+**The change**, from the first session after it is deployed. README §101.
+The scanner reads today's prices from live Kite quotes in place of the
+delayed feed.
+
+**Effect on this test: none on the samples, a small one on requests.**
+
+- The order book has always been sampled from Kite directly. No sample was
+  ever taken from the delayed feed, so no recorded sample is affected.
+- The day's list is chosen from daily data (amendment 3). The scanner's
+  intraday numbers do not enter it.
+- The scanner now sends Kite one quote request per scan and 25 requests for
+  5-minute bars every five minutes. Historical requests are spaced 0.35
+  seconds apart across the whole engine. If sampling coverage falls after the
+  change, this is the first place to look.
+
+**Unchanged:** everything in the test.
+

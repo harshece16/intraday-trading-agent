@@ -147,6 +147,11 @@ SCANNER = {
     # pre-market read at or after this time on a trading day (README section
     # 100). If the engine starts later, the first scan of the session fixes it.
     "fix_list_from": "08:45",
+    # Live prices for the scanner (README section 101). When Kite is connected
+    # one quote request gives every stock's last price, NSE's opening price,
+    # the day's volume and its average traded price. When it is not, the
+    # scanner uses the delayed feed and the page says so.
+    "live_feed": True,
     # Tradability guards from two NSE files (README section 100): the F&O ban
     # list, and the price-band list with each stock's series and surveillance
     # remark. A stock with a fixed band is long-only, and is left alone when

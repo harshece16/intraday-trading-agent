@@ -301,6 +301,41 @@ def test_a_missing_last_session_is_added_and_nothing_else_is_touched(monkeypatch
     assert scanner.complete_daily(daily, "2026-09-29") == (0, "2026-09-28")   # a second pass adds nothing
 
 
+def test_a_hole_at_the_last_session_is_filled_when_todays_bar_is_already_there(monkeypatch):
+    """#196: in a session the delayed feed carries today's bar and can lack yesterday's."""
+    last = {"date": "2026-09-28",
+            "stocks": {"JINDALSTEL": _bar("2026-09-28", 1139.6), "RELIANCE": _bar("2026-09-28", 1197.6),
+                       "NEWLIST": _bar("2026-09-28", 50.0)},
+            "indices": {"^CNXAUTO": _bar("2026-09-28", 27000.0)}}
+    monkeypatch.setattr(nse_feed, "last_session", lambda today: last)
+    daily = {"JINDALSTEL.NS": [_bar("2026-09-24", 1157.8), _bar("2026-09-25", 1164.8), _bar("2026-09-29", 1145.9)],
+             "RELIANCE.NS": [_bar("2026-09-25", 1226.0), _bar("2026-09-28", 1197.0), _bar("2026-09-29", 1189.3)],
+             "^CNXAUTO": [_bar("2026-09-25", 27300.0), _bar("2026-09-29", 26900.0)],
+             "NEWLIST.NS": [_bar("2026-09-29", 51.0)]}          # listed today: nothing before to join it to
+    assert scanner.complete_daily(daily, "2026-09-29") == (2, "2026-09-28")
+    assert [(b["time"][:10], b["close"]) for b in daily["JINDALSTEL.NS"]] == [
+        ("2026-09-24", 1157.8), ("2026-09-25", 1164.8), ("2026-09-28", 1139.6), ("2026-09-29", 1145.9)]
+    assert [b["time"][:10] for b in daily["^CNXAUTO"]] == ["2026-09-25", "2026-09-28", "2026-09-29"]
+    assert [b["close"] for b in daily["RELIANCE.NS"]] == [1226.0, 1197.0, 1189.3]     # the feed's own bar is kept
+    assert len(daily["NEWLIST.NS"]) == 1
+    assert scanner.complete_daily(daily, "2026-09-29") == (0, "2026-09-28")
+
+
+def test_the_previous_close_is_the_last_sessions_once_the_hole_is_filled(monkeypatch):
+    """The fact the scanner reads: the profile before today ends at NSE's close."""
+    last = {"date": "2026-09-28", "stocks": {"JINDALSTEL": _bar("2026-09-28", 1139.6)}, "indices": {}}
+    monkeypatch.setattr(nse_feed, "last_session", lambda today: last)
+    days = [(_dt.date(2026, 9, 25) - _dt.timedelta(days=i)).isoformat() for i in range(89, -1, -1)]
+    bars = [_bar(d, 1100.0 + i) for i, d in enumerate(days)] + [_bar("2026-09-29", 1145.9)]
+    daily = {"JINDALSTEL.NS": bars}
+    dates, closes = [b["time"][:10] for b in bars], [b["close"] for b in bars]
+    before = scanner.daily_profile(daily["JINDALSTEL.NS"], dates, closes, "2026-09-29")
+    assert before["close"] == 1189.0                                                 # the close of 25 September
+    scanner.complete_daily(daily, "2026-09-29")
+    after = scanner.daily_profile(daily["JINDALSTEL.NS"], dates, closes, "2026-09-29")
+    assert after["close"] == 1139.6
+
+
 def test_files_that_cannot_be_read_leave_the_daily_data_as_it_is(monkeypatch):
     def boom(today):
         raise RuntimeError("NSE is down")

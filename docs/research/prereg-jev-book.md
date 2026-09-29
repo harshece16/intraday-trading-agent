@@ -211,3 +211,47 @@ scanner to live prices will get its own note.
 **How the record is read:** as before. The guards can only remove a name from
 the list; they were not made to improve Jev's score.
 
+---
+
+# Clarification 7 — 2026-09-29, written before the change is deployed
+
+**What had been seen:** as in clarification 6.
+
+**The change**, from the first session after it is deployed (the date is
+added below once it is live). README §101.
+
+**The scanner row Jev sees is built from live prices.** Until now the
+scanner's numbers for the day (last price, change, gap, relative volume, VWAP,
+side) came from the delayed feed. From this change the row comes from one live
+Kite quote. The scanner's side and reasons are worked out from those numbers,
+so they can differ from what the delayed feed would have given.
+
+**What the delayed feed got wrong, as measured.** On 2026-09-29 between 13:53
+and 14:15 the running scanner was compared with Kite's quotes over the 100
+stocks. No fill, trade or verdict of this book was looked at.
+
+- **Gap:** off by 0.3 points or more on 23 stocks, by 2.57 at most. The feed's
+  first bar does not open at NSE's opening price (#193), and its daily bars
+  had no bar for the previous session for 16 stocks (#196).
+- **Day's change:** off by 0.3 points or more on those 16 stocks, by 2.53 at
+  most, because it was measured from the close of two sessions before.
+- **Last price:** not late in that half hour. It was within a median of 0.8
+  basis points of Kite's, read at the same moment. How late the feed runs at
+  09:45 has not been measured.
+- **Sector trend:** missing for 61 of the 100 stocks since 2026-09-16 (#197).
+  This change does not repair it.
+
+**What this does not change:** Jev's fills have been live Kite prices since
+clarification 3, so no recorded fill is affected. The list, the three
+questions, the cost, the comparison with the scanner's side, the pass rule
+and the kill rule are unchanged.
+
+**How the record is read:** rounds before the change were judged on a
+snapshot from the delayed feed, with the errors above on some stocks, and
+rounds after it on live quotes. The
+verdict is reported for all rounds, and for the rounds after the change
+alone. The change was made because the delayed numbers were wrong, not to
+improve Jev's score; it could move the score either way.
+
+If Kite is not connected at 09:45 the round is skipped, as before.
+

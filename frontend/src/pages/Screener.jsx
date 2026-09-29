@@ -106,7 +106,7 @@ export default function Screener({ state: s }) {
     <>
       <h2 className="h">Screener</h2>
       <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} Click a row to expand its rule book inline.</p>
-      <GuardNotes guards={s.scanner?.guards} />
+      <GuardNotes guards={s.scanner?.guards} feed={s.scanner?.feed} />
       <div className="tabs">
         {TABS.map(([key, label]) => (
           <button key={key} className="tab" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>

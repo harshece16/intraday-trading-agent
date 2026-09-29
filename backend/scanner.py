@@ -51,6 +51,11 @@ logger = logging.getLogger("trading_bot")
 IST = ZoneInfo("Asia/Kolkata")
 NIFTY = "^NSEI"
 VIX = "^INDIAVIX"
+NIFTY_QUOTE = "NIFTY 50"        # the index's name in Kite's quotes
+SESSION_OPEN_MINUTE = 9 * 60 + 15
+SESSION_MINUTES = 375           # 09:15 to 15:30
+BAR_MINUTES = 5
+LIVE_DAY_MIN_SHARE = 0.5        # of the universe trading, for the quotes to count as a session
 
 
 def yf_ticker(symbol):
@@ -160,8 +165,11 @@ class _Points:
 
 def complete_daily(daily, today_iso):
     """Add the last completed session to the daily bars where the delayed
-    feed has not published it yet, from NSE's own daily files. Returns the
-    number of series completed and the date they now run through."""
+    feed has not published it, from NSE's own daily files. The session is
+    looked for by date: during a session the feed already carries today's
+    bar and can still lack yesterday's (#196), so the missing bar goes in its
+    place, before any later one. Returns the number of series completed and
+    the date they now run through."""
     try:
         last = nse_feed.last_session(datetime.fromisoformat(today_iso).date())
     except Exception:
@@ -169,13 +177,18 @@ def complete_daily(daily, today_iso):
         return 0, None
     added = 0
     for ticker, bars in daily.items():
-        if not bars or _date(bars[-1]) >= last["date"]:
+        if not bars:
             continue
+        at = len(bars)
+        while at > 0 and _date(bars[at - 1]) > last["date"]:
+            at -= 1
+        if at == 0 or _date(bars[at - 1]) == last["date"]:
+            continue   # nothing before the session to join it to, or it is there
         bar = last["indices"].get(ticker)
         if bar is None and ticker.endswith(".NS"):
             bar = last["stocks"].get(ticker[:-3])
         if bar:
-            bars.append(dict(bar))
+            bars.insert(at, dict(bar))
             added += 1
     return added, last["date"]
 
@@ -188,7 +201,7 @@ def load_guards(cfg):
     return {"ban": nse_feed.fno_ban_list(), "bands": nse_feed.price_bands()}
 
 
-def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None):
+def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None, limits=None):
     """(why the stock is left alone today, or None; whether it is long-only).
     A stock with a fixed price band can lock: a short caught at the upper
     band cannot be covered, so it is long-only, and it is left alone when the
@@ -206,9 +219,12 @@ def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None):
     band = row["band"]
     if band is None:
         return None, False
-    if ltp and prev_close:
+    if ltp and (prev_close or limits):
         near = cfg.get("near_band_pct", 2.0) / 100
-        upper, lower = prev_close * (1 + band / 100), prev_close * (1 - band / 100)
+        if limits and limits[0] > 0 and limits[1] > 0:
+            lower, upper = limits                          # the exchange's own limits for the day
+        else:
+            upper, lower = prev_close * (1 + band / 100), prev_close * (1 - band / 100)
         if ltp >= upper * (1 - near):
             return f"Within {near * 100:.0f}% of its upper price band (₹{upper:,.2f}, {band:.0f}%)", True
         if ltp <= lower * (1 + near):
@@ -350,7 +366,118 @@ def intraday_metrics(candles, prof):
         "or_high": max(c["high"] for c in opening),
         "or_low": min(c["low"] for c in opening),
         "bars_today": n,
+        "feed": "delayed",
     }
+
+
+# --- live prices (README section 101) ----------------------------------------------------
+
+def _minute_of_day(iso):
+    t = datetime.fromisoformat(iso)
+    return t.hour * 60 + t.minute + t.second / 60.0
+
+
+def minutes_into_session(iso):
+    """Minutes of the session that had passed at this time, from 0 to 375."""
+    return max(0.0, min(float(SESSION_MINUTES), _minute_of_day(iso) - SESSION_OPEN_MINUTE))
+
+
+def volume_curve(candles, session):
+    """Average volume traded by the end of each 5-minute slot of the day,
+    over the sessions before `session`: the yardstick for today's volume."""
+    slots = SESSION_MINUTES // BAR_MINUTES
+    days = {}
+    for c in candles:
+        d = c["time"][:10]
+        if d >= session:
+            continue
+        k = int((_minute_of_day(c["time"]) - SESSION_OPEN_MINUTE) // BAR_MINUTES)
+        if 0 <= k < slots:
+            days.setdefault(d, [0] * slots)[k] += c["volume"]
+    curves = []
+    for per_slot in days.values():
+        run, cum = 0, []
+        for v in per_slot:
+            run += v
+            cum.append(run)
+        if run > 0:
+            curves.append(cum)
+    if not curves:
+        return []
+    return [sum(c[k] for c in curves) / len(curves) for k in range(slots)]
+
+
+def expected_volume(curve, minutes):
+    """What the curve expects to have traded `minutes` into the session,
+    in a straight line between the ends of two slots."""
+    if not curve or minutes <= 0:
+        return 0.0
+    k, part = divmod(min(minutes, len(curve) * BAR_MINUTES), BAR_MINUTES)
+    k = int(k)
+    if k >= len(curve):
+        return curve[-1]
+    before = curve[k - 1] if k else 0.0
+    return before + (curve[k] - before) * part / BAR_MINUTES
+
+
+def live_day(quotes, symbols):
+    """The session the quotes describe: the day on which at least half the
+    universe last traded, with volume and an opening price. None before the
+    open, or when the quotes are too thin to read."""
+    days = {}
+    for s in symbols:
+        q = quotes.get(s)
+        if q and q["last_trade"] and q["volume"] > 0 and q["open"] > 0 and q["prev_close"] > 0:
+            days[q["last_trade"][:10]] = days.get(q["last_trade"][:10], 0) + 1
+    if not days:
+        return None
+    day = max(days, key=days.get)
+    return day if days[day] >= LIVE_DAY_MIN_SHARE * len(symbols) else None
+
+
+def opening_range(candles, session):
+    """(high, low) of the session's first 15 minutes, once those three bars exist."""
+    first = [c for c in candles or [] if c["time"][:10] == session][:3]
+    if len(first) < 3:
+        return None, None
+    return max(c["high"] for c in first), min(c["low"] for c in first)
+
+
+def live_metrics(q, session, minutes, delayed_candles):
+    """The same facts intraday_metrics reads from 5-minute bars, from one live
+    quote. The gap is from NSE's opening price. The opening range needs bars,
+    so it comes from whichever candles hold today's first three."""
+    prev = q["prev_close"]
+    expected = expected_volume(volume_curve(delayed_candles or [], session), minutes)
+    or_high, or_low = opening_range(delayed_candles, session)
+    return {
+        "ltp": q["ltp"],
+        "chg_pct": (q["ltp"] / prev - 1) * 100,
+        "gap_pct": (q["open"] / prev - 1) * 100,
+        "rvol": q["volume"] / expected if expected > 0 else None,
+        "vwap": q["vwap"] or None,
+        "or_high": or_high, "or_low": or_low,
+        "bars_today": int(minutes // BAR_MINUTES),
+        "feed": "live",
+    }
+
+
+def _why_delayed(cfg):
+    if not cfg.get("live_feed", True):
+        return "Live prices are switched off in the settings."
+    if not data_provider.kite_data_active():
+        return "Kite is not connected."
+    return "Kite's quotes could not be read, or describe an earlier session than the delayed bars."
+
+
+def fetch_live_quotes(cfg, symbols):
+    if not cfg.get("live_feed", True):
+        return {}
+    try:
+        return data_provider.kite_quotes(symbols, indices=(NIFTY_QUOTE,))
+    except Exception:
+        logger.exception("Live quotes failed; using the delayed feed")
+        return {}
 
 
 def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg, side="long", sector_trend=None):
@@ -395,7 +522,7 @@ def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg
     if m["vwap"]:
         above = m["ltp"] > m["vwap"]
         pts.add(5 if above == (s > 0) else -5, "Holding above VWAP" if above else "Below VWAP")
-    if m["bars_today"] > 3:
+    if m["bars_today"] > 3 and m.get("or_high") is not None:
         if m["ltp"] > m["or_high"]:
             pts.add(8 if s > 0 else -6, "Trading above its 15-min opening range")
         elif m["ltp"] < m["or_low"]:
@@ -426,10 +553,14 @@ def intraday_score(m, prof, ctx, sector_rank, n_sectors, industry, catalyst, cfg
     return pts.score, pts.items, rs_today
 
 
-def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None, real_breadth=None):
+def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None, real_breadth=None, nifty_live=None):
+    """nifty_live, when given, is the index's live quote: its last price and
+    opening value replace the delayed bars'."""
     nd = [b for b in daily.get(NIFTY, []) if _date(b) < session]
     closes = [b["close"] for b in nd]
-    today = [c for c in nifty_5m if c["time"][:10] == session]
+    today = [c for c in nifty_5m or [] if c["time"][:10] == session]
+    if nifty_live:
+        today = [{"open": nifty_live["open"], "close": nifty_live["ltp"]}]
     score, reasons = 0.0, []
 
     trend = "sideways"
@@ -445,6 +576,8 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None, rea
 
     ltp = today[-1]["close"]
     prev_close = closes[-1] if closes else today[0]["open"]
+    if nifty_live and nifty_live.get("prev_close"):
+        prev_close = nifty_live["prev_close"]
     chg = (ltp / prev_close - 1) * 100
     if chg >= 0.3:
         score += 1
@@ -657,12 +790,26 @@ class Scanner:
         if not uni:
             raise RuntimeError("Universe list is empty")
         tickers = [yf_ticker(u["symbol"]) for u in uni]
+        symbols = [u["symbol"] for u in uni]
         daily = download_batch(tickers + [NIFTY, VIX] + sectoral_indices.TICKERS, "1y", "1d")
         intraday = download_batch(tickers + [NIFTY], "5d", "5m")
         nifty_5m = intraday.get(NIFTY)
-        if not nifty_5m or NIFTY not in daily:
+        if NIFTY not in daily:
             raise RuntimeError("NIFTY data unavailable")
-        session = nifty_5m[-1]["time"][:10]
+        # Live prices when Kite is connected and its quotes describe a session
+        # at least as recent as the delayed bars do; the delayed feed otherwise.
+        quotes = fetch_live_quotes(cfg, symbols)
+        nifty_q = quotes.get(NIFTY_QUOTE)
+        live = live_day(quotes, symbols) if nifty_q and nifty_q["ltp"] > 0 and nifty_q["open"] > 0 else None
+        delayed_session = nifty_5m[-1]["time"][:10] if nifty_5m else None
+        if live and (not delayed_session or live >= delayed_session):
+            session, feed = live, "live"
+            at = nifty_q["at"] if nifty_q.get("at") and nifty_q["at"][:10] == session else None
+            minutes = minutes_into_session(at) if at else float(SESSION_MINUTES)
+        elif delayed_session:
+            session, feed, quotes, nifty_q, minutes = delayed_session, "delayed", {}, None, None
+        else:
+            raise RuntimeError("NIFTY data unavailable")
         completed, _ = complete_daily(daily, session)
         nifty_dates = [_date(b) for b in daily[NIFTY]]
         nifty_closes = [b["close"] for b in daily[NIFTY]]
@@ -683,15 +830,27 @@ class Scanner:
         rows = []
         for u in uni:
             t = yf_ticker(u["symbol"])
-            candles = intraday.get(t)
+            candles = intraday.get(t) or []
             prof = daily_profile(daily.get(t, []), nifty_dates, nifty_closes, session)
-            if not prof or not candles or candles[-1]["time"][:10] != session:
+            if not prof:
                 continue
-            rows.append({**u, "_prof": prof, "_m": intraday_metrics(candles, prof), "_candles": candles})
+            q = quotes.get(u["symbol"])
+            traded = (q and q["last_trade"] and q["last_trade"][:10] == session and q["volume"] > 0
+                      and q["open"] > 0 and q["prev_close"] > 0 and q["ltp"] > 0)
+            if traded:
+                m = live_metrics(q, session, minutes, candles)
+            elif candles and candles[-1]["time"][:10] == session:
+                m, q = intraday_metrics(candles, prof), None
+            else:
+                continue
+            rows.append({**u, "_prof": prof, "_m": m, "_candles": candles, "_q": q, "_live_candles": False})
         for r in rows:
             r["chg_pct"] = r["_m"]["chg_pct"]
 
-        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER, fii_dii=fii_dii, real_breadth=real_breadth)
+        ctx = market_context(daily, nifty_5m, rows, session, config.MARKET_FILTER, fii_dii=fii_dii,
+                             real_breadth=real_breadth,
+                             nifty_live={"open": nifty_q["open"], "ltp": nifty_q["ltp"],
+                                         "prev_close": nifty_q["prev_close"]} if feed == "live" else None)
 
         by_sector = {}
         for r in rows:
@@ -706,35 +865,42 @@ class Scanner:
             for industry in by_sector
         }
 
-        for r in rows:
+        def score(r):
+            """Both sides scored from the row's profile and today's metrics; the stronger is kept."""
             prof, m, sym = r["_prof"], r["_m"], r["symbol"]
-            excluded = tradability_exclusion(prof, cfg)
-            if not excluded and sym in events:
-                ev = events[sym]
-                excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
-            if not excluded and sym in ex_actions:
-                excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
-            guarded, long_only = guard_check(sym, guards, session, cfg, ltp=m["ltp"], prev_close=prof["close"])
-            excluded = excluded or guarded
-            scored = {}
-            rs_today = None
-            for side in (("long",) if long_only else sides):
+            scored, rs_today = {}, None
+            for side in (("long",) if r["long_only"] else sides):
                 pre, pre_items, _ = premarket_score(prof, cfg, side, date_iso=session)
                 intra, intra_items, rs_today = intraday_score(
                     m, prof, ctx, sector_rank.get(r["industry"]), len(sectors), r["industry"], catalysts.get(sym),
                     cfg, side, sector_trend=sector_trends.get(r["industry"]))
                 scored[side] = (pre + intra, sorted(pre_items + intra_items, key=lambda x: -abs(x[0])))
             best = max(scored, key=lambda k: scored[k][0])
-            score, items = scored[best]
+            total, items = scored[best]
             r.update({
                 "side": best.upper(),
                 "long_score": _r(scored["long"][0], 1),
                 "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
-                "long_only": long_only,
-                "score": _r(score, 1), "final_score": _r(score, 1), "excluded": excluded,
+                "score": _r(total, 1), "final_score": _r(total, 1),
                 "reasons": [{"points": _r(float(p), 1), "text": t} for p, t in items[:7]],
+                "rs_today": _r(rs_today),
+            })
+
+        for r in rows:
+            prof, m, sym, q = r["_prof"], r["_m"], r["symbol"], r["_q"]
+            excluded = tradability_exclusion(prof, cfg)
+            if not excluded and sym in events:
+                ev = events[sym]
+                excluded = f"{ev['purpose']} on {ev['date']} — event risk, no new trades"
+            if not excluded and sym in ex_actions:
+                excluded = f"Ex-date today ({ex_actions[sym]}), so the price gap is mechanical, not a signal"
+            guarded, long_only = guard_check(sym, guards, session, cfg, ltp=m["ltp"], prev_close=prof["close"],
+                                             limits=(q["lower_limit"], q["upper_limit"]) if q else None)
+            excluded = excluded or guarded
+            r.update({
+                "long_only": long_only, "excluded": excluded, "feed": m["feed"],
                 "ltp": _r(m["ltp"]), "gap_pct": _r(m["gap_pct"]), "rvol": _r(m["rvol"]),
-                "rs_today": _r(rs_today), "vwap": _r(m["vwap"]), "atr_pct": _r(prof["atr_pct"]),
+                "vwap": _r(m["vwap"]), "atr_pct": _r(prof["atr_pct"]),
                 "daily_trend": prof["trend"], "rs10": _r(prof["rs10"]),
                 "pct_from_high": _r(prof["pct_from_high"]), "pct_from_low": _r(prof["pct_from_low"]),
                 "turnover_cr": _r(prof["turnover_cr"], 0), "chg_pct": _r(m["chg_pct"]), "beta": _r(prof["beta"]),
@@ -742,6 +908,7 @@ class Scanner:
                 "swing_patterns": prof.get("swing_patterns", []),
                 "large_deals": large_deals.get(sym),
             })
+            score(r)
 
         eligible = sorted((r for r in rows if not r["excluded"]), key=lambda r: -r["score"])
         mode = selection_mode(cfg)
@@ -753,7 +920,23 @@ class Scanner:
         else:
             deep = eligible[: cfg["deep_analysis"]]
         brain_params = config.STRATEGY_PARAMS.get("sahab_dimaag", {})
+        # The stocks that get the checklist read get live bars for it. The
+        # opening range, which needs bars, is then known at 09:30 and not a
+        # quarter of an hour later, so their score is worked out again.
+        live_candles = {}
+        if feed == "live" and deep:
+            try:
+                live_candles = data_provider.get_candles_batch([r["symbol"] for r in deep], "5m", "5d")
+            except Exception:
+                logger.exception("Live candles for the day's list failed; using the delayed bars")
         for r in deep:
+            mine = live_candles.get(r["symbol"])
+            if mine and not mine[-1].get("delayed"):
+                r["_candles"], r["_live_candles"] = mine, True
+                if r["_m"]["feed"] == "live" and r["_m"]["or_high"] is None:
+                    r["_m"]["or_high"], r["_m"]["or_low"] = opening_range(mine, session)
+                    if r["_m"]["or_high"] is not None:
+                        score(r)
             news = None
             if cfg.get("use_news", True):
                 try:
@@ -766,7 +949,7 @@ class Scanner:
                     fund = fundamentals.get_fundamentals(r["symbol"])
                 except Exception as exc:
                     logger.warning(f"Fundamentals failed for {r['symbol']}: {exc}")
-            finished = data_provider.closed_bars(r["_candles"], "5m", delayed=True)
+            finished = data_provider.closed_bars(r["_candles"], "5m", delayed=not r["_live_candles"])
             _, brain = trader_brain_signal(finished, prev_state=None, news=news, fundamentals=fund, **brain_params)
             if brain and "bull_score" in brain:
                 r["brain"] = brain
@@ -781,11 +964,12 @@ class Scanner:
 
         excluded_rows = sorted((r for r in rows if r["excluded"]), key=lambda r: -r["score"])
         ranked = eligible + excluded_rows
-        self.intraday = {r["symbol"]: r["_candles"][-200:] for r in rows}
+        self.intraday = {r["symbol"]: r["_candles"][-200:] for r in rows if r["_candles"]}
+        n_live = sum(1 for r in rows if r["feed"] == "live")
         for i, r in enumerate(ranked, 1):
             r["rank"] = i
             r["status"] = "AVOID" if r["excluded"] else "ACTIVE" if r["symbol"] in active else "WATCH"
-            for k in ("_prof", "_m", "_candles"):
+            for k in ("_prof", "_m", "_candles", "_q", "_live_candles"):
                 r.pop(k, None)
 
         active_sides = {r["symbol"]: r["side"] for r in ranked if r["symbol"] in active}
@@ -805,6 +989,9 @@ class Scanner:
                 "fixed_when": (self.day_list or {}).get("when") if mode == "liquidity" and fixed else None,
             },
             "guards": guards_summary(guards, [u["symbol"] for u in uni]),
+            "feed": {"prices": feed, "rows_live": n_live, "rows_delayed": len(rows) - n_live,
+                     "quotes_at": nifty_q["at"] if nifty_q else None,
+                     "why_delayed": None if feed == "live" else _why_delayed(cfg)},
             "daily_completed_from_nse": completed,
             "market": ctx,
             "sectors": sectors,
