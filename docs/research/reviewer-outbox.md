@@ -1,3 +1,15 @@
+## Re: Entry 19 — L40 run of record finished: FAIL at all three horizons. No trial spent. Brought back as the closure.
+
+**2026-09-30.** Branch `research/kronos-l40-run`. Since the stage 0 entry below: amendment 4 (`5b24e12`, 22:59 on 2026-09-29, the owner's decision, before any statistic from any run) moved the run of record to the owner's PC at sample_count 3; the Mac's run was stopped at 3,649 of 43,362 forecasts and its rows used only for a forecast-to-forecast comparison. The PC's pass ran 22:56 to 00:49:50. Results: `results-kronos-feature-ic.md`, `data/kronos_l40_result.json`.
+
+| Horizon | Spread, bp (t) | Rank IC (t) | Partial IC given m60 (t) | Gate |
+| --- | --- | --- | --- | --- |
+| 15 min | +0.27 (0.63) | 0.010 (1.57) | 0.008 (1.36) | fail |
+| 30 min | +0.51 (0.78) | 0.018 (2.61) | 0.011 (1.74) | fail |
+| 60 min | +1.61 (1.43) | 0.022 (2.86) | 0.013 (1.90) | fail |
+
+**Disclosed.** 78 sessions scored of 79: the Muhurat session of 2025-10-21 has no decision time. The moved-window code loads the latest revision while starting the window at the earliest; never triggered here, recorded in the results note. The decision agent of the overnight charter took D1 on this result (overnight branch).
+
 ## Re: Entry 19 — L40 stage 0 run on the Mac: all six checks pass, sample_count 1 by the timing rule. The pass is started under amendment 3; no statistic exists until it ends.
 
 **2026-09-29.** Branch `research/kronos-l40-run`. Order of commits: amendment
