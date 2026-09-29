@@ -272,8 +272,17 @@ def main(argv=None):
     ap.add_argument("--model", required=True, choices=sorted(MODELS))
     ap.add_argument("--stage0-only", action="store_true")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--smoke", action="store_true", help="load the pinned revision and forecast a synthetic series; reads no project data")
     args = ap.parse_args(argv)
     model = args.model
+    if args.smoke:
+        from huggingface_hub import HfApi, snapshot_download
+        commits = [(c.commit_id, c.created_at.isoformat()) for c in HfApi().list_repo_commits(MODELS[model]["repo"])]
+        sha, date, _, moved = pick_family_revision(commits, [])
+        inner = ADAPTERS[model](snapshot_download(MODELS[model]["repo"], revision=sha), args.device)
+        print(json.dumps({"model": model, "revision": [sha, date], "moved": moved, "smoke": inner.smoke(),
+                          "environment": environment(model)}), flush=True)
+        return
     stage0_path, result_path, rows_path = _paths(model)
     import kite_history
     db = os.environ.get("KRONOS_CANDLE_DB")
