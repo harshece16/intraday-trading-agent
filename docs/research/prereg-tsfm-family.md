@@ -51,3 +51,8 @@ One IC pass per model. A re-run only for a crash before any statistic, or a decl
 ## 7. Trial accounting
 
 Research look **L46**. No trial is spent unless a model clears, and then the trial is pre-registered separately.
+
+## Amendments
+
+1. **2026-09-30, 00:40 IST, after a smoke test on a synthetic series and before any of the six models was run on project data.** The smoke test (`--smoke`, which reads no project data) showed that for TimesFM-2.5 and FlowState-r1 the earliest revision on Hugging Face is an initial commit that holds only a README: no model. §2's "earliest revision" is read as **the earliest revision that holds the model's weights** (a file ending `.safetensors`, `.bin`, `.ckpt` or `.pth`), and "latest revision before the cutoff" likewise counts only revisions with weights. For TimesFM-2.5 that is `d35e0e4`, dated 2025-09-02, the same day, so its window is unchanged; for FlowState-r1 it is `533ab8d`, dated 2025-09-11, one day later than the sweep's date. The same smoke test showed TiRex's loader takes the repository name and a revision, not a file path; the adapter was corrected. Chronos-Bolt, Moirai 2.0 and Sundial passed the smoke test unchanged. Nothing else changes.
+

@@ -47,3 +47,12 @@ def test_the_family_gate_runs_bh_over_eighteen_with_voids_at_p_one(tmp_path):
     assert len(out["verdicts"]) == 18
     assert out["verdicts"]["chronos_bolt:f15"]["passes"]
     assert not out["verdicts"]["sundial:f60"]["passes"] and out["status"]["sundial"] == "NOT RUN"
+
+
+def test_only_revisions_that_hold_weights_are_candidates():
+    commits = [("readme", "2025-09-02T01:00:00+00:00"), ("weights", "2025-09-02T05:00:00+00:00"), ("later", "2025-09-12T00:00:00+00:00")]
+    files = {"readme": ["README.md", ".gitattributes"], "weights": ["config.json", "model.safetensors"], "later": ["model.safetensors"]}
+    usable = f.with_weights("x/y", commits, list_files=lambda sha: files[sha])
+    assert [c[0] for c in usable] == ["weights", "later"]
+    sha, _, kept, moved = f.pick_family_revision(usable, ["2025-09-01", "2025-09-03"])
+    assert sha == "weights" and kept == ["2025-09-03"] and moved["start"] == "2025-09-02"

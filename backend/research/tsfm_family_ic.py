@@ -52,8 +52,22 @@ MODELS = {
 }
 
 
+WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pth")
+
+
+def with_weights(repo, commits, list_files=None):
+    """The commits whose file list holds model weights (amendment 1: an initial commit
+    with only a README is not a model)."""
+    if list_files is None:
+        from huggingface_hub import HfApi
+        api = HfApi()
+        list_files = lambda sha: api.list_repo_files(repo, revision=sha)  # noqa: E731
+    return [c for c in commits if any(f.endswith(WEIGHT_SUFFIXES) for f in list_files(c[0]))]
+
+
 def pick_family_revision(commits, sessions):
-    """(sha, date, sessions kept, moved info). commits: [(sha, iso date)]."""
+    """(sha, date, sessions kept, moved info). commits: [(sha, iso date)], already
+    restricted to revisions that hold weights."""
     before = k.pick_revision(commits)
     if before:
         return before[0], before[1], sessions, None
@@ -188,8 +202,8 @@ class TiRex(Forecaster):
         import torch
         from tirex import load_model
         self.torch = torch
-        ckpt = os.path.join(local_dir, "model.ckpt")
-        self.model = load_model(ckpt if os.path.exists(ckpt) else local_dir, device=device)
+        revision = os.path.basename(os.path.normpath(local_dir))     # the snapshot folder is the revision
+        self.model = load_model(MODELS["tirex"]["repo"], device=device, backend="torch", hf_kwargs={"revision": revision})
 
     def forecast_batch(self, windows):
         ctx = self.torch.tensor([closes(w) for w in windows], dtype=self.torch.float32)
@@ -278,7 +292,7 @@ def main(argv=None):
     if args.smoke:
         from huggingface_hub import HfApi, snapshot_download
         commits = [(c.commit_id, c.created_at.isoformat()) for c in HfApi().list_repo_commits(MODELS[model]["repo"])]
-        sha, date, _, moved = pick_family_revision(commits, [])
+        sha, date, _, moved = pick_family_revision(with_weights(MODELS[model]["repo"], commits), [])
         inner = ADAPTERS[model](snapshot_download(MODELS[model]["repo"], revision=sha), args.device)
         print(json.dumps({"model": model, "revision": [sha, date], "moved": moved, "smoke": inner.smoke(),
                           "environment": environment(model)}), flush=True)
@@ -309,8 +323,9 @@ def main(argv=None):
     # step 2: revisions
     from huggingface_hub import HfApi, snapshot_download
     commits = [(c.commit_id, c.created_at.isoformat()) for c in HfApi().list_repo_commits(MODELS[model]["repo"])]
-    sha, date, sessions, moved = pick_family_revision(commits, sessions)
-    stage0["revisions"] = {"commits": commits, "picked": [sha, date], "moved_window": moved}
+    usable = with_weights(MODELS[model]["repo"], commits)
+    sha, date, sessions, moved = pick_family_revision(usable, sessions)
+    stage0["revisions"] = {"commits": commits, "with_weights": [c[0] for c in usable], "picked": [sha, date], "moved_window": moved}
     if moved and moved["void"]:
         halt(2, "no revision predates %s and only %d sessions remain after %s" % (k.REVISION_CUTOFF, moved["sessions"], moved["start"]))
     local_dir = snapshot_download(MODELS[model]["repo"], revision=sha)
