@@ -242,8 +242,21 @@ def summary(rows, date, out_json):
     return out
 
 
+def session_day():
+    """The session this run belongs to: today, or the next trading day when today's
+    session is over, a weekend or a holiday. A process started the night before
+    must not take the night for a session."""
+    import holidays
+    now = now_ist()
+    day = now.date()
+    if now.strftime("%H:%M") >= END or day.weekday() >= 5 or holidays.is_holiday(day):
+        day = holidays.next_trading_day(day)
+    return day
+
+
 def run(once=False):
-    date = now_ist().date().isoformat()
+    day = now_ist().date() if once else session_day()
+    date = day.isoformat()
     tag = "test_" if once else ""
     out_json = os.path.join(OUT_DIR, "kronos_shadow_%s%s.json" % (tag, date))
     latest_txt = os.path.join(OUT_DIR, "kronos_shadow_latest.txt")
@@ -266,15 +279,16 @@ def run(once=False):
         return
     times = hhmm_list()
     done = {r["hhmm"] for r in rows}
+    print("session %s: %d forecast times from %s to %s" % (date, len(times), times[0], times[-1]), flush=True)
     for hhmm in times:
         if hhmm in done:
             continue
-        sleep_until(hhmm)
+        sleep_until(hhmm, day=day)
         try:
             cycle(fc, hhmm, rows, date, out_json, latest_txt)
         except Exception as exc:                     # one bad cycle must not end the day
             print("%s: cycle failed: %s" % (hhmm, exc), flush=True)
-    sleep_until(END, seconds_after=0)
+    sleep_until(END, seconds_after=0, day=day)
     try:
         import data_provider
         symbols = sorted({r["symbol"] for r in rows})
