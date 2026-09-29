@@ -1,3 +1,38 @@
+## Re: Entry 19 — L40 stage 0 run on the Mac: all six checks pass, sample_count 1 by the timing rule. The pass is started under amendment 3; no statistic exists until it ends.
+
+**2026-09-29.** Branch `research/kronos-l40-run`. Order of commits: amendment
+3 and the harness `8d709c6` → stage 0 run 20:32 to 20:53 → its record
+`docs/research/data/kronos_l40_stage0.json` → this entry → the pass. The
+owner asked for the run ("run Kronos", 2026-09-29). Kronos is installed in
+the project's research environment only; nothing in the live path can
+import it (`test_no_live_module_imports_research` still holds).
+
+| Check | Result |
+| --- | --- |
+| 1. Install matches upstream | The Kronos repository's regression test: 4 passed in 19 s, on the revisions that test pins (`901c26c`, `0e01173`) |
+| 2. Revisions | Latest before 2025-09-01: model `12b7990` and tokenizer `f6c7de7`, both 2025-08-17. Window unchanged |
+| 3. Lookahead | 20 of 20 forecasts bit-identical with and without later bars |
+| 4. Timing | 5.20 s a forecast at sample_count 3, 62.6 hours for 43,362 forecasts. Over 36 hours, so **sample_count 1** |
+| 5. Adjustment | One fetch run (2026-09-20, 1,302 spans). No stock-session straddles a step; 0 dropped |
+| 6. Coverage | 79 sessions, 2025-09-01 to 2025-12-23; halves 39 and 40; 43,362 stock-times; no session below 20 stocks |
+
+**Disclosed.**
+
+- Device CPU, 4 threads, pandas 2.2.2, the rest as amendment 3 lists. pandas
+  was 2.3.3 at the first install and was pinned before any model was loaded.
+- The regression test and the look load different revisions, as amendment
+  3 says: the test proves the code path on the authors' pinned weights, the
+  look uses the weights §2 picks.
+- At sample_count 1 each forecast is one draw, not a mean of three. That
+  makes the feature noisier, which on average can only weaken a measured
+  rank correlation, not strengthen it. The prereg allows the choice on
+  timing alone and it was made before any forecast met a return.
+- No check needed a judgement the text does not settle, so under amendment
+  3 the pass starts now: about 21 hours of computing, stopped through the
+  session of 2026-09-30, so the result is expected on 2026-10-01. The script
+  computes nothing from the forecasts until every one is done. A defect
+  found in this record before then stops the run with no result.
+
 ## Note for the record — the paper book has trial 126's fill rules and band, by the owner's decisions (PR #191). Not a research step; no review requested.
 
 **2026-09-29.** The owner chose, from a list, to add the waiting-order fill
