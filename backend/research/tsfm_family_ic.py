@@ -137,7 +137,25 @@ class TimesFM25(Forecaster):
         super().__init__(local_dir, device)
         import numpy as np
         import timesfm
+        import timesfm.timesfm_2p5.timesfm_2p5_torch as tt
+        import torch
         self.np = np
+        # Amendment 2: the published checkpoints store query, key and value separately;
+        # the current code fuses them into one projection and splits its output in that
+        # order (torch.chunk(qkv, 3) -> query, key, value). Concatenating the three
+        # weight matrices in the same order is an exact rearrangement.
+        original = tt.load_file
+
+        def fused(path):
+            t = original(path)
+            for key in [n for n in t if n.endswith(".attn.query.weight")]:
+                pre = key[: -len("query.weight")]
+                for kind in ("weight", "bias"):
+                    if pre + "query." + kind in t:
+                        t[pre + "qkv_proj." + kind] = torch.cat([t.pop(pre + "query." + kind), t.pop(pre + "key." + kind),
+                                                                 t.pop(pre + "value." + kind)], 0)
+            return t
+        tt.load_file = fused
         self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained(local_dir)
         self.model.compile(timesfm.ForecastConfig(max_context=k.LOOKBACK, max_horizon=128, normalize_inputs=True,
                                                   use_continuous_quantile_head=True, force_flip_invariance=True,
@@ -189,8 +207,8 @@ class FlowState(Forecaster):
         t = self.torch.tensor([closes(w) for w in windows], dtype=self.torch.float32, device=self.device).unsqueeze(-1)
         with self.torch.no_grad():
             out = self.model(past_values=t, scale_factor=self.SCALE_FACTOR, prediction_length=PRED_LEN, batch_first=True)
-        pred = out.prediction_outputs          # [batch, quantiles, prediction_length, channels]
-        mid = pred.shape[1] // 2
+        pred = out.quantile_outputs            # [batch, quantiles, prediction_length, channels]
+        mid = list(self.model.config.quantiles).index(0.5)
         return [row[mid, :PRED_LEN, 0].float().cpu().tolist() for row in pred]
 
 
