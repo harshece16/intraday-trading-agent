@@ -88,5 +88,5 @@ def test_a_run_whose_timing_agrees_goes_on():
 
 
 def test_the_device_and_threads_are_fixed():
-    assert (h.DEVICE, h.THREADS) == ("cpu", 4)
+    assert (h.DEVICE, h.THREADS) == ("cpu", 4)          # KRONOS_DEVICE is unset in the test run
     assert (h.PAUSE_FROM, h.PAUSE_TO) == ("08:30", "15:45")

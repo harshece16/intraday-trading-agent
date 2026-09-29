@@ -6,7 +6,8 @@ look's own script leaves to whoever runs it:
 
   1. where the candle cache is read from (KRONOS_CANDLE_DB), so the run can happen
      in a worktree while the cache stays in the main checkout;
-  2. the device (cpu) and the thread count (4), fixed for the whole run;
+  2. the device (cpu, or KRONOS_DEVICE for a replication on another machine) and the
+     thread count (4), fixed for the whole run;
   3. that the sample_count chosen by the stage-0-only run is the one of record:
      the full run repeats the timing, and halts if its own choice differs;
   4. when the run is paused. It is stopped from 08:30 to 15:45 IST on trading days
@@ -32,7 +33,7 @@ from datetime import datetime, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
 PAUSE_FROM, PAUSE_TO = "08:30", "15:45"
-DEVICE = "cpu"
+DEVICE = os.environ.get("KRONOS_DEVICE", "cpu")     # the run of record is cpu (amendment 3); a PC replication may set cuda
 THREADS = 4
 NICE = 10
 POLL_SECONDS = 20
@@ -104,7 +105,8 @@ def environment(vendor, candle_db):
 def worker(mode):
     """The run itself, in this process. mode is 'stage0' or 'run'."""
     from pathlib import Path
-    os.nice(NICE)
+    if hasattr(os, "nice"):                    # not on Windows
+        os.nice(NICE)
     if BACKEND not in sys.path:
         sys.path.insert(0, BACKEND)
     import kite_history

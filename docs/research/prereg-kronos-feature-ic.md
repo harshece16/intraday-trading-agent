@@ -111,3 +111,12 @@ Research look **L40**. Trials remain **125**. If the gate clears, the trial that
    - **The checkpoint after stage 0.** Reviewer Entry 19 left it to the main agent. It is taken like this: stage 0 is committed and pushed, with an entry in the reviewer's outbox, before the pass starts. The pass then starts if all six checks passed and none needed a judgement this text does not already settle. The script computes no statistic until every forecast is done, which takes many hours, so a defect found in stage 0 during that time stops the run before any result exists. If any check halts, or moves the window (§2), the run stops there and waits.
    - **What installing it means.** Kronos is installed in the project's research environment only. No forecast reaches the scanner, the checklist, the review queue, the Jev book or any order path. That would need the gate of §8, the separate trial it names, and the confirmation of §3.
 
+## Dated notes
+
+**2026-09-29, 22:30, while the L40 pass is running and before any statistic exists. A forward shadow record from the session of 2026-09-30.** The owner asked to "use forecast in tomorrow run". Under this pre-registration and README §70, no forecast can reach the scanner, the checklist, the review queue or an order until the gate of §8, the separate trial and the confirmation of §3. What runs instead, from 2026-09-30, is a **shadow**: `backend/research/kronos_shadow.py` computes the same forecast live, every five minutes from 09:45 to 14:30, for the day's list, and writes it next to the scanner's side and score for that stock, with the realised 15, 30 and 60-minute returns filled in as the bars arrive. It is display and record only. It changes nothing the engine does.
+
+- Same model, revisions, features and targets as the look; sample_count 3 (the default; the shadow has time for it), CPU, 4 threads. Bars from Kite when connected, else the delayed feed, recorded per row.
+- Every five minutes, not the look's six times. The look's six times are among them.
+- The record is `backend/data/kronos_shadow_<date>.json` and a summary per day. **One day is an anecdote.** The day's rank IC and quintile spread are shown as they accrue, with no threshold. No decision, no gate and no trial reads the shadow record. If it is ever tested, that test is pre-registered first, and the sessions it may use are those after this note.
+- It does not touch the selection sample or the 2026 held-out window, and it does not change the look's one run, which reads only the cache.
+
