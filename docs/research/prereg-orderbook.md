@@ -81,6 +81,12 @@ average turnover, chosen before the open from daily data and kept all day
 (README §91). A stock that becomes ineligible during the day is dropped and
 not replaced. The choice uses no price move, order-book reading or return.
 
+**Live from the session of 2026-09-29.** The backend was restarted with this
+change on 2026-09-28 at 21:17 IST. On 2026-09-29 the list was fixed at the
+first scan of the session, at 09:15:38, and did not change until the close.
+That session: 25 stocks with 554 or 555 samples each, and one sample of
+ADANIENSOL at 09:15:20, from the list the engine held before the first scan.
+
 **Why:** a rotating list leaves most stock-sessions unusable, which cuts the
 test's sample by more than half. A fixed list gives up to 25 whole-session
 stocks a day. The most-traded names also have the tightest spreads, which is
@@ -111,6 +117,9 @@ sampled, and any session before this amendment is deployed.
 **The change**, from the first session after it is deployed (the date is
 added below once it is live). README §100.
 
+**Live from the session of 2026-09-30.** The backend was restarted with this
+change on 2026-09-29 at 18:08:47 IST, after the close, with no position open.
+
 1. The list is fixed before the open, at the first pre-market read at or
    after 08:45, so the engine watches the day's stocks from the first tick of
    the session.
@@ -138,6 +147,15 @@ the sample holds.
 **The change**, from the first session after it is deployed. README §101.
 The scanner reads today's prices from live Kite quotes in place of the
 delayed feed.
+
+**Live from the session of 2026-09-30.** The backend was restarted with this
+change on 2026-09-29 at 18:08:47 IST, after the close, with no position open.
+
+**A note on the record of 2026-09-29.** The restart chose that session's list
+again at 18:09 and put HINDALCO in place of TVSMOTOR (#198). No sample was
+taken after 15:29:30, so the samples are of the list fixed at 09:15:38. To
+know which stocks were on the list that day, read a scan from before the
+close, not the last scan of the day.
 
 **Effect on this test: none on the samples, a small one on requests.**
 
