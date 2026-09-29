@@ -24,7 +24,14 @@ semantics from qlib/data/ops.py and qlib/data/_libs/rolling.pyx at the same comm
     the window (1 = the oldest bar), first occurrence;
   * Slope/Rsquare/Resi regress the window's values on its slot positions 1..N (NaN
     slots skipped, positions kept), Resi being the last value's residual; Rsquare and
-    Corr are set to NaN where the rolling std of an input is within 2e-5 of 0.
+    Corr are set to NaN where the rolling std of an input is within 2e-5 of 0;
+  * every operator Qlib runs through pandas' rolling functions (all but Slope, Rsquare
+    and Resi) treats +-inf as missing, as pandas' Window._prep_values does. It matters
+    for CORD: Log($volume/Ref($volume, 1)+1) is +inf after a zero-volume bar, and that
+    pair is skipped, not the whole window (amendment 1, finding B2);
+  * Corr is NaN where the paired values of an input are all equal (undefined). Qlib's
+    mask catches that unless a skipped pair hides it; pandas then returns a value that
+    depends on its version (amendment 1).
 
 Where Qlib calls pandas' online rolling algorithms (Mean, Sum, Std, Corr) or its Cython
 incremental sums (Slope, Rsquare, Resi), this port computes each window directly, in a
@@ -90,17 +97,22 @@ L40_STOCK_TIMES = 43362
 LOOKAHEAD_PER_SEGMENT = 80            # §6.2: >= 200 across training, validation and test
 HAND_TOL = 1e-9                       # §6.3
 N_TESTS_NIGHT = 24                    # §5: L40 3 + L46 18 + L47 3
+L46_FINAL = ("DONE", "VOID")
 SEED = 123
 CUTOFF = datetime(2026, 9, 30, 7, 30, tzinfo=IST)   # §7
 
 # §4, verbatim from examples/benchmarks/LightGBM/workflow_config_lightgbm_Alpha158.yaml and
 # qlib/contrib/model/gbdt.py (objective from `loss`, verbosity -1), except num_threads,
 # which the prereg fixes at 16, and the three it adds: CPU, deterministic, seed 123.
+# force_col_wise is an execution option, not a model hyperparameter: LightGBM's documentation
+# asks for it (or force_row_wise) with deterministic=true, since otherwise the histogram
+# layout is chosen by a timing test at construction (amendment 1).
 LGB_PARAMS = OrderedDict([
     ("objective", "mse"), ("verbosity", -1),
     ("colsample_bytree", 0.8879), ("learning_rate", 0.2), ("subsample", 0.8789),
     ("lambda_l1", 205.6999), ("lambda_l2", 580.9768), ("max_depth", 8), ("num_leaves", 210),
     ("num_threads", 16), ("device_type", "cpu"), ("deterministic", True), ("seed", SEED),
+    ("force_col_wise", True),
 ])
 NUM_BOOST_ROUND = 1000
 EARLY_STOPPING_ROUNDS = 50
@@ -109,6 +121,7 @@ OUT_DIR = os.path.join(REPO, "docs", "research", "data")
 STAGE0 = os.path.join(OUT_DIR, "l47_stage0.json")
 FROZEN = os.path.join(OUT_DIR, "l47_frozen.json")
 RESULT = os.path.join(OUT_DIR, "l47_result.json")
+TRAIN_STARTED = os.path.join(OUT_DIR, "l47_train_started.json")
 L40_RESULT = os.path.join(OUT_DIR, "kronos_l40_result.json")
 MODELS_DIR = os.path.join(HERE, "l47_models")
 ROWS = os.path.join(HERE, "l47_rows.jsonl")
@@ -204,6 +217,15 @@ def _shift(x, d):
     return out
 
 
+def _finite(x):
+    """+-inf as NaN: pandas' rolling functions (Window._prep_values) treat an infinite value
+    as missing, so Qlib's Mean, Sum, Std, Corr, Max, Min, Quantile, Rank and the IdxMax/IdxMin
+    apply never see one. (Slope, Rsquare and Resi run Qlib's Cython on the raw values.)"""
+    np = _np()
+    x = np.asarray(x, dtype="float64")
+    return np.where(np.isinf(x), np.nan, x)
+
+
 def _columns(x, n):
     """The window's n columns, oldest first: column j holds x[t-n+1+j] at row t, NaN where
     that bar precedes the series. Row t depends on x[t-n+1..t] only."""
@@ -214,9 +236,9 @@ def _columns(x, n):
 
 
 def rolling_sum(x, n):
-    """Sum over the window's non-NaN values (NaN if there are none); and their count."""
+    """Sum over the window's finite values (NaN if there are none); and their count."""
     np = _np()
-    cols = _columns(x, n)
+    cols = _columns(_finite(x), n)
     s = np.zeros(len(x))
     cnt = np.zeros(len(x))
     for c in cols:
@@ -234,8 +256,9 @@ def rolling_mean(x, n):
 
 
 def rolling_std(x, n):
-    """Sample standard deviation (ddof=1) of the window's non-NaN values; NaN below two."""
+    """Sample standard deviation (ddof=1) of the window's finite values; NaN below two."""
     np = _np()
+    x = _finite(x)
     m = rolling_mean(x, n)
     cols = _columns(x, n)
     ss = np.zeros(len(x))
@@ -251,10 +274,11 @@ def rolling_std(x, n):
 
 
 def rolling_corr(x, y, n):
-    """Qlib's Corr: Pearson over the window's pairs where both are present (pandas'
-    prep_binary), NaN below two pairs, and NaN where either input's rolling std is within
-    2e-5 of 0 (ops.py Corr._load_internal)."""
+    """Qlib's Corr: Pearson over the window's pairs where both are finite (pandas'
+    prep_binary, then _prep_values), NaN below two pairs, and NaN where either input's
+    rolling std is within 2e-5 of 0 (ops.py Corr._load_internal)."""
     np = _np()
+    x, y = _finite(x), _finite(y)
     cx, cy = _columns(x, n), _columns(y, n)
     oks = [~np.isnan(a) & ~np.isnan(b) for a, b in zip(cx, cy)]
     T = len(x)
@@ -275,7 +299,54 @@ def rolling_corr(x, y, n):
     r[cnt < 2] = np.nan
     mask = np.isclose(rolling_std(x, n), 0, atol=CORR_STD_ATOL) | np.isclose(rolling_std(y, n), 0, atol=CORR_STD_ATOL)
     r[mask] = np.nan
+    r[_paired_constant(cx, cy, oks)] = np.nan
     return r
+
+
+def _paired_constant(cx, cy, oks):
+    """Windows where the paired values of either input are all equal: the correlation is
+    undefined (NaN), whatever rounding leaves in the mean. Reachable only when a missing
+    pair keeps Qlib's 2e-5 mask on the unpaired input from firing; there pandas returns an
+    implementation-dependent value (+-inf under pandas 2.3.3, 0 or ~1e-5 under 3.0.6)."""
+    np = _np()
+    T = len(cx[0])
+    lo_x, hi_x = np.full(T, np.inf), np.full(T, -np.inf)
+    lo_y, hi_y = np.full(T, np.inf), np.full(T, -np.inf)
+    for a, b, ok in zip(cx, cy, oks):
+        lo_x, hi_x = np.minimum(lo_x, np.where(ok, a, np.inf)), np.maximum(hi_x, np.where(ok, a, -np.inf))
+        lo_y, hi_y = np.minimum(lo_y, np.where(ok, b, np.inf)), np.maximum(hi_y, np.where(ok, b, -np.inf))
+    return (lo_x == hi_x) | (lo_y == hi_y)
+
+
+def qlib_pandas_corr(x, y, n):
+    """Qlib's Corr exactly as Qlib runs it: pandas' rolling corr, then its 2e-5 masks. Used
+    only to measure how far the port is from it (stage 0, information; the tests)."""
+    import pandas as pd
+    np = _np()
+    sx, sy = pd.Series(x, dtype="float64"), pd.Series(y, dtype="float64")
+    r = sx.rolling(n, min_periods=1).corr(sy)
+    r[np.isclose(sx.rolling(n, min_periods=1).std(), 0, atol=CORR_STD_ATOL)
+      | np.isclose(sy.rolling(n, min_periods=1).std(), 0, atol=CORR_STD_ATOL)] = np.nan
+    return r.to_numpy()
+
+
+def corr_differences(x, y, n):
+    """Where the port's Corr and Qlib's pandas Corr disagree, by kind: pandas' float error
+    where both are finite (its mean(xy) - mean(x)mean(y) cancels); windows whose paired
+    values of an input are constant, where the correlation is undefined, the port gives NaN
+    and pandas gives whatever its rounding leaves; and anything else (expected: none)."""
+    np = _np()
+    xf, yf = _finite(x), _finite(y)
+    ours, theirs = rolling_corr(x, y, n), qlib_pandas_corr(x, y, n)
+    cx, cy = _columns(xf, n), _columns(yf, n)
+    undefined = _paired_constant(cx, cy, [~np.isnan(a) & ~np.isnan(b) for a, b in zip(cx, cy)])
+    fin = np.isfinite(ours) & np.isfinite(theirs)
+    und = undefined & np.isnan(ours) & ~np.isnan(theirs)
+    other = ~fin & ~(np.isnan(ours) & np.isnan(theirs)) & ~und
+    return {"both_finite": int(fin.sum()),
+            "max_abs_diff_both_finite": float(np.abs(ours[fin] - theirs[fin]).max()) if fin.any() else None,
+            "undefined_port_nan": int(und.sum()), "undefined_pandas_inf": int((und & np.isinf(theirs)).sum()),
+            "other": int(other.sum())}
 
 
 def rolling_regression(y, n):
@@ -312,7 +383,7 @@ def rolling_argext(x, n, which):
     1 is the oldest bar of the window; a window shorter than n starts at the first bar."""
     np = _np()
     from numpy.lib.stride_tricks import sliding_window_view
-    x = np.asarray(x, dtype="float64")
+    x = _finite(x)
     f = np.argmax if which == "max" else np.argmin
     T = len(x)
     out = np.full(T, np.nan)
@@ -502,14 +573,13 @@ def _greater0(x):
 
 
 def _present(vals):
-    return [x for x in vals if not _isnan(x)]
+    """The values pandas' rolling functions count: finite ones (NaN and +-inf are missing)."""
+    return [x for x in vals if math.isfinite(x)]
 
 
 def _sum(vals):
     v = _present(vals)
-    if not v:
-        return NAN
-    return math.fsum(v) if all(math.isfinite(x) for x in v) else sum(v)
+    return math.fsum(v) if v else NAN
 
 
 def _mean(vals):
@@ -521,8 +591,6 @@ def _std(vals):
     v = _present(vals)
     if len(v) < 2:
         return NAN
-    if not all(math.isfinite(x) for x in v):
-        return NAN
     m = math.fsum(v) / len(v)
     return math.sqrt(math.fsum((x - m) ** 2 for x in v) / (len(v) - 1))
 
@@ -532,11 +600,11 @@ def _masked(sd):
 
 
 def _pearson(xs, ys):
-    pairs = [(a, b) for a, b in zip(xs, ys) if not _isnan(a) and not _isnan(b)]
+    pairs = [(a, b) for a, b in zip(xs, ys) if math.isfinite(a) and math.isfinite(b)]
     if _masked(_std(xs)) or _masked(_std(ys)) or len(pairs) < 2:
         return NAN
-    if not all(math.isfinite(a) and math.isfinite(b) for a, b in pairs):
-        return NAN
+    if len({a for a, _ in pairs}) == 1 or len({b for _, b in pairs}) == 1:
+        return NAN                        # a constant input: the correlation is undefined
     ma = math.fsum(a for a, _ in pairs) / len(pairs)
     mb = math.fsum(b for _, b in pairs) / len(pairs)
     sab = math.fsum((a - ma) * (b - mb) for a, b in pairs)
@@ -577,7 +645,7 @@ def _quantile(vals, q):
 def _pct_rank(vals):
     v = _present(vals)
     x = vals[-1]
-    if not v or _isnan(x):
+    if not v or not math.isfinite(x):
         return NAN
     less = sum(1 for y in v if y < x)
     eq = sum(1 for y in v if y == x)
@@ -585,6 +653,7 @@ def _pct_rank(vals):
 
 
 def _first_arg(vals, best):
+    vals = [x if math.isfinite(x) else NAN for x in vals]     # pandas hands apply NaN for +-inf
     if all(_isnan(x) for x in vals):
         return NAN
     for j, x in enumerate(vals):
@@ -1072,6 +1141,32 @@ def lookahead_check(flat_by_sym, picks, full_rows):
     return out
 
 
+def corr_vs_pandas(flat_by_sym):
+    """Information for the record (not a check): over every symbol's whole loaded series,
+    CORR and CORD from the port against Qlib's own pandas computation, by kind of
+    difference (corr_differences), and how many zero-volume bars there are."""
+    np = _np()
+    out = OrderedDict()
+    zero = 0
+    for sym in sorted(flat_by_sym):
+        bars = flat_by_sym[sym]
+        c = np.array([b["close"] for b in bars], dtype="float64")
+        v = np.array([b["volume"] for b in bars], dtype="float64")
+        zero += int((v == 0).sum())
+        with np.errstate(divide="ignore", invalid="ignore"):
+            pairs = {"CORR": (c, np.log(v + 1)), "CORD": (c / _shift(c, 1), np.log(v / _shift(v, 1) + 1))}
+        for op, (x, y) in pairs.items():
+            for d in WINDOWS:
+                r = corr_differences(x, y, d)
+                acc = out.setdefault("%s%d" % (op, d), {"both_finite": 0, "max_abs_diff_both_finite": 0.0,
+                                                        "undefined_port_nan": 0, "undefined_pandas_inf": 0, "other": 0})
+                for key in ("both_finite", "undefined_port_nan", "undefined_pandas_inf", "other"):
+                    acc[key] += r[key]
+                acc["max_abs_diff_both_finite"] = max(acc["max_abs_diff_both_finite"], r["max_abs_diff_both_finite"] or 0.0)
+    out["zero_volume_bars"] = zero
+    return out
+
+
 def hand_check(flat_by_sym, picks, full_rows):
     """§6.3: every feature (every family) at each pick against hand_features, to 1e-9."""
     out = []
@@ -1160,7 +1255,8 @@ def _stage0_body(stage0, kh, halt):
 
     # 3. hand calculation
     hc = hand_check(data.flat_by_sym, hand, X_hand)
-    stage0["3_hand_calculation"] = {"stock_times": len(hc), "tolerance": HAND_TOL, "families": FAMILIES, "checks": hc}
+    stage0["3_hand_calculation"] = {"stock_times": len(hc), "tolerance": HAND_TOL, "families": FAMILIES, "checks": hc,
+                                    "corr_against_qlibs_pandas_information_only": corr_vs_pandas(data.flat_by_sym)}
     if len(hc) < 5 or any(c["mismatches"] for c in hc):
         halt(3, "a feature differs from its direct computation by more than %g" % HAND_TOL)
 
@@ -1224,20 +1320,43 @@ def _stage0_body(stage0, kh, halt):
 
 # ---- train (§3, §4, §7) ------------------------------------------------------------------------
 
-def run_train(args):
+def in_head(path):
+    """True if `path` exists in the HEAD commit (whatever the working tree holds)."""
+    rel = os.path.relpath(path, REPO).replace(os.sep, "/")
+    rc, _ = _git("cat-file", "-e", "HEAD:%s" % rel)
+    return rc == 0
+
+
+def train_guards(args):
+    """Every refusal before training (prereg §7: train once; a refit only for a crash or a
+    declared bug, before freezing, recorded). Returns what an earlier attempt left, or None."""
     guard_platform()
-    np = _np()
-    import lightgbm as lgb
     if not os.path.exists(STAGE0) or _read(STAGE0).get("status") != "STAGE0_DONE":
         raise SystemExit("refusing to train: %s is missing or not STAGE0_DONE" % STAGE0)
-    previous = None
+    if in_head(FROZEN):
+        raise SystemExit("refusing to train: %s is committed, so the models are frozen; no refit after freezing (§7)"
+                         % FROZEN)
+    for p in (RESULT, ROWS, ROWS + ".tmp"):
+        if os.path.exists(p):
+            raise SystemExit("refusing to train: %s exists, so the scoring pass has started; no refit after it (§7)" % p)
     partial = [f for f in expected_frozen_files() if os.path.exists(os.path.join(MODELS_DIR, f))]
-    if os.path.exists(FROZEN) or partial:
-        if not args.refit_reason:
-            raise SystemExit("refusing to train: %s (training runs once; a refit after a crash or a declared bug needs "
-                             "--refit-reason, which is recorded)" % ("%s exists" % FROZEN if os.path.exists(FROZEN)
-                                                                    else "an earlier attempt left %s" % partial))
-        previous = _read(FROZEN) if os.path.exists(FROZEN) else {"partial_files_from_an_unfrozen_attempt": partial}
+    earlier = OrderedDict()
+    if os.path.exists(FROZEN):
+        earlier["frozen_record"] = _read(FROZEN)
+    if partial:
+        earlier["model_files"] = partial
+    if os.path.exists(TRAIN_STARTED):
+        earlier["train_started"] = _read(TRAIN_STARTED)
+    if earlier and not args.refit_reason:
+        raise SystemExit("refusing to train: an earlier attempt left %s (training runs once; a refit after a crash or a "
+                         "declared bug, before freezing, needs --refit-reason, which is recorded)" % list(earlier))
+    return earlier or None
+
+
+def run_train(args):
+    np = _np()
+    previous = train_guards(args)
+    import lightgbm as lgb
     s0 = _read(STAGE0)["stage0"]
     kh = _kite_history()
     started = time.time()
@@ -1260,6 +1379,10 @@ def run_train(args):
     apply_normaliser(X_va, norm)
     k_tr, k_va = _keys(data.rows_tr), _keys(data.rows_va)
 
+    # the trace a crash leaves: from here on, a second train needs --refit-reason
+    marker = OrderedDict([("look", "L47"), ("status", "TRAIN_STARTED"), ("started", datetime.now(IST).isoformat()),
+                          ("refit_reason", args.refit_reason), ("lgb_params", LGB_PARAMS), ("environment", environment())])
+    _write(TRAIN_STARTED, marker)
     os.makedirs(MODELS_DIR, exist_ok=True)
     out = OrderedDict()
     for name in HORIZONS:
@@ -1302,7 +1425,8 @@ def run_train(args):
         ("feature_fingerprint", feature_fingerprint()), ("lgb_params", LGB_PARAMS),
         ("num_boost_round", NUM_BOOST_ROUND), ("early_stopping_rounds", EARLY_STOPPING_ROUNDS),
         ("horizons", out), ("data", desc), ("stage0_sha256", sha256_file(STAGE0)),
-        ("environment", environment()), ("seconds", round(time.time() - started)),
+        ("train_started", marker["started"]), ("environment", environment()),
+        ("seconds", round(time.time() - started)),
         ("note", "validation IC is information only; it is not a gate and cannot change the design (prereg §7)"),
     ])
     if previous is not None:
@@ -1360,24 +1484,43 @@ def guard_cutoff(args, now=None):
 
 
 def load_night_inputs(l40_path, l46_dir):
+    """L40's result (DONE) and all six L46 results, each final (DONE or VOID): a missing one
+    means L46 has not finished, and the night's 24-test correction cannot be made."""
     if not os.path.exists(l40_path):
         raise SystemExit("refusing to score: L40's result %s is missing (pass --l40-result)" % l40_path)
     l40 = _read(l40_path)
     if l40.get("status") != "DONE":
         raise SystemExit("refusing to score: L40's result is %s, not DONE" % l40.get("status"))
     from research.tsfm_family_ic import MODELS
-    l46 = {}
+    l46, missing, open_ = {}, [], []
     for m in MODELS:
         p = os.path.join(l46_dir, "l46_%s_result.json" % m)
-        l46[m] = _read(p) if os.path.exists(p) else None
+        if not os.path.exists(p):
+            missing.append(m)
+            continue
+        l46[m] = _read(p)
+        if l46[m].get("status") not in L46_FINAL:
+            open_.append("%s=%s" % (m, l46[m].get("status")))
+    if missing or open_:
+        raise SystemExit("refusing to score: L46 has not finished (missing %s; not final %s) in %s" % (missing, open_, l46_dir))
     return l40, l46
 
 
-def run_score(args):
+def score_guards(args):
+    """Every refusal of the scoring pass, all before any bar or target is read. Returns
+    (frozen record, L40 result, L46 results, the guard record)."""
     guard_platform()
     cut = guard_cutoff(args)
-    if os.path.exists(RESULT) and _read(RESULT).get("status") == "DONE":
-        raise SystemExit("refusing to score: %s is DONE; the scoring pass runs once" % RESULT)
+    previous = None
+    if os.path.exists(RESULT):
+        try:
+            doc = _read(RESULT)
+            previous = {"status": doc.get("status"), "score": doc.get("score")}
+        except ValueError:
+            previous = {"status": "unreadable"}
+        if not args.owner_approved_rescore:
+            raise SystemExit("refusing to score: %s exists (status %s); the scoring pass runs once. A re-score is the "
+                             "owner's decision: --owner-approved-rescore \"<reason>\"" % (RESULT, previous["status"]))
     try:
         frozen = verify_frozen(FROZEN, MODELS_DIR)
     except RuntimeError as exc:
@@ -1385,16 +1528,95 @@ def run_score(args):
     if not committed_at_head(FROZEN):
         raise SystemExit("refusing to score: %s is not committed at HEAD (its hashes must be committed and pushed "
                          "before the scoring pass reads any target)" % FROZEN)
+    if not os.path.exists(STAGE0) or not committed_at_head(STAGE0):
+        raise SystemExit("refusing to score: %s is not committed at HEAD" % STAGE0)
+    if sha256_file(STAGE0) != frozen.get("stage0_sha256"):
+        raise SystemExit("refusing to score: %s is not the stage 0 record the models were trained after "
+                         "(SHA-256 differs from l47_frozen.json's stage0_sha256)" % STAGE0)
     if feature_fingerprint() != frozen["feature_fingerprint"]:
         raise SystemExit("refusing to score: the feature code differs from the code the models were trained with")
     l40, l46 = load_night_inputs(args.l40_result, args.l46_dir)
+    if args.l40_rows and not os.path.exists(args.l40_rows):
+        raise SystemExit("refusing to score: --l40-rows %s does not exist" % args.l40_rows)
+    import importlib.util
+    if importlib.util.find_spec("lightgbm") is None:
+        raise SystemExit("refusing to score: lightgbm is not installed in this environment")
+    record = OrderedDict([("look", "L47"), ("prereg", PREREG), ("started", datetime.now(IST).isoformat()),
+                          ("cutoff", cut), ("frozen_files_verified", frozen["files"]),
+                          ("frozen_sha256", sha256_file(FROZEN)), ("stage0_sha256", frozen["stage0_sha256"]),
+                          ("l40_rows", args.l40_rows), ("environment", environment())])
+    if args.owner_approved_rescore:
+        record["rescore"] = {"reason": args.owner_approved_rescore, "previous": previous}
+    return frozen, l40, l46, record
+
+
+def _dropped_as_sets(dropped):
+    return {sym: sorted(set(dates)) for sym, dates in (dropped or {}).items() if dates}
+
+
+def l40_rows_per_session(path):
+    counts = defaultdict(int)
+    with open(path) as f:
+        for line in f:
+            if line.strip():
+                counts[json.loads(line)["date"]] += 1
+    return dict(counts)
+
+
+def prediction_ties(rows_path):
+    """N2 of the review, for the reader of the result: how many distinct predictions each
+    session has, and the share of stock-times tied across a quintile cut, where the
+    harness's quintile_spread (unchanged) splits a tie by row order."""
+    import statistics
+    per = {name: defaultdict(list) for name in HORIZONS}
+    with open(rows_path) as f:
+        for line in f:
+            r = json.loads(line)
+            for name in HORIZONS:
+                fv, tv = r["features"].get(name), r["targets"].get(name)
+                if fv is None or tv is None or r["m60"] is None:
+                    continue
+                per[name][r["date"]].append(fv)
+    out = OrderedDict()
+    for name in HORIZONS:
+        distinct, n_all, bottom, top, s_bottom, s_top = [], 0, 0, 0, 0, 0
+        for d in sorted(per[name]):
+            vals = per[name][d]
+            if len(vals) < k.MIN_STOCKS:
+                continue                    # evaluate_rows drops these sessions too
+            n, qn, srt = len(vals), len(vals) // 5, sorted(vals)
+            distinct.append(len(set(vals)))
+            n_all += n
+            if 1 <= qn < n:
+                if srt[qn - 1] == srt[qn]:
+                    bottom += vals.count(srt[qn - 1])
+                    s_bottom += 1
+                if srt[n - qn - 1] == srt[n - qn]:
+                    top += vals.count(srt[n - qn])
+                    s_top += 1
+        out[name] = {"sessions": len(distinct),
+                     "distinct_predictions_per_session": {"median": statistics.median(distinct) if distinct else None,
+                                                          "min": min(distinct) if distinct else None},
+                     "share_tied_at_bottom_cut": bottom / n_all if n_all else None,
+                     "share_tied_at_top_cut": top / n_all if n_all else None,
+                     "sessions_with_a_tie_across_the_bottom_cut": s_bottom,
+                     "sessions_with_a_tie_across_the_top_cut": s_top}
+    return out
+
+
+def run_score(args):
+    frozen, l40, l46, record = score_guards(args)
+    # the trace of a started pass: from here on, a second score is the owner's decision
+    _write(RESULT, {"score": record, "status": "STARTED"})
     import lightgbm as lgb
+
+    def halt(why):
+        record["status_reason"] = why
+        _write(RESULT, {"score": record, "status": "HALTED"})
+        raise SystemExit("HALT: %s" % why)
 
     kh = _kite_history()
     started = time.time()
-    record = OrderedDict([("look", "L47"), ("prereg", PREREG), ("started", datetime.now(IST).isoformat()),
-                          ("cutoff", cut), ("frozen_files_verified", frozen["files"]),
-                          ("frozen_sha256", sha256_file(FROZEN)), ("environment", environment())])
     membership = k.load_membership_rows()
     pre, max_ts = load_bars(kh, sorted({r["symbol"] for r in membership}), READ_BEFORE_TS)
     record["max_time_read_ist"] = _ist_iso(max_ts)
@@ -1406,20 +1628,32 @@ def run_score(args):
     dropped = k.stage0_adjustment(adj, kh, list(flat_by_sym), selection)
     samples = k.build_samples(flat_by_sym, sessions_by_sym, selection, members, dropped)
     with_data = sorted({s[1] for s in samples})
+    per_session = defaultdict(int)
+    for smp in samples:
+        per_session[smp[1]] += 1
     record["sample"] = {"selection": splits.describe_split("selection", selection), "sessions_with_data": len(with_data),
-                        "stock_times": len(samples), "adjustment_dropped": adj["adjustment"]["dropped_count"]}
+                        "stock_times": len(samples), "adjustment_dropped": adj["adjustment"]["dropped_count"],
+                        "dropped_stock_sessions": dropped}
     if len(with_data) != L40_SESSIONS_WITH_DATA or len(samples) != L40_STOCK_TIMES:
-        record["status_reason"] = "L40's sample not reproduced; no target was scored"
-        _write(RESULT, {"score": record, "status": "HALTED"})
-        raise SystemExit("HALT: L40's sample is %d / %d, not %d / %d" % (len(with_data), len(samples),
-                                                                      L40_SESSIONS_WITH_DATA, L40_STOCK_TIMES))
+        halt("L40's sample is %d sessions / %d stock-times, not %d / %d; no target was scored"
+             % (len(with_data), len(samples), L40_SESSIONS_WITH_DATA, L40_STOCK_TIMES))
+    l40_dropped = l40["stage0"]["adjustment"]["dropped_stock_sessions"]
+    if _dropped_as_sets(dropped) != _dropped_as_sets(l40_dropped):
+        halt("the adjustment-dropped stock-sessions differ from L40's; no target was scored")
+    if args.l40_rows:
+        theirs = l40_rows_per_session(args.l40_rows)
+        record["sample"]["l40_rows_per_session_equal"] = theirs == dict(per_session)
+        if theirs != dict(per_session):
+            diff = sorted(d for d in set(theirs) | set(per_session) if theirs.get(d) != per_session.get(d))
+            halt("the per-session stock-time counts differ from L40's rows file on %s; no target was scored" % diff[:10])
     print("score: %d stock-times over %d sessions; computing the features ..." % (len(samples), len(with_data)), flush=True)
     X = feature_rows(flat_by_sym, [(s[0], s[3]) for s in samples])
     norm = _read(os.path.join(MODELS_DIR, NORMALISER_FILE))
     if norm["features"] != FEATURE_NAMES:
-        raise SystemExit("refusing to score: the normaliser's feature list differs")
+        halt("the normaliser's feature list differs; no target was scored")
     apply_normaliser(X, norm)
-    preds = {h: lgb.Booster(model_file=os.path.join(MODELS_DIR, model_file(h))).predict(X) for h in HORIZONS}
+    boosters = {h: lgb.Booster(model_file=os.path.join(MODELS_DIR, model_file(h))) for h in HORIZONS}
+    preds = {h: boosters[h].predict(X) for h in HORIZONS}
 
     tmp = ROWS + ".tmp"
     record["previous_partial_rows_found"] = os.path.exists(ROWS) or os.path.exists(tmp)
@@ -1433,13 +1667,18 @@ def run_score(args):
     os.replace(tmp, ROWS)
     result = k.evaluate_rows(ROWS)
     night = night_gate(l40, l46, result["summaries"])
+    ties = prediction_ties(ROWS)
+    models = OrderedDict((h, OrderedDict([("best_iteration", frozen["horizons"][h]["best_iteration"]
+                                           if "horizons" in frozen else None),
+                                          ("trees_in_file", boosters[h].num_trees())] + list(ties[h].items())))
+                         for h in HORIZONS)
     record["finished"] = datetime.now(IST).isoformat()
     record["seconds"] = round(time.time() - started)
+    v = verdict(result["summaries"], night)
     _write(RESULT, OrderedDict([("score", record), ("status", "DONE"), ("result", result), ("night_gate", night),
-                                ("verdict", verdict(result["summaries"], night)),
+                                ("verdict", v), ("models", models),
                                 ("constants", {"two_leg_bp": k.TWO_LEG_BP, "round_trip_bp": k.ROUND_TRIP_BP,
                                                "bh_q": k.BH_Q, "night_tests": N_TESTS_NIGHT, "horizons": dict(HORIZONS)})]))
-    v = verdict(result["summaries"], night)
     for name, s in result["summaries"].items():
         sp, ic, pic = s["spread"], s["ic"], s["pic"]
         print("L47 %s: sessions %d | IC %.4f (t %.2f) | partial IC %.4f (t %.2f) | spread %.1f bp (t %.2f) | passes: %s"
@@ -1458,6 +1697,10 @@ def main(argv=None):
     ap.add_argument("--l46-dir", default=OUT_DIR, help="score only: the folder holding l46_<model>_result.json")
     ap.add_argument("--owner-approved-after-cutoff", action="store_true",
                     help="score only: the owner's decision to run the one scoring pass after 07:30 IST")
+    ap.add_argument("--owner-approved-rescore", default=None, metavar="REASON",
+                    help="score only: the owner's decision to score again although l47_result.json exists; recorded")
+    ap.add_argument("--l40-rows", default=None,
+                    help="score only: L40's rows file of record; its per-session stock-time counts must match")
     args = ap.parse_args(argv)
     {"stage0": run_stage0, "train": run_train, "score": run_score}[args.command](args)
 

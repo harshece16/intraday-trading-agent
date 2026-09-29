@@ -1,6 +1,7 @@
 """Research look L47 (docs/research/prereg-qlib-lgbm-alpha158.md): the parts that decide
 something, on small synthetic data only. No candle cache is read; D2b keeps L47's real
 computation off the Mac."""
+import importlib.machinery
 import json
 import math
 import os
@@ -526,3 +527,336 @@ def test_commands_refuse_to_run_on_the_mac(monkeypatch):
     monkeypatch.delenv("L47_ALLOW_MAC", raising=False)
     with pytest.raises(SystemExit, match="PC only"):
         q.guard_platform()
+
+
+# ---- amendment 1 (review finding B2): +-inf is missing, as it is to pandas' rolling functions ------
+
+def _with_infs(n=160, seed=5):
+    x, y = _series(n=n, seed=seed)
+    y[[20, 21, 60, 130]] = np.inf
+    y[[90]] = -np.inf
+    x[[45]] = np.inf
+    return x, y
+
+
+@pytest.mark.parametrize("n", q.WINDOWS)
+def test_corr_skips_an_infinite_pair_like_pandas_plus_qlibs_mask(n):
+    x, y = _with_infs()
+    sx, sy = pd.Series(x), pd.Series(y)
+    ref = sx.rolling(n, min_periods=1).corr(sy)
+    ref[np.isclose(sx.rolling(n, min_periods=1).std(), 0, atol=2e-05)
+        | np.isclose(sy.rolling(n, min_periods=1).std(), 0, atol=2e-05)] = np.nan
+    got = q.rolling_corr(x, y, n)
+    assert np.allclose(got, ref, rtol=0, atol=1e-10, equal_nan=True)
+    assert np.isfinite(got[25:30]).all() or n > 5       # a window holding an inf is not NaN as a whole
+
+
+@pytest.mark.parametrize("n", q.WINDOWS)
+def test_mean_sum_std_skip_infinite_values_like_pandas(n):
+    _, y = _with_infs()
+    sy = pd.Series(y)
+    assert np.allclose(q.rolling_mean(y, n), sy.rolling(n, min_periods=1).mean(), rtol=0, atol=1e-12, equal_nan=True)
+    assert np.allclose(q.rolling_sum(y, n)[0], sy.rolling(n, min_periods=1).sum(), rtol=0, atol=1e-12, equal_nan=True)
+    assert np.allclose(q.rolling_std(y, n), sy.rolling(n, min_periods=1).std(), rtol=0, atol=1e-12, equal_nan=True)
+
+
+def test_cord_after_a_zero_volume_bar_differs_from_qlibs_pandas_only_by_pandas_float_error():
+    """B2: after a zero-volume bar CORD skips the infinite pair instead of going NaN. Against
+    Qlib's own pandas computation the port then differs in two ways only: pandas' float error
+    where both are finite, and windows whose paired values of an input are constant (an
+    undefined correlation: the port gives NaN, pandas a version-dependent value). Exactness
+    is the hand check's job."""
+    bars = _bars(3000, seed=21)
+    F = q.alpha158_from_bars(bars)
+    c = np.array([b["close"] for b in bars], dtype="float64")
+    v = np.array([b["volume"] for b in bars], dtype="float64")
+    with np.errstate(divide="ignore", invalid="ignore"):
+        left, right = c / q._shift(c, 1), np.log(v / q._shift(v, 1) + 1)
+    assert np.isinf(right).sum() > 100                    # zero-volume bars followed by trading
+    for n in q.WINDOWS:
+        got = F[:, q.FEATURE_NAMES.index("CORD%d" % n)]
+        assert q.canonical_bytes(got) == q.canonical_bytes(q.rolling_corr(left, right, n))
+        diff = q.corr_differences(left, right, n)
+        assert diff["other"] == 0 and diff["both_finite"] > 1000, (n, diff)
+        assert diff["max_abs_diff_both_finite"] < 1e-3, (n, diff)
+        theirs = q.qlib_pandas_corr(left, right, n)
+        for t in np.where(np.isnan(got) & ~np.isnan(theirs))[0]:     # pandas' version-dependent value
+            w = slice(max(0, t - n + 1), t + 1)
+            ok = np.isfinite(left[w]) & np.isfinite(right[w])
+            assert np.ptp(left[w][ok]) == 0 or np.ptp(right[w][ok]) == 0
+        holds_inf = pd.Series(np.isinf(right).astype(float)).rolling(n, min_periods=1).max().to_numpy() > 0
+        assert np.isfinite(got[holds_inf]).sum() > 50, n  # before amendment 1 every one of these was NaN
+
+
+def test_corr_vs_pandas_is_recorded_by_kind_for_every_window():
+    bars = {"AAA": _bars(400, seed=2), "BBB": _bars(300, seed=4)}
+    out = q.corr_vs_pandas(bars)
+    assert out["zero_volume_bars"] == sum(1 for b in bars["AAA"] + bars["BBB"] if b["volume"] == 0)
+    assert all(out["%s%d" % (op, d)]["other"] == 0 for op in ("CORR", "CORD") for d in q.WINDOWS)
+
+
+def test_the_hand_calculation_treats_non_finite_values_as_missing():
+    assert q._std([1.0, float("inf"), 3.0]) == pytest.approx(math.sqrt(2.0))
+    assert q._sum([1.0, float("-inf"), 2.0]) == 3.0
+    assert q._pearson([1.0, 2.0, 3.0, 4.0], [2.0, float("inf"), 6.0, 8.0]) == pytest.approx(1.0)
+    assert math.isnan(q._pearson([1.1, 1.1, 1.1, 2.0], [0.3, 0.3, 0.3, float("inf")]))   # constant once paired
+
+
+def test_corr_is_nan_where_the_paired_values_of_an_input_are_constant():
+    # the unpaired x varies (std > 2e-5, no mask) but the pairs left after the inf all share x
+    x = np.array([1.1, 1.1, 1.1, 1.1, 2.0])
+    y = np.array([0.1, 0.2, 0.7, 0.5, np.inf])
+    assert math.isnan(q.rolling_corr(x, y, 5)[-1])
+    third = np.array([1.0 / 3] * 4 + [5.0])              # a non-dyadic constant: the mean may round off it
+    assert math.isnan(q.rolling_corr(third, y, 5)[-1])
+
+
+# ---- amendment 1 (review finding B1): the one-run rule, train side --------------------------------
+
+class _Args(object):
+    def __init__(self, **kw):
+        self.refit_reason = None
+        self.owner_approved_after_cutoff = True      # tests do not depend on the wall clock
+        self.owner_approved_rescore = None
+        self.l40_result = None
+        self.l46_dir = None
+        self.l40_rows = None
+        self.__dict__.update(kw)
+
+
+@pytest.fixture
+def paths(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    data.mkdir()
+    for name, value in (("STAGE0", data / "l47_stage0.json"), ("FROZEN", data / "l47_frozen.json"),
+                        ("RESULT", data / "l47_result.json"), ("TRAIN_STARTED", data / "l47_train_started.json"),
+                        ("MODELS_DIR", tmp_path / "models"), ("ROWS", tmp_path / "l47_rows.jsonl")):
+        monkeypatch.setattr(q, name, str(value))
+    monkeypatch.setattr(q, "guard_platform", lambda: None)
+    monkeypatch.setattr(q, "in_head", lambda p: False)
+    monkeypatch.setattr(q, "committed_at_head", lambda p: True)
+    (data / "l47_stage0.json").write_text(json.dumps({"status": "STAGE0_DONE", "stage0": {}}))
+    return tmp_path
+
+
+def test_train_refuses_without_a_done_stage0(paths):
+    os.remove(q.STAGE0)
+    with pytest.raises(SystemExit, match="STAGE0_DONE"):
+        q.train_guards(_Args(refit_reason="x"))
+
+
+def test_train_refuses_even_with_a_reason_once_the_frozen_record_is_committed(paths, monkeypatch):
+    monkeypatch.setattr(q, "in_head", lambda p: p == q.FROZEN)
+    with pytest.raises(SystemExit, match="frozen"):
+        q.train_guards(_Args(refit_reason="a declared bug"))
+
+
+@pytest.mark.parametrize("which", ["RESULT", "ROWS", "ROWS_TMP"])
+def test_train_refuses_even_with_a_reason_once_scoring_has_started(paths, which):
+    path = q.ROWS + ".tmp" if which == "ROWS_TMP" else getattr(q, which)
+    with open(path, "w") as f:
+        f.write("{}")
+    with pytest.raises(SystemExit, match="scoring pass has started"):
+        q.train_guards(_Args(refit_reason="a declared bug"))
+
+
+@pytest.mark.parametrize("left", ["train_started", "model_file", "frozen_uncommitted"])
+def test_an_earlier_training_attempt_needs_a_recorded_reason(paths, left):
+    if left == "train_started":
+        with open(q.TRAIN_STARTED, "w") as f:
+            json.dump({"status": "TRAIN_STARTED", "started": "t"}, f)
+    elif left == "model_file":
+        os.makedirs(q.MODELS_DIR)
+        open(os.path.join(q.MODELS_DIR, q.model_file("f15")), "w").close()
+    else:
+        with open(q.FROZEN, "w") as f:
+            json.dump({"files": {}}, f)
+    with pytest.raises(SystemExit, match="refit-reason"):
+        q.train_guards(_Args())
+    previous = q.train_guards(_Args(refit_reason="crash before freezing"))
+    assert previous and len(previous) == 1
+
+
+def test_a_first_training_needs_no_reason(paths):
+    assert q.train_guards(_Args()) is None
+
+
+def test_train_writes_its_started_marker_before_the_first_lgb_train(paths, monkeypatch):
+    rows_tr = [("AAA", "2025-01-0%d" % d, "09:45", d, 5) for d in range(1, 6)]
+    rows_va = [("AAA", "2025-02-01", "09:45", 9, 5)]
+
+    def fake_features(flat, req):
+        return np.array([[float((r * 7 + j) % 11) for j in range(q.N_FEATURES)] for r, _ in enumerate(req)])
+
+    class FakeData(object):
+        def __init__(self, kh, before_ts):
+            self.rows_tr, self.rows_va, self.flat_by_sym = rows_tr, rows_va, {}
+            self.split = {"train": sorted({r[1] for r in rows_tr})}
+            self.y_tr = {h: [1.0] * len(rows_tr) for h in q.HORIZONS}
+            self.y_va = {h: [1.0] for h in q.HORIZONS}
+
+        def describe(self):
+            return {"sessions": {"train": 1, "validation": 1}, "rows": {"train": 5}}
+
+    norm = q.fit_normaliser(fake_features(None, rows_tr), [r[1] for r in rows_tr], [r[1] for r in rows_tr])
+    with open(q.STAGE0, "w") as f:
+        json.dump({"status": "STAGE0_DONE", "stage0": {"data": FakeData(None, None).describe(),
+                                                       "4_purge": {"normaliser": norm}}}, f)
+    monkeypatch.setattr(q, "Data", FakeData)
+    monkeypatch.setattr(q, "feature_rows", fake_features)
+    monkeypatch.setattr(q, "_kite_history", lambda: object())
+    monkeypatch.setitem(sys.modules, "lightgbm", type(sys)("lightgbm"))
+
+    def first_lgb_train(*a, **kw):
+        assert os.path.exists(q.TRAIN_STARTED)
+        raise RuntimeError("crash inside the first lgb.train")
+    monkeypatch.setattr(q, "train_one", first_lgb_train)
+    with pytest.raises(RuntimeError, match="first lgb.train"):
+        q.run_train(_Args())
+    marker = json.load(open(q.TRAIN_STARTED))
+    assert marker["status"] == "TRAIN_STARTED" and marker["started"] and marker["environment"]
+    assert not os.path.exists(q.FROZEN)
+    with pytest.raises(SystemExit, match="refit-reason"):
+        q.train_guards(_Args())
+
+
+# ---- amendment 1 (review findings B1, N5-N7): the one-run rule, score side --------------------------
+
+@pytest.fixture
+def score_env(paths, monkeypatch):
+    os.makedirs(q.MODELS_DIR)
+    files = {}
+    for name in q.expected_frozen_files():
+        with open(os.path.join(q.MODELS_DIR, name), "w") as f:
+            f.write("model %s" % name)
+        files[name] = q.sha256_file(os.path.join(q.MODELS_DIR, name))
+    with open(q.FROZEN, "w") as f:
+        json.dump({"files": files, "stage0_sha256": q.sha256_file(q.STAGE0),
+                   "feature_fingerprint": q.feature_fingerprint(),
+                   "horizons": {h: {"best_iteration": 7} for h in q.HORIZONS}}, f)
+    l40 = paths / "kronos_l40_result.json"
+    l40.write_text(json.dumps({"status": "DONE", "stage0": {"adjustment": {"dropped_stock_sessions": {}}}}))
+    l46 = paths / "l46"
+    l46.mkdir()
+    from research.tsfm_family_ic import MODELS
+    for j, m in enumerate(MODELS):
+        (l46 / ("l46_%s_result.json" % m)).write_text(json.dumps({"status": "VOID" if j == 5 else "DONE"}))
+    fake = type(sys)("lightgbm")
+    fake.__spec__ = importlib.machinery.ModuleSpec("lightgbm", None)
+    monkeypatch.setitem(sys.modules, "lightgbm", fake)
+    return _Args(l40_result=str(l40), l46_dir=str(l46))
+
+
+def test_score_guards_pass_on_a_frozen_committed_complete_record(score_env):
+    frozen, l40, l46, record = q.score_guards(score_env)
+    assert frozen["files"] and l40["status"] == "DONE" and len(l46) == 6 and "rescore" not in record
+
+
+@pytest.mark.parametrize("status", ["STARTED", "HALTED", "DONE", "anything"])
+def test_score_refuses_if_a_result_exists_with_any_status(score_env, status):
+    with open(q.RESULT, "w") as f:
+        json.dump({"status": status}, f)
+    with pytest.raises(SystemExit, match="runs once"):
+        q.score_guards(score_env)
+    score_env.owner_approved_rescore = "owner: the PC lost power mid-pass"
+    _, _, _, record = q.score_guards(score_env)
+    assert record["rescore"]["reason"] == "owner: the PC lost power mid-pass"
+    assert record["rescore"]["previous"]["status"] == status
+
+
+def test_score_refuses_an_unreadable_result_too(score_env):
+    with open(q.RESULT, "w") as f:
+        f.write("{half a json")
+    with pytest.raises(SystemExit, match="runs once"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_a_frozen_record_that_is_not_committed(score_env, monkeypatch):
+    monkeypatch.setattr(q, "committed_at_head", lambda p: p != q.FROZEN)
+    with pytest.raises(SystemExit, match="not committed"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_a_stage0_record_that_is_not_committed(score_env, monkeypatch):
+    monkeypatch.setattr(q, "committed_at_head", lambda p: p != q.STAGE0)
+    with pytest.raises(SystemExit, match="l47_stage0.json is not committed"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_a_stage0_record_other_than_the_one_training_followed(score_env):
+    with open(q.STAGE0, "a") as f:
+        f.write(" ")
+    with pytest.raises(SystemExit, match="stage0_sha256"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_changed_feature_code(score_env, monkeypatch):
+    monkeypatch.setattr(q, "feature_fingerprint", lambda: "different")
+    with pytest.raises(SystemExit, match="feature code"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_while_l46_has_not_finished(score_env):
+    from research.tsfm_family_ic import MODELS
+    path = os.path.join(score_env.l46_dir, "l46_%s_result.json" % list(MODELS)[2])
+    with open(path, "w") as f:
+        json.dump({"status": "STARTED"}, f)
+    with pytest.raises(SystemExit, match="L46 has not finished"):
+        q.score_guards(score_env)
+    os.remove(path)
+    with pytest.raises(SystemExit, match="L46 has not finished"):
+        q.score_guards(score_env)
+
+
+def test_score_refuses_without_l40s_result_or_a_named_l40_rows_file(score_env):
+    score_env.l40_rows = score_env.l40_result + ".absent"
+    with pytest.raises(SystemExit, match="l40-rows"):
+        q.score_guards(score_env)
+    os.remove(score_env.l40_result)
+    with pytest.raises(SystemExit, match="L40's result"):
+        q.score_guards(score_env)
+
+
+def test_score_writes_started_before_any_bar_is_read(score_env, monkeypatch):
+    class NoBars(object):
+        def _conn(self):
+            raise RuntimeError("a bar was about to be read")
+    monkeypatch.setattr(q, "_kite_history", lambda: NoBars())
+    with pytest.raises(RuntimeError, match="about to be read"):
+        q.run_score(score_env)
+    doc = json.load(open(q.RESULT))
+    assert doc["status"] == "STARTED" and doc["score"]["started"] and doc["score"]["frozen_files_verified"]
+    with pytest.raises(SystemExit, match="runs once"):
+        q.score_guards(score_env)
+
+
+def test_adjustment_drops_and_l40_rows_counts_are_compared_as_l40_recorded(tmp_path):
+    assert q._dropped_as_sets({"A": ["2025-09-02", "2025-09-01"], "B": []}) == q._dropped_as_sets({"A": ["2025-09-01", "2025-09-02"]})
+    assert q._dropped_as_sets({}) != q._dropped_as_sets({"A": ["2025-09-01"]})
+    rows = tmp_path / "rows.jsonl"
+    rows.write_text("\n".join(json.dumps({"date": d}) for d in ["2025-09-01"] * 3 + ["2025-09-02"] * 2) + "\n")
+    assert q.l40_rows_per_session(str(rows)) == {"2025-09-01": 3, "2025-09-02": 2}
+
+
+def test_prediction_ties_counts_distinct_values_and_ties_across_the_quintile_cuts(tmp_path):
+    rows = []
+    for j in range(25):                                  # 25 stocks: quintiles of 5
+        v = 0.0 if j < 8 else float(j)                   # 8 tied at the bottom, across the 5/6 cut
+        rows.append({"date": "2025-09-01", "m60": 1.0, "targets": {h: 1.0 for h in q.HORIZONS},
+                     "features": {h: v for h in q.HORIZONS}})
+    for j in range(25):
+        rows.append({"date": "2025-09-02", "m60": 1.0, "targets": {h: 1.0 for h in q.HORIZONS},
+                     "features": {h: float(j) for h in q.HORIZONS}})
+    for j in range(5):                                   # below MIN_STOCKS: ignored, as evaluate_rows does
+        rows.append({"date": "2025-09-03", "m60": 1.0, "targets": {h: 1.0 for h in q.HORIZONS},
+                     "features": {h: 0.0 for h in q.HORIZONS}})
+    path = tmp_path / "rows.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    t = q.prediction_ties(str(path))["f15"]
+    assert t["sessions"] == 2 and t["distinct_predictions_per_session"] == {"median": 21.5, "min": 18}
+    assert t["share_tied_at_bottom_cut"] == pytest.approx(8 / 50) and t["share_tied_at_top_cut"] == 0
+    assert t["sessions_with_a_tie_across_the_bottom_cut"] == 1
+
+
+def test_lightgbm_runs_column_wise_for_determinism():
+    assert q.LGB_PARAMS["force_col_wise"] is True and q.LGB_PARAMS["deterministic"] is True
