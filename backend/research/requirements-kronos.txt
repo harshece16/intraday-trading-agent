@@ -1,4 +1,4 @@
-# Research-only environment for research look L38 (docs/research/prereg-kronos-feature-ic.md).
+# Research-only environment for research look L40 (written as L38) (docs/research/prereg-kronos-feature-ic.md).
 # NEVER merge into backend/requirements.txt: the engine must not be able to import any of this.
 #
 #   python3 -m venv backend/research/.kvenv
@@ -7,9 +7,13 @@
 #   git -C backend/research/kronos_vendor checkout 67b630e67f6a18c9e9be918d9b4337c960db1e9a   # 2026-04-13, after PR #234
 #
 # Versions are the Kronos repo's own requirements.txt at that commit, plus torch.
+# pandas is pinned as that file pins it; backend/requirements.txt alone would install a later one
+# (prereg amendment 3). pytest runs the Kronos repo's own regression test in stage 0.
 torch>=2.0.0
 einops==0.8.1
 huggingface_hub==0.33.1
 safetensors==0.6.2
 tqdm==4.67.1
 matplotlib==3.9.3
+pandas==2.2.2
+pytest>=8.0.0

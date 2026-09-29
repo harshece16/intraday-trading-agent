@@ -1,3 +1,50 @@
+## Re: Entry 19 — L40 run of record finished: FAIL at all three horizons. No trial spent. Brought back as the closure.
+
+**2026-09-30.** Branch `research/kronos-l40-run`. Since the stage 0 entry below: amendment 4 (`5b24e12`, 22:59 on 2026-09-29, the owner's decision, before any statistic from any run) moved the run of record to the owner's PC at sample_count 3; the Mac's run was stopped at 3,649 of 43,362 forecasts and its rows used only for a forecast-to-forecast comparison. The PC's pass ran 22:56 to 00:49:50. Results: `results-kronos-feature-ic.md`, `data/kronos_l40_result.json`.
+
+| Horizon | Spread, bp (t) | Rank IC (t) | Partial IC given m60 (t) | Gate |
+| --- | --- | --- | --- | --- |
+| 15 min | +0.27 (0.63) | 0.010 (1.57) | 0.008 (1.36) | fail |
+| 30 min | +0.51 (0.78) | 0.018 (2.61) | 0.011 (1.74) | fail |
+| 60 min | +1.61 (1.43) | 0.022 (2.86) | 0.013 (1.90) | fail |
+
+**Disclosed.** 78 sessions scored of 79: the Muhurat session of 2025-10-21 has no decision time. The moved-window code loads the latest revision while starting the window at the earliest; never triggered here, recorded in the results note. The decision agent of the overnight charter took D1 on this result (overnight branch).
+
+## Re: Entry 19 — L40 stage 0 run on the Mac: all six checks pass, sample_count 1 by the timing rule. The pass is started under amendment 3; no statistic exists until it ends.
+
+**2026-09-29.** Branch `research/kronos-l40-run`. Order of commits: amendment
+3 and the harness `8d709c6` → stage 0 run 20:32 to 20:53 → its record
+`docs/research/data/kronos_l40_stage0.json` → this entry → the pass. The
+owner asked for the run ("run Kronos", 2026-09-29). Kronos is installed in
+the project's research environment only; nothing in the live path can
+import it (`test_no_live_module_imports_research` still holds).
+
+| Check | Result |
+| --- | --- |
+| 1. Install matches upstream | The Kronos repository's regression test: 4 passed in 19 s, on the revisions that test pins (`901c26c`, `0e01173`) |
+| 2. Revisions | Latest before 2025-09-01: model `12b7990` and tokenizer `f6c7de7`, both 2025-08-17. Window unchanged |
+| 3. Lookahead | 20 of 20 forecasts bit-identical with and without later bars |
+| 4. Timing | 5.20 s a forecast at sample_count 3, 62.6 hours for 43,362 forecasts. Over 36 hours, so **sample_count 1** |
+| 5. Adjustment | One fetch run (2026-09-20, 1,302 spans). No stock-session straddles a step; 0 dropped |
+| 6. Coverage | 79 sessions, 2025-09-01 to 2025-12-23; halves 39 and 40; 43,362 stock-times; no session below 20 stocks |
+
+**Disclosed.**
+
+- Device CPU, 4 threads, pandas 2.2.2, the rest as amendment 3 lists. pandas
+  was 2.3.3 at the first install and was pinned before any model was loaded.
+- The regression test and the look load different revisions, as amendment
+  3 says: the test proves the code path on the authors' pinned weights, the
+  look uses the weights §2 picks.
+- At sample_count 1 each forecast is one draw, not a mean of three. That
+  makes the feature noisier, which on average can only weaken a measured
+  rank correlation, not strengthen it. The prereg allows the choice on
+  timing alone and it was made before any forecast met a return.
+- No check needed a judgement the text does not settle, so under amendment
+  3 the pass starts now: about 21 hours of computing, stopped through the
+  session of 2026-09-30, so the result is expected on 2026-10-01. The script
+  computes nothing from the forecasts until every one is done. A defect
+  found in this record before then stops the run with no result.
+
 ## Note for the record — the paper book has trial 126's fill rules and band, by the owner's decisions (PR #191). Not a research step; no review requested.
 
 **2026-09-29.** The owner chose, from a list, to add the waiting-order fill

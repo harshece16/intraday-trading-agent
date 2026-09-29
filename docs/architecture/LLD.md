@@ -816,7 +816,7 @@ enforces it.
 | `overnight_data.py`, `overnight_etf.py` | The overnight premium in an ETF | Trials 124, 125 |
 | `momentum_width.py` | Does the momentum rule survive honest fills, and is a wider book better? | L41, trial 126, L42, trial 127; L43 to L45 not taken |
 | `panel_differences.py`, `width_report.py` | Every corporate action that differs between the two price panels, and which of them a book held | Reports; no return read |
-| `kronos_feature_ic.py` | Does a zero-shot Kronos forecast rank the next 15 to 60 minutes? Needs its own environment (`requirements-kronos.txt`) | L40, pre-registered, not run |
+| `kronos_feature_ic.py` | Does a zero-shot Kronos forecast rank the next 15 to 60 minutes? Needs its own environment (`requirements-kronos.txt`) | L40, run 2026-09-29/30 on the PC: FAIL at all three horizons (`results-kronos-feature-ic.md`) |
 
 Backtest harnesses outside `research/`: `backtester.py`,
 `swing_backtester.py`, `diagnose_entry_edge.py`, `tune_entry_params.py`.
