@@ -51,6 +51,16 @@ PY
   echo
   echo "log (last lines):"
   [ -f "$LOG" ] && grep -v "NotOpenSSLWarning\|warnings.warn" "$LOG" | tail -6 | cut -c1-140
+  SHADOW=/Users/harshgupta/Projects/webapp/backend/data/kronos_shadow_latest.txt
+  SHPID=/Users/harshgupta/Projects/webapp/backend/data/kronos_shadow.pid
+  echo
+  echo "------------------------------------------------------------------------------------"
+  if [ -f "$SHPID" ] && kill -0 "$(cat $SHPID)" 2>/dev/null; then
+    echo "SHADOW for the live session: waiting for 09:45, then a forecast for the day's list every 5 minutes until 14:15 (display only, no trade uses it)"
+  else
+    echo "SHADOW for the live session: not running"
+  fi
+  [ -f "$SHADOW" ] && cat "$SHADOW" | head -40
   if [ -f "$DONE" ]; then
     echo; echo "=== FINISHED ==="; cat "$DONE"
     echo; echo "result: $W/../docs/research/data/kronos_l40_result.json"
