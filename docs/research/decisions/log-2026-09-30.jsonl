@@ -9,3 +9,4 @@
 {"id": "D3", "at": "2026-09-30T02:23+05:30", "question": "combination search result", "decision": "trials 128-202 FAIL; count of record 202; no candidate for confirmation", "evidence": "0/75 pass; none positive net; best -13.8 bp/trade (+2.9 gross); pattern alone -16.4..-17.0 bp over 5,074 trades", "taken_by": "main session", "reversible": false}
 {"id": "D2e", "at": "2026-09-30T02:30+05:30", "question": "L47 second review", "decision": "approved: stage 0 on the PC, reviewer pre-freeze check, train once, commit hashes, score before 07:30", "taken_by": "main session", "reversible": true}
 {"id":"D2f","at":"2026-09-30T02:40+05:30","question":"L47 stage 0 pre-freeze review","decision":"approved to train; train once from the committed stage 0; commit hashes before scoring","taken_by":"main session","reversible":true}
+{"id":"D2g","at":"2026-09-30T02:36+05:30","question":"L47 frozen","decision":"run the one scoring pass now","taken_by":"main session","reversible":false}
