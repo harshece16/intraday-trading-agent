@@ -1,0 +1,35 @@
+"""Research look L46: the parts of the family harness that decide something, testable
+without torch or any model package."""
+from research import tsfm_family_ic as f
+
+
+def test_the_latest_revision_before_the_cutoff_is_used_and_the_window_is_kept():
+    commits = [("a", "2025-06-30T10:00:00+00:00"), ("b", "2025-08-17T12:00:00+00:00"), ("c", "2025-09-09T09:00:00+00:00")]
+    sessions = ["2025-09-01", "2025-09-02", "2025-12-23"]
+    sha, date, kept, moved = f.pick_family_revision(commits, sessions)
+    assert (sha, kept, moved) == ("b", sessions, None)
+
+
+def test_with_no_revision_before_the_cutoff_the_earliest_is_used_and_sessions_start_after_it():
+    commits = [("late", "2025-11-01T00:00:00+00:00"), ("first", "2025-09-02T00:00:00+00:00")]
+    sessions = ["2025-09-01", "2025-09-02", "2025-09-03", "2025-10-01"]
+    sha, date, kept, moved = f.pick_family_revision(commits, sessions)
+    assert sha == "first" and kept == ["2025-09-03", "2025-10-01"]
+    assert moved == {"start": "2025-09-02", "sessions": 2, "void": True}
+
+
+def test_six_models_three_horizons_eighteen_tests():
+    assert len(f.MODELS) == 6 and f.N_TESTS_IN_FAMILY == 18
+    assert set(f.ADAPTERS) == set(f.MODELS)
+
+
+def test_the_module_imports_no_model_package_at_import_time():
+    import ast
+    tree = ast.parse(open(f.__file__).read())
+    top = set()
+    for node in tree.body:                      # module level only; adapters import inside methods
+        if isinstance(node, ast.Import):
+            top |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            top.add(node.module.split(".")[0])
+    assert not top & {"torch", "chronos", "timesfm", "uni2ts", "tsfm_public", "tirex", "transformers", "numpy", "huggingface_hub"}

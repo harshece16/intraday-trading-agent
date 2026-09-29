@@ -52,3 +52,4 @@ backend/research/kronos_l40_run.pid
 
 # NSE index closing files, downloaded by the scanner to complete the last session (README section 100)
 backend/data/nse_indices/
+backend/research/l46_rows_*.jsonl
