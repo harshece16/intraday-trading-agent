@@ -1,3 +1,15 @@
+## Note for the record — the night of 2026-09-29/30: L46, L47 and trials 128–202, all FAIL. Brought back for review.
+
+**2026-09-30.** Branch `research/overnight-2026-09-30`. The owner, going to sleep, asked for other models and candlestick combinations to be tested if Kronos failed. Decisions were taken by a decision agent against `decisions/charter-2026-09-30.md` and logged in `decisions/log-2026-09-30.md`. Pre-registrations were committed before the results they govern: L46 and the combination search at 00:14 (before L40's result was read), L47 at 01:08 (after L40's and Chronos-Bolt's results; the design is the sweep's, written before either).
+
+| Look / trials | Result | Record |
+| --- | --- | --- |
+| L46, six zero-shot models | FAIL 18 of 18; spreads −2.3 to +0.5 bp; BH across 18, no survivor | `results-tsfm-family.md` |
+| Trials 128–202, 75 combinations | FAIL 0 of 75; none positive net; best −13.8 bp a trade | `results-combo-search.md` |
+| L47, LightGBM on Alpha158 trained on our bars | FAIL; spreads +0.11 / +0.03 / +0.51 bp; BH within 3 and across 24, no survivor | `results-qlib-lgbm-alpha158.md` |
+
+**Disclosed.** L46's amendments 1 and 2 (revisions with weights; TimesFM's fused projections; FlowState's median) came after smoke tests on a synthetic series, before any project data. L47's code was not approved at the first independent review (a one-run hole and an infinite-value difference in CORD) and was approved after amendment 1; its stage 0 was reviewed before training. The combination search reuses L40's sample, which the seven looks had scored; it was fixed before any of them was read and judged at 75. The only night-wide BH survivor is Chronos-Bolt at 30 minutes with a negative spread; not a pass, and a reversed signal was never pre-registered. Issue #204 records a latent defect in L40's moved-window code that was never triggered.
+
 ## Re: Entry 19 — L40 run of record finished: FAIL at all three horizons. No trial spent. Brought back as the closure.
 
 **2026-09-30.** Branch `research/kronos-l40-run`. Since the stage 0 entry below: amendment 4 (`5b24e12`, 22:59 on 2026-09-29, the owner's decision, before any statistic from any run) moved the run of record to the owner's PC at sample_count 3; the Mac's run was stopped at 3,649 of 43,362 forecasts and its rows used only for a forecast-to-forecast comparison. The PC's pass ran 22:56 to 00:49:50. Results: `results-kronos-feature-ic.md`, `data/kronos_l40_result.json`.
