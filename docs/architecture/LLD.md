@@ -857,6 +857,7 @@ Every route needs the `X-Api-Key` header except `/kite/callback`.
 | GET | `/api/journal/session-summary` | Why a session traded what it did |
 | GET | `/api/journal/liquidity-checks`, `/api/journal/depth-samples` | Order-book records |
 | GET | `/api/momentum-book`, `/api/jev-book` | The paper books |
+| GET | `/api/kronos`, `/api/kronos/day/{date}` | The Kronos space: L40's records and the shadow's forecasts, from `kronos.db`. Display only |
 | GET, POST | `/api/review-queue`, `/enable`, `/{id}/approve`, `/{id}/reject` | The review queue |
 | POST | `/api/mode` | Paper or Live. Live needs a readiness check, else 409 |
 | GET | `/api/control/live-readiness` | What blocks going live |
@@ -902,6 +903,15 @@ changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
 Tests never touch this file. `conftest.py` points every test at a temporary
 database.
 
+**`backend/data/kronos.db`** is a second, separate database (`kronos_store.py`,
+README §102). It holds `shadow_forecasts` (one row per date, time and stock:
+forecast, last hour's move, the scanner's side and score, live or delayed bars,
+realised targets), `shadow_days` (counts, running statistics and the summary per
+day) and `runs` (the L40 records, whole). It is filled by ingesting the research
+processes' JSON files on a page request, opened per call with a busy timeout,
+read by the two `/api/kronos` routes, and read by nothing in the engine (rule
+RES-32).
+
 ## 15. Files on disk
 
 All gitignored unless marked.
@@ -913,6 +923,8 @@ All gitignored unless marked.
 | `backend/.typesafe_key.json` | The TypeSafe key | 0600 |
 | `backend/data/sahab_journal.db` | The journal | |
 | `backend/data/momentum_book_state.json`, `jev_book_state.json` | Book state, written atomically | |
+| `backend/data/kronos.db` | The Kronos store: the shadow's forecasts and L40's records, ingested from the files below | |
+| `backend/data/kronos_shadow_<date>.json`, `..._summary.json` | The shadow's day and summary, written atomically by `research/kronos_shadow.py` | |
 | `backend/data/bhav_daily/`, `bhav_daily_2026_heldout/`, `bhav_live/` | Bhavcopies: selection, held-out, and the book's evening downloads | |
 | `backend/data/corp_actions/` | NSE corporate actions, 2000 to 2026 | |
 | `backend/data/kite_history.db` | 5-minute bars, NIFTY 100, from 2024-09-20 | |
@@ -984,6 +996,7 @@ clears the stored key and asks again.
 | Holdings diagnostic | `/portfolio/diagnostic` | A technical read of real holdings | None |
 | Momentum Book | `/momentum-book` | Status, NAV against the benchmark, holdings, trades | None |
 | Jev Book | `/jev-book` | Status, Jev against the scanner, the latest session | None |
+| Kronos | `/kronos` | L40's stage 0 records and result, the latest shadow day one time at a time, one row per day | None |
 | Journal | `/journal` | Scorecard, blocks, trade record, IC | None |
 | Trades | `/trades` | Today's orders with charges | Export CSV |
 

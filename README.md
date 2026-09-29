@@ -3818,6 +3818,20 @@ Daily bars and the bars of earlier sessions still come from the delayed feed, wh
 
 Files: `backend/scanner.py`, `backend/data_provider.py`, `backend/config.py`, `backend/tests/test_scanner_live_feed.py`, `frontend/src/components/ListNotes.jsx`.
 
+### 102. The Kronos space: a page and a database for the forecasts, read-only for the engine
+
+**What it is.** Kronos is an open-source price-forecasting model, a transformer over candlestick bars. The project tests it as research look L40 (§93; `docs/research/prereg-kronos-feature-ic.md`): does a zero-shot forecast of the next 15, 30 or 60 minutes rank the day's stocks, beyond what the last hour's move already says? Two research processes, both outside the live path, write what they find as JSON files: the L40 pass writes its stage 0 records and, when it finishes, its result to `docs/research/data/kronos_l40_*.json`; the shadow (`backend/research/kronos_shadow.py`) writes one forecast per stock on the scanner's list every quarter hour of a session, and the move that then happened, to `backend/data/kronos_shadow_<date>.json` and `..._summary.json`. Until now those files had no home.
+
+**The change.** A store and a page.
+
+- `backend/kronos_store.py` reads the files into its own sqlite database, `backend/data/kronos.db` (gitignored with the other `data/*.db`). Three tables: `shadow_forecasts`, one row per date, time and stock, with the forecast, the last hour's move, the scanner's side and score at that moment, whether the bars were live or delayed, and the realised targets once known; `shadow_days`, one row per day with its counts, running statistics and summary; `runs`, the L40 records whole. Ingest is an upsert, so a day file rewritten with targets filled in updates the rows already stored. A file caught mid-write is skipped that time and read on the next. The connection is opened per call with a busy timeout; nothing holds it open.
+- Two routes: `GET /api/kronos` (the look's records summarised, today's or the latest day, one row per day) and `GET /api/kronos/day/{date}` (one day in full). The page route ingests first, so a file the shadow wrote a minute ago is on the page at its next refresh, without restarting anything. Both need the dashboard key like every other route.
+- A **Kronos** page in the sidebar, under Research: what the model is and that nothing here touches a trade; the test (stage 0 on the Mac and the PC: regression, pinned revisions, lookahead proof, seconds per forecast, sample count, sessions, stock-times; and the result per horizon when it exists, with IC, partial IC given the last hour's move, the quintile spread against the 33.26 bp two-leg bar, both halves, and the gate's verdict in plain words); today's shadow, one time at a time, with each stock's forecasts in basis points, the scanner's side and score, whether the bars were live, and the realised move where known, with the day's running statistics; and one row per day. It refreshes every minute.
+
+**What it is not.** No decision reads it. No entry, size, exit, scanner score or checklist read touches the store or its files; the engine never imports the module, and the module never imports research code or torch. Rule RES-32 states it, and two tests hold it: only `app.py` may import `kronos_store`, for its two routes, and the store's imports are checked against the research and torch packages. A shadow day is an anecdote, and the page says so; the test is the pre-registered 79-session pass, and its gate is the only thing that can earn Kronos a trial.
+
+**Checked.** Ten tests on a synthetic day and summary, targets filled later, a torn file, the three records, the routes on a bare FastAPI app, and the boundary. The page was checked in a browser against a stub that served the two routes from a throwaway copy of the data and proxied everything else to the running backend; the PR that added this section carries the screenshot.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

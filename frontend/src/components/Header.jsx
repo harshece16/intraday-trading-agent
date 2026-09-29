@@ -13,6 +13,7 @@ const NAV = [
   ["Today", [["/", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"]]],
   ["Market", [["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"]]],
   ["Strategies", [["/momentum-book", "Momentum book"], ["/jev-book", "Jev book"]]],
+  ["Research", [["/kronos", "Kronos"]]],
   ["Your book", [["/portfolio", "Portfolio", "held"], ["/trades", "Trades"], ["/journal", "Journal"]]],
 ];
 
