@@ -3503,7 +3503,7 @@ It is now on by default, because it only runs when asked (`POST /api/chaywanapra
 
 **Read its output as leads, not verdicts.** That report and a test run the same morning agreed with the journal on the two findings that matter: 99% of setups fail reward-to-risk because targets at the next support or resistance don't cover the round-trip cost, and the engine stalled on one cycle for 2 minutes at 09:19. They also called expired Kite sessions a live-money risk while the engine is in paper mode, and guessed at a file that doesn't exist. It still never edits anything.
 
-### 93. Kronos, a price-forecasting model, pre-registered as research look L40 (stage 0 passed on 2026-09-29; the measurement pass is running)
+### 93. Kronos, a price-forecasting model, tested as research look L40: it fails at every horizon
 
 Kronos is an open-source "foundation model" for candlestick data: a transformer pre-trained on bars from many exchanges, which forecasts the next bars of any stock without being trained on it. Posts about it came up in the owner's reels. A cloud session researched it and wrote a pre-registered test, which was merged here on 2026-09-28.
 
@@ -3545,6 +3545,18 @@ The pre-registration was drafted on an older copy of the project. Merging it ren
 | Coverage | 79 sessions, 39 and 40 a half, 43,362 stock-times |
 
 The measurement pass started at 20:55 on 2026-09-29: about 21 hours of computing, paused through the session of 2026-09-30. No number is read from it until every forecast is done. The record is `docs/research/data/kronos_l40_stage0.json`; the result will be `kronos_l40_result.json` and a results note.
+
+**Moved to the owner's PC, then finished (amendment 4).** At the owner's request the Mac's run was stopped at 22:59, unread, and the run on the owner's PC (an RTX 3060 Ti) became the run of record: three samples a forecast, as the pre-registration preferred, in under two hours.
+
+**Result, 2026-09-30 00:49: FAIL at 15, 30 and 60 minutes** (`docs/research/results-kronos-feature-ic.md`).
+
+| Horizon | Top-minus-bottom fifth, before costs | Needed |
+| --- | --- | --- |
+| 15 min | +0.27 bp (t 0.63) | 33.26 bp, t > 2 |
+| 30 min | +0.51 bp (t 0.78) | 33.26 bp, t > 2 |
+| 60 min | +1.61 bp (t 1.43) | 33.26 bp, t > 2 |
+
+The test could detect a gap of 1 to 2 bp, so this is a measured no. Kronos's ranking correlates faintly with the next hour (rank IC 0.02, t 2.6 to 2.9), but part of that is the last hour's move echoed back, and in money it is worth a few percent of the cost. Two runs of the same model on the same bars called the direction differently a third of the time. Nothing is added to Trader Sahab; the live shadow runs as a labelled record of a failed model.
 
 ### 94. The dashboard, reorganised: a sidebar, one status bar, and loads that say when they fail
 
