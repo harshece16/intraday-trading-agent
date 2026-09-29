@@ -1,0 +1,35 @@
+{
+ "look": "L47",
+ "status": "TRAIN_STARTED",
+ "started": "2026-09-30T02:34:30.981532+05:30",
+ "refit_reason": null,
+ "lgb_params": {
+  "objective": "mse",
+  "verbosity": -1,
+  "colsample_bytree": 0.8879,
+  "learning_rate": 0.2,
+  "subsample": 0.8789,
+  "lambda_l1": 205.6999,
+  "lambda_l2": 580.9768,
+  "max_depth": 8,
+  "num_leaves": 210,
+  "num_threads": 16,
+  "device_type": "cpu",
+  "deterministic": true,
+  "seed": 123,
+  "force_col_wise": true
+ },
+ "environment": {
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "machine": "AMD64",
+  "cpu_count": 16,
+  "numpy": "2.4.6",
+  "pandas": "3.0.6",
+  "lightgbm": "4.7.0",
+  "scipy": "1.17.1",
+  "git_head": "4e867d6ec6990560f311542337a6609609533c8e",
+  "module_dirty": false,
+  "module_sha256": "dfd1df76ab293b5f32ae4dc164ac7c5b08e58cb70403411f91bd31e7b1f60075"
+ }
+}
