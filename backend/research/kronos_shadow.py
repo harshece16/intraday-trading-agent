@@ -52,6 +52,15 @@ OUT_DIR = os.path.join(MAIN_BACKEND, "data")
 STAGE0 = os.path.join(os.path.dirname(BACKEND), "docs", "research", "data", "kronos_l40_stage0.json")
 
 
+def write_json(path, obj):
+    """Write to a temporary file and rename it into place, so a reader never sees a
+    half-written file."""
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=1)
+    os.replace(tmp, path)
+
+
 def api(path):
     with open(os.path.join(MAIN_BACKEND, ".dashboard_key.json")) as f:
         key = json.load(f)["key"]
@@ -208,11 +217,11 @@ def cycle(fc, hhmm, rows, date, out_json, latest_txt):
     filled = realise(rows, candles, date)
     stats = running_stats(rows)
     note = "%d stocks forecast, %d skipped, %d outcomes filled" % (len(syms), len(symbols) - len(syms), filled)
-    with open(out_json, "w") as f:
-        json.dump({"date": date, "sample_count": SAMPLE_COUNT, "device": DEVICE, "rows": rows, "running": stats,
-                   "updated": computed}, f, indent=1)
-    with open(latest_txt, "w") as f:
+    write_json(out_json, {"date": date, "sample_count": SAMPLE_COUNT, "device": DEVICE, "rows": rows, "running": stats,
+                          "updated": computed})
+    with open(latest_txt + ".tmp", "w") as f:
         f.write(table(rows, hhmm, stats, note) + "\n")
+    os.replace(latest_txt + ".tmp", latest_txt)
     print("%s %s: %s" % (computed[11:19], hhmm, note), flush=True)
 
 
@@ -237,8 +246,7 @@ def summary(rows, date, out_json):
            "bars": by_feed, "sample_count": SAMPLE_COUNT, "device": DEVICE,
            "share_of_forecasts_on_the_scanners_side": agree, "stats": stats,
            "note": "One session. Recorded, not concluded from; no threshold applies. See the dated note of 2026-09-29 in the pre-registration."}
-    with open(out_json, "w") as f:
-        json.dump(out, f, indent=1)
+    write_json(out_json, out)
     return out
 
 
@@ -294,9 +302,8 @@ def run(once=False):
         symbols = sorted({r["symbol"] for r in rows})
         candles = data_provider.get_candles_batch(symbols, "5m", "3d") if symbols else {}
         realise(rows, candles, date)
-        with open(out_json, "w") as f:
-            json.dump({"date": date, "sample_count": SAMPLE_COUNT, "device": DEVICE, "rows": rows,
-                       "running": running_stats(rows), "updated": now_ist().isoformat()}, f, indent=1)
+        write_json(out_json, {"date": date, "sample_count": SAMPLE_COUNT, "device": DEVICE, "rows": rows,
+                              "running": running_stats(rows), "updated": now_ist().isoformat()})
     except Exception as exc:
         print("end of day: outcomes failed: %s" % exc, flush=True)
     out = summary(rows, date, os.path.join(OUT_DIR, "kronos_shadow_%s_summary.json" % date))
