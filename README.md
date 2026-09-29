@@ -3503,7 +3503,7 @@ It is now on by default, because it only runs when asked (`POST /api/chaywanapra
 
 **Read its output as leads, not verdicts.** That report and a test run the same morning agreed with the journal on the two findings that matter: 99% of setups fail reward-to-risk because targets at the next support or resistance don't cover the round-trip cost, and the engine stalled on one cycle for 2 minutes at 09:19. They also called expired Kite sessions a live-money risk while the engine is in paper mode, and guessed at a file that doesn't exist. It still never edits anything.
 
-### 93. Kronos, a price-forecasting model, pre-registered as research look L40 (stage 0 passed on 2026-09-29; the measurement pass is running)
+### 93. Kronos, a price-forecasting model, tested as research look L40: it fails at every horizon
 
 Kronos is an open-source "foundation model" for candlestick data: a transformer pre-trained on bars from many exchanges, which forecasts the next bars of any stock without being trained on it. Posts about it came up in the owner's reels. A cloud session researched it and wrote a pre-registered test, which was merged here on 2026-09-28.
 
@@ -3545,6 +3545,18 @@ The pre-registration was drafted on an older copy of the project. Merging it ren
 | Coverage | 79 sessions, 39 and 40 a half, 43,362 stock-times |
 
 The measurement pass started at 20:55 on 2026-09-29: about 21 hours of computing, paused through the session of 2026-09-30. No number is read from it until every forecast is done. The record is `docs/research/data/kronos_l40_stage0.json`; the result will be `kronos_l40_result.json` and a results note.
+
+**Moved to the owner's PC, then finished (amendment 4).** At the owner's request the Mac's run was stopped at 22:59, unread, and the run on the owner's PC (an RTX 3060 Ti) became the run of record: three samples a forecast, as the pre-registration preferred, in under two hours.
+
+**Result, 2026-09-30 00:49: FAIL at 15, 30 and 60 minutes** (`docs/research/results-kronos-feature-ic.md`).
+
+| Horizon | Top-minus-bottom fifth, before costs | Needed |
+| --- | --- | --- |
+| 15 min | +0.27 bp (t 0.63) | 33.26 bp, t > 2 |
+| 30 min | +0.51 bp (t 0.78) | 33.26 bp, t > 2 |
+| 60 min | +1.61 bp (t 1.43) | 33.26 bp, t > 2 |
+
+The test could detect a gap of 1 to 2 bp, so this is a measured no. Kronos's ranking correlates faintly with the next hour (rank IC 0.02, t 2.6 to 2.9), but part of that is the last hour's move echoed back, and in money it is worth a few percent of the cost. Two runs of the same model on the same bars called the direction differently a third of the time. Nothing is added to Trader Sahab; the live shadow runs as a labelled record of a failed model.
 
 ### 94. The dashboard, reorganised: a sidebar, one status bar, and loads that say when they fail
 
@@ -3830,6 +3842,32 @@ Daily bars and the bars of earlier sessions still come from the delayed feed, wh
 **Two running tests.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 7 (the scanner row Jev sees is now built from live prices) and `prereg-orderbook.md` amendment 4 (no effect on the samples).
 
 Files: `backend/scanner.py`, `backend/data_provider.py`, `backend/config.py`, `backend/tests/test_scanner_live_feed.py`, `frontend/src/components/ListNotes.jsx`.
+
+### 102. The Kronos space: a page and a database for the forecasts, read-only for the engine
+
+**What it is.** Kronos is an open-source price-forecasting model, a transformer over candlestick bars. The project tests it as research look L40 (§93; `docs/research/prereg-kronos-feature-ic.md`): does a zero-shot forecast of the next 15, 30 or 60 minutes rank the day's stocks, beyond what the last hour's move already says? Two research processes, both outside the live path, write what they find as JSON files: the L40 pass writes its stage 0 records and, when it finishes, its result to `docs/research/data/kronos_l40_*.json`; the shadow (`backend/research/kronos_shadow.py`) writes one forecast per stock on the scanner's list every quarter hour of a session, and the move that then happened, to `backend/data/kronos_shadow_<date>.json` and `..._summary.json`. Until now those files had no home.
+
+**The change.** A store and a page.
+
+- `backend/kronos_store.py` reads the files into its own sqlite database, `backend/data/kronos.db` (gitignored with the other `data/*.db`). Three tables: `shadow_forecasts`, one row per date, time and stock, with the forecast, the last hour's move, the scanner's side and score at that moment, whether the bars were live or delayed, and the realised targets once known; `shadow_days`, one row per day with its counts, running statistics and summary; `runs`, the L40 records whole. Ingest is an upsert, so a day file rewritten with targets filled in updates the rows already stored. A file caught mid-write is skipped that time and read on the next. The connection is opened per call with a busy timeout; nothing holds it open.
+- Two routes: `GET /api/kronos` (the look's records summarised, today's or the latest day, one row per day) and `GET /api/kronos/day/{date}` (one day in full). The page route ingests first, so a file the shadow wrote a minute ago is on the page at its next refresh, without restarting anything. Both need the dashboard key like every other route.
+- A **Kronos** page in the sidebar, under Research: what the model is and that nothing here touches a trade; the test (stage 0 on the Mac and the PC: regression, pinned revisions, lookahead proof, seconds per forecast, sample count, sessions, stock-times; and the result per horizon when it exists, with IC, partial IC given the last hour's move, the quintile spread against the 33.26 bp two-leg bar, both halves, and the gate's verdict in plain words); today's shadow, one time at a time, with each stock's forecasts in basis points, the scanner's side and score, whether the bars were live, and the realised move where known, with the day's running statistics; and one row per day. It refreshes every minute.
+
+**What it is not.** No decision reads it. No entry, size, exit, scanner score or checklist read touches the store or its files; the engine never imports the module, and the module never imports research code or torch. Rule RES-32 states it, and two tests hold it: only `app.py` may import `kronos_store`, for its two routes, and the store's imports are checked against the research and torch packages. A shadow day is an anecdote, and the page says so; the test is the pre-registered 79-session pass, and its gate is the only thing that can earn Kronos a trial.
+
+**Checked.** Ten tests on a synthetic day and summary, targets filled later, a torn file, the three records, the routes on a bare FastAPI app, and the boundary. The page was checked in a browser against a stub that served the two routes from a throwaway copy of the data and proxied everything else to the running backend; the PR that added this section carries the screenshot.
+
+### 103. More predictive tools, surveyed: what can be tested next, and what cannot
+
+The owner asked (2026-09-29) for more prediction tools, libraries and agents that could be tested. Three research agents searched in parallel, without redoing the sweep of §79: time-series foundation models that fit the Kronos harness, finance ML libraries and agent frameworks, and India-specific tools with the newest evidence. 55 candidates are recorded with their licence, size, known leakage bugs and independent net-of-cost evidence (`docs/research/predictive-tools-sweep-2026-09-29.md`, full lists in `docs/research/data/predictive-tools-sweep/`). Nothing was run.
+
+- **No candidate has independent, net-of-cost evidence on intraday stocks.** Three outside tests of Kronos itself are negative, on NSE daily data and US ETFs.
+- **Most of the newest models cannot use the Kronos sample.** A model's weights must predate the prices it is examined on. Chronos-2, TiRex-2, Toto 2.0, Granite PatchTST-FM-r2 and TimesFM-3.0 were released after September 2025, so they can be tested only on the 2026 held-out window or forward, from live sessions.
+- **Testable now, zero-shot, in the Kronos harness:** TimesFM-2.5, Moirai 2.0, Sundial, FlowState, Chronos-Bolt and TiRex v1, as one pre-registered family.
+- **Testable as a trained look:** Qlib's LightGBM on its Alpha158 factor set. The project has never trained a model on its own bars; this would close that gap with a number.
+- **Skipped:** LLM agent frameworks (independent audits show 50 to 72% of their performance disappears after the model's training cutoff), order-book deep models, deep reinforcement learning, and tools with no record.
+
+Every test would be pre-registered first, and the expected result for each is a null. Nothing reaches the engine without a pass, a trial and confirmation.
 
 ## Backtest results
 

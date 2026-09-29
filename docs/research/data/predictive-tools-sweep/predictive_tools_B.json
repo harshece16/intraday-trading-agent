@@ -1,0 +1,616 @@
+{
+  "meta": {
+    "written": "2026-09-29",
+    "scope": "Finance-specific ML libraries, model zoos, factor libraries and agentic systems not assessed by docs/research/prediction-engine-sweep-2026-09-26.md; judged on independent net-of-cost evidence and on cheap testability in the L40 harness (backend/research/kronos_feature_ic.py).",
+    "channels": "agent-reach: Exa web search (mcporter exa.web_search_exa), GitHub via gh CLI (repos, issues, search, README, releases), page reads via r.jina.ai and raw.githubusercontent.com. No login-backed platform used.",
+    "harness_bar": "quintile spread > 33.26 bp, t > 2 across >= 60 sessions, both halves positive, BH q=0.10 over 3 horizons, partial IC given m60 positive with t > 2; costs 16.63 bp round trip; selection sample 2025-09-01..2025-12-31, six decision times, horizons 15/30/60 min.",
+    "project_facts_checked": [
+      "No trained model (lightgbm/xgboost/sklearn) exists anywhere in backend/research/*.py; every prior trial used hand-coded rules or a foundation model (L40).",
+      "Kite order-book sampler: 5 levels at ~30 s (prereg-orderbook.md, Amendment 1), recording since 2026-09-24, so ~5 sessions exist.",
+      "None of the names below appears in docs/research/*.md except qlib (literature sweep row: CSI300 LightGBM IR 2.00 gross -> 1.44 with cost, backtest only)."
+    ],
+    "ranking": [
+      "qlib_lightgbm_alpha158",
+      "factor_zoo_intraday_bollerslev",
+      "vibe_trading_alpha_zoo",
+      "deeplob_family_lob_benchmarks",
+      "kronos_nse_prereg_negatives"
+    ]
+  },
+  "candidates": [
+    {
+      "id": "qlib_lightgbm_alpha158",
+      "rank": 1,
+      "name": "Microsoft Qlib: LightGBM on Alpha158 (and the deep zoo: TFT, HIST, TRA, ADD, IGMTF, KRNN; Alpha360)",
+      "url": "https://github.com/microsoft/qlib",
+      "licence": "MIT",
+      "stars": 49045,
+      "last_push": "2026-09-22",
+      "predicts": "Cross-sectional excess return of each stock over the next N bars (benchmark label: Ref($close,-2)/Ref($close,-1)-1, i.e. next-day close-to-close); the high-frequency example predicts the next 1-minute trend with the same Alpha158 handler.",
+      "horizon": "Daily in the benchmarks; 1-minute in examples/highfreq (workflow_config_High_Freq_Tree_Alpha158.yaml).",
+      "data_needed": "OHLCV bars only (Alpha158 = 158 hand-made rolling price/volume expressions; Alpha360 = the raw last-60-bar OHLCV window). HIST additionally needs a stock-to-concept (industry/business) matrix that does not exist for NSE.",
+      "runs_on_project_data": "Yes. Daily bhavcopies load through dump_bin; an IN-region Yahoo collector was merged in 2021 (PR #513). For 5-minute bars either register a custom frequency in Qlib's bin format (native calendars are 'day' and '1min'; untested here) or port the 158 expressions in qlib/contrib/data/loader.py (Alpha158DL.get_feature_config) to pandas with windows in bars. No new downloads.",
+      "training": "Yes. LightGBM: minutes on the Mac CPU. TRA/HIST/IGMTF/ADD: tens of minutes to hours on the RTX 3060 Ti. TFT example pins Python 3.6-3.7 and CUDA 10.0 (examples/benchmarks/TFT/README.md) - effectively unrunnable on current tooling.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "#1668 (open, 2023-10): run_all_model.py cannot reproduce the published benchmark table; a second user confirms.",
+        "#2029 (open, 2025-10): KRNN gives poor, non-improving scores on the shipped config; the published KRNN row is itself negative (AR -4.65%, IR -0.54).",
+        "#1276 (closed, 2022): HIST shipped without the code that generates stock2concept data.",
+        "#1774 (closed, 2024): question whether DDG-DA's proxy-model normalisation uses future mean/std; answered as train-only.",
+        "No open issue reports look-ahead in Alpha158 itself; the label uses Ref(close,-2)/Ref(close,-1) by design (buy at the next close)."
+      ],
+      "independent_evidence": [
+        {
+          "claim": "Alpha158/LightGBM on a US universe with 2+2 bp costs and three expanding-window folds: mean fold IC +0.0069 but mean Rank IC -0.0053, not positive in every fold; the author's own gate returned RESEARCH_ONLY; universe survivorship-biased. Headline 'excess return with cost 35-80%' is a Qlib portfolio simulation the author refuses to treat as evidence.",
+          "source": "https://github.com/Pangqiang-Gary/qlib-us-walk-forward",
+          "market": "US daily",
+          "net_of_cost": true
+        },
+        {
+          "claim": "Vendor's own high-frequency benchmark (Chinese 1-minute bars, Alpha158 + LightGBM): IC 0.0349, Rank IC 0.0435, long-short average return 0.000074 (0.74 bp per period), long-short Sharpe 0.27, no costs.",
+          "source": "https://github.com/microsoft/qlib/blob/main/examples/highfreq/README.md",
+          "market": "CN 1-min",
+          "net_of_cost": false
+        },
+        {
+          "claim": "Vendor's own daily CSI300 benchmark, mean of 20 seeds: LightGBM Alpha158 IC 0.0399, Rank IC 0.0482, AR 12.8%, IR 1.57; deep zoo rows sit within +/-0.01 IC of LightGBM (HIST 0.0522, IGMTF 0.0480, TRA 0.0440-0.0485, ADD 0.0430, TFT 0.0358, KRNN 0.0173 with negative return).",
+          "source": "https://github.com/microsoft/qlib/blob/main/examples/benchmarks/README.md",
+          "market": "CN daily",
+          "net_of_cost": "Qlib backtest default costs; not independently verified"
+        }
+      ],
+      "only_evidence_is_own_backtest": false,
+      "indian_or_intraday_evidence": "None net of cost. Vendor 1-min CN benchmark is gross and ~0.7 bp per period.",
+      "covered_by_sweep": "Partly. Literature sweep row (CSI300, backtest only). Engine sweep rejected 'ML on OHLCV bars' as a family on external evidence, but the project has never trained any model on its own bars; trials 41-116 were hand-coded rules.",
+      "recommendation": "test",
+      "how": "One pre-registered look in the L40 harness, not a trial: port the Alpha158 expression list to the Kite 5-minute bars (windows in bars), train one LightGBM regressor per horizon (targets = the harness's 15/30/60-minute next-bar-open-to-close returns, cross-sectionally rank-normalised) on 2024-09..2025-08-15 with a 5-session purge, freeze, then score the three forecasts at the six decision times on the 2025-09..12 selection sample exactly as L40 scores Kronos. Family of 3, BH q=0.10, partial IC given m60. Skip TFT/HIST/TRA/KRNN/ADD/IGMTF as separate looks: their own tables show no material gain over LightGBM, KRNN is negative, HIST needs concept data. Expected result: null (vendor's own 1-min number is 0.7 bp gross against a 16.63 bp round trip).",
+      "sources": [
+        "https://github.com/microsoft/qlib",
+        "https://github.com/microsoft/qlib/blob/main/examples/benchmarks/README.md",
+        "https://github.com/microsoft/qlib/blob/main/examples/highfreq/README.md",
+        "https://github.com/microsoft/qlib/blob/main/examples/benchmarks/TFT/README.md",
+        "https://github.com/microsoft/qlib/issues/1668",
+        "https://github.com/microsoft/qlib/issues/2029",
+        "https://github.com/microsoft/qlib/issues/1276",
+        "https://github.com/microsoft/qlib/issues/1774",
+        "https://github.com/microsoft/qlib/pull/513",
+        "https://github.com/Pangqiang-Gary/qlib-us-walk-forward"
+      ]
+    },
+    {
+      "id": "factor_zoo_intraday_bollerslev",
+      "rank": 2,
+      "name": "Intraday market-return predictability from the lagged high-frequency factor zoo (Aleti, Bollerslev, Siggaard; Management Science 2025) - a factor-library method, not a repo",
+      "url": "https://doi.org/10.1287/mnsc.2023.01657",
+      "licence": "Paper; online appendix and data files at the DOI. No maintained code repo found.",
+      "predicts": "Time-series (not cross-sectional) intraday return of the aggregate market from lagged intraday returns on 200+ characteristic-sorted factor portfolios, regularised by ridge/LASSO/elastic net/boosting; continuous vs jump increments separated.",
+      "horizon": "Intraday (sub-daily market timing on SPY).",
+      "data_needed": "Intraday returns on many characteristic-sorted portfolios, which requires stock-level intraday bars plus the characteristics (from daily data) to build them.",
+      "runs_on_project_data": "Partly. NIFTY 100 5-minute bars plus bhavcopy-derived characteristics (size, 12-1 momentum, realised vol, turnover, beta) can build a few dozen intraday factor-portfolio return series; the 200-factor zoo cannot be replicated. Target would be NIFTY (futures ~6-7 bp) rather than single stocks.",
+      "training": "Yes, small: penalised regressions, seconds on CPU.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [
+        {
+          "claim": "Peer-reviewed (Management Science 71(9), 2025): SPY intraday strategy on the model's forecasts gives an annualised transaction-cost-adjusted Sharpe of 1.37 and a Fama-French six-factor alpha of 20.83% out of sample, against 0.09 intraday Sharpe for SPY itself; gains concentrate in high-uncertainty periods and a few liquidity/tail-risk factors.",
+          "source": "https://public.econ.duke.edu/~boller/Papers/MS_2025.pdf",
+          "market": "US, index-level",
+          "net_of_cost": true
+        }
+      ],
+      "only_evidence_is_own_backtest": "Authors' own, but peer-reviewed, out of sample and cost-adjusted; no third-party replication found.",
+      "indian_or_intraday_evidence": "Intraday yes; Indian no.",
+      "covered_by_sweep": "No. The sweep's 'flow and calendar' row (L32, +0.70 bp) is last-30-minute momentum, not cross-sectional factor lead-lag into the index.",
+      "recommendation": "later",
+      "how": "Not a fit for the L40 harness (which ranks stocks); it needs its own pre-registration with a market-timing target (NIFTY futures or NIFTYBEES intraday return over 30/60 minutes), a fixed small factor set buildable from project data, an expanding-window ridge fit, and a hurdle of the futures round trip plus a Bonferroni family of 1. Do it only if the owner opens an index-timing family; the mechanism (slow-moving capital in a 200-factor zoo) may not exist with ~20 NIFTY 100 factor portfolios.",
+      "sources": [
+        "https://public.econ.duke.edu/~boller/Papers/MS_2025.pdf",
+        "https://doi.org/10.1287/mnsc.2023.01657"
+      ]
+    },
+    {
+      "id": "vibe_trading_alpha_zoo",
+      "rank": 3,
+      "name": "HKUDS Vibe-Trading - Alpha Zoo v1 (qlib158 port, alpha101, gtja191, academic; 452 alphas) inside an LLM trading agent",
+      "url": "https://github.com/HKUDS/Vibe-Trading",
+      "licence": "MIT (the qlib158 port is an Apache-2.0 port of Qlib's Alpha158 with the upstream SHA pinned)",
+      "stars": 34311,
+      "created": "2026-04-01",
+      "last_push": "2026-09-29",
+      "predicts": "Nothing by itself: the zoo is a pandas factor library plus a 'bench any zoo on your universe' CLI; the surrounding product is an LLM agent (v0.1.16 on 2026-09-29).",
+      "horizon": "Daily formulas (Alpha158 windows in days; Alpha101 and GTJA191 are daily formulas).",
+      "data_needed": "OHLCV; 19 Alpha101 formulas need sector tags.",
+      "runs_on_project_data": "Probably, as a library: pass the 5-minute bars as the frame and the window units become bars. NOT verified here; the intraday semantics of daily formulas are the user's problem.",
+      "training": "No (factor computation only).",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "104 issue/PR hits for leak/lookahead in five months. #1293/#1299/#1304/#1305 (closed 2026-08-31): options signals were filled at the same-day close and HV warm-up used look-ahead. #1578 (open, 2026-09-24): Carhart momentum leaked today's price into the skip-month return. #1613/#1618 (open, 2026-09-27): add a warning when a backtest window lies inside the LLM's training data. These are the repo fixing its own leakage, which is the right direction but also the record.",
+        "Release notes say the zoo is 'lookahead-banned at the operator layer' and 'registry-validated'; not independently checked."
+      ],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No (repo created 2026-04; name absent from both sweeps). Its agent layer belongs to the LLM-agent family the sweep rejected.",
+      "recommendation": "test only as the factor implementation for candidate 1 (skip the agent)",
+      "how": "If the qlib158 module computes Alpha158 on an arbitrary OHLCV frame without Qlib's bin store, use it (Apache-2.0, pinned to upstream) as the feature step of the LightGBM look instead of hand-porting 158 expressions. Verify on 20 random stock-bars that features at time t are bit-identical with and without later bars present (the L40 stage-0 lookahead proof). Do not run its 'bench any zoo' CLI as a search: 452 alphas x 3 horizons is 1,356 comparisons and would consume the family budget.",
+      "sources": [
+        "https://github.com/HKUDS/Vibe-Trading",
+        "https://github.com/HKUDS/Vibe-Trading/releases/tag/v0.1.8",
+        "https://github.com/HKUDS/Vibe-Trading/issues/1578",
+        "https://github.com/HKUDS/Vibe-Trading/issues/1613",
+        "https://github.com/HKUDS/Vibe-Trading/pull/1304"
+      ]
+    },
+    {
+      "id": "deeplob_family_lob_benchmarks",
+      "rank": 4,
+      "name": "DeepLOB, DeepLOB-Attention, TransLOB, TLOB, and the LOBCAST / LOBFrame benchmark frameworks",
+      "url": "https://github.com/zcakhaa/DeepLOB-Deep-Convolutional-Neural-Networks-for-Limit-Order-Books ; https://github.com/jwallbridge/translob ; https://github.com/LeonardoBerti00/TLOB ; https://github.com/matteoprata/LOBCAST ; https://github.com/FinancialComputingUCL/LOBFrame ; https://github.com/Jeonghwan-Cheon/lob-deep-learning",
+      "licence": "DeepLOB none; TransLOB none; TLOB MIT; LOBCAST none; LOBFrame none; lob-deep-learning none",
+      "stars": {"DeepLOB": 611, "translob": 125, "TLOB": 178, "LOBCAST": 123, "LOBFrame": 261, "lob-deep-learning": 160},
+      "predicts": "3-class mid-price trend (up/flat/down) k LOB events ahead (k = 1..100 events, i.e. seconds to a few minutes) from the last 100 snapshots of a 10-level book.",
+      "horizon": "Event-based, seconds to minutes; far inside one spread at NSE cash costs.",
+      "data_needed": "Event-level (every update) 10-level LOB with months of history per stock (DeepLOB: one year of LSE; LOBCAST: LOBSTER 2021-22; TLOB: NASDAQ LOBSTER).",
+      "runs_on_project_data": "No. Kite depth is 5 levels sampled every ~30 s (prereg-orderbook.md), recorded since 2026-09-24 (about five sessions). Neither the depth, the cadence nor the history exists.",
+      "training": "Yes, from scratch: no pretrained weights transfer across venues. DeepLOB (~60k parameters) trains in hours on an 8 GB GPU; TLOB/TransLOB similar.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "DeepLOB repo: 18 open issues, last push 2021, no licence.",
+        "DeepLOB's own profit simulation is mid-to-mid with no transaction costs, stated in the paper ('we use mid-prices without transaction costs')."
+      ],
+      "independent_evidence": [
+        {
+          "claim": "LOBCAST (Prata et al., Artificial Intelligence Review 2024): 15 re-implemented DL LOB models (incl. DeepLOB, DeepLOB-Attention, TransLOB, BiN-CTABL) all drop sharply from FI-2010 to unseen NASDAQ LOBSTER 2021/2022 data, F1 48-61%; 'not consistently reliable ... inadequate for practical applications in real-world settings'.",
+          "source": "https://link.springer.com/article/10.1007/s10462-024-10715-4",
+          "market": "US NASDAQ event-level",
+          "net_of_cost": "Profit analysis included; F1 collapse is the headline."
+        },
+        {
+          "claim": "LOBFrame (Briola et al., 2025, LSE/UCL): on 15 NASDAQ stocks DeepLOB's 'high forecasting power does not necessarily correspond to actionable trading signals'; standard ML metrics overstate usability.",
+          "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12315853/",
+          "market": "US NASDAQ event-level",
+          "net_of_cost": "Operational (transaction-probability) framework, not a P&L."
+        },
+        {
+          "claim": "TLOB (Berti et al., 2025): 'existing models fail to generalize across different market conditions and assets'; a plain MLP adapted to LOB beats prior SoTA.",
+          "source": "https://arxiv.org/abs/2502.15757",
+          "market": "US NASDAQ event-level",
+          "net_of_cost": false
+        }
+      ],
+      "only_evidence_is_own_backtest": "Originals yes; the three independent benchmarks are negative on generalisation.",
+      "indian_or_intraday_evidence": "No NSE study found. The sweep's own NSE finding: order-imbalance predictability perishes within 30 minutes.",
+      "covered_by_sweep": "DeepLOB named; successors and the two benchmark frameworks were not. Family (order-book microstructure) judged 'not supported', L37 running.",
+      "recommendation": "skip",
+      "how": "Revisit only if L37 clears its gate AND at least three months of 5-level snapshots exist; then one look with TLOB or DeepLOB retrained on the snapshots, scored at the L40 horizons (15/30/60 min), never at the paper's 10-event horizons. Two independent benchmarks already show these models do not transfer even between US datasets.",
+      "sources": [
+        "https://arxiv.org/abs/1808.03668",
+        "https://link.springer.com/article/10.1007/s10462-024-10715-4",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC12315853/",
+        "https://arxiv.org/abs/2502.15757",
+        "https://github.com/matteoprata/LOBCAST",
+        "https://github.com/FinancialComputingUCL/LOBFrame",
+        "https://github.com/LeonardoBerti00/TLOB"
+      ]
+    },
+    {
+      "id": "kronos_nse_prereg_negatives",
+      "rank": 5,
+      "name": "Independent pre-registered Kronos studies found on GitHub (not tools; prior evidence for L40)",
+      "url": "https://github.com/neopentane7/kronos-candlecast ; https://github.com/ThomasCaruso/OpenAlpha ; https://github.com/abhijatchaturvedi/FineForecast ; https://github.com/jvaidya10/kronos-india",
+      "licence": "kronos-candlecast MIT; OpenAlpha MIT; FineForecast proprietary (personal use); kronos-india MIT",
+      "predicts": "Kronos-small/base zero-shot OHLCV paths (candlecast: NSE daily, 30-session horizon; OpenAlpha: 4 US ETFs, 40->12 daily horizon). FineForecast: QLoRA fine-tune of Kronos-base on NSE plus a MASTER-style head ranking Nifty 500 (monthly-style L/S deciles). kronos-india: daily-after-close signal pipeline on 1-minute bars.",
+      "horizon": "Daily to 30 sessions (candlecast), 12 days (OpenAlpha); not the L40 intraday horizons.",
+      "data_needed": "Daily bars (candlecast, OpenAlpha, FineForecast via yfinance).",
+      "runs_on_project_data": "Not relevant; these are results, not tools. candlecast's kronos-calibrate harness reads any sampled-path file and returns fair CRPS/coverage - reusable if L40 ever wants calibration metrics.",
+      "training": "None for the two negatives; FineForecast trains LoRA adapters + head on a GPU.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [
+        {
+          "claim": "kronos-candlecast (acceptance rule committed 2026-08-03, grid run five days later): Kronos-small zero-shot on NSE daily bars, 708 rolling windows, 59 tickers, 12 independent dates, 30-member ensembles: fair CRPS 121.87 vs 67.24 for random walk + drift (81% worse), interval score 978 vs 463, 80% intervals cover 41.3% [37.0, 45.6]. Conformal repair does not fix it.",
+          "source": "https://github.com/neopentane7/kronos-candlecast",
+          "market": "NSE daily",
+          "net_of_cost": "n/a (forecast calibration, not P&L)"
+        },
+        {
+          "claim": "OpenAlpha: Kronos-base zero-shot on 4 US ETFs, 25 origins each, 1,600 generations, two temperatures: median relative skill vs zero-return persistence -0.042 (T=0.6) and -0.084 (T=1.0); origins beating persistence 31%/26% vs 60% required; 0/4 assets; moving-block 95% CI excludes zero on the unfavourable side. Also 12-25% of tokenizer round-trips are structurally invalid candles; repairing them changes forecast error by 0.0.",
+          "source": "https://github.com/ThomasCaruso/OpenAlpha",
+          "market": "US ETFs daily",
+          "net_of_cost": "n/a"
+        },
+        {
+          "claim": "FineForecast README lists 'Phase 4 walk-forward backtest + transaction-cost L/S portfolio' as complete but publishes no number in the README; licence forbids reuse. kronos-india: 'Results are currently being collected'.",
+          "source": "https://github.com/abhijatchaturvedi/FineForecast",
+          "market": "NSE daily",
+          "net_of_cost": "unreported"
+        }
+      ],
+      "only_evidence_is_own_backtest": "candlecast and OpenAlpha are pre-registered negatives by third parties; FineForecast/kronos-india report nothing.",
+      "indian_or_intraday_evidence": "Indian yes (daily); intraday no.",
+      "covered_by_sweep": "No (all four repos post-date or were missed by the 2026-09-26 sweep; Kronos itself was covered: 49.3% direction on NSE index).",
+      "recommendation": "not a tool - attach as prior evidence to L40; keep L40 as written",
+      "how": "Cite both negatives in the L40 results file. They test daily horizons, so they neither replace nor shorten the intraday look; they lower its prior further. A Kronos fine-tune (FineForecast's shape) would be a later, separate pre-registration and only if L40's zero-shot spread is non-zero but under the bar.",
+      "sources": [
+        "https://github.com/neopentane7/kronos-candlecast",
+        "https://github.com/ThomasCaruso/OpenAlpha",
+        "https://github.com/abhijatchaturvedi/FineForecast",
+        "https://github.com/jvaidya10/kronos-india"
+      ]
+    },
+    {
+      "id": "tradingagents_since_sweep",
+      "rank": 6,
+      "name": "TradingAgents v0.5.0 / v0.5.1 / v0.5.2 (2026-09-18, 09-24, 09-29) - what is new since the sweep",
+      "url": "https://github.com/TauricResearch/TradingAgents",
+      "licence": "Apache-2.0",
+      "stars": 109243,
+      "predicts": "Daily buy/hold/sell decision per ticker from LLM analyst/researcher/trader agents over news, fundamentals, sentiment, technicals.",
+      "horizon": "Daily.",
+      "data_needed": "US news/fundamentals APIs (Yahoo, SEC EDGAR, insider trades) plus an LLM API budget.",
+      "runs_on_project_data": "No (US data providers; no NSE fundamentals/news path).",
+      "training": "No (prompting); per-run LLM cost.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "Commits 2026-09-28: 'withhold insider trades with no filing date from a past run', 'serve a past run financial statements only with a known filing date', 'serve a quarterly figure filed only year to date' - i.e. the 0.5.x line is fixing information that leaked into back-dated runs. No new evaluation shipped.",
+        "Sweep already cites #1007 (leakage)."
+      ],
+      "independent_evidence": [
+        {
+          "claim": "Profit Mirage (arXiv 2510.07920): with GPT-4o (cutoff Oct 2023) as backbone, TradingAgents' Sharpe decays 55.68% and total return 50.18% once the test window passes the cutoff; prediction consistency under counterfactual perturbation 0.69 (lowest of five agents, still leakage).",
+          "source": "https://arxiv.org/pdf/2510.07920",
+          "market": "US daily",
+          "net_of_cost": false
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "Yes (family rejected). Only the 0.5.x change log is new, and it contains no result.",
+      "recommendation": "skip",
+      "how": "Nothing new to test; the new commits confirm the leakage the sweep cited.",
+      "sources": [
+        "https://github.com/TauricResearch/TradingAgents/releases",
+        "https://arxiv.org/pdf/2510.07920"
+      ]
+    },
+    {
+      "id": "ai_hedge_fund",
+      "rank": 7,
+      "name": "virattt/ai-hedge-fund (and Look-Ahead-Bench, which uses it as the harness)",
+      "url": "https://github.com/virattt/ai-hedge-fund",
+      "licence": "MIT",
+      "stars": 63797,
+      "predicts": "Portfolio allocation from persona agents (Buffett, Munger, ...) + valuation/sentiment/technical agents over US fundamentals and prices; simulated only.",
+      "horizon": "Daily to monthly.",
+      "data_needed": "US fundamentals API (financialdatasets.ai), news, LLM API.",
+      "runs_on_project_data": "No.",
+      "training": "No; LLM cost per run.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "#720 (closed 2026-09-25): 'Model memory can still leak into backtests through the ticker and filing dates in the snapshot'; #721 (closed 2026-09-25): blind all investor-agent prompts in backtests (--blind removed, always on). #722: PEAD fired without an 8-K. The maintainer is now removing the leakage channel the benchmark below measured.",
+        "New since sweep: v2.4.0/2.4.1 (2026-09-24/25) with the blinding change."
+      ],
+      "independent_evidence": [
+        {
+          "claim": "Look-Ahead-Bench (arXiv 2601.13770, code benstaf/lookaheadbench): running ai-hedge-fund with Llama 3.1 8B/70B and DeepSeek 3.2, alpha decays by -17.2 / -15.3 / -21.8 pp between an in-training-window period and a post-cutoff period; point-in-time models (Pitinf) show +0.3 to +1.3 pp. The bigger the standard model, the worse the collapse ('memory trap').",
+          "source": "https://ar5iv.labs.arxiv.org/html/2601.13770",
+          "market": "US daily",
+          "net_of_cost": false
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "Family yes; repo not named.",
+      "recommendation": "skip",
+      "how": "No net-of-cost record anywhere; the only independent measurement is of its leakage.",
+      "sources": [
+        "https://github.com/virattt/ai-hedge-fund/issues/720",
+        "https://github.com/virattt/ai-hedge-fund/issues/721",
+        "https://ar5iv.labs.arxiv.org/html/2601.13770",
+        "https://github.com/benstaf/lookaheadbench"
+      ]
+    },
+    {
+      "id": "finmem_finagent_fincon",
+      "rank": 8,
+      "name": "FinMem, FinAgent, FinCon, QuantAgent, HedgeAgents, FinRobot (LLM single/multi-agent traders)",
+      "url": "https://github.com/pipiku915/FinMem-LLM-StockTrading ; https://github.com/AI4Finance-Foundation/FinRobot",
+      "licence": "FinMem MIT (962 stars, last push 2024-08-18, dormant); FinRobot Apache-2.0 (8.1k); FinAgent: no public repo found",
+      "predicts": "Daily buy/sell/hold per stock from news + prices with layered memory / tools / multi-agent debate.",
+      "horizon": "Daily.",
+      "data_needed": "News feeds, prices, LLM API.",
+      "runs_on_project_data": "No NSE news pipeline exists in the project.",
+      "training": "No (prompting).",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [
+        {
+          "claim": "Profit Mirage (arXiv 2510.07920), five agents on GPT-4o: post-cutoff total-return decay FinMem 71.85% (worst), Sharpe decay 51-62% across FinMem/FinAgent/QuantAgent/FinCon/TradingAgents; FinMem prediction-consistency 0.82 under counterfactual perturbation (memorising, not forecasting).",
+          "source": "https://arxiv.org/pdf/2510.07920",
+          "market": "US/HK/CN daily",
+          "net_of_cost": false
+        },
+        {
+          "claim": "KTD-Fin (arXiv 2605.28359, 2026-05): ten frontier LLM agents on CSI300 2024-2026 with tickers/dates masked: cumulative returns 'largely explained by passive market and style exposure, with limited evidence of persistent stock-selection alpha'.",
+          "source": "https://arxiv.org/abs/2605.28359",
+          "market": "CN daily",
+          "net_of_cost": false
+        },
+        {
+          "claim": "'What survives honest evaluation?' (arXiv 2608.27734, 2026-08): with look-ahead excluded by construction and Deflated Sharpe indexed to the search's own trial count, every LLM-discovered strategy (two frontier models, up to 100 candidates, five runs, 453 US stocks + 39 ETFs, realistic costs) is rejected; passive benchmarks are certified.",
+          "source": "https://arxiv.org/html/2608.27734",
+          "market": "US daily",
+          "net_of_cost": true
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "Family yes; names no.",
+      "recommendation": "skip",
+      "how": "Three independent 2025-26 audits, one net of costs, find nothing after the model's knowledge window.",
+      "sources": [
+        "https://arxiv.org/pdf/2510.07920",
+        "https://arxiv.org/abs/2605.28359",
+        "https://arxiv.org/html/2608.27734",
+        "https://github.com/pipiku915/FinMem-LLM-StockTrading"
+      ]
+    },
+    {
+      "id": "fingpt",
+      "rank": 9,
+      "name": "FinGPT (FinGPT-Forecaster)",
+      "url": "https://github.com/AI4Finance-Foundation/FinGPT",
+      "licence": "MIT",
+      "stars": 21303,
+      "predicts": "Next-week direction + rationale from news headlines and recent prices (LoRA-tuned Llama).",
+      "horizon": "Weekly.",
+      "data_needed": "News + prices; a 7B model (fits 8 GB in 4-bit).",
+      "runs_on_project_data": "No news pipeline; prices yes.",
+      "training": "Fine-tuning optional; inference on 8 GB with quantisation.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [
+        {
+          "claim": "Leckat (Research Square preprint, posted 2026-07-01), FinGPT inside Look-Ahead-Bench: alpha decay +2.27% between April 2021 (in-sample) and July 2024 (out-of-sample) - one month each, a self-described pilot; says nothing about edge net of cost.",
+          "source": "https://www.researchsquare.com/article/rs-10217060/v1",
+          "market": "US",
+          "net_of_cost": false
+        },
+        {
+          "claim": "Profit Mirage: 'financial language models exhibit severe information leakage' (FinGPT, Fin-LLaMA, InvestLM; InvestLM PC 0.88).",
+          "source": "https://arxiv.org/pdf/2510.07920",
+          "market": "US/CN",
+          "net_of_cost": false
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "Family (sentiment) rejected; name absent.",
+      "recommendation": "skip",
+      "sources": [
+        "https://github.com/AI4Finance-Foundation/FinGPT/tree/master/fingpt/FinGPT_Forecaster",
+        "https://www.researchsquare.com/article/rs-10217060/v1",
+        "https://arxiv.org/pdf/2510.07920"
+      ]
+    },
+    {
+      "id": "alphaagent_rdagent",
+      "rank": 10,
+      "name": "AlphaAgent (LLM alpha mining) and Microsoft RD-Agent(Q)",
+      "url": "https://github.com/RndmVariableQ/AlphaAgent ; https://github.com/microsoft/RD-Agent",
+      "licence": "AlphaAgent: none (418 stars); RD-Agent: MIT (14.8k stars)",
+      "predicts": "Generates formulaic alpha factors (and, for RD-Agent, models) in a loop of hypothesis -> code -> Qlib backtest -> feedback; final predictor is LightGBM on the mined factors, daily.",
+      "horizon": "Daily (next-day return).",
+      "data_needed": "OHLCV in Qlib format + GPT-4-class API budget (RD-Agent: GPT-4-turbo per paper; AlphaAgent: GPT-3.5-turbo).",
+      "runs_on_project_data": "Daily bhavcopies yes via Qlib; intraday untested.",
+      "training": "Yes: many LightGBM fits inside the loop; each loop iteration is a search trial.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "RD-Agent: #1372 (open) backtests exceed the 3600 s limit; #1333 torch missing for fin_quant; no leakage issue found in the tracker.",
+        "AlphaAgent: 8 open issues, no licence file."
+      ],
+      "independent_evidence": [
+        {
+          "claim": "Both report only their own Qlib backtests: AlphaAgent CSI500 + S&P500 2021-24 with 5/15 bp CN fees and 5 bp US sell fee; RD-Agent(Q) NeurIPS 2025 D&B on CSI300 2017-2020 test, extended to CSI500/NASDAQ-100 2024-25 after reviewer concern about knowledge cutoff. No third-party replication found.",
+          "source": "https://arxiv.org/abs/2502.16789",
+          "market": "CN/US daily",
+          "net_of_cost": "Own backtest with fees"
+        },
+        {
+          "claim": "AlphaAgent's own comparison reports RD-Agent's mined factors as lower-IC and more homogeneous - one framework's evidence against another, neither independent.",
+          "source": "https://arxiv.org/html/2502.16789v2",
+          "market": "CN/US daily",
+          "net_of_cost": "Own"
+        },
+        {
+          "claim": "arXiv 2608.27734 (see FinMem row): once search intensity is deflated, LLM-discovered strategies are all rejected.",
+          "source": "https://arxiv.org/html/2608.27734",
+          "market": "US daily",
+          "net_of_cost": true
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No.",
+      "recommendation": "skip",
+      "how": "An LLM factor miner is a trial multiplier: every loop iteration is a search shot the project's one-run-per-hypothesis rule would have to count. The only search-aware independent evaluation rejects everything it produced. AlphaAgent additionally has no licence.",
+      "sources": [
+        "https://arxiv.org/abs/2502.16789",
+        "https://github.com/RndmVariableQ/AlphaAgent",
+        "https://proceedings.neurips.cc/paper_files/paper/2025/file/ac5c2b6e423883cbcacbcccf88491b78-Paper-Datasets_and_Benchmarks_Track.pdf",
+        "https://github.com/microsoft/RD-Agent",
+        "https://arxiv.org/html/2608.27734"
+      ]
+    },
+    {
+      "id": "stockformer",
+      "rank": 11,
+      "name": "StockFormer (Gao et al., IJCAI 2023) and the unrelated Eric991005 Stockformer/Multitask-Stockformer",
+      "url": "https://github.com/gsyyysg/StockFormer",
+      "licence": "none (357 stars, last push 2024-05); Eric991005 repos: none",
+      "predicts": "Predictive-coding state representations + SAC RL policy for daily portfolio allocation on CSI300/NASDAQ.",
+      "horizon": "Daily.",
+      "data_needed": "Daily OHLCV + technical indicators.",
+      "runs_on_project_data": "Daily bhavcopies, in principle.",
+      "training": "Yes: transformer pretraining + RL, hours on 8 GB.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "#21 (open, 2024-12-05, 6 comments): stock_data_handle.py fits StandardScaler on the whole dataset - features normalised with the test period's mean/std (commenters: 'this is data leakage, it peeks at all later data').",
+        "#22 (open, 2025-05-28): running the released pretrained model produces all-zero actions in df_actions_test.csv while df_assets_his_test.csv keeps rising; 'cannot reproduce the paper result, and the df_assets_his_test.csv is faked?'. Unanswered by the authors."
+      ],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No.",
+      "recommendation": "skip",
+      "how": "Open leakage and irreproducibility reports, no licence, DRL family already rejected.",
+      "sources": [
+        "https://github.com/gsyyysg/StockFormer/issues/21",
+        "https://github.com/gsyyysg/StockFormer/issues/22",
+        "https://www.ijcai.org/proceedings/2023/0530.pdf"
+      ]
+    },
+    {
+      "id": "finrl_finrl_meta",
+      "rank": 12,
+      "name": "FinRL / FinRL-Meta / FinRL-DeepSeek",
+      "url": "https://github.com/AI4Finance-Foundation/FinRL ; https://github.com/AI4Finance-Foundation/FinRL-Meta ; https://github.com/benstaf/FinRL_DeepSeek",
+      "licence": "MIT / MIT / MIT",
+      "stars": {"FinRL": 16446, "FinRL-Meta": 1946, "FinRL_DeepSeek": 332},
+      "predicts": "DRL policy (PPO/SAC/A2C...) over daily OHLCV + indicators for portfolio allocation; FinRL-DeepSeek adds LLM risk/sentiment signals.",
+      "horizon": "Daily.",
+      "data_needed": "Daily OHLCV; FinRL-DeepSeek adds news.",
+      "runs_on_project_data": "Daily bhavcopies yes; intraday envs exist but need custom data loaders.",
+      "training": "Yes; hours on 8 GB.",
+      "fits_8gb_gpu": true,
+      "issues": [
+        "FinRL #189 (closed 2021): FeatureEngineer used fillna(bfill) - look-ahead in price data. Sweep already cites #938.",
+        "FinRL-Meta: no leakage/lookahead/survivorship issue in the tracker (only #83, a normalisation suggestion) - absence of reports, not evidence of absence.",
+        "FinRL_DeepSeek: same author as Look-Ahead-Bench; its own evaluation only."
+      ],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "Yes (DRL family rejected; FinRL named).",
+      "recommendation": "skip",
+      "sources": [
+        "https://github.com/AI4Finance-Foundation/FinRL/issues/189",
+        "https://github.com/AI4Finance-Foundation/FinRL-Meta/issues/83",
+        "https://github.com/benstaf/FinRL_DeepSeek"
+      ]
+    },
+    {
+      "id": "alpha101_libraries",
+      "rank": 13,
+      "name": "WorldQuant Alpha101 implementations (yli188, popbo/alphas, KunQuant, Vibe-Trading alpha101)",
+      "url": "https://github.com/yli188/WorldQuant_alpha101_code ; https://github.com/popbo/alphas ; https://github.com/Menooker/KunQuant",
+      "licence": "yli188 none (876 stars, last push 2019); popbo none (591); KunQuant Apache-2.0 (322, a compiler for Alpha101/Alpha158 expressions); Vibe-Trading MIT",
+      "predicts": "101 daily formulaic cross-sectional signals (Kakushadze 2016); no model.",
+      "horizon": "Daily (formulas use day windows; 19 need sector neutralisation).",
+      "data_needed": "OHLCV + VWAP + market cap for some.",
+      "runs_on_project_data": "Daily yes; on 5-minute bars the semantics are undefined but computable.",
+      "training": "No.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [
+        {
+          "claim": "Kakushadze's paper reports only in-sample Sharpe/turnover of the 101 alphas; the literature sweep already cites awesome-systematic-trading's statistic (median replication Sharpe 0.37 across 4,843 coded papers).",
+          "source": "https://arxiv.org/abs/1601.00991",
+          "market": "US daily",
+          "net_of_cost": false
+        }
+      ],
+      "only_evidence_is_own_backtest": true,
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No by name.",
+      "recommendation": "skip as a separate look",
+      "how": "Do not add 101 more single-feature tests. If candidate 1 runs, Alpha158 already spans the same operator family (rolling correlations, ranks, deltas); adding Alpha101 as a second block would be a second search shot for no new information class.",
+      "sources": [
+        "https://arxiv.org/abs/1601.00991",
+        "https://github.com/yli188/WorldQuant_alpha101_code",
+        "https://github.com/Menooker/KunQuant"
+      ]
+    },
+    {
+      "id": "tsfresh_featuretools",
+      "rank": 14,
+      "name": "tsfresh / featuretools (automatic feature extraction)",
+      "url": "https://github.com/blue-yonder/tsfresh ; https://github.com/alteryx/featuretools",
+      "licence": "MIT / BSD-3-Clause",
+      "stars": {"tsfresh": 9434, "featuretools": 7684},
+      "predicts": "Nothing; ~800 generic time-series statistics (tsfresh) or relational aggregates (featuretools) per window.",
+      "horizon": "Any.",
+      "data_needed": "Any series.",
+      "runs_on_project_data": "Yes.",
+      "training": "No (feature step); the selection step is itself a multiple-comparison search.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": "No finance evidence at all; searches for tsfresh + intraday + net-of-cost returned nothing specific.",
+      "indian_or_intraday_evidence": "None found.",
+      "covered_by_sweep": "No.",
+      "recommendation": "skip",
+      "how": "Generic feature generators on bars are the function class trials 41-116 already measured at about zero; 800 features x 3 horizons is a search, not a hypothesis.",
+      "sources": [
+        "https://github.com/blue-yonder/tsfresh",
+        "https://tsfresh.readthedocs.io/en/stable/text/forecasting.html"
+      ]
+    },
+    {
+      "id": "stockpy",
+      "rank": 15,
+      "name": "stockpy (SilvioBaratto)",
+      "url": "https://github.com/SilvioBaratto/stockpy",
+      "licence": "MIT",
+      "stars": 20,
+      "predicts": "Generic PyTorch/Pyro regression and classification wrappers (LSTM, GRU, BNN); nothing finance-specific beyond the name.",
+      "horizon": "Any.",
+      "data_needed": "Any tabular/series.",
+      "runs_on_project_data": "Yes.",
+      "training": "Yes, small.",
+      "fits_8gb_gpu": true,
+      "issues": [],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": "No evidence of any kind.",
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No.",
+      "recommendation": "skip",
+      "sources": ["https://github.com/SilvioBaratto/stockpy"]
+    },
+    {
+      "id": "navyam_pragma",
+      "rank": 16,
+      "name": "2026 'financial foundation model' releases found: navyam-oss (Bachatt, India), sflender/pragma-ffm (Revolut PRAGMA reimplementation)",
+      "url": "https://github.com/bachatt-app/navyam-oss ; https://github.com/sflender/pragma-ffm",
+      "licence": "Apache-2.0 (navyam, 0 stars, created 2026-09-08); none (pragma-ffm, 4 stars)",
+      "predicts": "navyam: an Indian-finance text LLM (savings, cards, tax), not a price model. pragma-ffm: a hobby reimplementation of Revolut's transaction-sequence model; not a market predictor.",
+      "horizon": "n/a",
+      "data_needed": "n/a",
+      "runs_on_project_data": "No.",
+      "training": "n/a",
+      "fits_8gb_gpu": null,
+      "issues": [],
+      "independent_evidence": [],
+      "only_evidence_is_own_backtest": "Not applicable.",
+      "indian_or_intraday_evidence": "None.",
+      "covered_by_sweep": "No.",
+      "recommendation": "skip",
+      "how": "Listed so the '2026 releases' question has an answer: no new open-weight finance price-forecasting model zoo surfaced in Exa or GitHub searches beyond Kronos (AAAI 2026 acceptance, no new weights).",
+      "sources": [
+        "https://github.com/bachatt-app/navyam-oss",
+        "https://github.com/sflender/pragma-ffm"
+      ]
+    }
+  ],
+  "could_not_verify": [
+    "Whether Vibe-Trading's qlib158 module runs on an arbitrary OHLCV frame at 5-minute cadence without the Qlib bin store (not executed).",
+    "Whether Qlib's bin format accepts a '5min' calendar for NSE without code changes (docs show 'day' and '1min'; not executed).",
+    "Qlib benchmark cost settings: whether the published CSI300 table already nets the default open/close costs (literature sweep says IR 2.00 gross -> 1.44 with cost; the README does not say).",
+    "Pangqiang-Gary/qlib-us-walk-forward was read through a GitHub mirror (github.laiyagushi.com) as returned by Exa; the numbers are as that page shows them.",
+    "The FinGPT Look-Ahead-Bench case report (Leckat 2026) is a one-author Research Square preprint with one month per period; treated as weak.",
+    "FineForecast's Phase 4 transaction-cost backtest numbers: not in the README; notebooks not opened (proprietary licence).",
+    "Aleti-Bollerslev-Siggaard: only the paper's own out-of-sample numbers; no third-party replication found; whether an NSE factor set of ~20 portfolios carries the same signal is unknown.",
+    "LOBCAST/LOBFrame profit analyses were read in abstract/highlight form; the F1 collapse numbers are from the paper text, the P&L tables were not read.",
+    "No Reddit/X reads were done (not needed for this scope); Exa's index was the only web search backend used and it returned nothing for '2026 model zoo release' beyond Kronos and Vibe-Trading."
+  ]
+}

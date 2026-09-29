@@ -1,0 +1,754 @@
+{
+  "written": "2026-09-29",
+  "scope": "Time-series foundation models and zero-shot forecasters that could be dropped into backend/research/kronos_feature_ic.py as a forecast_batch(windows) class (512 five-minute OHLCV bars in, 12 closes out), for the L40 harness (docs/research/prereg-kronos-feature-ic.md).",
+  "channels_used": [
+    "Exa web search via mcporter (exa.web_search_exa)",
+    "GitHub via authenticated gh CLI (repos, issues search, forks)",
+    "Hugging Face public model API via curl (metadata, raw READMEs)",
+    "r.jina.ai page reads (arXiv, blogs, docs); jina was rate-blocked for huggingface.co so raw READMEs were fetched directly"
+  ],
+  "cost_benchmark_note": "The sweep's 'Sharpe 6.44 gross to -3.62 at 20 bp' pair is quoted, with the same numbers, by the mental-momentum summary as a global long-short evaluation of a baseline model from the TSFM-in-finance literature (its ref 34), and that summary also relays from Rahimikia et al. 2511.18578 a from-scratch financial TimesFM-20M at Sharpe -1.87 under 11.2/21.3 bp mixed costs. I fetched the 138-page 2511.18578 PDF but the jina text extraction did not contain those figures (likely in tables/figures), so the pair is traced, not re-verified.",
+  "general_finding": "No candidate has any independent out-of-sample evidence net of transaction costs on intraday stocks, Indian or otherwise. The only NSE cost-aware number is a negative one for pretrained Kronos-small at a daily horizon (kronos-nse-1d). Every finance paper found (2511.18578, 2606.27100) is daily, gross of costs, and null-to-negative.",
+  "harness_notes": [
+    "All generic models instance-normalise on the context; on a near-random-walk price series the forecast is last value plus a learned drift, so the harness's partial IC given m60 (the last hour's return) is the control that matters.",
+    "Probabilistic models: use the median (quantile models) or sample mean (Sundial) as the harness's c_hat; fix seeds for Sundial exactly as the prereg fixes them for Kronos.",
+    "Guard flat windows: several models (TimesFM NaN issues, Lag-Llama #130) misbehave when a 512-bar window has zero variance.",
+    "Chronos family: install a build after 2026-09-08 (PR #532) or run in float32, because bf16 unscaling loses low-order bits at price levels of 1e3-1e5 with tick-scale variation."
+  ],
+  "candidates": [
+    {
+      "rank": 1,
+      "name": "Chronos-2",
+      "org": "Amazon",
+      "url": "https://huggingface.co/amazon/chronos-2",
+      "repo": "https://github.com/amazon-science/chronos-forecasting",
+      "licence": "Apache-2.0",
+      "params": "119.5M (safetensors); card says 120M",
+      "weights_hf_id": "amazon/chronos-2",
+      "released": "2025-10-30 (card created); paper arXiv 2510.15821 2025-10-17",
+      "last_updated": "2026-06-05 (card); repo pushed 2026-09-17",
+      "input_output": "Encoder-only (T5-style) patch model. Univariate, multivariate and covariate-informed (past-only and known-future) in one checkpoint via group attention. Max context 8192. Multi-step quantile forecasts (any quantile levels). Point = median.",
+      "zero_shot": true,
+      "fits_8gb": "Yes (120M; fp32 ~0.5 GB). Card: >300 forecasts/s on one A10G; CPU also supported.",
+      "known_bugs": [
+        "Commit 6c69155 fixed past/future covariate separation in Chronos2Pipeline; issue #462 (2026-02-10, closed, no reply) asks whether the paper's multivariate results still hold. Covariate path only.",
+        "PR #532 (merged 2026-09-08): bf16 unscaling discarded low-order bits when the series level is large relative to its variation (max delta 252 at level 1e5, variation 100). Directly relevant to price-level inputs: install a build after 2026-09-08 or run in float32.",
+        "Open: #502 clip-to-context option, #537 predict_df ordering with categorical ids."
+      ],
+      "independent_evidence": "2606.27100 (daily US, 5 large caps, L=512, MAE vs random walk, no costs): Chronos v1 is one of only two model-stock cells with a one-sided DM p<0.05 (AMZN p=0.0421); Chronos-2 itself not significant anywhere. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "sweep_2026_09_26_named_it": "family only; the Kronos note §4 names Chronos via 2511.18578 (Chronos-large zero-shot R2 -1.37% on daily excess returns)",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Univariate on close (median of quantiles), 512-bar context, prediction_length=12. A second configuration with O/H/L/V as past covariates is a second feature and would enlarge the pre-registered family; decide before running. Use a source build after 2026-09-08 (PR #532) or torch float32.",
+      "sources": [
+        "https://huggingface.co/amazon/chronos-2",
+        "https://huggingface.co/api/models/amazon/chronos-2",
+        "https://github.com/amazon-science/chronos-forecasting/issues/462",
+        "https://github.com/amazon-science/chronos-forecasting/pull/532",
+        "https://arxiv.org/html/2510.15821v1",
+        "https://arxiv.org/html/2606.27100v1"
+      ],
+      "needs_training": false
+    },
+    {
+      "rank": 2,
+      "name": "TiRex-2",
+      "org": "NXAI",
+      "url": "https://huggingface.co/NX-AI/TiRex-2",
+      "repo": "https://github.com/NX-AI/tirex",
+      "licence": "Apache-2.0 (TiRex-2 card and HF tag); the original TiRex is under the NXAI Community License",
+      "params": "38.4M active univariate + 44.1M for multivariate (card); safetensors total not exposed by the API",
+      "weights_hf_id": "NX-AI/TiRex-2",
+      "released": "2026-06-16 (card created); arXiv 2607.01204",
+      "last_updated": "2026-07-21 (card); repo pushed 2026-09-09",
+      "input_output": "Recurrent xLSTM patch model. Univariate and multivariate targets with past and future-known covariates in one checkpoint; quantile output; streaming (constant per-patch cost). Strictly causal over targets per the abstract. Predecessor's max prediction_length 2048 (#27).",
+      "zero_shot": true,
+      "fits_8gb": "Yes (~83M total). sLSTM CUDA kernels need compute capability >= 8.0; RTX 3060 Ti is 8.6. CPU path exists (slower).",
+      "known_bugs": [
+        "Predecessor issue #9 'Future tokens are not masked during inference' (closed 2025-07): clarified by the authors as a design property (one token predicted per 32-step patch; N-1 NaN tokens appended), not a leak.",
+        "Predecessor #22 'quantile_levels input ignored' (closed 2025-10); #27 undocumented 2048 max horizon (documented in FAQ)."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29). Its only finance-adjacent number is GIFT-Eval CRPS 0.4781 (5th) per The Forecasting Company's Sep-2026 table.",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Strongest cheap multivariate candidate: feed OHLCV as five variates, read the close variate's median at +3/+6/+12. Also run univariate close for comparability with the rest.",
+      "sources": [
+        "https://huggingface.co/NX-AI/TiRex-2",
+        "https://huggingface.co/api/models/NX-AI/TiRex-2",
+        "https://arxiv.org/abs/2607.01204",
+        "https://github.com/NX-AI/tirex/issues/9",
+        "https://github.com/NX-AI/tirex/issues/27",
+        "https://www.theforecastingcompany.com/blog/t0-beta/"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 3,
+      "name": "TimesFM-2.5",
+      "org": "Google Research",
+      "url": "https://huggingface.co/google/timesfm-2.5-200m-pytorch",
+      "repo": "https://github.com/google-research/timesfm",
+      "licence": "Apache-2.0 (weights up to 2.5; 3.0 is not)",
+      "params": "231M safetensors (200M core + optional 30M continuous quantile head)",
+      "weights_hf_id": "google/timesfm-2.5-200m-pytorch",
+      "released": "2025-09-02",
+      "last_updated": "2025-10-02 (fused QKV, results unchanged); repo pushed 2026-09-15",
+      "input_output": "Decoder-only patch model, univariate only (covariates only via an external XReg ridge regression). Context up to 16k (README) / max_context param; horizon up to 1k with the quantile head; point + 10 quantiles; normalize_inputs=True.",
+      "zero_shot": true,
+      "fits_8gb": "Yes (~0.9 GB fp32). Speed not reported by the card.",
+      "known_bugs": [
+        "#338 (open, 2025-11-07): forecast_with_covariates() XReg leaks later batch items' context into earlier ones when series in a batch are time-ordered; maintainer confirmed, workaround batch_size=1; fix PR #393 (open, 2026-04-04). Covariate path only; the plain forecast() is unaffected.",
+        "NaN handling: #321 nan output, #381 NaN in autoregressive decode, #486 all-NaN interpolation, #507 zero-variance sqrt guard (all open) - a flat 512-bar window (illiquid stock, halt) can produce NaN; guard for it.",
+        "#506 MLX backend diverges from PyTorch (use PyTorch)."
+      ],
+      "independent_evidence": "2606.27100 (daily US, no costs): TimesFM-2.5 has the best average rank with Moirai-2.0 but no DM-significant cell. 2511.18578 (daily excess returns, global): TimesFM 500M zero-shot R2 -2.80%; a 20M TimesFM pre-trained from scratch on financial data keeps a Sharpe of -1.87 under mixed 11.2/21.3 bp costs per the mental-momentum summary of that paper. All negative; none intraday.",
+      "sweep_2026_09_26_named_it": "family only; Kronos note §4 names TimesFM via 2511.18578 and 2606.27100",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Univariate close, forecast(horizon=12). It is the most-tested TSFM in the finance literature and every test is null, so a null here is expected; a pass would be the surprise worth having.",
+      "sources": [
+        "https://huggingface.co/google/timesfm-2.5-200m-pytorch",
+        "https://huggingface.co/api/models/google/timesfm-2.5-200m-pytorch",
+        "https://github.com/google-research/timesfm/issues/338",
+        "https://github.com/google-research/timesfm/pull/393",
+        "https://github.com/google-research/timesfm/issues/506",
+        "https://arxiv.org/html/2606.27100v1",
+        "https://arxiv.org/abs/2511.18578",
+        "https://research.mental-momentum.ai/r/time-series-foundation-models-zero-shot-4jd57h"
+      ],
+      "needs_training": false
+    },
+    {
+      "rank": 4,
+      "name": "Moirai 2.0 (R-small)",
+      "org": "Salesforce AI Research",
+      "url": "https://huggingface.co/Salesforce/moirai-2.0-R-small",
+      "repo": "https://github.com/SalesforceAIResearch/uni2ts",
+      "licence": "CC-BY-NC-4.0 (research only; the card says the proprietary version is used by Salesforce)",
+      "params": "11.4M",
+      "weights_hf_id": "Salesforce/moirai-2.0-R-small",
+      "released": "2025-08-06",
+      "last_updated": "2026-01-29 (card); repo pushed 2026-06-02",
+      "input_output": "Decoder-only, quantile loss, patch tokens with missing-value info; univariate target with optional dynamic real covariates (feat_dynamic_real). Only the small size exists for 2.0. Context configurable.",
+      "zero_shot": true,
+      "fits_8gb": "Yes, trivially (11M).",
+      "known_bugs": [
+        "#224 (open, 2025-08-12): Moirai2 accuracy drops significantly when feat_dynamic_real are present - do not pass OHLV as covariates.",
+        "#232 PackedQuantileMAELoss (training only). #249 'Update TiRex model URL to avoid leakage' concerns GIFT-Eval benchmark contamination, not inference."
+      ],
+      "independent_evidence": "2606.27100 (daily US, no costs): Moirai-2.0 has the strongest average rank and is DM-significant on GOOG (p=0.0421) only. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "sweep_2026_09_26_named_it": "family only; Kronos note §4 names Moirai-2.0 via 2606.27100",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Univariate close only (#224). NC licence: fine for the research harness, never for the live path.",
+      "sources": [
+        "https://huggingface.co/Salesforce/moirai-2.0-R-small",
+        "https://huggingface.co/api/models/Salesforce/moirai-2.0-R-small",
+        "https://github.com/SalesforceAIResearch/uni2ts/issues/224",
+        "https://arxiv.org/html/2606.27100v1"
+      ],
+      "needs_training": false
+    },
+    {
+      "rank": 5,
+      "name": "Granite TimeSeries PatchTST-FM-r2",
+      "org": "IBM Research",
+      "url": "https://huggingface.co/ibm-granite/granite-timeseries-patchtst-fm-r2",
+      "repo": "https://github.com/ibm-granite/granite-tsfm",
+      "licence": "Dual OpenMDW-1.0 / Apache-2.0 (user's choice)",
+      "params": "384.6M",
+      "weights_hf_id": "ibm-granite/granite-timeseries-patchtst-fm-r2",
+      "released": "2026-08-07 (card created); announced 2026-09-09",
+      "last_updated": "2026-09-09",
+      "input_output": "Univariate encoder (PatchTST + Conformer block), context 8192, overlapping patches 16/8, 99-quantile head; example uses context_length=512, prediction_length=64, quantile_levels.",
+      "zero_shot": true,
+      "fits_8gb": "Yes (~1.5 GB fp32). Speed not reported.",
+      "known_bugs": [
+        "None found (new model; no leakage issues in granite-tsfm search)."
+      ],
+      "independent_evidence": "Card: top permissive-licence zero-shot model on GIFT-Eval as of 2026-08-31 (CRPS 0.4672 per the t0-beta table). No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Univariate close; context 512 matches the harness exactly. Newest permissive general model; a good 'best generic univariate' control.",
+      "sources": [
+        "https://huggingface.co/ibm-granite/granite-timeseries-patchtst-fm-r2",
+        "https://huggingface.co/api/models/ibm-granite/granite-timeseries-patchtst-fm-r2",
+        "https://www.theforecastingcompany.com/blog/t0-beta/"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 6,
+      "name": "Sundial (base-128m)",
+      "org": "THUML, Tsinghua",
+      "url": "https://huggingface.co/thuml/sundial-base-128m",
+      "repo": "https://github.com/thuml/Sundial",
+      "licence": "Apache-2.0",
+      "params": "128.3M",
+      "weights_hf_id": "thuml/sundial-base-128m",
+      "released": "2025-05-13 (ICML 2025 oral; arXiv 2502.00816)",
+      "last_updated": "2026-03-09 (card); repo pushed 2025-09-12",
+      "input_output": "Decoder-only generative model: samples trajectories (num_samples) rather than quantiles; univariate (#9 multivariate open); context up to 2880, patch 16, multi-patch prediction up to 720. Card: 2880->720 in 510 ms on A100 (one sample).",
+      "zero_shot": true,
+      "fits_8gb": "Yes (~0.5 GB fp32). Requires transformers==4.40.1 per card; DynamicCache issue #5 with newer versions.",
+      "known_bugs": [
+        "#5 'DynamicCache has no attribute get_max_length' (closed) - pin transformers. No leakage issues found; only 14 issues total."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "test in the L40 harness",
+      "recommendation_detail": "Same generative class as Kronos, so fix seeds and sample_count exactly as §2 of the prereg; use the sample mean at +3/+6/+12.",
+      "sources": [
+        "https://huggingface.co/thuml/sundial-base-128m",
+        "https://huggingface.co/api/models/thuml/sundial-base-128m",
+        "https://github.com/thuml/Sundial/issues/5",
+        "https://github.com/thuml/Sundial/issues/9"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 7,
+      "name": "Toto 2.0 (313m / 22m)",
+      "org": "Datadog",
+      "url": "https://huggingface.co/Datadog/Toto-2.0-313m",
+      "repo": "https://github.com/DataDog/toto",
+      "licence": "Apache-2.0",
+      "params": "312.7M (313m), 21.9M (22m); also 4m, 1B (1.04B), 2.5B",
+      "weights_hf_id": "Datadog/Toto-2.0-313m, Datadog/Toto-2.0-22m",
+      "released": "2026-04-14 (cards created); blog 2026-05-14; arXiv 2605.20119",
+      "last_updated": "2026-06-04; repo pushed 2026-09-28",
+      "input_output": "Decoder-only patched transformer alternating causal time attention and full variate attention; native multivariate; quantiles 0.1..0.9 of shape (9, batch, n_variates, horizon); single-pass or block decoding; variable context. Trained on observability metrics plus public data. Requires Python 3.12+.",
+      "zero_shot": true,
+      "fits_8gb": "Yes for 313m (1.25 GB fp32) and 22m; 1B borderline, 2.5B (9.1 GB fp32) no. Card: ~ms-scale forward pass for a 1024-step forecast on A100.",
+      "known_bugs": [
+        "None found; issue tracker is dependency bumps. Fine-tuning and exogenous covariates not yet available for 2.0."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29). Leaderboard-only (BOOM, GIFT-Eval, TIME).",
+      "recommendation": "test in the L40 harness (lower priority than TiRex-2 for the multivariate slot)",
+      "recommendation_detail": "OHLCV as five variates, read the close variate's median. Observability pre-training is the furthest domain from prices of all candidates.",
+      "sources": [
+        "https://huggingface.co/Datadog/Toto-2.0-313m",
+        "https://huggingface.co/api/models/Datadog/Toto-2.0-313m",
+        "https://www.datadoghq.com/blog/ai/toto-2/",
+        "https://arxiv.org/abs/2605.20119",
+        "https://github.com/DataDog/toto"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 8,
+      "name": "Granite TimeSeries FlowState-r1",
+      "org": "IBM Research",
+      "url": "https://huggingface.co/ibm-granite/granite-timeseries-flowstate-r1",
+      "repo": "https://github.com/ibm-granite/granite-tsfm",
+      "licence": "Apache-2.0",
+      "params": "9.1M safetensors (card says 18.5M total after the update)",
+      "weights_hf_id": "ibm-granite/granite-timeseries-flowstate-r1",
+      "released": "2025-09-10 (card created); arXiv 2508.05287",
+      "last_updated": "2026-04-29",
+      "input_output": "State-space (SSM) univariate model with a timescale-adaptive decoder (scale_factor); pre-training context 4096; 9 quantiles; multi-patch parallel decoding. Zero-shot only (no fine-tuning path).",
+      "zero_shot": true,
+      "fits_8gb": "Yes, trivially.",
+      "known_bugs": [
+        "None found."
+      ],
+      "independent_evidence": "Card: best MASE among open-code zero-shot models on GIFT-Eval as of 2026-04-28. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "test in the L40 harness (cheap add-on)",
+      "recommendation_detail": "Univariate close. Its scale_factor must be set for 5-minute bars; leave at the card default unless the FAQ says otherwise, and record it.",
+      "sources": [
+        "https://huggingface.co/ibm-granite/granite-timeseries-flowstate-r1",
+        "https://huggingface.co/api/models/ibm-granite/granite-timeseries-flowstate-r1"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 9,
+      "name": "FinCast (v1)",
+      "org": "Vincent05R (CIKM 2025)",
+      "url": "https://huggingface.co/Vincent05R/FinCast",
+      "repo": "https://github.com/vincent05r/FinCast-fts",
+      "licence": "Apache-2.0 (repo and card)",
+      "params": "Paper: up to 1B; the v1.pth checkpoint size was not read",
+      "weights_hf_id": "Vincent05R/FinCast (single file v1.pth)",
+      "released": "2025-08-20 (repo); checkpoint 2025-08-26; arXiv 2508.19609",
+      "last_updated": "repo pushed 2026-06-22",
+      "input_output": "Financial-domain decoder with MoE and quantile-aware loss; README: any context and horizon, native quantiles, training-free inference. Univariate scalar series (paper evaluates 4.38M financial scalar points); OHLCV support not confirmed.",
+      "zero_shot": true,
+      "fits_8gb": "Unknown until v1.pth is inspected; a 1B fp32 checkpoint would not fit, a 1B fp16 one barely would.",
+      "known_bugs": [
+        "None found (134 stars, small tracker)."
+      ],
+      "independent_evidence": "Only the paper's own zero-shot MSE/MAE (20%/10% better than TimesFM/Chronos on its test set) as relayed by the mental-momentum summary; no returns, no costs. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "test with a change",
+      "recommendation_detail": "Change: (1) read v1.pth size and confirm it loads in <8 GB; (2) confirm the input is a plain price series and how it normalises; (3) it is finance-pretrained, so apply the prereg's contamination rule - checkpoint date 2025-08-26 precedes the 2025-09-01 selection window, which is why it qualifies at all.",
+      "sources": [
+        "https://github.com/vincent05r/FinCast-fts",
+        "https://huggingface.co/Vincent05R/FinCast",
+        "https://huggingface.co/api/models/Vincent05R/FinCast",
+        "https://arxiv.org/abs/2508.19609",
+        "https://research.mental-momentum.ai/r/time-series-foundation-models-zero-shot-4jd57h"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 10,
+      "name": "TimesFM-3.0",
+      "org": "Google Research",
+      "url": "https://huggingface.co/google/timesfm-3.0-pytorch",
+      "repo": "https://github.com/google-research/timesfm",
+      "licence": "TimesFM Non-Commercial License v1.0 - weights restricted to non-commercial, non-production use (code stays Apache-2.0)",
+      "params": "330.7M",
+      "weights_hf_id": "google/timesfm-3.0-pytorch",
+      "released": "2026-08-24 (card created); blog 2026-08-31",
+      "last_updated": "2026-09-02",
+      "input_output": "Decoder-only, natively multivariate (multiple targets, past covariates, past-future covariates); single forward pass over the horizon (contiguous patch masking); context patch 32, horizon patch 64; point + quantiles. Leads GIFT-Eval and fev-bench per the t0-beta table (CRPS 0.4557).",
+      "zero_shot": true,
+      "fits_8gb": "Yes (~1.3 GB fp32).",
+      "known_bugs": [
+        "New; none found. Shares the repo's NaN issues list."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "test with a change",
+      "recommendation_detail": "Change: licence gate. Research use fits 'non-commercial', but nothing from it may enter the paper or live engine of a trading business; run it only if TimesFM-2.5 shows anything, and label results as non-deployable.",
+      "sources": [
+        "https://huggingface.co/google/timesfm-3.0-pytorch",
+        "https://huggingface.co/api/models/google/timesfm-3.0-pytorch",
+        "https://research.google/blog/timesfm-3-a-zero-shot-foundation-model-for-multivariate-forecasting/",
+        "https://raw.githubusercontent.com/google-research/timesfm/master/README.md"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 11,
+      "name": "TiRex (v1)",
+      "org": "NXAI",
+      "url": "https://huggingface.co/NX-AI/TiRex",
+      "repo": "https://github.com/NX-AI/tirex",
+      "licence": "NXAI Community License (Llama-3-style: free with attribution; extra terms above EUR 100M revenue)",
+      "params": "35M (README); not exposed by the API",
+      "weights_hf_id": "NX-AI/TiRex",
+      "released": "2025-05-26",
+      "last_updated": "2026-02-05",
+      "input_output": "Univariate xLSTM, quantiles + mean, max prediction_length 2048; CUDA cc>=8.0 kernels, CPU fallback.",
+      "zero_shot": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "#9 not-a-leak clarification; #22 quantile_levels ignored (closed); #27 horizon cap."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (superseded by TiRex-2, which is Apache-2.0 and multivariate)",
+      "sources": [
+        "https://huggingface.co/NX-AI/TiRex",
+        "https://raw.githubusercontent.com/NX-AI/tirex/main/LICENSE",
+        "https://github.com/NX-AI/tirex/issues/9"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 12,
+      "name": "Chronos-Bolt (small/base)",
+      "org": "Amazon",
+      "url": "https://huggingface.co/amazon/chronos-bolt-base",
+      "repo": "https://github.com/amazon-science/chronos-forecasting",
+      "licence": "Apache-2.0",
+      "params": "47.7M (small), 205.3M (base)",
+      "weights_hf_id": "amazon/chronos-bolt-small, amazon/chronos-bolt-base",
+      "released": "2024-11-25",
+      "last_updated": "2025-11-21",
+      "input_output": "Univariate, context 2048, multi-quantile patched T5; no native covariates.",
+      "zero_shot": true,
+      "fits_8gb": "Yes; fast.",
+      "known_bugs": [
+        "Same bf16 unscaling precision bug as Chronos-2, fixed in PR #532 (2026-09-08)."
+      ],
+      "independent_evidence": "2511.18578 tested Chronos (T5-large) zero-shot on daily excess returns: R2 -1.37%, portfolios 'far inferior' to CatBoost/LightGBM, no costs. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (Chronos-2 supersedes it in the same package; run Bolt-small only as a speed fallback)",
+      "sources": [
+        "https://huggingface.co/amazon/chronos-bolt-base",
+        "https://huggingface.co/api/models/amazon/chronos-bolt-base",
+        "https://github.com/amazon-science/chronos-forecasting/pull/532",
+        "https://arxiv.org/abs/2511.18578"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 13,
+      "name": "Granite TimeSeries TTM-r3",
+      "org": "IBM Research",
+      "url": "https://huggingface.co/ibm-granite/granite-timeseries-ttm-r3",
+      "repo": "https://github.com/ibm-granite/granite-tsfm",
+      "licence": "Apache-2.0",
+      "params": "1.4M safetensors at the top level; card describes a mixture of 1-35M experts",
+      "weights_hf_id": "ibm-granite/granite-timeseries-ttm-r3",
+      "released": "2026-05-21",
+      "last_updated": "2026-07-02",
+      "input_output": "Tiny MLP-mixer family with expert routing, multivariate, multi-quantile head, CPU-friendly; paper 'to be released'. TTM uses fixed context/forecast lengths (r2: 512/1024/1536 in, 96+ out).",
+      "zero_shot": true,
+      "fits_8gb": "Yes (CPU is enough).",
+      "known_bugs": [
+        "None found."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip for now (paper unreleased; fixed-length API; add only if a CPU-only rerun is ever needed)",
+      "sources": [
+        "https://huggingface.co/ibm-granite/granite-timeseries-ttm-r3",
+        "https://huggingface.co/api/models/ibm-granite/granite-timeseries-ttm-r3"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 14,
+      "name": "t0-alpha",
+      "org": "The Forecasting Company",
+      "url": "https://huggingface.co/theforecastingcompany/t0-alpha",
+      "repo": "https://github.com/theforecastingcompany/tfc-t0",
+      "licence": "Apache-2.0 (t0-alpha open weights; t0-beta 256M is API-only)",
+      "params": "~102M",
+      "weights_hf_id": "theforecastingcompany/t0-alpha (+ ONNX int8 build)",
+      "released": "2026 (alpha); t0-beta blog 2026-09-16; tech report arXiv 2609.24559",
+      "last_updated": "2026-09-24",
+      "input_output": "Decoder-style patch transformer; univariate and multivariate with past and known-future covariates; quantile multi-horizon; example context 512.",
+      "zero_shot": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "None found (new)."
+      ],
+      "independent_evidence": "Only a third-party (Macrocosm) ERCOT power-price backtest of t0-beta: $14.94M simulated P&L, Sharpe 1.29, versus $11.82M for an always-short control - not stocks, and the control captures most of it. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (alpha checkpoint; the stronger beta is closed; nothing on equities)",
+      "sources": [
+        "https://huggingface.co/theforecastingcompany/t0-alpha",
+        "https://huggingface.co/api/models/theforecastingcompany/t0-alpha",
+        "https://www.theforecastingcompany.com/blog/t0-beta/"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 15,
+      "name": "Time-MoE (50M / 200M)",
+      "org": "Time-MoE (Shi et al., ICLR 2025)",
+      "url": "https://huggingface.co/Maple728/TimeMoE-200M",
+      "repo": "https://github.com/Time-MoE/Time-MoE",
+      "licence": "Apache-2.0",
+      "params": "113M total / 50M active; 453M total / 200M active",
+      "weights_hf_id": "Maple728/TimeMoE-50M, Maple728/TimeMoE-200M",
+      "released": "2024-09-21",
+      "last_updated": "weights 2024-10-22; repo pushed 2026-03-21",
+      "input_output": "Decoder-only MoE, univariate, autoregressive point forecasts, context up to 4096.",
+      "zero_shot": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "#75 z-normalisation epsilon and #56 instance normalisation questions (closed); #92 LoRA worse than zero-shot; no leakage issue found."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (weights untouched since 2024, point-only, off every 2026 leaderboard top-10)",
+      "sources": [
+        "https://huggingface.co/Maple728/TimeMoE-200M",
+        "https://huggingface.co/api/models/Maple728/TimeMoE-200M",
+        "https://github.com/Time-MoE/Time-MoE/issues/75"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 16,
+      "name": "Timer / Timer-XL (timer-base-84m) and Timer-S1",
+      "org": "THUML, Tsinghua",
+      "url": "https://huggingface.co/thuml/timer-base-84m",
+      "repo": "https://github.com/thuml/Large-Time-Series-Model",
+      "licence": "Apache-2.0 (both)",
+      "params": "84M (timer-base-84m); Timer-S1 8.3B total / 0.75B active",
+      "weights_hf_id": "thuml/timer-base-84m; thuml/Timer-S1",
+      "released": "2024-11-23; Timer-S1 2026-05-09 (arXiv 2603.04791)",
+      "last_updated": "2025-08-03; 2026-05-09",
+      "input_output": "timer-base-84m: univariate point forecasts, context 2880, patch 96 (a 12-bar horizon means generating a 96-step patch). Timer-S1: quantiles, context 11,520, needs >=40 GB VRAM per its card.",
+      "zero_shot": true,
+      "fits_8gb": "timer-base-84m yes; Timer-S1 no (card: at least 40 GB VRAM).",
+      "known_bugs": [
+        "#14 data scaling issue (closed 2024); #76 'corr part written wrong' (open, 2026-06, Chinese)."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (84m superseded by Sundial from the same lab and mismatched to a 12-bar horizon; S1 does not fit the GPU)",
+      "sources": [
+        "https://huggingface.co/thuml/timer-base-84m",
+        "https://huggingface.co/thuml/Timer-S1",
+        "https://huggingface.co/api/models/thuml/Timer-S1",
+        "https://github.com/thuml/Large-Time-Series-Model"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 17,
+      "name": "Lag-Llama",
+      "org": "time-series-foundation-models",
+      "url": "https://huggingface.co/time-series-foundation-models/Lag-Llama",
+      "repo": "https://github.com/time-series-foundation-models/lag-llama",
+      "licence": "Apache-2.0",
+      "params": "2.45M",
+      "weights_hf_id": "time-series-foundation-models/Lag-Llama",
+      "released": "2024-02-07",
+      "last_updated": "weights 2024-05-14; repo pushed 2025-06-06",
+      "input_output": "Univariate probabilistic (Student-t) decoder using lag features; short context (32) plus lags.",
+      "zero_shot": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "#130 (open since 2025-03): RobustScaler divides by 1e-10 when the IQR is zero, producing 2e10-scale inputs and near-zero outputs; fix PR #131 unmerged. A 512-bar window of a stock with many unchanged closes hits this.",
+        "#88/#48 first prediction far from last value (open); #107 GPU memory leak (open)."
+      ],
+      "independent_evidence": "Named in the mental-momentum summary as a model whose zero-shot trading fails; nothing net of cost. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (stale, open scaler bug, weakest on every leaderboard)",
+      "sources": [
+        "https://huggingface.co/time-series-foundation-models/Lag-Llama",
+        "https://github.com/time-series-foundation-models/lag-llama/issues/130",
+        "https://research.mental-momentum.ai/r/time-series-foundation-models-zero-shot-4jd57h"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 18,
+      "name": "MOMENT-1 (large)",
+      "org": "AutonLab, CMU",
+      "url": "https://huggingface.co/AutonLab/MOMENT-1-large",
+      "repo": "https://github.com/moment-timeseries-foundation-model/moment",
+      "licence": "MIT",
+      "params": "346.4M",
+      "weights_hf_id": "AutonLab/MOMENT-1-large",
+      "released": "2024-05-09",
+      "last_updated": "2025-03-26; repo pushed 2026-02-10",
+      "input_output": "Encoder (T5) with task heads; forecasting head is randomly initialised and must be trained (#17: zero-shot forecasting of a sine wave 'really bad'; intended fine-tuned).",
+      "zero_shot": false,
+      "needs_training": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "#17 zero-shot forecasting unsupported; #29 scale before fine-tuning."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (needs a trained forecasting head; violates the zero-shot rule)",
+      "sources": [
+        "https://huggingface.co/AutonLab/MOMENT-1-large",
+        "https://github.com/moment-timeseries-foundation-model/moment/issues/17"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)"
+    },
+    {
+      "rank": 19,
+      "name": "TabPFN-TS",
+      "org": "Prior Labs",
+      "url": "https://github.com/PriorLabs/tabpfn-time-series",
+      "repo": "https://github.com/PriorLabs/tabpfn-time-series",
+      "licence": "Package Apache-2.0; local TabPFN-v2 weights under the Prior Labs licence (HF 'other'); TabPFN-3/3.5 are API-metered",
+      "params": "TabPFN-v2 regressor (not exposed); tabpfn-time-series v1.2.0",
+      "weights_hf_id": "Prior-Labs/TabPFN-v2-reg (local mode); Prior-Labs/tabpfn_3_5 (API)",
+      "released": "2025-01-05 (arXiv 2501.02945)",
+      "last_updated": "repo pushed 2026-09-28",
+      "input_output": "Reframes forecasting as tabular regression on running-index, calendar and auto-seasonal features; point + quantiles; one TabPFN fit per window (seconds each).",
+      "zero_shot": true,
+      "fits_8gb": "Local v2 yes; ~50k windows x seconds each is days of compute.",
+      "known_bugs": [
+        "#51 (open) end-of-series missing targets; nothing on leakage."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (it extrapolates a curve of time features, not the bar dynamics; slow per window; weights licence)",
+      "sources": [
+        "https://github.com/PriorLabs/tabpfn-time-series",
+        "https://docs.priorlabs.ai/capabilities/forecasting",
+        "https://arxiv.org/html/2501.02945v4",
+        "https://huggingface.co/api/models/Prior-Labs/TabPFN-v2-reg"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 20,
+      "name": "TimeGPT-2.1",
+      "org": "Nixtla (API)",
+      "url": "https://www.nixtla.io/blog/timegpt-2-1-announcement",
+      "repo": "https://github.com/Nixtla/nixtla",
+      "licence": "Closed weights; enterprise subscription with a 30-day free trial (API-call caps per plan)",
+      "params": "Not disclosed",
+      "weights_hf_id": "none (API only)",
+      "released": "2025-12-10 (2.1)",
+      "last_updated": "repo pushed 2026-09-29",
+      "input_output": "API: univariate and (2.1) multivariate with exogenous variables; point + quantiles; long-horizon variant TimeGPT-LH.",
+      "zero_shot": true,
+      "fits_8gb": "n/a (remote). Every 512-bar window of Kite data would leave the machine.",
+      "known_bugs": [
+        "Not inspectable."
+      ],
+      "independent_evidence": "2606.27100 (daily US, no costs): TimeGPT/TimeGPT-LH included; no DM-significant cell. No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (closed, metered, data egress, no evidence; the project's rule is inspectable zero-shot models)",
+      "sources": [
+        "https://www.nixtla.io/blog/timegpt-2-1-announcement",
+        "https://www.nixtla.io/docs/introduction/timegpt_subscription_plans",
+        "https://arxiv.org/html/2606.27100v1"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 21,
+      "name": "TimeCopilot",
+      "org": "TimeCopilot (MIT)",
+      "url": "https://github.com/TimeCopilot/timecopilot",
+      "repo": "https://github.com/TimeCopilot/timecopilot",
+      "licence": "MIT",
+      "params": "n/a (agent framework wrapping 30+ TSFMs)",
+      "weights_hf_id": "none",
+      "released": "2025",
+      "last_updated": "2026-09-23",
+      "input_output": "LLM agent (default openai:gpt-4o-mini) that selects among Chronos, Moirai, TimesFM, TimeGPT etc.; adds an LLM and cross-validation loop around the models.",
+      "zero_shot": true,
+      "fits_8gb": "n/a",
+      "known_bugs": [
+        "n/a"
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (not a model; the LLM selection step is a non-reproducible, non-pre-registrable layer; its adapters are not needed since each model has a 3-line API)",
+      "sources": [
+        "https://github.com/TimeCopilot/timecopilot"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 22,
+      "name": "Moirai-MoE / Moirai 1.1 / moirai-agent",
+      "org": "Salesforce",
+      "url": "https://huggingface.co/Salesforce/moirai-moe-1.0-R-base",
+      "repo": "https://github.com/SalesforceAIResearch/uni2ts",
+      "licence": "CC-BY-NC-4.0",
+      "params": "MoE base 935M total; 1.1-R-base 91M; moirai-agent 3.4B",
+      "weights_hf_id": "Salesforce/moirai-moe-1.0-R-base, Salesforce/moirai-1.1-R-base, Salesforce/moirai-agent",
+      "released": "2024-11 / 2024-06 / 2025-12",
+      "last_updated": "2025-01-21 / 2025-01-21 / 2026-01-29",
+      "input_output": "Any-variate attention (1.x), MoE (MoE), LLM-based agent (moirai-agent); distributional outputs.",
+      "zero_shot": true,
+      "fits_8gb": "1.1-R-base yes; MoE base and agent are large.",
+      "known_bugs": [
+        "#258 MoiraiAgent assertion on NaN outputs from TimesFM (open)."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (superseded by Moirai 2.0 in the same package; agent is an LLM wrapper)",
+      "sources": [
+        "https://huggingface.co/Salesforce/moirai-moe-1.0-R-base",
+        "https://huggingface.co/Salesforce/moirai-agent",
+        "https://huggingface.co/api/models/Salesforce/moirai-agent"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 23,
+      "name": "Toto 1.0 (Open-Base-1.0)",
+      "org": "Datadog",
+      "url": "https://huggingface.co/Datadog/Toto-Open-Base-1.0",
+      "repo": "https://github.com/DataDog/toto",
+      "licence": "Apache-2.0",
+      "params": "151.3M",
+      "weights_hf_id": "Datadog/Toto-Open-Base-1.0",
+      "released": "2025-04-30",
+      "last_updated": "2026-05-14",
+      "input_output": "Multivariate decoder with Student-t mixture output (samples); context 4096; exogenous covariates added 2026-02 (1.0 only).",
+      "zero_shot": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "None found."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (Toto 2.0 is 7x more parameter-efficient per Datadog and is the recommended release)",
+      "sources": [
+        "https://huggingface.co/Datadog/Toto-Open-Base-1.0",
+        "https://www.datadoghq.com/blog/ai/toto-2/"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)",
+      "needs_training": false
+    },
+    {
+      "rank": 24,
+      "name": "UniTS",
+      "org": "MIMS Harvard",
+      "url": "https://github.com/mims-harvard/UniTS",
+      "repo": "https://github.com/mims-harvard/UniTS",
+      "licence": "MIT",
+      "params": "not read",
+      "weights_hf_id": "none on HF (checkpoints in repo releases)",
+      "released": "2024-02",
+      "last_updated": "repo pushed 2024-09-26",
+      "input_output": "Multi-task prompt-tuned model; new datasets need prompt tuning or fine-tuning.",
+      "zero_shot": false,
+      "needs_training": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "28 open issues, unmaintained since 2024-09."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (needs training; unmaintained)",
+      "sources": [
+        "https://github.com/mims-harvard/UniTS"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)"
+    },
+    {
+      "rank": 25,
+      "name": "TOTEM",
+      "org": "Talukder et al.",
+      "url": "https://github.com/SaberaTalukder/TOTEM",
+      "repo": "https://github.com/SaberaTalukder/TOTEM",
+      "licence": "none declared",
+      "params": "not read",
+      "weights_hf_id": "none",
+      "released": "2024-02",
+      "last_updated": "2025-02-20",
+      "input_output": "VQ-VAE tokeniser + forecaster trained per domain; paper's zero-shot is cross-dataset after training.",
+      "zero_shot": false,
+      "needs_training": true,
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "0 open issues; no licence file."
+      ],
+      "independent_evidence": "No independent net-of-cost evidence on stocks found (searched Exa, GitHub, arXiv 2026-09-29).",
+      "recommendation": "skip (needs training; no licence)",
+      "sources": [
+        "https://github.com/SaberaTalukder/TOTEM"
+      ],
+      "sweep_2026_09_26_named_it": "family only (no model named)"
+    },
+    {
+      "rank": 26,
+      "name": "Kronos variants and forks (context only; Kronos itself excluded)",
+      "org": "various",
+      "url": "https://huggingface.co/NeoQuasar/Kronos-mini",
+      "repo": "https://github.com/shiyu-coder/Kronos",
+      "licence": "MIT (upstream and the fine-tunes below)",
+      "params": "Kronos-mini 4.1M (context 2048), Kronos-base 102.3M, Tokenizer-2k 4.0M; NSE fine-tunes 24.7M",
+      "weights_hf_id": "NeoQuasar/Kronos-mini, NeoQuasar/Kronos-base, NeoQuasar/Kronos-Tokenizer-2k; fine-tunes: sahil007123/kronos-nse-1d, ashutoshsinghpr7/kronos-nse-small, minhajbaba/kronos-nse-lora, Ahmed-elbarbary/kronos-small-egx, zubziretta/Kronos-small-BIST; repos Bhavya-Dhoot/Kronos-nse, jvaidya10/kronos-india",
+      "released": "upstream 2025-06-30; fine-tunes 2026-07 to 2026-09",
+      "last_updated": "upstream weights 2025-09-09; repo pushed 2026-04-13; fine-tunes through 2026-09-20",
+      "input_output": "OHLCV(+amount) K-line tokens, as the harness already uses.",
+      "zero_shot": "upstream sizes yes; every fork listed is fine-tuned",
+      "needs_training": "fine-tunes only",
+      "fits_8gb": "Yes.",
+      "known_bugs": [
+        "#227/PR #234 fine-tune normalisation leak (known). Ahmed-elbarbary/kronos-small-egx (2026-09-20) reports the CSV fine-tuning script still normalised each window by its own mean/std including the future, teaching mean reversion: correlation of the 20-session forecast with the move back to the window average +0.98 before, -0.13 after re-scaling on the 90 past candles only.",
+        "sahil007123/kronos-nse-1d: from_pretrained leaves modules in train mode (dropout active) unless .eval() is called; and at T=1.0 pretrained forecast spread is 3.95x realised volatility with 12.6% impossible (>10%/day) forecasts."
+      ],
+      "independent_evidence": "sahil007123/kronos-nse-1d (NSE, daily, 100 held-out sessions 2026-01-01 to 2026-07-30, top-80 by turnover, 7,465 forecasts): pretrained Kronos-small zero-shot rank-IC -0.0116 (t -0.54), decile spread 0.046% against a ~10 bp round trip; a 12-1 momentum rule on the same sessions +0.0376 (t +3.51). Fine-tuning fixed calibration, not skill. Daily, not intraday, but it is the only NSE, cost-aware, out-of-sample number anywhere.",
+      "sweep_2026_09_26_named_it": "Kronos named in the sweep §2 (issue #227) and is L40's model",
+      "recommendation": "skip as candidates (fine-tuned = rule violation; mini/base are the same family L40 already fixed to small). Cite kronos-nse-1d as the prior for L40.",
+      "sources": [
+        "https://huggingface.co/sahil007123/kronos-nse-1d",
+        "https://huggingface.co/Ahmed-elbarbary/kronos-small-egx",
+        "https://huggingface.co/api/models?search=kronos",
+        "https://github.com/Bhavya-Dhoot/Kronos-nse",
+        "https://github.com/jvaidya10/kronos-india",
+        "https://github.com/shiyu-coder/Kronos/issues/227"
+      ]
+    }
+  ]
+}

@@ -17,6 +17,7 @@ import Journal from "./pages/Journal";
 import Trades from "./pages/Trades";
 import MomentumBook from "./pages/MomentumBook";
 import JevBook from "./pages/JevBook";
+import Kronos from "./pages/Kronos";
 
 function Page({ children }) {
   const location = useLocation();
@@ -47,6 +48,7 @@ function AppRoutes({ state }) {
       <Route path="/trades" element={<Page><Trades state={state} /></Page>} />
       <Route path="/momentum-book" element={<Page><MomentumBook /></Page>} />
       <Route path="/jev-book" element={<Page><JevBook /></Page>} />
+      <Route path="/kronos" element={<Page><Kronos /></Page>} />
     </Routes>
   );
 }

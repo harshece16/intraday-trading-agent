@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "written": "2026-09-29",
+    "scope": "India-specific predictive tools/datasets/signals/systems for NSE/BSE intraday, plus anything new since 2026-09-20; practitioner evidence since 2026-09-01",
+    "channels_used": [
+      "Exa web search via `mcporter call exa.web_search_exa` (web, arXiv, Reddit and X through Exa's index only; no login)",
+      "gh CLI: `gh search repos`, `gh api repos/...` (metadata, README, contents, commits)",
+      "r.jina.ai page reader (arXiv abstracts, MDPI, blogs). Reddit blocks it; reddit bodies were not read."
+    ],
+    "not_used": ["twitter-cli (no credentials)", "OpenCLI Reddit (unverified session; instructions said Exa only)"],
+    "project_bar": "quintile spread > 33.26 bp at 15/30/60 min, t > 2, both halves, BH q=0.10; 16.63 bp round trip",
+    "already_covered_in_house": ["ORB", "VWAP", "order-book imbalance (L37)", "PEAD (L39)", "overnight ETF hold (trials 124-125)", "momentum (120,126,127)", "slow cross-sectional", "option-chain positioning", "FII/DII flows", "Kronos zero-shot (L40 pre-registered)", "3c overnight/intraday decomposition, volatility-sorted (L23-L25, L27-L28)", "results-direction gap (L36)"]
+  },
+  "candidates": [
+    {
+      "rank": 1,
+      "name": "Cross-sectional overnight-gap reversal (H2) and the low-turnover `nq tilt` candidate",
+      "url": "https://github.com/ullasgh/nifty-intraday-quant-research",
+      "kind": "signal + tool",
+      "predicts": "Cross-sectional rank of last night's close-to-open return predicts the sign of the open-to-close (09:16/10:00 -> 15:20) return the next day: overnight losers outperform. Horizon: one session. Long/short decile spread, and a long-only index-relative tilt with weight smoothing a=0.10.",
+      "data_needed": "1-minute (or 5-minute) bars for ~149 NSE equities 2018-2026 plus prior close; the project already has Kite 5-min NIFTY 100 bars since 2024-09 and daily bhavcopies since 2010 (prev close and open), so the feature is computable from data on hand.",
+      "costs_counted": "yes",
+      "reported_net": "Decile spread (10:00 entry): -24.30 bp/session pooled 2018-2025, t=-16.66, 1,867 sessions, sign-stable 8/8 years, vs their two-leg hurdle 16.53 bp at Rs 1L. Recent years: 2024 -10.98 bp, 2025 -9.62 bp (both below the two-leg hurdle at Rs 1L and even at Rs 10L, 8.03 bp); 2024 on continuous-coverage names only -3.04 bp. Low-turnover tilt (a=0.10, mild/full): net +2.29 bp/day pooled (5.77%/yr), +1.92 (2024), +0.84 (2025); recent-window t=2.75 iid / 3.20 Newey-West but continuous-coverage subset p~0.046-0.077; their own Phase G3 (2026-08-31): no weighting scheme promotes at DSR 0.95 (closest 0.9485).",
+      "oos_or_live": "In-sample 2018-01 to 2025-07-31 with a 12-month holdout that has NOT been read (read-count 7 logged; the lock is an audit trail, not enforcement). No live record.",
+      "known_problems": [
+        "Universe is a fixed current-day list of 149 names (survivorship: no delisted names; the authors' own recon shows what the deltas measure is new listings, and the recent edge is carried by 18 stocks that IPO'd inside the window).",
+        "Effect decayed from -37.6 bp (2018, like-for-like) to -3 bp (2024, continuous names); recent-window significance flips on the SE estimator and is 1 of 4 related constructions.",
+        "Edge concentrates in the bottom-2 ADV deciles (32.95% of gross excess vs 23.82% permutation p95) - exactly where capacity binds and where Kite fills are worst.",
+        "Cost model prices brokerage/STT/statutory only; the README says half-spread 1.5 bp and impact are added elsewhere, so hurdles are a floor.",
+        "The tilt's low turnover is a smoothed book; 'net' there is not a same-day MIS round trip on the whole notional, so its bps/day are not comparable with the project's 16.63 bp per-position round trip."
+      ],
+      "covered_by_sweep_2026_09_26": "Partly. The sweep's 'overnight drift and gaps' family is the time-series overnight HOLD (trials 124-125) and 3c/L25 sorted by ATR%, not by last night's gap. The cross-sectional rank of the overnight return itself does not appear in the in-house tested list (checked trials.md and prereg-step2/3c; the step-2 mention of 'overnight gap' is timing context, not a feature).",
+      "recommendation": "skip at the project's bar (a full-session decile spread of ~10 bp in 2024-25, ~3 bp on continuous names, cannot reach 33.26 bp inside 60 minutes). If the owner wants the line formally closed, a single measurement look (not a trial): feature = overnight return (prev bhavcopy close -> 09:45 bar close) ranked cross-sectionally at the 09:45 decision time only, matched to the 60-minute target, reported against the 33.26 bp gate with the partial-IC-given-m60 control; expected result FAIL. Do not spend a trial.",
+      "sources": [
+        "https://github.com/ullasgh/nifty-intraday-quant-research",
+        "https://github.com/ullasgh/nifty-intraday-quant-research/blob/main/results/RESEARCH_REPORT.md",
+        "https://github.com/ullasgh/nifty-intraday-quant-research/blob/main/specs/h2_overnight_reversal.md",
+        "https://github.com/ullasgh/nifty-intraday-quant-research/blob/main/results/phase_g3_comparison.md"
+      ]
+    },
+    {
+      "rank": 2,
+      "name": "The Accuracy Illusion (rachitranka25) - 14-month NSE index-derivative study, 9 model families, 86 rule strategies",
+      "url": "https://github.com/rachitranka25/accuracy-illusion",
+      "kind": "system + negative-result write-up",
+      "predicts": "Attempted: NIFTY/BANKNIFTY/FINNIFTY direction at 5-60 min from free data (Angel One SmartAPI, EOD option chains). Found: direction not predictable (best 51.3% per bar -> 50.4% per event, p=0.69); magnitude/volatility predictable 68-74% OOS; EOD option-chain residuals IC 0.04-0.06 for next-day open-to-close (2,181 days); one open lead: fade the stretch from the OI cluster on BANKNIFTY, 60%, +0.211%/trade over 55 OOS days.",
+      "data_needed": "Index 1-min bars, decade of EOD option chains (bhavcopy OI), VIX. The project has index files and F&O ban lists but not a decade of chain OI in analysable form.",
+      "costs_counted": "yes (4 bp round trip on BANKNIFTY futures; ATM option costs exceed the median 30-min move)",
+      "reported_net": "0 of 86 rule strategies profitable after multiple-testing correction; 0 of 4 premium-selling configs significant (withdrawn); required accuracy to break even 71.5% vs achieved 51.3%; the 'stable 60% breakout' was 51% after costs, -Rs 26,861, PF 0.95; ORB -18.6R over 351 sessions.",
+      "oos_or_live": "Purged walk-forward, shuffled-label controls, positive control with injected signal; live dashboard log used to measure run lengths. 55-day pinning lead is OOS but n=55.",
+      "known_problems": ["Single author, 0 stars, created 2026-09-14; numbers reproducible from committed results but not independently replicated.", "The one positive lead (OI-cluster pinning fade) has n=55 and the decade test on the same feature family gives 52%.", "Index derivatives, not NIFTY 100 cash: not the project's instrument."],
+      "covered_by_sweep_2026_09_26": "Yes in substance: matches the sweep's 'rule/indicator intraday' (refuted), 'option-chain positioning' (rejected) and 'volatility forecasting' (sizing input only) verdicts. New since 2026-09-14 and NSE-specific, so it is fresh corroboration.",
+      "recommendation": "skip as a signal source (needs option-chain OI history the project does not hold; effect sizes IC 0.05 daily are far under the bar). Keep as corroborating evidence and adopt its one methodological point: per-bar hit rates with persistent calls inflate n by ~1.66x (n_eff = n*E[L]/E[L^2]); the project's per-session IC already avoids this, but any future 'hit-rate' dashboard number must be scored per non-overlapping event.",
+      "sources": [
+        "https://github.com/rachitranka25/accuracy-illusion",
+        "https://github.com/rachitranka25/accuracy-illusion/blob/main/FINDINGS.md",
+        "https://github.com/rachitranka25/accuracy-illusion/blob/main/findings/06-open-interest.md"
+      ]
+    },
+    {
+      "rank": 3,
+      "name": "Vaunox/quant-intraday - Indian cash-equity intraday ML program, closed with honest negatives",
+      "url": "https://github.com/Vaunox/quant-intraday",
+      "kind": "system (closed)",
+      "predicts": "Attempted: 15-minute-clock intraday direction on liquid NSE cash equities via gradient-boosted models on point-in-time features (Kite Connect); also cointegration pairs, index-rebalance flow, PEAD, monthly cross-sectional factors, ETF rotation.",
+      "data_needed": "Kite/yfinance bars (they found Kite ~ yfinance, delta -0.016..+0.040); 2,695-name survivorship-free NSE panel 2016-24 for factors.",
+      "costs_counted": "yes (~0.17-0.21% MIS round trip incl. slippage)",
+      "reported_net": "OOS AUC 0.520 (lgbm .529); kill-gate net CPCV Sharpe -0.977 at 15 min; 60-min -0.90; daily 56-name cross-sectional +0.148 (DSR 0.967 on concatenated paths, t~1.66 de-duplicated); cointegration pairs +0.425 net Sharpe, insignificant; monthly factor IC +0.051, IR -0.82; an external '60% / +0.662 Sharpe' claim audited down to +0.148. Zero capital risked.",
+      "oos_or_live": "CPCV walk-forward; no live trading ('PROJECT CLOSED').",
+      "known_problems": ["0 stars, single author; MLflow run IDs cited but not public.", "Depth/microstructure arc was data-gated (untested), same as the project's L37 uses its own sampler.", "Pairs result: too few independent pairs, t insignificant."],
+      "covered_by_sweep_2026_09_26": "Yes: 'ML on OHLCV bars' (refuted) and 'slow cross-sectional' (rejected). Intraday cointegration pairs on NSE cash is NOT in the in-house tested list.",
+      "recommendation": "skip; cite as corroboration of trials 41-116 / section 69. The pairs line is 'later' only if a significant (t>2) net-positive NSE intraday pairs result appears elsewhere; +0.425 insignificant is not a reason to spend a trial.",
+      "sources": ["https://github.com/Vaunox/quant-intraday", "https://github.com/Vaunox/quant-intraday/blob/main/docs/FINDINGS.md"]
+    },
+    {
+      "rank": 4,
+      "name": "NSE bulk/block-deal disclosures as a next-session signal",
+      "url": "https://www.nseindia.com/report-detail/display-bulk-and-block-deals",
+      "kind": "dataset + signal (academic evidence only)",
+      "predicts": "Post-disclosure drift of stocks that appear in the evening bulk/block-deal file (buy vs sell, investor category). Deals are disclosed after 17:00, so the tradable window is the next session open onward.",
+      "data_needed": "NSE bulk/block deal daily CSVs (public archive since 2004/2005) joined to bhavcopies (project has since 2010) and 5-min bars (project has NIFTY 100 since 2024-09).",
+      "costs_counted": "no (event-study abnormal returns, no cost or execution model in any paper found)",
+      "reported_net": "Rajvanshi & Paul 2022 (NSE 2010-2019): front-runners earn 5-7% within a week AROUND the event, mostly pre-event; Chaturvedula et al. 2015 (2004-2012): significant CARs, larger for buys; Agarwalla & Pandey (IIMA WP 2010-04-02): block purchase permanent impact ~+1.6%, block sales revert quickly, price rises 8 minutes BEFORE block purchases (front-running in the tape, not in the disclosure).",
+      "oos_or_live": "None. Event studies, in-sample, gross.",
+      "known_problems": ["Most abnormal return is pre-event (leakage/front-running), not post-disclosure.", "Bulk deals (>0.5% of equity) are rare in NIFTY 100 names; block deals in large caps are pre-negotiated promoter/PE sales at a discount whose reaction is priced in the next open (cf. L36: results direction priced by the open, +5.9 bp at 30 min, 0 by close).", "Small n inside NIFTY 100 since 2024-09."],
+      "covered_by_sweep_2026_09_26": "No. The sweep's critic named index-rebalance flows, not deals.",
+      "recommendation": "later, low priority: a single event look (not a trial) - next-session open -> +60 min return for NIFTY 100 names in the previous evening's bulk/block file, split buy/sell, against the 16.63 bp one-leg cost; expect 'priced at the open'. Only worth running after L37/L39/L40 are closed and if n >= 60 events in the selection window.",
+      "sources": [
+        "https://exa.ai/library/publication/6k5qqzlmkqp",
+        "https://ideas.repec.org/a/eee/ememar/v23y2015icp26-45.html",
+        "https://www.iima.ac.in/sites/default/files/rnpfiles/2010-04-02Sobheshkumar.pdf",
+        "https://www.nseindia.com/report-detail/display-bulk-and-block-deals"
+      ]
+    },
+    {
+      "rank": 5,
+      "name": "MFAST - Financial language models for news-based trading under market frictions (arXiv 2609.23703, 2026-09-20)",
+      "url": "https://arxiv.org/abs/2609.23703",
+      "kind": "paper (framework)",
+      "predicts": "Firm-specific news -> next-period return/portfolio decisions, evaluated with event-time observability, calibration, execution timing, transaction costs, liquidity and capacity limits. Horizon: daily portfolio, not intraday.",
+      "data_needed": "Refinitiv News Analytics + CRSP (US); a public replication arm uses open financial text and public prices. The project has no timestamped NSE news/announcement corpus.",
+      "costs_counted": "yes (transaction costs, liquidity, capacity in the protocol)",
+      "reported_net": "Abstract states decoder-only LMs beat encoder baselines and dictionary sentiment on classification, calibration, return prediction and NET portfolio performance; no figure in the abstract; 47 pages, 'revise and resubmit' at EAAI. Net figures not extracted here.",
+      "oos_or_live": "Primary OOS restricted to post-release news outside the foundation models' disclosed data-freshness windows (a leakage control).",
+      "known_problems": ["US only; single author; not peer-reviewed yet.", "No India corpus; the in-house LLM/sentiment family was rejected on broker-verified evidence."],
+      "covered_by_sweep_2026_09_26": "Family yes ('LLM agents and sentiment', refuted/not supported); this specific paper is new.",
+      "recommendation": "later: only relevant if the project ever builds a timestamped NSE corporate-announcement corpus (the XBRL feed used for L36 is the natural source), and then as a daily, not intraday, look. Its leakage protocol (post-model-cutoff evaluation) is worth copying for any LLM test.",
+      "sources": ["https://arxiv.org/abs/2609.23703"]
+    },
+    {
+      "rank": 6,
+      "name": "GIFT Nifty implied open as an overnight-gap / early-session predictor",
+      "url": "https://www.mdpi.com/1911-8074/18/9/527",
+      "kind": "signal",
+      "predicts": "GIFT Nifty (ex-SGX Nifty) at 09:00-09:10 IST implies the Nifty open; blogs claim 75-90% direction accuracy for the opening gap.",
+      "data_needed": "GIFT Nifty tick/minute history from NSE IX - not in Kite, not on hand.",
+      "costs_counted": "no",
+      "reported_net": "None. MDPI JRFM 18(9):527 (Sept 2025) finds cointegration, bidirectional Granger causality and that GIFT Nifty leads the Nifty index in price discovery (Hasbrouck IS / Gonzalo-Granger CS) - a price-discovery result, not a trading result. Blog accuracy claims (marketnetra.in, stockmarket2day.com) are uncosted and trivial: the futures ARE the implied open.",
+      "oos_or_live": "None found.",
+      "known_problems": ["Predicting the open from the futures is not tradable: the gap is set in the 09:00-09:08 auction. No measured post-open continuation/fade result net of cost was found.", "USD settlement embeds a USD/INR view; expiry-day and roll distortions."],
+      "covered_by_sweep_2026_09_26": "Adjacent: overnight family (trials 124-125) and L36 (news priced by the open).",
+      "recommendation": "skip. No measured net-of-cost result exists, and the project's own L36/L25 evidence says the open already carries the information.",
+      "sources": ["https://www.mdpi.com/1911-8074/18/9/527", "https://marketnetra.in/blog/sgx-nifty-gift-nifty-pre-market-guide", "https://stockmarket2day.com/gift-nifty-vs-nifty-50-how-it-predicts-tomorrows-open/"]
+    },
+    {
+      "rank": 7,
+      "name": "kronos-nse-terminal (chandewardnyanesh) - Kronos foundation model on NSE",
+      "url": "https://github.com/chandewardnyanesh/kronos-nse-terminal",
+      "kind": "tool",
+      "predicts": "Full-day 5-min candle forecasts for 12 NSE instruments with Kronos-mini/small/base; signal engine blends with 5 indicators.",
+      "data_needed": "yfinance + Kite live; the project already holds the bars and has Kronos pre-registered (L40).",
+      "costs_counted": "claimed ('realistic transaction costs') but not specified",
+      "reported_net": "README: hit rate 63.4%, MAE Rs 18.2, Sharpe 1.47, max DD -4.2%, total P&L Rs 12,840 on Rs 1L over 60 trades. No dates, instrument, horizon or cost table.",
+      "oos_or_live": "'Walk-forward' claimed; no period given.",
+      "known_problems": ["n=60 trades; 9 stars; last push 2026-05-31; no issue history.", "Kronos on NSE index direction measured in-house at 49.3% over 1,047 sessions (sweep)."],
+      "covered_by_sweep_2026_09_26": "Yes (time-series foundation models, refuted) and by L40's pre-registration.",
+      "recommendation": "skip; L40 already tests the same model class with a proper harness.",
+      "sources": ["https://github.com/chandewardnyanesh/kronos-nse-terminal"]
+    },
+    {
+      "rank": 8,
+      "name": "Warren Duffer (arimanyus) - LLM (Jev) ranker over Nifty 50, live MIS orders",
+      "url": "https://github.com/arimanyus/warrenduffer",
+      "kind": "system",
+      "predicts": "An LLM classifies and ranks Nifty 50 names every 15 s and decides take-profits; code sizes and stops.",
+      "data_needed": "Kotak Neo or Kite REST; RSS feeds optional.",
+      "costs_counted": "partial - statutory charges only; Kite intraday brokerage explicitly NOT deducted",
+      "reported_net": "None published. 'Verified live' refers to the Kotak plumbing, not P&L. No trade log, no backtest table.",
+      "oos_or_live": "Live-capable, no record; replay mode uses bar-based pessimistic fills.",
+      "known_problems": ["92 stars in a week (created 2026-09-22) with no results; no paper-trading mode; 'winners have no target'."],
+      "covered_by_sweep_2026_09_26": "Yes (LLM agents family, refuted/not supported).",
+      "recommendation": "skip; nothing to test. Re-check only if the author publishes a broker-verified ledger.",
+      "sources": ["https://github.com/arimanyus/warrenduffer"]
+    },
+    {
+      "rank": 9,
+      "name": "vajra-quant (DMZ22) - NSE index-ETF engine with a full Indian cost stack",
+      "url": "https://github.com/DMZ22/vajra-quant",
+      "kind": "system",
+      "predicts": "Daily EOD rotation/trend/mean-reversion on NIFTYBEES, Next-50 and gold ETFs; AMO orders at the next open.",
+      "data_needed": "Yahoo daily; ETF round trip ~28 bp incl. DP charges.",
+      "costs_counted": "yes",
+      "reported_net": "2012-01-02 -> 2026-07-23, Rs 10L, net of costs, idle cash at 6%: MomentumRotator CAGR 13.42%, Sharpe 0.47, max DD -32.1% vs NIFTYBEES buy-and-hold 12.79%, Sharpe 0.47, DD -36.3%. Ensemble 7.79%, TrendSurfer 5.48%, MeanRevert 3.15%.",
+      "oos_or_live": "Single run of committed defaults, no walk-forward; no live record.",
+      "known_problems": ["No edge over buy-and-hold on Sharpe; daily, not intraday; 3 stars, last push 2026-07-24."],
+      "covered_by_sweep_2026_09_26": "Yes (slow cross-sectional / overnight ETF).",
+      "recommendation": "skip (outside the intraday mandate and equal to the index on Sharpe). Its cost table (NIFTYBEES ~28 bp round trip) is a useful cross-check of the project's 2.4-2.7 bp ETF figure, which excludes DP charges.",
+      "sources": ["https://github.com/DMZ22/vajra-quant"]
+    },
+    {
+      "rank": 10,
+      "name": "Nightwatch (Allencrspy) - ChatGPT night-before NSE stock selection with a track-record page",
+      "url": "https://github.com/Allencrspy/nightwatch",
+      "kind": "tool",
+      "predicts": "Next-session intraday setups (entry/stop/target) chosen by a ChatGPT prompt over Dhan EOD data; results replayed on 5-min bars in R.",
+      "data_needed": "Dhan Data API (Rs 499/month).",
+      "costs_counted": "no (R accounting; stop-first tie rule only)",
+      "reported_net": "None published (repo created 2026-09-23, 0 stars). 'Track record' is a page the user fills, not a result.",
+      "oos_or_live": "None.",
+      "known_problems": ["Nothing places orders; no costs; no numbers."],
+      "covered_by_sweep_2026_09_26": "Yes (LLM agents family).",
+      "recommendation": "skip.",
+      "sources": ["https://github.com/Allencrspy/nightwatch"]
+    },
+    {
+      "rank": 11,
+      "name": "Indian text datasets: NifSent50 (Kaggle) and the Multi-Channel Sentiment Corpus (S&P 500 + Nifty 500 earnings-call transcripts and headlines, 2026-07)",
+      "url": "https://www.kaggle.com/datasets/grounddominator/nifsent50-nifty-50-stocks-and-news-dataset",
+      "kind": "dataset",
+      "predicts": "NifSent50: headline sentiment labels for NIFTY 50 names; Multi-Channel corpus: speaker-role-segmented earnings-call transcripts and headlines for Nifty 500 names.",
+      "data_needed": "Public downloads; the project has none of it.",
+      "costs_counted": "no",
+      "reported_net": "None. NifSent50's labels are DERIVED from the subsequent >1% price move (NewsAPI/Investing.com/Reddit headlines, Yahoo daily prices), so any 'prediction' from them is circular; no minute timestamps. The Multi-Channel corpus is a corpus paper (Exa library entry dated 2026-07-16); the related arXiv 2604.13260 'Which Voices Move Markets?' studies post-earnings cross-sectional returns (US).",
+      "oos_or_live": "None.",
+      "known_problems": ["Label leakage by construction (NifSent50); daily granularity; no NSE-announcement timestamps."],
+      "covered_by_sweep_2026_09_26": "Family yes; datasets new.",
+      "recommendation": "later: only as an input to a PEAD (L39) follow-up if Stage A finds a post-open drift worth explaining; not as a standalone signal.",
+      "sources": [
+        "https://www.kaggle.com/datasets/grounddominator/nifsent50-nifty-50-stocks-and-news-dataset",
+        "https://exa.ai/library/publication/x2j9yk58s63",
+        "https://arxiv.org/abs/2604.13260"
+      ]
+    },
+    {
+      "rank": 12,
+      "name": "Practitioner evidence since 2026-09-01 (Reddit r/IndiaAlgoTrading, X, LinkedIn, vendor pages)",
+      "url": "https://www.algoinvesting.in/2026/09/weekly-market-analysis-algo-performance_01572787126.html",
+      "kind": "evidence bundle",
+      "predicts": "n/a",
+      "data_needed": "n/a",
+      "costs_counted": "mixed",
+      "reported_net": "Only one dated, cost-stated figure found: algoinvesting.in (vendor, 2026-09-25) reports its Nifty long-short model at -2.94% for the week and -25.25% YTD 2026 'after brokerage and taxes' vs the index -11.44% - a live negative. Exa's Reddit index has NO r/IndiaAlgoTrading thread dated on/after 2026-09-01 with a net-of-cost result; nearest are 'Finally cracked it - 140% in 37 days' (2026-08-29, red flag, body unreadable), '2 months profit wiped out in a single day' (2026-08-27) and '2 months progress ... live results of my quant engine' (2026-08-15). X: Exa returned zero x.com results for every query; LinkedIn posts surfaced instead ('The real cost of STT, CTT and GST on a Rs 1Cr daily turnover algo', 2026-09-07; 'August 2026 Trading Performance Update', 2026-09-02), unread (login wall).",
+      "oos_or_live": "The vendor figure is live; everything else unverifiable.",
+      "known_problems": ["Reddit bodies could not be read (reader blocked); X not indexed; LinkedIn login-walled."],
+      "covered_by_sweep_2026_09_26": "The sweep already characterised this layer (Day-N journals go quiet; wins are premium selling).",
+      "recommendation": "none to test; the only verifiable September datum is negative.",
+      "sources": [
+        "https://www.algoinvesting.in/2026/09/weekly-market-analysis-algo-performance_01572787126.html",
+        "https://www.reddit.com/r/IndiaAlgoTrading/comments/1w1qbx3/finally_cracked_it_4_years_of_failure_to_success/",
+        "https://www.reddit.com/r/IndiaAlgoTrading/comments/1w058uh/2_months_profit_wiped_out_in_a_single_day/",
+        "https://www.reddit.com/r/IndiaAlgoTrading/comments/1vp3ymv/2_months_progress_issues_fixes_and_live_results/",
+        "https://www.linkedin.com/posts/quantfin-research_stt-transactioncosts-algotrading-activity-7502690024270868480-X18y"
+      ]
+    },
+    {
+      "rank": 13,
+      "name": "ViperQ - Auction-Market-Theory features for RL trading (arXiv 2609.13825, 2026-09-12)",
+      "url": "https://arxiv.org/abs/2609.13825",
+      "kind": "paper",
+      "predicts": "PPO agents on VPOC/value-area/CVD/tape-velocity state; TSLA and NVDA tick data.",
+      "data_needed": "Institutional US tick data; not India.",
+      "costs_counted": "not mentioned in the abstract",
+      "reported_net": "+163.6% ROI TSLA (27,019 trades, DD -27.5%), +116.5% NVDA (12,892 trades, DD -47.8%) on a 12-month held-out partition, zero leverage. With 27k trades and no cost statement this is a red flag, not evidence.",
+      "oos_or_live": "Held-out 12 months claimed.",
+      "known_problems": ["No transaction costs stated; two tickers; RL on tick data is the family the sweep rejected (t~1.2 best)."],
+      "covered_by_sweep_2026_09_26": "Yes (deep RL, refuted).",
+      "recommendation": "skip.",
+      "sources": ["https://arxiv.org/abs/2609.13825"]
+    }
+  ],
+  "could_not_verify": [
+    "Ballarin, Capra & Dellaportas, 'Multi-Horizon Echo State Network Prediction of Intraday Stock Returns' (arXiv 2504.19623v2, revised 2026-09-03): the HTML fetch returned no text; market, sample and whether costs are counted are unconfirmed. Family (ML on bars) is refuted in-house.",
+    "VibeCoderMVP/NiftyOptionsBacktest (weekly theta harvest, Jan 2023-Jun 2026 via Dhan): README carries no numbers; nothing to assess. Premium-selling family needs option fills data the project does not hold.",
+    "Reddit thread bodies (r.jina.ai and old.reddit both blocked); X posts (none in Exa's index for these queries); LinkedIn posts (login wall).",
+    "AnishGrandhe29/stock-market-prediction (multimodal GIFT-Nifty gap model) and santoshneelappagol07/news.py (news-NLP gap engine): READMEs contain no out-of-sample or cost figures.",
+    "Siddarthb07/trade_bot (bulk-deal tracker): 645 labelled BUY deals, ~35% positive at 1 month, paper-first; no net figure, 'ambition gate' of 85% OOS hit rate never reported as met.",
+    "kara-india/nse-prediction, AshutoshDekatey/nifty-intraday-ml-v2, adhissj/nifty-auction-profile-trading-bot, ayyararyan/curvex (eSSVI butterfly stat-arb on Jan-2026 NIFTY option parquet; research code, no results in README): no reported results."
+  ]
+}

@@ -3107,6 +3107,18 @@
    "verify": "Browser network tab: /ws frames about every 3 s, /api/state every 10 s, /api/kite/status every 15 s",
    "source": "README §53",
    "test": null
+  },
+  {
+   "id": "RES-32",
+   "area": "research",
+   "status": "active",
+   "rule": "The Kronos store (backend/data/kronos.db) is written only by research processes, through the JSON files it ingests (the shadow's day and summary files in backend/data, the L40 records in docs/research/data), and is read only by the two display routes /api/kronos and /api/kronos/day/{date}. No decision in the engine reads it: no entry, size, exit, scanner score or checklist read touches the store or its files.",
+   "why": "Kronos is research look L40, not a strategy. A page and a database for its forecasts must not become a signal by accident; the boundary is that the engine never imports the store and the store never imports research code.",
+   "enforced_in": "backend/kronos_store.py:page; backend/kronos_store.py:day_page; backend/app.py:kronos_page; backend/app.py:kronos_day",
+   "config": null,
+   "verify": "GET /api/kronos shows the shadow's latest day and the L40 records; grep -l kronos_store backend/*.py lists app.py and kronos_store.py only",
+   "source": "README §102",
+   "test": "backend/tests/test_kronos_store.py::test_nothing_in_the_engine_imports_the_store; backend/tests/test_kronos_store.py::test_app_declares_the_two_routes_and_they_only_read; backend/tests/test_research_splits.py::test_no_live_module_imports_research"
   }
  ]
 }
