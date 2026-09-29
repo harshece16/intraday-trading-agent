@@ -1,6 +1,6 @@
 # Pre-registration — forecast × candlestick combination search (trials 128 to 202, counted whether or not each runs)
 
-**Written 2026-09-30 at 00:25 IST, before the result of L40 was read and before any model of L46 was run.** The owner asked, 2026-09-29: "try combinations with different set of rules maybe candle stick patterns or strategy combined with these or any permutation combination like if its possible to combine and see a profit."
+**Written 2026-09-30 by 00:14 IST (its commit), before the result of L40 was read and before any model of L46 was run.** The owner asked, 2026-09-29: "try combinations with different set of rules maybe candle stick patterns or strategy combined with these or any permutation combination like if its possible to combine and see a profit."
 
 **The concern, stated before the search.** Trying many combinations of forecasts and rules on the same past sessions will find some that look profitable by luck; with 75 combinations, about four would clear a plain t > 2 by chance. This search is therefore fixed in full here, every combination counts as a trial, and a combination passes only a bar corrected for all 75. A "profit" that does not clear that bar is reported as noise.
 

@@ -1,6 +1,6 @@
 # Pre-registration — do six zero-shot time-series foundation models rank the next intraday move? (research look L46; a trial only if one clears)
 
-**Written 2026-09-30 at 00:20 IST, before the result of L40 was read, and before any of these six models has been loaded or run on project data or any other.** Background: `predictive-tools-sweep-2026-09-29.md` (part A). Owner's instruction, 2026-09-29: "if not then test the other models ... lets hope atleast 3 models are run". This look runs whatever L40's result is.
+**Written 2026-09-30 by 00:14 IST (its commit), before the result of L40 was read, and before any of these six models has been loaded or run on project data or any other.** Background: `predictive-tools-sweep-2026-09-29.md` (part A). Owner's instruction, 2026-09-29: "if not then test the other models ... lets hope atleast 3 models are run". This look runs whatever L40's result is.
 
 **What it is not.** Not a strategy, not a backtest, not a trial. No order path, no config, no gate changes.
 
