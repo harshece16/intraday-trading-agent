@@ -53,3 +53,8 @@ backend/research/kronos_l40_run.pid
 # NSE index closing files, downloaded by the scanner to complete the last session (README section 100)
 backend/data/nse_indices/
 backend/research/l46_rows_*.jsonl
+# L47 (docs/research/prereg-qlib-lgbm-alpha158.md): the frozen models and the normaliser live on
+# the PC; their SHA-256 hashes are committed in docs/research/data/l47_frozen.json. Scored rows too.
+backend/research/l47_models/
+backend/research/l47_rows.jsonl
+backend/research/l47_rows.jsonl.tmp
