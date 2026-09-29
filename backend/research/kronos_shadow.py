@@ -42,7 +42,7 @@ for p in (BACKEND, MAIN_BACKEND):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-FIRST, LAST, END = "09:45", "14:30", "15:36"
+FIRST, LAST, END = "09:45", "14:15", "15:36"   # Kite's 5-minute bars end at 15:10, so 14:15 is the last time with a 60-minute outcome
 STEP_MINUTES = 5
 LOOKBACK, PRED_LEN = 512, 12
 SAMPLE_COUNT, DEVICE, THREADS = 3, "cpu", 4
