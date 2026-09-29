@@ -3832,6 +3832,18 @@ Files: `backend/scanner.py`, `backend/data_provider.py`, `backend/config.py`, `b
 
 **Checked.** Ten tests on a synthetic day and summary, targets filled later, a torn file, the three records, the routes on a bare FastAPI app, and the boundary. The page was checked in a browser against a stub that served the two routes from a throwaway copy of the data and proxied everything else to the running backend; the PR that added this section carries the screenshot.
 
+### 103. More predictive tools, surveyed: what can be tested next, and what cannot
+
+The owner asked (2026-09-29) for more prediction tools, libraries and agents that could be tested. Three research agents searched in parallel, without redoing the sweep of §79: time-series foundation models that fit the Kronos harness, finance ML libraries and agent frameworks, and India-specific tools with the newest evidence. 55 candidates are recorded with their licence, size, known leakage bugs and independent net-of-cost evidence (`docs/research/predictive-tools-sweep-2026-09-29.md`, full lists in `docs/research/data/predictive-tools-sweep/`). Nothing was run.
+
+- **No candidate has independent, net-of-cost evidence on intraday stocks.** Three outside tests of Kronos itself are negative, on NSE daily data and US ETFs.
+- **Most of the newest models cannot use the Kronos sample.** A model's weights must predate the prices it is examined on. Chronos-2, TiRex-2, Toto 2.0, Granite PatchTST-FM-r2 and TimesFM-3.0 were released after September 2025, so they can be tested only on the 2026 held-out window or forward, from live sessions.
+- **Testable now, zero-shot, in the Kronos harness:** TimesFM-2.5, Moirai 2.0, Sundial, FlowState, Chronos-Bolt and TiRex v1, as one pre-registered family.
+- **Testable as a trained look:** Qlib's LightGBM on its Alpha158 factor set. The project has never trained a model on its own bars; this would close that gap with a number.
+- **Skipped:** LLM agent frameworks (independent audits show 50 to 72% of their performance disappears after the model's training cutoff), order-book deep models, deep reinforcement learning, and tools with no record.
+
+Every test would be pre-registered first, and the expected result for each is a null. Nothing reaches the engine without a pass, a trial and confirmation.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
