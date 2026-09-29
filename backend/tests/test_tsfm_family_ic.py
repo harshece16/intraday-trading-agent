@@ -33,3 +33,17 @@ def test_the_module_imports_no_model_package_at_import_time():
         elif isinstance(node, ast.ImportFrom) and node.module:
             top.add(node.module.split(".")[0])
     assert not top & {"torch", "chronos", "timesfm", "uni2ts", "tsfm_public", "tirex", "transformers", "numpy", "huggingface_hub"}
+
+
+def test_the_family_gate_runs_bh_over_eighteen_with_voids_at_p_one(tmp_path):
+    import json
+    from research import l46_family_gate as g
+    good = {"sessions": 79, "spread": {"mean": 40.0, "t": 5.0, "p": 1e-6, "halves": [{"mean": 30.0}, {"mean": 50.0}]},
+            "pic": {"mean": 0.05, "t": 3.0}, "ic": {"mean": 0.05, "t": 3.0},
+            "top": {"mean": 20.0, "t": 3.0}, "bottom": {"mean": -20.0, "t": -3.0}}
+    doc = {"status": "DONE", "result": {"summaries": {"f15": good, "f30": good, "f60": good}}}
+    (tmp_path / "l46_chronos_bolt_result.json").write_text(json.dumps(doc))
+    out = g.family(str(tmp_path))
+    assert len(out["verdicts"]) == 18
+    assert out["verdicts"]["chronos_bolt:f15"]["passes"]
+    assert not out["verdicts"]["sundial:f60"]["passes"] and out["status"]["sundial"] == "NOT RUN"
