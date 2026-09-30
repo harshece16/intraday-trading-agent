@@ -297,7 +297,7 @@ With no order book to read, a paper entry proceeds and is recorded as
 | Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost, and `money`: a hit target and a stop after costs (`target_net_rs`, `stop_net_rs`), and the break-even rate or "cannot break even at any win rate" |
 | Expiry | 300 seconds after the offer |
 | Approval | `approve_review()` needs a pending, unexpired card. In live mode it also needs `confirm_live` |
-| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. It does **not** re-apply the minimum R:R or the cost floor: the approval overrides the card's blocker |
+| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. A card blocked on R:R is held to `REVIEW_QUEUE.min_net_rrr` again: `floor_reason()` on the net R:R at the live price, with the card's stop, target and `cost_pct`; under it the approval is refused, journaled as `refused` with the reason and `net_rrr_live` (#211). It does **not** re-apply the checklist's minimum R:R (1.5) or the stop-to-cost floor: the approval overrides the card's blocker |
 | Shadow | `shadow_outcome()` replays every unapproved card and every held-back near-miss as if approved at the offer, with the same slippage and charges. If one bar touches both stop and target, the stop is assumed first |
 
 The queue's switch is in memory only. A restart turns it off.
@@ -403,7 +403,7 @@ phase and only with Kite credentials.
 | --- | --- | --- |
 | Side | A call on a long read, a put on a short read. Buying only | `_try_enter_fno` |
 | Gate | Confidence at least 60; one contract per underlying; shared position and loss limits | `_try_enter_fno` |
-| Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options; index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list` |
+| Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options, and the reason says when the last fetch failed (`nse_feed.failure_text`); index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list`, `nse_feed.last_failure` |
 | Expiry | Nearest monthly expiry 5 to 35 days out | `fno_instruments.nearest_expiry` |
 | Strike | The strike whose delta is nearest 0.45, priced at a fixed 20% volatility | `fno_instruments.find_contract` |
 | Size | `floor(20% × ₹10,000 ÷ (premium × lot size))` lots | `fno_risk.lots_to_buy` |
@@ -521,7 +521,7 @@ If the tunnel can't start, the login isn't started and the route returns 503. Th
 
 | Module | Behaviour |
 | --- | --- |
-| `nse_feed` | NSE website endpoints with browser headers and primed cookies. Each response is cached: announcements 10 minutes, breadth 5 minutes, flows and deals 1 hour, calendar and corporate actions 6 hours. On failure it returns the last good payload or nothing |
+| `nse_feed` | NSE website endpoints with browser headers and primed cookies. Each response is cached: announcements 10 minutes, breadth 5 minutes, flows and deals 1 hour, calendar and corporate actions 6 hours. On failure it returns the last good payload or nothing. The two guard files from NSE's archives (`_archive`: F&O ban list 30 minutes, price bands 6 hours) return None when unknown, never a stale copy. A failed fetch is remembered per file for `ARCHIVE_RETRY_S` (180 s), so callers get None at once until then; `last_failure(url)` gives when and why (#212) |
 | `news_sentiment.get_sentiment` | NSE filings, Google News, Marketaux if keyed, Yahoo only if Google returned nothing. Cached 15 minutes. Headlines older than 72 hours are dropped |
 | `news_sentiment._aggregate` | Weight = source weight × 0.5^(age ÷ 12 h). Source weights: NSE filing 1.5, Marketaux 1.2, Alpha Vantage 1.2, Google 1.0, Yahoo 0.6 |
 | `sentiment_lexicon.score_text` | A weighted phrase lexicon with negation handling |
