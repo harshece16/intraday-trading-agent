@@ -198,3 +198,46 @@ restart in it now keeps one membership all day, which amendment 3 already
 described as the rule.
 
 **Unchanged:** everything in the test, including the rule that chooses the list.
+
+---
+
+# Amendment 6 — 2026-09-30, before any `depth_samples` row has been joined to a return
+
+**What had been seen:** row counts only. A copy of the journal taken at 20:03
+IST on 2026-09-30, after the close, held 44,452 `depth_samples` rows:
+3,575 on 2026-09-25, 13,763 on 2026-09-28, 14,112 on 2026-09-29 and 13,002
+on 2026-09-30. To test the change, the migration was run on that copy and a
+hash of every existing column of every row was compared before and after
+(equal; no value was looked at), and `measure_real_slippage.py` was run on the
+copy with its output sent to a file of which only the sample-count lines were
+read. No feature has been computed and no sample has been joined to a return.
+
+**The change** (#188, README §112), from the first session after the backend
+is restarted with it (the date is added below once it is live). Each
+`depth_samples` row with a book also stores the book itself: every non-empty
+level of each side, best first, as `[price, quantity, orders]`, in two new
+columns, `bid_levels_json` and `ask_levels_json`. Until now only the touch and
+the five-level sums were kept, so the cost of an order past level 1 (#66)
+could only be modelled.
+
+- The columns are added with `ALTER TABLE ... ADD COLUMN`, which changes the
+  table's definition and rewrites no row. Every row recorded before the deploy
+  keeps its values and reads NULL in the new columns. Index rows (NIFTY 50)
+  have no book and stay NULL too.
+- The sampler makes the same single quote call per tick; the levels were
+  already in Kite's answer and were being dropped. Sampling coverage should not
+  change.
+
+**Effect on this test: none.** Its five features read existing columns only:
+`imbalance5`, `spread_bp`, `bid_qty5` and `ask_qty5`, and `total_buy_qty` and
+`total_sell_qty`, with `ts` and `symbol`. Those columns are computed from the
+same levels exactly as before: the new code and the old gave the same values
+on 20,000 random books, and no existing column is renamed, moved or
+rewritten. L37 does not use the new columns. A feature built on levels 2 to 5
+would be a new question and needs its own pre-registration; it is not added
+to this one.
+
+**Unchanged:** the five features, the three horizons, the 15-session
+requirement, the session and coverage rules of amendment 1, the list rules of
+amendments 2, 3 and 5, the 33.26 bp hurdle and the Benjamini–Hochberg family
+of 15.

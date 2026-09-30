@@ -14,8 +14,17 @@ One Kite `quote` call per tick for the whole watchlist; rows go to
 depth_samples. Pure data collection: nothing here reads the result, and no
 trading decision changes. `snapshot()` is a pure function of a quote dict so
 it can be tested without Kite.
+
+Each row also keeps the book itself, level by level (#188): every non-empty
+level of each side, best first, as [price, quantity, orders] in
+bid_levels_json and ask_levels_json. Until then only the touch and the
+five-level quantity sums were kept, so the cost of an order bigger than
+level 1 could only be modelled (#66). The summary columns are computed
+exactly as before from the same levels, because the pre-registered
+order-book test (docs/research/prereg-orderbook.md) reads them.
 """
 
+import json
 import logging
 
 import config
@@ -24,8 +33,17 @@ import database
 logger = logging.getLogger("trading_bot")
 
 
+def levels_json(levels):
+    """One side of the book as stored: [[price, quantity, orders], ...] best
+    first, compact JSON. `orders` is None if Kite leaves it out."""
+    return json.dumps([[lv["price"], lv["quantity"], lv.get("orders")] for lv in levels], separators=(",", ":"))
+
+
 def snapshot(symbol, quote, ts):
-    """One depth_samples row from a Kite quote dict, or None if the book is empty."""
+    """One depth_samples row from a Kite quote dict, or None if the book is empty.
+    A level counts only if it has a price and a quantity (Kite pads a thin
+    book with zeros); the summary columns and the stored levels use the same
+    levels, so level 1 is (bid, bid_qty1) and the quantities add up to bid_qty5."""
     depth = quote.get("depth") or {}
     bids = [lv for lv in depth.get("buy", []) if lv.get("price") and lv.get("quantity")]
     asks = [lv for lv in depth.get("sell", []) if lv.get("price") and lv.get("quantity")]
@@ -43,6 +61,7 @@ def snapshot(symbol, quote, ts):
         "imbalance5": round((bid_qty - ask_qty) / (bid_qty + ask_qty), 4) if bid_qty + ask_qty else None,
         "volume": quote.get("volume"), "total_buy_qty": quote.get("buy_quantity"),
         "total_sell_qty": quote.get("sell_quantity"),
+        "bid_levels_json": levels_json(bids), "ask_levels_json": levels_json(asks),
     }
 
 
