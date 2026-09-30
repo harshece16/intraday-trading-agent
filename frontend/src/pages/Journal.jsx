@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { apiJson } from "../api";
+import { apiJson, useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { num, signed, clock } from "../format";
 import { StatusPill, ConfidencePill } from "../components/Pill";
 
@@ -10,7 +11,7 @@ function fmtWhen(ts) {
 }
 
 export default function Journal() {
-  const [j, setJ] = useState(null);
+  const { data: j, error, reload } = useApi("/api/journal/summary");
   const [fj, setFj] = useState(null);
   // undefined = still loading, null = fetch failed, array = loaded — kept distinct so a
   // failed fetch never renders the same "nothing to report" message as a genuine empty list.
@@ -19,7 +20,6 @@ export default function Journal() {
 
   useEffect(() => {
     let cancelled = false;
-    apiJson("/api/journal/summary").then((d) => !cancelled && setJ(d)).catch(() => {});
     apiJson("/api/fno/journal").then((d) => !cancelled && setFj(d)).catch(() => {});
     apiJson("/api/journal/blocked-signals?hours=24&limit=50").then((d) => !cancelled && setBlocked(d)).catch(() => !cancelled && setBlocked(null));
     apiJson("/api/journal/blocker-stats?hours=24").then((d) => !cancelled && setBlockerStats(d)).catch(() => {});
@@ -31,7 +31,7 @@ export default function Journal() {
       <h2 className="h">Sahab's Journal</h2>
       <p className="sub">The knowledge base built from every scan, checklist read and fill.</p>
       {!j ? (
-        <p className="empty">Loading Sahab's Journal…</p>
+        <LoadState error={error} onRetry={reload} label="Loading Sahab's Journal…" />
       ) : (
         <JournalBody j={j} fj={fj} blocked={blocked} blockerStats={blockerStats} />
       )}

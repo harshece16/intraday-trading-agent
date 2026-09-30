@@ -181,11 +181,11 @@ export default function ReviewQueue({ s }) {
   }
 
   return (
-    <div className="cardbox" style={{ marginBottom: 20 }}>
+    <section className="cardbox" style={{ marginTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 className="h" style={{ fontSize: 16 }}>
-            Review queue {rq.enabled ? `— on${pending.length ? `, ${pending.length} waiting` : ""}` : "— off"}
+          <h2 className="h" style={{ fontSize: 17 }}>
+            Review queue{rq.enabled ? `: on${pending.length ? `, ${pending.length} waiting` : ""}` : ": off"}
           </h2>
           <div className="detail" style={{ marginTop: 2 }}>
             {rq.enabled
@@ -198,24 +198,30 @@ export default function ReviewQueue({ s }) {
       {pending.map((c) => <PendingCard key={c.id} c={c} live={live} />)}
       {rq.enabled && !pending.length && <p className="empty" style={{ marginTop: 10 }}>Nothing waiting right now.</p>}
       {decided.length > 0 && (
-        <div className="table-wrap" style={{ marginTop: 12 }}>
-          <table className="datatable">
-            <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th>If approved</th><th></th></tr></thead>
-            <tbody>{decided.map((c) => <DecidedRow key={c.id} c={c} />)}</tbody>
-          </table>
-        </div>
+        <details className="more-block" style={{ marginTop: 12 }}>
+          <summary>
+            Earlier today: {decided.length} card{decided.length > 1 ? "s" : ""}
+            {rq.shadow_summary?.trades > 0 && (
+              <>, <span className={rq.shadow_summary.net_rs > 0 ? "up" : rq.shadow_summary.net_rs < 0 ? "down" : ""}>
+                {money(rq.shadow_summary.net_rs)} ({rq.shadow_summary.r > 0 ? "+" : ""}{num(rq.shadow_summary.r)}R)
+              </span> if all had been taken</>
+            )}
+          </summary>
+          <div className="table-wrap">
+            <table className="datatable">
+              <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th>If approved</th><th></th></tr></thead>
+              <tbody>{decided.map((c) => <DecidedRow key={c.id} c={c} />)}</tbody>
+            </table>
+          </div>
+          {rq.shadow_summary?.trades > 0 && (
+            <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+              Across {rq.shadow_summary.trades} trade{rq.shadow_summary.trades > 1 ? "s" : ""}
+              {rq.shadow_summary.open ? `, ${rq.shadow_summary.open} still open` : ""}
+              {rq.shadow_summary.provisional ? `, ${rq.shadow_summary.provisional} provisional` : ""}. {rq.shadow_summary.basis}
+            </p>
+          )}
+        </details>
       )}
-      {rq.shadow_summary?.trades > 0 && (
-        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-          If every card today that wasn't approved had been:{" "}
-          <b className={rq.shadow_summary.net_rs > 0 ? "up" : rq.shadow_summary.net_rs < 0 ? "down" : ""}>
-            {money(rq.shadow_summary.net_rs)} ({rq.shadow_summary.r > 0 ? "+" : ""}{num(rq.shadow_summary.r)}R)
-          </b>{" "}
-          across {rq.shadow_summary.trades} trade{rq.shadow_summary.trades > 1 ? "s" : ""}
-          {rq.shadow_summary.open ? `, ${rq.shadow_summary.open} still open` : ""}
-          {rq.shadow_summary.provisional ? `, ${rq.shadow_summary.provisional} provisional` : ""}. {rq.shadow_summary.basis}
-        </p>
-      )}
-    </div>
+    </section>
   );
 }

@@ -59,21 +59,46 @@
   .empty { margin: 10px 0; font-size: 14px; color: var(--ink-2); }
   [hidden] { display: none !important; }
 
-  /* ---- Top bar + page nav (sticky) ---- */
-  .topbar {
-    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-    padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--rule);
+  /* ---- App shell: sidebar + status bar ---- */
+  .app { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 100vh; }
+  .app-main { min-width: 0; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 20px;
+    padding: 18px 12px 16px; background: var(--surface); border-right: 1px solid var(--rule); overflow-y: auto;
   }
-  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; cursor: pointer; border: 0; background: none; padding: 0; }
-  .brand b { font-family: var(--serif); font-size: 19px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; }
-  .brand span { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 2px; text-decoration: none; color: var(--ink); }
+  .brand b { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; }
   .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
   .dot.open { background: var(--long); box-shadow: 0 0 0 3px var(--long-bg); }
+  .sidebar nav { display: flex; flex-direction: column; gap: 16px; }
+  .navgroup { display: flex; flex-direction: column; gap: 1px; }
+  .navgroup-label { padding: 0 10px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+  .navlink {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 7px 10px; border-radius: 6px; text-decoration: none;
+    font-size: 14.5px; font-weight: 500; color: var(--ink-2);
+  }
+  .navlink:hover { color: var(--ink); background: var(--sunken); }
+  .navlink.active { color: var(--ink); font-weight: 600; background: var(--sunken); box-shadow: inset 2px 0 0 var(--ink); }
+  .navlink .n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--paper); color: var(--ink-2); font-size: 12px; font-weight: 600; display: inline-grid; place-items: center; }
+  .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .sidebtn { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 0; border-radius: 6px; background: none; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--ink-2); text-align: left; }
+  .sidebtn::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
+  .sidebtn.on::before { background: var(--long); }
+  .sidebtn:hover { color: var(--ink); background: var(--sunken); }
+
+  .statusbar {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+    padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--rule);
+  }
+  .statusbar.is-live { box-shadow: inset 0 3px 0 var(--short); }
+  .session { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  .session strong { font-size: 14px; font-weight: 600; }
+  .session span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .statusbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .stat { display: flex; flex-direction: column; line-height: 1.25; }
   .stat small { font-size: 12px; color: var(--ink-2); }
   .stat strong { font-size: 15px; font-weight: 600; }
-  .divider { flex: none; width: 1px; height: 28px; background: var(--rule); }
-  .kite { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
   /* The Kite chip carries connection state in colour as well as words: "Kite
      session expired" read as ordinary grey text for as long as the label was
      wrong, so nobody noticed the session had died. */
@@ -109,22 +134,8 @@
   .session-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; overflow: hidden; }
   .session-bar-fill { height: 100%; width: 0%; background: var(--long); transition: width 1s linear; }
 
-  .pagenav {
-    position: sticky; top: 57px; z-index: 4; display: flex; gap: 4px; overflow-x: auto;
-    padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--rule);
-  }
-  .navlink {
-    flex: none; position: relative; display: flex; align-items: center; gap: 6px;
-    padding: 13px 14px; border: 0; background: none; cursor: pointer;
-    font-size: 14.5px; font-weight: 500; color: var(--ink-2);
-  }
-  .navlink:hover { color: var(--ink); }
-  .navlink.active { color: var(--ink); font-weight: 600; }
-  .navlink.active::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--ink); }
-  .navlink .n { font-weight: 400; color: var(--ink-3); }
-
   /* ---- Page shell ---- */
-  .page { max-width: 1240px; margin: 0 auto; padding: 32px 24px 72px; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 32px 32px 72px; }
   .page.narrow { max-width: 920px; }
   .section-gap { margin-top: 40px; }
   h2.h { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
@@ -333,9 +344,6 @@
     .grid3 { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 640px) {
-    .topbar { padding: 10px 16px; }
-    .divider { display: none; }
-    .pagenav { padding: 0 12px; }
     .page { padding: 22px 16px 56px; }
     .grid3 { grid-template-columns: minmax(0, 1fr); }
     .cases { grid-template-columns: minmax(0, 1fr); }
@@ -366,3 +374,23 @@
     border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .load-error { margin: 10px 0; padding: 12px 14px; border-radius: 8px; background: var(--short-bg); color: var(--short); font-size: 14px; }
+  .load-error .more { padding: 0; color: inherit; text-decoration: underline; }
+  details.more-block > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 6px 0; }
+  details.more-block > summary:hover { color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    .sidebar { position: static; height: auto; flex-direction: row; align-items: center; gap: 12px; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+    .sidebar nav { flex-direction: row; gap: 2px; }
+    .navgroup { flex-direction: row; }
+    .navgroup-label, .sidebar-foot { display: none; }
+    .navlink { white-space: nowrap; }
+    .statusbar { gap: 14px; padding: 10px 16px; }
+    .statusbar-right { margin-left: 0; }
+  }
+  .controls { margin-top: 0; }
+  .controls-facts { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); gap: 10px 0; }
+  .controls-facts dd { font-size: 14px; }
+  .more.inline { padding: 0; font-size: 13px; }

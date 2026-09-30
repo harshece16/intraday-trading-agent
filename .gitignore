@@ -30,5 +30,31 @@ docs/research/data/null_result.json
 backend/data/universe_b_rows.json
 backend/data/universe_b_overnight_rows.json
 
-# Raw NSE bhavcopies (~350 KB/day); the derived daily breadth table is committed instead.
+# 3h raw bhavcopy cache (600 MB, re-downloadable)
+backend/data/bhav_daily/
 backend/data/bhav/
+backend/data/bhav_daily_2026_heldout/
+backend/data/corp_actions/
+backend/data/bhav_live/
+backend/data/momentum_book_state.json
+backend/data/momentum_book.log
+backend/data/jev_book_state.json
+backend/.typesafe_key.json
+
+# Kronos, vendored for research look L40 only (docs/research/prereg-kronos-feature-ic.md).
+# Third-party code and model weights; cloned by hand at the pinned commit, never committed.
+backend/research/kronos_vendor/
+backend/research/kronos_rows_*.jsonl
+backend/research/.kvenv/
+backend/research/kronos_l40_run.log
+backend/research/kronos_l40_run.done
+backend/research/kronos_l40_run.pid
+
+# NSE index closing files, downloaded by the scanner to complete the last session (README section 100)
+backend/data/nse_indices/
+backend/research/l46_rows_*.jsonl
+# L47 (docs/research/prereg-qlib-lgbm-alpha158.md): the frozen models and the normaliser live on
+# the PC; their SHA-256 hashes are committed in docs/research/data/l47_frozen.json. Scored rows too.
+backend/research/l47_models/
+backend/research/l47_rows.jsonl
+backend/research/l47_rows.jsonl.tmp

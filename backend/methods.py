@@ -226,7 +226,7 @@ def get_methods():
                            "reliably (Elliott Wave's wave-counting requires judgment calls Murphy himself says "
                            "trained analysts disagree on), redundant with what's already implemented (Point & "
                            "Figure vs. the candlestick/bar-chart patterns already in place). Market breadth and "
-                           "intermarket analysis were measured on 2026-09-25 (README §74): whole-NSE breadth "
+                           "intermarket analysis were measured on 2026-09-25 (README §109): whole-NSE breadth "
                            "from two years of bhavcopies (A/D ratio, McClellan, TRIN) and overnight moves in "
                            "India VIX, the S&P 500, USD/INR, crude and US yields. None predicts the 09:20 to "
                            "15:10 session by enough to pay a round trip, so neither is a rule; breadth stays "

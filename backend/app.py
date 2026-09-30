@@ -494,6 +494,45 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/jev-book")
+def jev_book_summary():
+    """The Jev book (README section 86): the LLM judge's paper decisions on the
+    daily shortlist, scored after costs against the scanner's own side. While
+    today's round is open, "live" carries a display-only mark of its positions."""
+    import jev_book
+    return jev_book.page()
+
+
+@app.get("/api/momentum-book")
+def momentum_book_summary():
+    """The paper momentum book (README section 83): holdings, NAV against its
+    equal-weighted benchmark, cumulative excess and the switch-off band."""
+    import momentum_book
+    return momentum_book.summary()
+
+
+@app.get("/api/kronos")
+def kronos_page():
+    """The Kronos space (README section 102): research look L40's records and the
+    shadow forecasts, read from backend/data/kronos.db. Display only: the store
+    is written by research processes through the files it ingests, and no decision
+    in the engine reads it (rule RES-32). Ingesting first keeps the page current
+    without a restart."""
+    import kronos_store
+    return kronos_store.page(today=datetime.now(IST_TZ).date().isoformat())
+
+
+@app.get("/api/kronos/day/{date}")
+def kronos_day(date: str):
+    """One shadow day in full: every forecast, the running statistics and the
+    day's summary when the shadow has written one."""
+    import kronos_store
+    day = kronos_store.day_page(date)
+    if day is None:
+        raise HTTPException(status_code=404, detail=f"No Kronos shadow day for {date!r}")
+    return day
+
+
 @app.get("/api/journal/depth-samples")
 def journal_depth_samples():
     """How much order-book data depth_sampler.py has collected so far."""

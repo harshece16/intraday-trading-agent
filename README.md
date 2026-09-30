@@ -1,47 +1,77 @@
-# Trader Sahab: an intraday trading agent for NSE (Zerodha)
+# Trader Sahab: a research-driven trading agent for NSE (Zerodha)
 
-Trader Sahab is an intraday trading agent for Indian equities and, now,
-options-buying. It works like a disciplined technical trader. It **scans the
-NIFTY 100** to decide *what* is worth trading today and on which side: strong
-stocks to buy on strong days, weak stocks to **short** on weak days. It uses
-market context, relative strength, volume, sector leadership, news and
-results-day risk. The **Sahab's Dimaag** then decides *when* to enter and
-exit, following **Zerodha Varsity's own Grand Checklist** — a candlestick
-pattern, a stop at support or resistance, above-average volume, Dow Theory
-trend agreement, and a minimum reward-to-risk — the same checklist Varsity's
-Technical Analysis module teaches a retail trader to run before every trade.
-It sizes every trade by risk and explains each decision in plain language,
-with a link to the exact source behind it, on a live multi-page dashboard.
+Trader Sahab is a paper-mode trading system for Indian equities, built around
+one rule: **nothing trades until it passes a test that was written down before
+its data was read.** It began as an intraday agent that scans the NIFTY 100
+and follows Zerodha Varsity's Grand Checklist. That approach was measured,
+and it does not work. After 127 recorded strategy trials and two broad research
+sweeps, the one strategy that has passed is slow: a **monthly momentum book
+held in delivery**. It now runs in paper, and new ideas are tested the same
+way beside it.
 
-It runs in **paper mode** by default and can route real orders through
-**Zerodha Kite Connect** — for cash equity, and (opt-in, separately) for
-buying calls/puts once the checklist and a confidence gate both clear.
+The dashboard still runs the intraday engine: live scans of the NIFTY 100,
+the checklist's labels, a review queue where you decide, risk-based sizing,
+and a plain-language explanation of every decision with a link to its
+source. Everything runs in **paper mode** by default. The code can route real
+orders through **Zerodha Kite Connect**, for cash equity and, opt-in, for
+buying calls and puts. **No real-money order has ever been placed**, and
+going live is the owner's decision alone.
+
+**Design documents:** [High-level design](docs/architecture/HLD.md) ·
+[Low-level design](docs/architecture/LLD.md) ·
+[Rules checklist](docs/architecture/RULES.md) ·
+[Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) ·
+[Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK)
+
+## What it runs today (2026-09-28)
+
+| Book | What it does | Evidence | Status |
+| --- | --- | --- | --- |
+| **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session, lets an order wait when a stock is locked at its price band, and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: +0.82% a month over its own universe after every delivery charge (t 2.91). Re-run on repaired prices with orders that wait, which is what the book now runs: **+0.71% a month** (t 2.51; 20.6% a year against 11.9%), a narrow pass ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better), [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month)). Confirmed on 200 stocks never read before and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
+| **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. Running since **28 September 2026** |
+| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades |
+| **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
 
 ## ⚠️ Read this first
 
-- **The strategy has been measured and it does not work.** Not "unproven" —
-  measured, over 495 sessions and 201 trades, at **−0.36R per trade with
-  t = −3.59** and a 95% confidence interval of **[−0.55, −0.16]** that does
-  not contain zero. Both halves of the sample agree independently. The entry
-  has **no edge** — gross ≈ 0, and against 200 seeds of matched random
-  entries it is **indistinguishable from random**, not worse — and **0.398R
-  of friction per trade** turns that into a significant loss. Holding for days
-  instead of minutes doesn't help, and the scanner's ranking has **no
-  predictive power** (IC −0.0021, t = −0.26). See
-  [§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work)
-  and [§52](#52-holding-longer-doesnt-rescue-it-either).
-  **Do not trade real money with it.**
-- **What this repo is, then.** A well-instrumented decision engine, an honest
-  cost model, and an evidence pipeline that correctly refused to certify an
-  edge for months and has now explained why. The machinery is the asset; the
-  strategy it currently runs is not.
-- **Where the research stands (2026-09-23).**
-  - **Phase 2 is closed** with no tradable edge. Friction is 0.398R per trade, and the round trip costs **16.60 bp**.
-  - The live gate now prices that cost correctly. It had been using 12 bp ([§57](#57-the-reward-to-risk-gate-now-prices-the-round-trip-it-actually-pays), #74).
-  - Every entry now passes an order-book **liquidity check** ([§58](#58-a-liquidity-check-before-every-entry--can-we-get-in-and-out-at-the-price-we-assumed)).
-  - One new hypothesis is **pre-registered but not run**: 3e, wide stops and short side only (`docs/research/prereg-3e-wide-structure-short.md`). It needs reviewer review and the owner's go-ahead.
-  - **Phase-3 scoping** (`docs/research/phase3-scoping.md`) checked every Kite segment at ₹5,500 of margin. Only NSE/BSE cash, MCX GOLDPETAL and CDS futures are reachable. No reachable segment has a documented effect that clears its cost.
-  - **Strategy trials: 37.** The 2026 held-out window is still unspent.
+- **Nothing here guarantees profit.** The one strategy that passed is a
+  monthly momentum tilt with real losing years: −13% against its own
+  universe in 2025 and −14% in 2016. Its evidence is a backtest, 200 unseen
+  stocks and eight unseen months, and at the project-wide trial count it
+  would not pass. Re-run on repaired prices with honest fills it still
+  passes its own rule, narrowly and with a smaller edge: +0.71% a month
+  against the +0.82% first recorded ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better)). No strategy, fund or trader delivers anything like 1% a
+  day.
+- **What was measured and failed**, so nobody retries it blind:
+  - The Varsity checklist the intraday agent was built on: **−0.36R a trade,
+    t = −3.59**, over 495 sessions and 201 trades, with both halves agreeing
+    and the entry indistinguishable from random
+    ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§52](#52-holding-longer-doesnt-rescue-it-either)).
+    **Do not trade real money with it.**
+  - Every intraday price-and-indicator rule, in a 76-configuration search
+    ([§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)), and trading filings and results days
+    ([§73](#73-do-filings-move-stocks-enough-to-trade-measured-no-with-one-lead), [§74](#74-results-days-the-filed-numbers-point-the-right-way-and-the-move-is-gone-by-the-open)).
+  - Post-earnings drift ([§84](#84-post-earnings-drift-measured-on-nses-own-filings-real-in-sign-too-small-to-trade--dropped)), our own 14-signal ranking engine
+    ([§85](#85-our-own-prediction-engine-14-signals-and-a-fitted-model-lost-to-the-one-signal-momentum-rule)), and the overnight premium held in a Nifty ETF
+    ([§87](#87-the-overnight-premium-in-an-etf-measured-on-minute-data-it-does-not-survive--the-line-closes)).
+  - Sweeps of GitHub, Reddit, Instagram, X, papers and blogs found no
+    documented net-of-cost edge from retail intraday trading or from LLM
+    price prediction ([§76](#76-research-what-would-actually-give-profits-and-rewire-the-process-the-answer-is-horizon-and-the-one-test-it-motivated-failed-its-own-gate), [§79](#79-the-best-prediction-engine-for-2026-intraday-or-fo-none-that-predicts-direction-and-the-one-surviving-design-fails-on-facts)). A 2026-09-27 sweep found no intraday entry-timing rule that clears costs either ([§88](#88-what-should-decide-when-to-trade-now-the-checklist-is-retired-intraday-nothing-clears-costs-positional-how-much-momentum-to-hold)).
+- **Costs decide everything.** A cash intraday round trip costs about
+  16.6 bp at small size and 14.3 bp at a ₹1 lakh position. A delivery round
+  trip costs about 22 bp in charges plus 10 bp of assumed slippage, and a
+  ₹15.34 DP charge per stock sold. The momentum book survives because it
+  replaces about three names a month, which costs about 0.7% of the book a
+  year.
+- **Trials of record: 127** (`docs/research/trials.md`). New ideas are
+  judged against their own family of tries ([§80](#80-two-owner-decisions-overnight-etf-holds-are-allowed-paper-and-new-ideas-are-judged-against-their-own-family)), with a corrected
+  Deflated Sharpe ratio ([§77](#77-the-deflated-sharpe-gate-could-never-pass-fixed)). The 2026 held-out window has been
+  spent once, for the momentum family.
+- **Daily housekeeping.** Kite logs every session out at 06:00. Click
+  **Reconnect** on the dashboard before 09:15 on each trading day, or the
+  order-book test loses that session and prices fall back to a ~15-minute
+  delayed feed. The Jev book also needs a TypeSafe API key
+  ([Setup](#storing-the-typesafe-api-key-for-the-jev-book)).
 - **Most retail intraday traders lose.** SEBI's own study (Jul 2024) found
   71% of individual intraday cash traders net-lost in FY23, rising to 80%
   above 500 trades/year. A separate SEBI study (Sep 2024) found 93% of
@@ -53,7 +83,7 @@ buying calls/puts once the checklist and a confidence gate both clear.
   loss is the premium paid, full stop, while a short call's "has to be
   unlimited" — a fundamentally different risk shape from everything else
   this codebase sizes to a known, bounded loss. See
-  [F&O (options-buying only)](#fo-options-buying-only) below.
+  [F&O (options-buying only)](#7-fo-options-buying-only) below.
 - **F&O trades are gated by a confidence score**, not just the checklist —
   it's deliberately capped low whenever the Dimaag Scorecard (expectancy,
   Deflated Sharpe Ratio, Information Coefficient) hasn't proven a real
@@ -67,7 +97,7 @@ buying calls/puts once the checklist and a confidence gate both clear.
   instead of the keyword lexicon — off by default, costs real (small) money
   once you turn it on, and is not a price predictor: it scores a headline's
   tone toward the company, nothing more. See
-  [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below
+  [LLM-read news sentiment](docs/architecture/LLD.md#91-headline-scoring) below
   for exactly what it does and doesn't claim, and why raw "ask an LLM to
   predict the stock" isn't a feature here at all.
 - **"Certified trader" describes the knowledge, not a licence.** The rules
@@ -77,7 +107,7 @@ buying calls/puts once the checklist and a confidence gate both clear.
 - **Starts in PAPER mode, F&O starts disabled.** No real orders until you
   click LIVE and set up Kite; no options orders until you also separately
   turn F&O on from the Portfolio page.
-- **Data caveats:** yfinance is ~15 minutes delayed. The NSE feeds are the
+- **Data caveats:** yfinance is a delayed feed, and how far behind it runs is not known exactly. The scanner takes today's prices from it only when Kite is not connected (§101). The NSE feeds are the
   JSON endpoints behind nseindia.com's own pages, not a documented API, so
   they can change or rate-limit. Google News RSS is unofficial. Kite Connect
   gives F&O OHLC + open interest, not implied volatility — this app solves
@@ -89,6 +119,11 @@ buying calls/puts once the checklist and a confidence gate both clear.
   own holiday-master API) — re-pull and update the list each year.
 
 ## How the agent decides
+
+> This section describes the **intraday engine**. Since [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line) the
+> Varsity checklist only labels setups for the review queue, and automatic
+> entries are off. The paper books in [What it runs today](#what-it-runs-today-2026-09-28)
+> run beside it and are described in their own sections.
 
 ### 1. Market context (every scan)
 
@@ -102,13 +137,14 @@ buying calls/puts once the checklist and a confidence gate both clear.
 ### 2. Scanner — *what* to trade (`scanner.py`, every 5 min open / 60 min closed)
 
 The universe is the NIFTY 100 (large, liquid, F&O-eligible stocks), refreshed
-weekly from NSE's list. The engine won't scan or trade on an NSE holiday or
-weekend (`holidays.py`) — the dashboard shows "Markets are shut today for
-X" and when trading resumes instead of treating it as an ordinary closed day.
+weekly from NSE's list. The engine doesn't trade on an NSE holiday or
+weekend (`holidays.py`). The scanner still refreshes once an hour on those
+days, so the dashboard stays current. The dashboard shows "Markets are shut
+today for X" and when trading resumes.
 
 | Stage | Rules (points) |
 |---|---|
-| **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** |
+| **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** · in the F&O ban, in trade-for-trade, or within 2% of a fixed price band → excluded; a stock with a fixed band is long only (§100) |
 | **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 · confirmed Bulkowski daily pattern +15 · Murphy reversal day/selling climax +10 to +18 |
 | **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
@@ -208,12 +244,12 @@ They get the same discipline penalties as longs (fighting the 15-min uptrend
 −2, support within 1 ATR −1.5, thin volume −0.5, RSI washed out −1.5), and
 strongly positive news blocks a new short. The engine also refuses a short
 the scanner ranked as a long, and vice versa. Shorts are MIS (intraday)
-orders and are always covered by the 15:15 square-off. Never hold a cash
+orders and are always covered by the 15:08 square-off. Never hold a cash
 short overnight, because a short delivery goes to exchange auction.
 
 Exits for both sides: the ATR stop-loss and take-profit (or the checklist's
 own pattern-based stop and level-based target, when `entry_mode: "checklist"`),
-the opposite case reaching 5 or the swing structure breaking, and the 15:15
+the opposite case reaching 5 or the swing structure breaking, and the 15:08
 square-off. `allow_shorts` in `STRATEGY_PARAMS["trader_brain"]` and
 `SCANNER` turns shorting off.
 
@@ -324,7 +360,7 @@ and sizing; `costs.py` models Zerodha's published intraday tariff.
 
 The weight column above is about *trust*, not *how a headline gets scored*.
 Scoring is a separate step (`llm_sentiment.py` / `sentiment_lexicon.py`) —
-see [LLM-read news sentiment](#llm-read-news-sentiment-llm_sentimentpy) below.
+see [LLM-read news sentiment](docs/architecture/LLD.md#91-headline-scoring) below.
 
 NSE bulk/block deals ("smart money" signal) were researched as a possible
 addition but not built — it needs scraping an undocumented NSE endpoint, not
@@ -364,7 +400,7 @@ logged as a trial in `backend/data/backtest_trials.json`).
 The one LLM integration in this codebase, and deliberately narrow. Added
 after explicitly declining a broader ask ("use an LLM to predict the
 stock") — that request is answered in full in
-[High-Level Design](#high-level-design) below, but the short version: an
+[High-Level Design](docs/architecture/HLD.md) below, but the short version: an
 LLM has no live market feed and no calibration for numeric forecasting: it
 generates the most statistically fluent continuation of a prompt, not a
 prediction, and that isn't a limitation prompting can fix.
@@ -1230,8 +1266,8 @@ structured stats straight out of the journal database — a new
 near-misses grouped by their lone blocker, the real R:R and volume-ratio
 distributions — the same aggregate analysis that found §27's bug, now
 reusable instead of hand-rolled each time) and `recent_activity_issues()`
-(recent warn/error log lines) — and, when `ANTHROPIC_API_KEY` is
-configured, asks Claude (Sonnet 5, a heavier on-demand call than
+(recent warn/error log lines) — and, when an LLM is available (the
+Anthropic API or the Claude Code CLI, §92), asks Claude (Sonnet 5, a heavier on-demand call than
 `llm_sentiment.py`'s per-headline Haiku scoring) to turn those real
 numbers into prioritized, evidence-cited platform improvements. The
 system prompt explicitly forbids citing any number it wasn't given and
@@ -2949,7 +2985,7 @@ lines (recomputed client-side from the same candles, not a separate value),
 a volume histogram panel, the checklist's actual entry/stop/target as
 labeled price lines, and arrows marking the latest detected candlestick
 pattern — explicitly **not** a projected price path, see
-[Enhancing the chart](#enhancing-the-chart-componentschartjsx) below.
+[Enhancing the chart](docs/architecture/LLD.md#173-chart-componentschartjsx) below.
 
 - **Overview** — one-sentence headline of what the agent is doing, a market
   countdown ("opens in 2h 14m" / a live session-progress bar, computed
@@ -2976,7 +3012,7 @@ pattern — explicitly **not** a projected price path, see
   confirmed daily patterns) on every real Kite holding, using the exact same
   indicators the scanner runs on the NIFTY 100. Deliberately **not** a buy/
   sell call or a return forecast — see
-  [Holdings diagnostic](#holdings-diagnostic-portfolio_diagnosticpy) below
+  [Holdings diagnostic](docs/architecture/LLD.md#112-holdings-diagnostic-portfolio_diagnosticpy) below
   for why that line is drawn where it is.
 - **Journal** — the Dimaag Scorecard, the F&O knowledge base summary, the
   honest SEBI-sourced benchmark panel ("What good actually looks like
@@ -3284,7 +3320,571 @@ The post's rules are pictures, so each one was turned into an exact rule and **p
 
 The post's author trades it on 24-hour FX, gold and crypto markets, and ends by selling a Telegram channel. **Nothing here tests it there.** On NSE cash intraday it is one more price-only rule, and it fails the same way. Details: `docs/research/results-3g-smc-mtf.md`. Trials now stand at **117**.
 
-### 74. Market breadth and intermarket moves, measured: neither predicts the session by enough to trade
+### 73. Do filings move stocks enough to trade? Measured: no, with one lead
+
+An event study (`docs/research/results-event-study.md`, research look L35, pre-registered) took **9,586 non-routine NSE filings** for the NIFTY 100 over 316 sessions and measured the move after each, in the direction the filing suggested, over 30 minutes, 60 minutes and to the close, against normal bars and the 16.63 bp round trip.
+
+- **No filing type clears the cost.** The candidate list was empty before the multiple-testing correction.
+- **Order wins are "sell the news"**: −8.6 bp in the first 30 minutes (t = −2.97). Real, but half the round trip and the wrong way.
+- **Results days move stocks 3× normal** (121 bp in 30 minutes vs 42, 175 bp by the close), but every result scored **zero for direction**: the keyword lexicon can't tell good numbers from bad. That is a volatility finding, not an edge.
+
+The one lead is the last line. Reading a result's *direction* needs the LLM reader (`llm_sentiment.py`), which is new information rather than a new indicator. That's the next measurement (L36), pre-registered on its own.
+
+### 74. Results days: the filed numbers point the right way, and the move is gone by the open
+
+L35's one lead was that results days move stocks 3× normal. L36 (`docs/research/results-results-direction.md`) read each company's filed profit figure from its XBRL, took the year-on-year sign, and asked whether it predicts the move (167 results events; NSE's index only covers about two of the five quarters, which is stated).
+
+- **The direction is right.** The **overnight gap** moves **+83 bp in the direction of the profit change, t = 4.8**, on filed numbers alone.
+- **It's priced by the open.** After a 09:20 entry the aligned drift is **6 bp at 30 minutes and zero by the close**, against a 16.63 bp round trip.
+
+So a results rule for an intraday cash account has nothing to trade; earning the gap means holding through the announcement, an overnight delivery position outside this project's scope. No rule was written. Together with §69 and §73 this leaves one open line: the **order-book data** collecting since §71.
+
+### 75. The Varsity checklist is retired as the decision-maker; the order book is the one open line
+
+By the owner's decision (2026-09-25) the checklist no longer decides when to trade. It was measured every way it could be (§51, §57, §61, §69) and lost every time, like every other price-bar rule. It stays in the code only as the **review queue's describer** (§64): it labels setups and their numbers, and you decide. Automatic entries are off through the evidence gate (§70).
+
+There is **no proven replacement today**, and none is being wired in. Filings and results numbers were tested (§73, §74): the results direction is real but is priced in the overnight gap, before anyone can act. The only information this account can reach that no test has used is the **order book** (§71, collecting since 2026-09-25). Its test is pre-registered now, before the data exists (`docs/research/prereg-orderbook.md`), to run after 15 sessions. If it clears, that becomes the new brain, tested and confirmed before paper. If it doesn't, the remaining questions are capital, horizon and instrument, not the rule.
+
+### 76. "Research what would actually give profits, and rewire the process": the answer is horizon, and the one test it motivated failed its own gate
+
+The owner asked (2026-09-25) for a sweep of everything — Reddit, GitHub, papers, blogs, crypto, Sensex — to find what makes money and rewire Trader Sahab around it. Four independent sweeps are consolidated in `docs/research/literature-sweep-2026-09-25.md`. They agree with each other and with this project's 117 trials: **no source documents net-of-cost profit from intraday equity or index trading for a retail account, anywhere.** What is documented net of costs holds for **weeks to months** in delivery, or is derivatives carry. Crypto is closed for an Indian account by the 30% tax and the 1% TDS withheld on every sale, not by law. Sensex and Nifty derivatives need about ₹1.7 lakh of margin per lot before their cheap round trips exist. At the real balance (₹5,500) the only executable instruments are cash intraday, which has no edge, and cash delivery, where the flat ₹15.34 DP charge per sale makes a 15-stock book cost ~420 bp a round trip.
+
+The one rewire the evidence supported — a **slow, long-only momentum book in delivery**, the idea behind NSE's own NIFTY200 Momentum 30 index — was pre-registered as 3h (`docs/research/prereg-3h-slow-momentum-delivery.md`) and run the same evening on 4,215 sessions of NSE's daily bhavcopies, 2009–2025, with every stock that ever traded (no survivorship). **Result (`results-3h-slow-momentum-delivery.md`): FAIL on the pre-registered rule.** It passed four of five gates — net excess over its own equal-weighted universe +0.72%/month with t 2.48, positive in both halves, 18.4% vs 9.6% CAGR net of every delivery charge, 523 round trips — and failed the Deflated Sharpe gate at the project's 119-trial count (0.24 vs 0.95). That gate asks a monthly factor tilt to show an excess Sharpe near 1.2; the strategy's is 0.62, which is what the literature says momentum delivers. The rule was written in advance and stands: **no engine work, the 2026 held-out window stays unspent**, and the reviewer is asked three specific questions in the results file. The run also exposed that NSE's bhavcopy never adjusts PREVCLOSE for splits, that weekend special sessions exist, and that ETFs sit in the EQ series — all recorded, with the fix, in #130. A later review (2026-09-26, #135) found the run itself had a look-ahead — its ₹20 price floor was applied to split-adjusted prices, which changed the universe in 103 of 190 months — so trial 119's numbers are contaminated; the FAIL stands.
+
+**What changes in the product: nothing in the engine.** The evidence gate (§70) still holds automatic entries at zero; the review queue is the trading path; the order-book test (§75) is still the one open intraday line. What changed is the honest framing of the question: at this capital the agent's job cannot be stock selection at any horizon, and at ₹1 lakh the only measured net-positive result in the project's history is a monthly one that its own multiple-testing gate declines to certify.
+
+### 77. The Deflated Sharpe gate could never pass; fixed
+
+The Scorecard's "DSR" row and every research pass rule that asked for "DSR ≥ 0.95 at the full trial count" used a luck baseline that grew with the strategy's own Sharpe ratio. Above about 20 trials it sat above every strategy's Sharpe, so the gate failed whatever the data — a synthetic edge with t ≈ 71 scored 0.0 (#132). It now uses the standard null-consistent baseline: at the project's ~120 trials a strategy needs roughly t ≥ 4.3 to pass, which is strict but reachable. No past verdict changes: every affected test failed other gates, and 3h (§76) also fails the corrected gate (0.45). The Scorecard's live figure barely moves, because the paper trades lose.
+
+### 78. Research data guards, and the Scorecard counts every trial
+
+Three defects in the 3h research pipeline, found by a second adversarial review and confirmed (#135): the universe's ₹20 price floor used split-adjusted prices, a look-ahead that changed the universe in 103 of 190 months, so trial 119's numbers are contaminated (its FAIL stands); the DP charge double-counted GST (₹18.10 instead of Zerodha's GST-inclusive ₹15.34); and nothing stopped a selection run from reading 2026 held-out files once the cache held them. All three are fixed with tests, and the 2026 bhavcopies now live in a separate `bhav_daily_2026_heldout/` folder that selection code never reads.
+
+The dashboard Scorecard's Deflated Sharpe row now deflates for the project's full count of tried configurations — 119, read from `docs/research/trials.md` — instead of the 34 `backtester.py` runs it used to count (#136). It fails either way today because the paper trades lose; the difference matters on the day they don't.
+
+### 79. "The best prediction engine for 2026 intraday or F&O": none that predicts direction, and the one surviving design fails on facts
+
+The owner asked (2026-09-26) for a sweep of GitHub, Reddit, Instagram and X for the best prediction engine to build. Eight sweeps logged 151 approaches, merged into 12 families, each checked by two adversarial reviewers (`docs/research/prediction-engine-sweep-2026-09-26.md`). **No engine guarantees profit, and none showed a verified net profit from predicting Indian intraday or F&O prices** — not ML on price bars, foundation models such as Kronos, LLM agents, reinforcement learning, option-chain signals (open interest, put-call ratio, max pain, gamma exposure), or indicator rules. Volatility is predictable, but India VIX already prices it. The records that hold up are option-premium selling and slow momentum, which are risk premia, not prediction.
+
+The one design that survived review — hold a Nifty ETF overnight, with a nightly go/no-go model — was then found to rely on a pre-open auction the ETF is not part of (NSE's 25 September pre-open list includes gold and silver ETFs but not NIFTYBEES), and after the interest the money could have earned its 2023–25 edge is not significant and 2025 is negative. **Nothing is built.** The order-book test (§75) was amended before its data is read: its horizons must end by the 15:08 square-off, and only stocks sampled through the whole session count.
+
+### 80. Two owner decisions: overnight ETF holds are allowed (paper), and new ideas are judged against their own family
+
+On 2026-09-26 the owner approved **overnight holds of a Nifty index ETF in delivery**, in paper mode, for a strategy that first passes its pre-registered gates and held-out check — ETFs only, no futures, options, leverage or shorts. The owner also chose the **family-level significance bar**: a new idea is judged against the tries made on its own mechanism (at least two), not against all 119 of the project's intraday trials, which needed roughly t ≥ 4.3 and made every new idea unpassable. The easier bar comes with mandatory safeguards: positive in both halves and in the most recent three years, a held-out confirmation and a forward paper run before anything is relied on, and a pass on economics alone still counts as a fail. It applies to new pre-registrations only; no past trial is re-graded. Full record: `docs/research/decision-2026-09-26-overnight-and-significance.md`.
+### 81. The order-book sampler also records the Nifty ETFs at the overnight entry and exit times
+
+For the overnight-hold test (§80), the engine now takes one extra order-book snapshot per tick of **NIFTYBEES and SETFNIF50, plus the Nifty 50 level**, only inside two windows: **09:15–09:30**, when an overnight position would be sold, and **15:00–15:30**, when it would be bought. NIFTYBEES is not in NSE's pre-open auction, so the sale happens in the continuous market after 09:15, and its first prints are noisy; the test needs the spread a trader would actually pay, not the bhavcopy's opening print. Rows go to the same `depth_samples` table as §71; nothing reads them for trading. Configured in `config.DEPTH_SAMPLER` (`window_symbols`, `window_indices`, `windows`).
+
+### 82. The first strategy to pass: slow momentum in delivery, on corrected data, confirmed on unseen stocks and on 2026
+
+After the owner moved the product from intraday leverage to delivery (§80), 3i re-tested slow momentum on data rebuilt from **NSE's own corporate-actions file** — splits, bonuses, rights, demergers and 20,000 dividends — with fund units excluded (`docs/research/prereg-3i-momentum-corrected-data.md`). The rules are unchanged from 3h: hold the 15 of the 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, keep a name while it ranks in the top 30, rebalance monthly, pay every Zerodha delivery charge.
+
+| | Net excess over its own universe | t | Result |
+| --- | --- | --- | --- |
+| **Part A** — top 200, 2010–2025 (trial 120) | +0.82% a month; CAGR 22.3% vs 12.0% | 2.91 | **Pass** (family-level bar, all six gates) |
+| **Part B** — stocks ranked 201–400, never read before | +1.00% a month; CAGR 28.6% vs 15.4% | 3.31 | **Confirms** |
+| **2026 held-out**, Jan–Aug | +1.28% a month, 6 of 8 months ahead | 1.08 | **Confirms** (sign check) |
+
+Read with the caveats in `results-3i-momentum-corrected-data.md`: Part A re-reads months an earlier test had seen; at the project-wide trial count it would fail; eight held-out months are weak and one of them carries much of the result; momentum has losing years (−13% in 2025, −14% in 2016); tax is not modelled. **It is not a prediction of tomorrow's price and not a guarantee** — it is the first result in 120 trials that clears its pre-registered gates and two independent confirmations. As the pre-registration requires, the next step is a paper positional book with an automatic switch-off band, not real money.
+
+### 83. The paper momentum book
+
+The strategy that passed 3i (§82) now runs as a **paper positional book** — a new **Momentum Book** page on the dashboard. Every trading evening after 19:30 the engine starts a separate job (`backend/momentum_book.py daily`) that downloads the day's NSE bhavcopy and corporate actions, rebuilds the adjusted price history, and marks the book to market. On the first session of each month it re-ranks the 200 most-traded stocks at the previous close and trades at that day's close: keep a holding while it ranks in the top 30, fill the rest from the top, 15 names, ₹10 lakh paper capital, every Zerodha delivery charge. The benchmark — the same 200 stocks equal-weighted — runs alongside so the page shows the excess, not just the return.
+
+**It switches itself off** if, from the sixth month on, cumulative excess falls below the band. When this section was written the band was n × 0.82% − 2 × 3.87% × √n (−14.0% at six months, −17.0% at twelve), fixed in the results file. Since 2026-09-29, before the first rebalance, it is n × 0.71% − 2 × 3.89% × √n (−14.8% and −18.4%); see [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month). Paper only; nothing places an order. The code repeats the research loader and ranking rather than importing them (live code may not import research); replaying it over 2026 reproduces the research held-out run exactly — the same 15 names at all nine rebalances and the same book values. The first rebalance is after the 30 September 2026 close.
+
+### 84. Post-earnings drift measured on NSE's own filings: real in sign, too small to trade — dropped
+
+Step three of the delivery plan measured the classic post-earnings drift on the point-in-time NIFTY 100 using NSE's own quarterly XBRL filings, with the event-dating, reporting-basis and share-count fixes two reviewers required (`docs/research/prereg-pead-stage-a.md`). Buying the top third of profit surprises the session after the filing and holding 60 sessions beat the NIFTY 100 by **+0.25% a month before costs (t 1.41)** and **+0.11% after (t 0.62)** over 2019–2025 — below the pre-registered bar of +0.37% and t 1.8, and concentrated in 2022. **Dropped**, with no retries, and the earnings surprise is not used as an input in later models. Details: `results-pead-stage-a.md`.
+
+### 85. Our own prediction engine: 14 signals and a fitted model lost to the one-signal momentum rule
+
+The owner asked for a prediction engine of our own. The research leaves one kind worth building: a **monthly ranking of which liquid NSE stocks will beat the others** (intraday direction is not predictable after costs). "Sahab Ranker" took 14 inputs from the literature — momentum over three horizons, one-month reversal, volatility, beta, idiosyncratic volatility, distance from the 52-week high, liquidity, illiquidity, dividend yield, price — and learned their weights walk-forward two ways (a correlation-weighted composite and a ridge regression), refitted monthly, with the same book and costs as the momentum book (`docs/research/prereg-ranker-engine.md`).
+
+| 2013–2025, net | Excess over its universe | t |
+| --- | --- | --- |
+| **Momentum rule (the running paper book)** | **+0.84% a month** | **2.63** |
+| Ranker, composite | +0.08% a month | 0.23 |
+| Ranker, ridge | +0.14% a month | 0.41 |
+
+Both fail their gates and lose to momentum on unseen stocks too. The models learned to favour quiet, low-beta stocks alongside momentum — a third less drawdown, but that defensive tilt gave up most of the momentum premium in the 2019–2025 rally. **Not adopted; the momentum book stays the engine.** More signals and a fitted model did not beat the one robust signal, as the prediction-engine sweep predicted. Details: `results-ranker-engine.md`.
+
+### 86. The Jev book: an LLM judge on the daily shortlist, tested in paper
+
+At the owner's request, **TypeSafe Jev** (an LLM judgment service, called through TypeSafe's official System One API) is wired into the engine as a separate paper book — a new **Jev Book** page. Every trading day at the first tick after 09:45, for each stock on the scanner's shortlist (up to 15), Jev is shown public market data only — the scanner's row, the chart labels, the news headlines, the market summary — and asked three typed questions: **buy, short or skip**; the probability the price is higher at 15:08; and a position size (none, half, normal, double). Each buy or short fills at the live price when Jev answers and closes at the 15:08 square-off, after the engine's round-trip cost (14.3 bp at the book's ₹1 lakh position), and is compared with the scanner's own side on the same stock-day.
+
+The research found no LLM trader with an edge after costs, so this is a **pre-registered forward test** (`docs/research/prereg-jev-book.md`, trial 123), not a switch-on: after 300 trades or 60 sessions, Jev must be positive after costs with t ≥ 2.24, in both halves, and beat the scanner. It turns itself off if it is clearly losing after 100 trades. Jev never sees keys, account data or positions, and places no orders. **It needs a TypeSafe API key** from console.typesafe.ai/keys, stored with `pbpaste | backend/.venv/bin/python backend/typesafe_key.py set` (or the `TYPESAFE_API_KEY` environment variable); `typesafe_key.py test` checks it. Until then each day is recorded as "Jev unavailable". Fills are Kite's live price only: if Kite isn't connected when the round is due, the day is recorded as "no live prices" and doesn't count, and any fill Kite can't price is left out (#151). The engine's usual fallback to delayed yfinance prices would have let Jev see headlines newer than its own entry price. All three questions go in one request per stock; at about 34,000 input tokens a day the cost is roughly $0.03 a month.
+
+### 87. The overnight premium in an ETF: measured on minute data, it does not survive — the line closes
+
+The owner allowed overnight ETF holds (§80). The test (`docs/research/prereg-overnight-etf.md`) used Kite's 1-minute history for NIFTYBEES, SETFNIF50, the Nifty 50 and India VIX, 2015–2025: buy the ETF at 15:24, sell it at 09:19 the next session (NIFTYBEES is not in the pre-open auction), after charges, a 2 bp spread each way and the interest the money could have earned.
+
+| Nightly, 2015–2025 | Before costs | After costs | t |
+| --- | --- | --- | --- |
+| NIFTYBEES, always hold | +2.4 bp | **−6.4 bp** | −5.9 |
+| SETFNIF50, always hold | +4.4 bp | −4.4 bp | −2.7 |
+| NIFTYBEES, only on nights a model picks | | −0.1 bp | −0.2 |
+
+Negative in every year. The index's well-known overnight premium (about +9.8 bp a night) is measured from the closing average to the auction open; an ETF bought and sold in the continuous market around those times captures only a quarter of it, which is less than the interest alone. A nightly model learned to stay out and found no nights that pay. **Both trials fail; the overnight line closes** and nothing is built. Details: `results-overnight-etf.md`.
+
+### 88. What should decide when to trade, now the checklist is retired? Intraday: nothing clears costs; positional: how much momentum to hold
+
+The owner asked (2026-09-27) for a better way to decide *when* to trade than the Varsity checklist, which lost every test it was given (§51, §69) and no longer decides trades (§75). Two read-only sweeps covered papers, practitioner write-ups, GitHub and Reddit, and checked every idea against the 125 trials already run (`docs/research/entry-timing-sweep-2026-09-27.md`). No trial or research look was spent.
+
+**Intraday, nothing found clears the 14–17 bp round trip.** The best-known "profitable day trading" results, opening-range breakouts on high-volume stocks and index intraday momentum, earn about 1–8 bp gross a trade once converted to Indian costs, and this project already measured the same families at +4.5 bp (trial 35) and +0.7 bp (L32). Meta-labeling and volatility or VIX filters can only filter or scale an entry's gross edge, and ours is zero. The checklist wasn't a bad pick among good ones; the whole class of price-timing rules sits below cost at this size. The one open intraday line stays the pre-registered order-book test (§75), which runs as written once 15 full sessions are recorded; published NSE evidence expects it to fail. If one more intraday trial is wanted, the only candidate with a mechanism for a bigger move is an opening-range breakout restricted to results days with extreme opening volume, and only if a count of qualifying events, reading no returns, shows it can reach about 2,000 trades.
+
+**Positionally, the leads are about how much momentum to hold, not new entry signals:**
+
+1. **Confirm the running rule on 2002–2009**, years no test has read, including the 2008 crash. NSE's old bhavcopies are free and the corporate actions are already cached. This is a confirmation like the unseen-stocks check in §82, not a trial.
+2. **A volatility-scaled momentum overlay**, moving part of the book into NIFTYBEES when momentum's own volatility is high, the mechanism the literature ties to momentum crashes like 2016 and 2025. It would run as a shadow sleeve beside the paper book, never changing it. **It needs an owner decision first:** judged on alpha under the family bar, it will probably fail even if it cuts drawdowns; judged on a non-inferiority rule fixed in advance, it could pass on risk alone, which the current rules don't allow.
+3. **Promoter open-market purchases** from SEBI insider-trading disclosures, held about three months: the one new daily-horizon signal with Indian evidence and a clean 2016–2025 sample.
+
+Trend filters to cash, delivery percentage, FII/DII flows, short-term reversal, bulk deals and turn-of-month timing were rejected on weak, gross-only or contrary evidence. Separately, the cost model's slippage (0.03% a leg) has never been measured (#66). At ₹2–3 lakh positions it is the largest part of the intraday hurdle, and measuring it from the order-book data spends no trial.
+
+### 89. The system design, written down: high-level and low-level design, 227 rules with a checklist, and a knowledge graph
+
+The owner asked for the system to be presented at design level, with its rules as an interactive checklist, on GitHub. The whole codebase was mapped against the code, and a knowledge graph of 316 files was rebuilt with graphify.
+
+| What | Where |
+| --- | --- |
+| **High-level design**: parts, a trading day, where entries stop, how it fails | [`docs/architecture/HLD.md`](docs/architecture/HLD.md) |
+| **Low-level design**: modules, tick sequence, formulas, API, database, settings | [`docs/architecture/LLD.md`](docs/architecture/LLD.md) |
+| **Rules checklist**: 227 rules, each with its enforcing code and a way to check it | [`docs/architecture/RULES.md`](docs/architecture/RULES.md) |
+| **Interactive rulebook**: search, filters, saved ticks, the design diagrams | [Open it](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) (private to the owner), or [`rules.html`](docs/architecture/rules.html) opened in a browser |
+| **Checklists to tick on GitHub**: pre-market, new strategy, go-live readiness | New issue → choose a template |
+| **Knowledge graph**: 3,619 nodes, 8,545 edges, 200 clusters | [`docs/architecture/KNOWLEDGE_GRAPH.md`](docs/architecture/KNOWLEDGE_GRAPH.md) |
+
+The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_docs.py` builds the GitHub page and the interactive page from it, and a test in CI fails when a rule names code that no longer exists or when a built page is stale. Of the 227 rules, 208 are enforced now, 15 are switched off or pending, 4 are retired and kept on record, and 133 are covered by an automated test.
+
+**Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
+
+### 90. The Jev Book page shows an open round: its status and a live mark
+
+The Jev book opened 15 paper positions on its first morning (2026-09-28, 09:45), and its page read "0 trades". A trade was only counted after its 15:08 close, and nothing on the page said positions were open. The owner asked why it wasn't trading.
+
+While a round is open the page now shows:
+
+- **A status:** "Open until 15:08", with how many paper positions are open and when they were opened.
+- **A live mark:** what Jev's positions and the scanner's own side would net after costs if closed now, and when that was marked.
+- **Per stock:** the price now, the move so far, and both nets, in place of the empty Exit columns.
+
+**The mark is for watching only.** It is computed on request from Kite's last traded prices, never written to the state file, and never enters the summary, the kill rule or the verdict. The test still scores the 15:08 close alone (`docs/research/prereg-jev-book.md`, Clarification 4). Without Kite the page says there is no live mark; it never uses delayed prices. One Kite call serves every page refresh for 30 seconds.
+
+The first round also showed something to watch: Jev took the scanner's own side on all 15 stocks and skipped none. On such a day Jev and the scanner score exactly the same, so the day cannot show Jev adding anything. One day is too little to judge.
+
+### 91. The day's 25 stocks: the most-traded, chosen once and kept all day
+
+The owner said the 25 stocks the scanner picks were wrong and there was too much checklist. Measured on 2026-09-28:
+
+| Problem with the old list | Measured |
+| --- | --- |
+| Its ranking predicts nothing | Rank IC ≈ 0 over 434–436 sessions (§37, §52). The one feature that survived testing, volatility, is worth 8 bp against a 16.6 bp round trip (step 2 follow-ups) |
+| It was built from a pile of rules | About 20 score components plus a checklist read that moved each score by up to 15 points |
+| It rotated all day | 51 different stocks were on it; 4 stayed in every scan; the list changed in 69 of 72 scans |
+| So most stocks weren't watched long enough | Only 10 met the order-book test's rule of being sampled for 90% of the session |
+| It leaned one way | 92% of active rows were shorts on a falling day, so the Jev book and the review queue became bets on the index |
+
+**The new rule** (`SCANNER["selection"] = "liquidity"`, now the default): the 25 eligible NIFTY 100 stocks with the highest 20-day average turnover, chosen once and kept all day. (It was fixed at the first scan of the session until §100, which fixes it before the open.) The existing filters still apply: price, turnover, range, and no results or ex-date that day. A stock that becomes ineligible during the day is dropped, not replaced. The pre-market read uses the same rule, so the morning list and the day's list are the same stocks.
+
+**Why this rule, and what it doesn't claim.** It is chosen for what can be measured, not as a prediction. The most-traded stocks are the cheapest to trade: on 2026-09-28 the median quoted spread was 1.0 bp for the most-traded third of the index and 2.5 bp for the least-traded third, and 1.3 bp for the 15 stocks of the new list that were being sampled, against 2.1 bp for the old list. A fixed list lets every watched stock be observed for the whole session. It does not make the intraday side profitable. No stock-selection rule tested here, or found in the literature for this market, predicts which stocks will move which way within a day net of costs.
+
+Scores, sides and reasons are still computed and shown, and the checklist still reads every watched stock. None of them chooses the list any more. The old ranked list is kept one setting away (`"selection": "score"`).
+
+**Two running tests take this list as input**, so both carry a note written before the change takes effect: `prereg-orderbook.md` Amendment 2 and `prereg-jev-book.md` Clarification 5. The change was deployed on 2026-09-28 at 20:37 IST, so the first session under it is 2026-09-29. Neither pass rule changes.
+
+The flood of review cards is a separate problem (#166), and its fix waits on the owner's choice of a reward-to-risk floor.
+
+### 92. Chaywanaprash runs on the Claude Code CLI when there is no API key
+
+Chaywanaprash (§29) only ever called the Anthropic API, so without a paid key it returned bare stats: every report in the journal until now was saved with no analysis. It now uses the same two backends as the Research Desk. With `ANTHROPIC_API_KEY` set it calls the API; without one it runs `claude -p` on the owner's Claude plan, with every tool, hook and MCP server switched off, so it can only read the stats it is given and write text. With `config.CHAYWANAPRASH["llm_backend"] = "auto"` (the default) the CLI is also the fallback when the API call fails, so a wrong or out-of-credit key doesn't silently turn the analysis off. Set it to `"anthropic_api"` or `"claude_cli"` to force one.
+
+It is now on by default, because it only runs when asked (`POST /api/chaywanaprash/analyze`, still capped at 12 runs a day), and `GET /api/chaywanaprash/status` lists the backends it would use. **Verified live on 2026-09-28:** after a restart the status read `"backends": ["claude_cli"]`, and one analysis through the app took 27 s and was saved as report #5 with a 5,440-character narrative.
+
+**Read its output as leads, not verdicts.** That report and a test run the same morning agreed with the journal on the two findings that matter: 99% of setups fail reward-to-risk because targets at the next support or resistance don't cover the round-trip cost, and the engine stalled on one cycle for 2 minutes at 09:19. They also called expired Kite sessions a live-money risk while the engine is in paper mode, and guessed at a file that doesn't exist. It still never edits anything.
+
+### 93. Kronos, a price-forecasting model, tested as research look L40: it fails at every horizon
+
+Kronos is an open-source "foundation model" for candlestick data: a transformer pre-trained on bars from many exchanges, which forecasts the next bars of any stock without being trained on it. Posts about it came up in the owner's reels. A cloud session researched it and wrote a pre-registered test, which was merged here on 2026-09-28.
+
+**The question it asks:** at six fixed times each session (09:45 to 13:30), does Kronos's forecast for the next 15, 30 or 60 minutes rank NIFTY 100 stocks by what they actually do next, by more than it costs to trade? It is a measurement, not a strategy. Nothing in the engine can import it, and no trial is spent unless it passes.
+
+| Fixed in advance | |
+| --- | --- |
+| Model | Kronos-small, zero-shot (no training on our data), code and weights pinned to versions dated before the sample |
+| Data | The Kite 5-minute cache, point-in-time NIFTY 100, sessions from 2025-09-01 to 2025-12-31. The 2026 window is not read |
+| Features | The forecast return over the next 15, 30 and 60 minutes, each tested only against its own horizon |
+| Control | The last hour's return, so plain momentum can't pass as a model finding |
+| Gate | A top-minus-bottom quintile spread above 33.26 bp with t > 2 over at least 60 sessions, positive in both halves, surviving multiple-testing correction across the three tests |
+| Stage 0 | Six checks run first, each a halt if it fails: the install matches the authors' own regression test, the model versions predate the sample, a proof that no later bar leaks into a forecast, timing, the price-adjustment check, and coverage |
+
+**What the research found before writing it** (`research/kronos-research-2026-09-28.md`): the paper's own backtest numbers could not be read from the cloud session. The one independent reproduction found Kronos 12 to 22% worse than "tomorrow equals today" on daily prices, with 48–54% direction accuracy. The project's prediction-engine sweep (§79) also found no verified net profit from models like it. **The expected result is a clean negative.** If it clears the gate anyway, the next step is a separately pre-registered trial, judged by the family-level bar (§80), not an engine change.
+
+**Running it is the owner's call.** It needs a separate research environment with PyTorch (about 800 MB), a copy of the third-party Kronos code at a pinned commit, and model weights from Hugging Face. About 50,000 forecasts at roughly 1.2 seconds each come to a night or a weekend of CPU on the Mac. Start it after 15:30 and outside the 19:30 momentum job, so it can't slow the live engine; the engine's watchdog flags any tick over 120 seconds. Stage 0 runs alone first and its results come back for review before the single IC pass:
+
+```bash
+cd backend
+python3 -m venv research/.kvenv
+research/.kvenv/bin/pip install -r requirements.txt -r research/requirements-kronos.txt
+git clone https://github.com/shiyu-coder/Kronos research/kronos_vendor
+git -C research/kronos_vendor checkout 67b630e67f6a18c9e9be918d9b4337c960db1e9a
+research/.kvenv/bin/python -m research.kronos_feature_ic --stage0-only
+```
+
+The pre-registration was drafted on an older copy of the project. Merging it renumbered the look from L38 to L40 and corrected the trial count from 119 to 125 (Amendment 2). Nothing in its design changed.
+
+**Run, 2026-09-29.** The owner asked for the run. Kronos is installed in the project's research environment only (`backend/research/.kvenv` and `backend/research/kronos_vendor`, both outside version control); the engine cannot import it, and a test proves that. Before any model was loaded, Amendment 3 fixed what the text had left open: the device is CPU, because the authors' own regression test runs there; 4 threads; pandas pinned to 2.2.2 as the authors pin it; and a harness (`backend/research/kronos_l40_launch.py`) that stops the run from 08:30 to 15:45 on trading days so it cannot slow the engine. Stage 0 then ran, 20:32 to 20:53:
+
+| Check | Result |
+| --- | --- |
+| The install matches the authors' | Their regression test passes, 4 of 4 |
+| Model versions predate the sample | Both dated 2025-08-17 |
+| No later bar leaks into a forecast | 20 of 20 forecasts identical with and without later bars |
+| Timing | 5.2 seconds a forecast with three samples, 62.6 hours in all. Over the 36-hour limit, so one sample a forecast |
+| Price-adjustment check | One fetch run, no stock-session dropped |
+| Coverage | 79 sessions, 39 and 40 a half, 43,362 stock-times |
+
+The measurement pass started at 20:55 on 2026-09-29: about 21 hours of computing, paused through the session of 2026-09-30. No number is read from it until every forecast is done. The record is `docs/research/data/kronos_l40_stage0.json`; the result will be `kronos_l40_result.json` and a results note.
+
+**Moved to the owner's PC, then finished (amendment 4).** At the owner's request the Mac's run was stopped at 22:59, unread, and the run on the owner's PC (an RTX 3060 Ti) became the run of record: three samples a forecast, as the pre-registration preferred, in under two hours.
+
+**Result, 2026-09-30 00:49: FAIL at 15, 30 and 60 minutes** (`docs/research/results-kronos-feature-ic.md`).
+
+| Horizon | Top-minus-bottom fifth, before costs | Needed |
+| --- | --- | --- |
+| 15 min | +0.27 bp (t 0.63) | 33.26 bp, t > 2 |
+| 30 min | +0.51 bp (t 0.78) | 33.26 bp, t > 2 |
+| 60 min | +1.61 bp (t 1.43) | 33.26 bp, t > 2 |
+
+The test could detect a gap of 1 to 2 bp, so this is a measured no. Kronos's ranking correlates faintly with the next hour (rank IC 0.02, t 2.6 to 2.9), but part of that is the last hour's move echoed back, and in money it is worth a few percent of the cost. Two runs of the same model on the same bars called the direction differently a third of the time. Nothing is added to Trader Sahab; the live shadow runs as a labelled record of a failed model.
+
+### 94. The dashboard, reorganised: a sidebar, one status bar, and loads that say when they fail
+
+The dashboard had grown to ten pages in one flat row of underlined tabs, under a
+header holding nine controls. Overview opened with setup notes, the controls and a
+30-row table of expired review cards before it ever said what the market was doing.
+Most pages swallowed a failed request and sat on "Loading…" for good.
+
+- **Sidebar navigation, grouped by question.** *Today*: Overview, Pre-market, Day
+  plan. *Market*: Screener, Technical analysis. *Strategies*: Momentum book, Jev book.
+  *Your book*: Portfolio, Trades, Journal. Screener shows how many picks are
+  active, and Portfolio how many positions are open. Live log and browser alerts
+  are at the foot. On a phone the sidebar becomes a scrolling strip across the top.
+- **One status bar.** Session, invested, realized and open P&L, the Kite chip, the
+  entry pause and the Paper/Live switch. A red line runs along the top while live.
+- **Overview in reading order.** The market read comes first. Then the trading
+  controls, with capital, F&O, alerts and the Scorecard in one row. Then the review
+  queue, with earlier cards folded under "Earlier today", then picks, positions,
+  activity, and charts last.
+- **Loads that fail say so.** `useApi()` (in `api.js`) and `LoadState` replace the
+  `.catch(() => {})` pattern on Day plan, Portfolio, Journal, Technical analysis,
+  Momentum book and Jev book. A failure shows the reason and a **Try again** button.
+  `apiJson()` now treats an HTTP error as an error instead of data. If the engine
+  can't be reached, the app says so after 8 seconds instead of "Connecting…" forever.
+- **Bug fixed ([#172](https://github.com/harshece16/intraday-trading-agent/issues/172)).**
+  With no engine state (backend down or restarting), the mode switch showed
+  **Live** pressed, in red. It now shows neither until the engine answers.
+
+No backend or trading behaviour changed.
+
+### 95. Chaywanaprash reviews the last two weeks of Sahab's Dimaag every week
+
+The owner asked for Chaywanaprash to improve Sahab's Dimaag on a schedule, using the logic and rules added in the past two weeks. Once a week, at the first engine tick after 15:40 on a trading day, it now reads 14 days of the journal, every change merged in that window (`git log`) and the trading rules as they stand in `docs/architecture/rules.json`. It then answers three questions: whether each change to how stocks are picked, entered, sized or exited shows up as working in the data; which rules never fire, fire on everything or contradict each other; and at most five improvements, each naming the file or rule id and the test it must pass first (net of costs, both halves of the sample, counted as a new trial).
+
+**It proposes; it does not edit the brain.** The report is saved to `chaywanaprash_reports` (`GET /api/chaywanaprash/reports`), and the live log says when it starts and when it is saved. A change it proposes goes through the normal branch, backtest and PR route like any other. An LLM rewriting entry rules from 13 closed trades would be curve-fitting, which is what the trial count and the Deflated Sharpe gate exist to stop.
+
+- **When:** a trading day after 15:40, when no 14-day review with a narrative is under a week old. At most one attempt a day, so a failed run retries the next trading day. It runs in its own thread; the CLI took 85 s on the first real run, and the tick doesn't wait.
+- **Settings:** `config.CHAYWANAPRASH["review_every_days"]` (7; `0` turns it off), `review_lookback_days` (14), `review_after` ("15:40"). It shares the 12-a-day budget and the API-or-CLI backends from §92.
+- **First run, on a copy of the journal (2026-09-28):** 125 merged changes and 202 trading rules went in (58 KB). Among its proposals: stop offering review cards whose own after-cost numbers are negative (already #166), check whether the Scorecard's failing verdict still applies now the scanner changed (§91), and audit target selection rather than lowering the 1.5 reward-to-risk bar. It also flagged two possible bookkeeping gaps (the cost item's pass and fail counts don't add up to the total, and `checklist_item_breakdown` is empty). These are unverified leads.
+
+### 96. Should the first pick come from more stocks? Tested: the running book holds up, a wider one is not shown to be better
+
+The owner asked (2026-09-28) whether the first pick should come from more stocks, "not just 100", because every later step depends on it. There are two first picks in this project, and they have different answers.
+
+| Book | Picks from | Answer |
+| --- | --- | --- |
+| Intraday scanner | NIFTY 100, then the 25 most-traded (§91) | Not re-tested. On the one wider list measured, 113 F&O stocks outside the index, no rule cleared costs (L26, L27, L34). An audit of the selection path is in `docs/research/scanner-audit-2026-09-28.md` |
+| Paper momentum book | Every NSE share, then the 200 most-traded | Tested here |
+
+**The test** was written down before its code (`docs/research/prereg-universe-width.md`), reviewed four times and amended four times before any return was read. It repaired the price data first, because a sweep found that the loaders read the EQ series only.
+
+**What the repair found (#175, #177, #178).** A stock that moves to trade-for-trade has no EQ row. The old data priced it at its last EQ close and sold it there. It also applied 743 corporate actions with a different factor, 42 of them on stocks inside the 400 most-traded. Of those 42, 32 are demergers, 30 of them applied ten sessions late: NSE puts a stock in trade-for-trade for about ten sessions after a demerger, and the old data folded those sessions into the adjustment. Of the 743, 566 are dividends and 127 demergers. Consolidations were not adjusted at all, and seven dividend amounts were overstated.
+
+**Results.** All figures are net of every Zerodha delivery charge and slippage, on 2010 to 2025. Nothing from 2026 was read.
+
+| Question | Result | Verdict |
+| --- | --- | --- |
+| Does the running rule survive repaired prices and honest fills? (trial 126) | **+0.71% a month over its benchmark, t 2.51, CAGR 20.6% against 11.9%.** First recorded as +0.82%, t 2.91, CAGR 22.3% | Survives its own rule narrowly, with a smaller edge |
+| Does its confirmation on ranks 201–400 survive? (L42) | +0.91% a month, t 3.00. First recorded as +1.00%, t 3.31 | Survives |
+| Does the rule work on ranks 401 to 1,000? (L43–L45) | Not run. With a floor of ₹70 lakh traded a day, the list reaches 600 stocks only from August 2020: 63, 56 and 30 months against the 120 required | **Could not be tested** |
+| Is one book over the 400 most-traded better than the running book? (trial 127) | +0.31% a month more, **t 0.97** against a bar of 1.65. About half of the gap is the wider list's own return. It also missed the family bar: t 2.76 against 2.807 | **FAIL. No change** |
+
+**Honest fills** means three things the first test did not model: no buy when a stock closes locked at its upper band and no sell at its lower band, no fill on a day it did not trade, and a real price when it is in trade-for-trade. The two largest monthly differences were June and July 2021, when the book held three Adani stocks that had moved to trade-for-trade. The old data priced and sold them at the close of 8 June. On repaired prices the book did 4.4 and 3.6 points worse, and its sells waited three sessions at the lower band.
+
+**What this does not show.**
+
+- Whether momentum works in less-traded stocks. The liquidity floor was set before the list sizes were known, and it made that question untestable. The floor was not changed afterwards. A new test would need its own pre-registration, and that is the owner's decision.
+- How much of the smaller edge is the data and how much the fills. Separating them would be another counted trial.
+- That the rule clears today's bar. The momentum family now counts ten tries. At ten, trial 126 would not pass (t 2.51 against 2.807). It is judged on trial 120's criteria because it cannot make a new claim.
+- What slippage really is. The rates are judgements from a 2010 study (#66). The excess stays above zero until about 2 percentage points more per side. Trial 126's pass does not: about 0.02 points more per side would fail it (Deflated Sharpe 0.952 against 0.95).
+
+**For the owner.** The paper book's own loader (`backend/momentum_book.py`) had the same three defects. The owner decided on 2026-09-28 to fix it before the first rebalance ([§97](#97-the-paper-momentum-book-now-reads-repaired-prices)).
+
+Files: `docs/research/results-universe-width.md`, `docs/research/stock-picking-sweep-2026-09-28.md`, `backend/research/momentum_width.py`, `backend/research/panel_differences.py`, `backend/research/width_report.py`, `backend/tests/test_momentum_width.py`.
+
+### 97. The paper momentum book now reads repaired prices
+
+**Owner's decision, 2026-09-28:** fix the paper book's loader before its first rebalance on the evening of 2026-10-01.
+
+§96 found three defects in how prices were read. The research loader was repaired there. The paper book has its own copy of the loader, because live code may not import research code, and that copy still had all three.
+
+| Defect | Before | Now |
+| --- | --- | --- |
+| Trade-for-trade rows (#175) | Read the EQ series only. A holding that moved to trade-for-trade kept its last EQ close and was sold at it | Reads EQ, BE and BZ. The holding is valued and sold at what it traded for |
+| Consolidations (#177) | Not adjusted. Ten shares becoming one looked like a tenfold gain | Adjusted |
+| Dividend amounts (#178) | Seven rows overstated; a dividend above 90% of the price and a demerger that left under 5% were refused | Read correctly; both kinds applied |
+
+**What did not change.** The rule is the one that was tested: the 200 most-traded stocks, 15 holdings, monthly. The universe is still chosen from EQ rows only, so a stock in trade-for-trade on the ranking day is not eligible. Costs, the benchmark and the switch-off band are as they were.
+
+**Checked on the real data**, the bhavcopy cache to 2025-12-31:
+
+| Check | Result |
+| --- | --- |
+| The book's panel against the research loader's repaired panel | 0 differences over 4,215 sessions and 3,088 stocks |
+| All 42,809 corporate-action rows, read by both copies | 0 differences |
+| The ranked universe at the last 36 month-ends | The same list, 36 of 36 |
+| A dry run of the book on a temporary state, October to December 2025 | 2 rebalances, 15 holdings, 200 benchmark positions |
+
+The book had held nothing and recorded no return before this change, so its forward record starts on the repaired data.
+
+**What this did not fix (#180, fixed in §99).** The paper book still filled every order at the close. The re-run in §96 did not: it carried a buy past a day the stock was locked at its upper band, and a sell past a lower-band lock. So the paper book now runs repaired prices with the old fill assumption, which is neither of the two tested configurations. The band still expects +0.82% a month; the re-run gave +0.71%. Keeping 0.82% makes the band stricter. Both are the owner's decisions.
+
+Files: `backend/momentum_book.py`, `backend/tests/test_momentum_book.py`, `docs/research/prereg-3i-momentum-corrected-data.md` (dated note).
+
+### 98. Live orders are booked at what Kite executed, a live position survives a restart, and paper option stops fire
+
+The owner asked for the gaps between the engine and a real account to be closed before live trading is ever switched on. Four changes, all verified against a stand-in for Kite: **no live order has ever been placed, and none was placed to test these.**
+
+**Live fills come from Kite ([#155](https://github.com/harshece16/intraday-trading-agent/issues/155)).** A live order used to be booked as filled in full at the modelled price, and Kite's answer was never read. The engine now waits for Kite to report the order finished and books the quantity and average price Kite executed.
+
+| Kite says | The engine |
+| --- | --- |
+| Complete | Books Kite's quantity and price. The journal row records the signal price, the order id and the slippage in bp |
+| Rejected or cancelled, nothing filled | Books nothing, raises an error-level alert, and reports the entry as blocked, so the day's one entry in that stock isn't spent |
+| Part filled | After 5 s cancels the rest and books what filled. A part-filled exit leaves the rest open and watched |
+| Nothing (Kite can't be read) | Books nothing and sends no other order in that stock, then asks Kite again every tick and books or drops the order |
+
+A checklist entry's stop and target are chart levels, so they don't move with the fill. Risk per share is measured from the price paid. The wait runs on the thread that sent the order, so a slow Kite can hold the tick for about 10 s.
+
+**A live position stays watched ([#156](https://github.com/harshece16/intraday-trading-agent/issues/156)).** Each position now carries whether it is real money, set by the order that opened it, and its closing order goes where that says. After a restart, which always comes back in Paper, today's open live positions are restored with their stops and targets and the live log raises an error-level alert. Before any order is sent for one, Kite's positions are read: if Kite holds nothing, the position is dropped and no order is sent, because a closing order would open a new position the other way. The same flag fixes a second defect found on the way: switching modes with a position open sent its exit to the wrong place, so a paper position's stop would have placed a real order after a switch to Live. Positions in Kite that today's journal doesn't know are still only reported, and block new entries in that stock; the engine doesn't adopt them.
+
+**Paper option stops and targets fire ([#154](https://github.com/harshece16/intraday-trading-agent/issues/154)).** An open paper option is repriced every tick with Black-Scholes from the underlying's live price, and that premium drives the stop, the target and the 15:08 square-off. It is a model price: it ignores changes in implied volatility and the bid-ask spread, and uses a fixed 20% volatility. Options stay switched off.
+
+**Slippage has a measurement script, and the 3 bp stays ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)).** `backend/research/measure_real_slippage.py` reads the recorded order book. Its first run, on 2026-09-28:
+
+| Stocks, by order-book depth | Median cost per leg | 90th percentile |
+| --- | --- | --- |
+| Most liquid third | 0.84 bp | 2.09 bp |
+| Middle third | 1.04 bp | 2.08 bp |
+| Least liquid third | 1.41 bp | 2.32 bp |
+
+That is from 34,338 book samples over **2 sessions**, which is too little to change the cost model, and they are snapshots of the book, not fills. Against the signal price the cost was higher: a median of 1.7 bp and a 90th percentile of 7.2 bp over 79 matched signals, of which one was a full pass. The script says so itself and recommends nothing.
+
+Four new defects were filed: live option orders still book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)), open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)), the order-book sampler doesn't store levels 2 to 5, which #66 needs ([#188](https://github.com/harshece16/intraday-trading-agent/issues/188)), and paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189), not verified against Kite).
+
+### 99. The paper momentum book runs what was tested: orders wait, and the band expects +0.71% a month
+
+**Owner's decisions, 2026-09-29**, both before the book's first rebalance on the evening of 2026-10-01.
+
+**1. Orders wait (#180).** The book used to fill every order at the day's close. A close at a locked price band is not a price an order could have had. The book now follows the fill rules of trial 126 (§96):
+
+| Situation on the fill day | What the book does |
+| --- | --- |
+| The stock closed locked at its upper band | A buy waits and is tried again the next session |
+| The stock closed locked at its lower band | A sell waits. The holding stays in the book and keeps its slot |
+| The stock did not trade | Nothing fills |
+| A buy has waited five sessions | It is cancelled. Its cash stays uninvested until the next rebalance |
+| An order is still open at the next month-end | It is dropped and decided again |
+
+The *Momentum Book* page shows the orders that are waiting and why, and each trade says if it waited or was filled while the stock was in trade-for-trade.
+
+**2. The band expects +0.71% a month.** The switch-off band was set from trial 120's figures. The book now runs trial 126's configuration, so the band uses trial 126's: a mean of 0.71% and a standard deviation of 3.89%. **This loosens the floor:**
+
+| Months of record | Floor before | Floor now |
+| --- | --- | --- |
+| 6 | −14.0% | −14.8% |
+| 12 | −17.0% | −18.4% |
+
+It is a change to a threshold fixed in advance. It was made before any forward return exists, and it is written into the pre-registration as a dated note.
+
+**Checked on the real data.** The book's own code was run over 2010 to 2025 on the bhavcopy cache, session by session, and compared with trial 126:
+
+| Check | Result |
+| --- | --- |
+| Monthly values of the book and of the benchmark, 190 months | Equal to trial 126's; largest difference 7e-16 |
+| Mean excess and t | +0.709% a month, t 2.505, as trial 126 |
+| Holdings after the last rebalance | The same 15 names |
+| Orders that waited | 7 buys and 9 sells, as trial 126 |
+| Sells filled from a trade-for-trade row | 14, as trial 126 |
+
+The page was checked in the browser on an example from July 2021, when three holdings closed locked at the lower band for three sessions.
+
+**What this does not settle.** Real fills. Slippage of 0.05% a side is still a judgement (#66), and trial 126's pass would fail at 0.07%. Nothing here guarantees a profit.
+
+Files: `backend/momentum_book.py`, `backend/config.py`, `backend/tests/test_momentum_book.py`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-3i-momentum-corrected-data.md` (second dated note).
+
+### 100. The day's list is fixed before the open, on the last session's data, with guards from two NSE files
+
+**Owner's decision, 2026-09-29:** start the scanner fixes from the audit (`docs/research/scanner-audit-2026-09-28.md`). This is the first part. The move to live prices is separate and not done yet.
+
+**1. The list is fixed before the open.** §91 said the day's 25 stocks were "chosen once before trading". They were chosen from daily data, and the list was fixed at the first scan after the open. Now a pre-market read at or after 08:45 on a trading day fixes it, and the engine watches those stocks from the first tick. If the engine starts after the open, the first scan fixes it as before, and the Screener says which happened.
+
+**2. The daily data runs through the last completed session (#192).** For hours after a close, the delayed feed's daily bars still end on the session before. At 01:03 on 29 September they ended on the 25th, so a read before the open would have ranked on data one session old. The scanner now adds the last session from NSE's own files, the equity bhavcopy and the index closing file, when it is missing. With it the day's list changed by one name. If NSE's files cannot be read, the Pre-market page says which session it ranked on.
+
+**3. Guards.** Two small files from NSE's archives are read each scan:
+
+| Guard | Rule | On 2026-09-29 |
+| --- | --- | --- |
+| F&O ban | A stock on the ban list for the day is left alone | 2 stocks banned, none in the NIFTY 100 |
+| Fixed price band | Long only, and left alone within 2% of either band. Stocks with derivatives have no fixed band | ENRIN, TATACAP, TMCV |
+| Trade-for-trade | Series BE or BZ: left alone, because the position cannot be squared off the same day | None |
+| Surveillance | A graded-surveillance remark in NSE's list: left alone | None |
+
+A file that cannot be read is treated as unknown. It excludes nothing, and the page says it could not be read instead of saying nothing was found.
+
+**What this does not do.**
+
+- It does not make the intraday side profitable. No selection rule tested here predicts direction after costs (§51, §69, §91). These are tradability and data fixes.
+- When this section was written the scanner's intraday numbers still came from the delayed feed. Its gap was the open of that feed's first bar, which is not NSE's opening price: on 20 stock-days checked against the bhavcopy the gap differed by 0.3 points or more on 7 (#193). §101 moves the scanner to live prices.
+- The 2% distance from a band is a judgement, not a measured figure.
+
+**Two running tests take the list as input.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 6 and `prereg-orderbook.md` amendment 3. Amendment 3 also corrects amendment 2, which had described the list as fixed before the open.
+
+**Checked.** The pre-market read and a scan were run from this code against NSE's live files and the delayed feed on 2026-09-29; the pages were checked in the browser on a read-only preview.
+
+Files: `backend/scanner.py`, `backend/nse_feed.py`, `backend/trading_engine.py`, `backend/config.py`, `backend/tests/test_scanner_guards.py`, `frontend/src/components/ListNotes.jsx`, `frontend/src/pages/Screener.jsx`, `Overview.jsx`, `PreMarket.jsx`.
+
+### 101. The scanner reads live prices
+
+**Owner's decision, 2026-09-29.** This is the second part of the scanner fixes. §100 was the first.
+
+**The problem.** The scanner took today's prices from the delayed feed, even with Kite connected. Its gap was not NSE's opening gap, because that feed's first bar does not open at NSE's opening price (#193). How far behind the feed runs is not known exactly, so the scanner depended on something it could not check.
+
+**The change.** When Kite is connected, each scan sends one quote request for the whole universe and gets, for every stock: the last price, NSE's opening price, the day's volume, and the day's average traded price (VWAP).
+
+| Number on the Screener | Before | Now, with Kite connected |
+| --- | --- | --- |
+| Last price, change | From the delayed feed | Live |
+| Gap | The delayed feed's first bar over the previous close | NSE's opening price over the previous close |
+| Relative volume | Finished delayed bars against the same bars on up to 4 earlier sessions | The day's volume to the second, against the average traded by that minute of the day on the earlier sessions |
+| VWAP | Worked out from delayed bars | The exchange's average traded price |
+| Opening range | From delayed bars | For the day's list, from live bars at 09:30. For other stocks, from delayed bars as before |
+| NIFTY's change and position against its open | Delayed | Live |
+| Bars for the checklist read of the day's list | Delayed | Live |
+| Price band for the near-band guard | Worked out from the previous close | The exchange's own limit for the day |
+
+Daily bars and the bars of earlier sessions still come from the delayed feed, which is complete for past sessions.
+
+**When Kite is not connected**, or its quotes cannot be read, the scanner works as it did, on the delayed feed, and the Screener says so with the reason. Live prices can be switched off with `SCANNER["live_feed"]`.
+
+**Requests.** One quote request a scan, and 25 requests for bars every five minutes. Historical requests are now spaced 0.35 seconds apart across the whole engine, so the scanner and the engine's own tick cannot send more than Kite allows between them.
+
+**Checked on the real data**, after the close, with Kite connected, on the session of 2026-09-28:
+
+| Check | Result |
+| --- | --- |
+| Gap of RELIANCE, HDFCBANK, TCS, INFY | −0.65%, −0.54%, +0.86%, +0.18%: NSE's own, to two decimals. The delayed feed gave −0.51%, −0.41%, +0.72%, +0.15% |
+| Live against delayed over 100 stocks | The gap differs by a median of 0.14 points and at most 0.78. The day's change is the same. One stock's side differs |
+| One quote request for 102 instruments | 0.07 seconds |
+
+**Checked on a live session**, 2026-09-29 between 13:53 and 14:15. The new scanner ran in its own process on a throwaway journal, beside the running one, and both were compared with Kite's quotes. It ran nine scans on live prices.
+
+| Check | Result |
+| --- | --- |
+| Rows on live prices | 100 of 100 in each of the six scans where it was recorded |
+| Bars for the day's list | 25 of 25 from Kite, ending on the current bar, in each of the four scans where it was counted |
+| Gap, against NSE's open over its previous close | Largest error 0.005 points. The running scanner was off by 0.3 points or more on 23 stocks, 5 of them on the day's list, and by 2.57 at most |
+| Day's change | Within 0.10 points of a quote read seconds later. The running scanner was off by 0.3 points or more on 16 stocks, and by 2.53 at most (#196) |
+| VWAP, against the exchange's | Within 0.7 basis points. The running scanner: a median of 1.0 and at most 9.1 |
+| Relative volume | A median of 1.63, against 1.58 on the running scanner. For 8 stocks in 10 the two differ by 0.01 to 0.07 |
+| Side | Differs from the running scanner on 3 stocks (SIEMENS, CIPLA, TATACAP), none on the day's list |
+| Requests to Kite, with a scan and a tick's bars fetched at the same moment | 50 requests, never closer than 0.35 seconds, 3 at most in any second, none refused |
+| Time for a scan | 14 to 15 seconds, against 10 to 15 for the running scanner. 22 seconds when a tick fetches its bars at the same moment, and that tick's bars then take 16 seconds in place of 9 |
+| First scan after a restart | 46 to 49 seconds, 26 of them on news and fundamentals, which is not new |
+
+**What the check did not show.**
+
+- **The last price was not newer.** In that half hour the delayed feed's newest price was within a median of 0.8 basis points of Kite's, read at the same moment, and at most 7.4. What this change gives is the right gap, the right day's change and the exchange's own VWAP, and a scanner that no longer depends on how late that feed runs. It did not give a newer price on this session.
+- **One reading is unexplained.** In one scan one stock's live price was 34 basis points from a quote read 9 seconds later. The stock was not recorded. In the other scans the largest difference was 10.
+- **The open has not been checked**: the first scan at 09:15 and the opening range at 09:30.
+- **The scanner ran beside the engine, not inside it.** The request spacing was tested in one process with a tick's bar fetch, which is the same code the engine runs, but not in the engine itself.
+
+**Found by the check.**
+
+- **The daily bars kept a hole at the last session (#196), fixed here.** During a session the delayed feed's daily bars already end with today's bar, and for 16 of the 100 stocks they had no bar for 2026-09-28. The repair from §100 looked only at the last bar and skipped them, so those stocks' gap and day's change were measured from the close of 2026-09-25. It now looks for the session by date and puts NSE's bar in its place. With the fix, no stock's day change was off by 0.3 points or more on either feed.
+- **The sector trend check has been off for 61 of the 100 stocks since 2026-09-16 (#197), not fixed.** The delayed feed serves one daily bar for six of the eight sector indices. The check needs 51 and is skipped without saying so. It covers Financial Services, Automobile, FMCG, Metals, Power, Oil and Gas, and Realty. The day's list is chosen by turnover, so the 25 stocks traded are the same; the side and the score shown for a stock are affected.
+
+**Deployed** on 2026-09-29 at 18:08 IST, by a backend restart after the close, with no position open. The same restart brought §98 and §100 live. The first session on all three is 2026-09-30.
+
+| Checked after the restart | Result |
+| --- | --- |
+| Code running | The tree of the merged commit, which is the tree the tests ran on (816 passed) |
+| First scan | 100 of 100 rows on live prices, with the ban list and the price bands read |
+| Paper mode, Kite login, capital, pause switch, positions | As before the restart |
+| Review queue | The restart switched it off, as it always does. It was switched back on, as it was before |
+| Momentum book | Shows the +0.71% band. The running backend had shown +0.82% until the restart |
+| Screener, Overview, Pre-market and Momentum book pages | Read in the browser, with no error in the console |
+
+**Found by the deploy (#198, not fixed).** The day's list is held in memory, so the restart chose the list for 2026-09-29 again and put HINDALCO in place of TVSMOTOR. Nothing was affected, because the market was closed. A restart inside a session would change the list part-way through the day.
+
+**What this does not do.** It does not make the intraday side profitable. No selection rule tested here predicts direction after costs. This makes the scanner's numbers current and correct, which any later test of them needs.
+
+**Two running tests.** Each has a dated note written before the change is deployed: `prereg-jev-book.md` clarification 7 (the scanner row Jev sees is now built from live prices) and `prereg-orderbook.md` amendment 4 (no effect on the samples).
+
+Files: `backend/scanner.py`, `backend/data_provider.py`, `backend/config.py`, `backend/tests/test_scanner_live_feed.py`, `frontend/src/components/ListNotes.jsx`.
+
+### 102. The Kronos space: a page and a database for the forecasts, read-only for the engine
+
+**What it is.** Kronos is an open-source price-forecasting model, a transformer over candlestick bars. The project tests it as research look L40 (§93; `docs/research/prereg-kronos-feature-ic.md`): does a zero-shot forecast of the next 15, 30 or 60 minutes rank the day's stocks, beyond what the last hour's move already says? Two research processes, both outside the live path, write what they find as JSON files: the L40 pass writes its stage 0 records and, when it finishes, its result to `docs/research/data/kronos_l40_*.json`; the shadow (`backend/research/kronos_shadow.py`) writes one forecast per stock on the scanner's list every quarter hour of a session, and the move that then happened, to `backend/data/kronos_shadow_<date>.json` and `..._summary.json`. Until now those files had no home.
+
+**The change.** A store and a page.
+
+- `backend/kronos_store.py` reads the files into its own sqlite database, `backend/data/kronos.db` (gitignored with the other `data/*.db`). Three tables: `shadow_forecasts`, one row per date, time and stock, with the forecast, the last hour's move, the scanner's side and score at that moment, whether the bars were live or delayed, and the realised targets once known; `shadow_days`, one row per day with its counts, running statistics and summary; `runs`, the L40 records whole. Ingest is an upsert, so a day file rewritten with targets filled in updates the rows already stored. A file caught mid-write is skipped that time and read on the next. The connection is opened per call with a busy timeout; nothing holds it open.
+- Two routes: `GET /api/kronos` (the look's records summarised, today's or the latest day, one row per day) and `GET /api/kronos/day/{date}` (one day in full). The page route ingests first, so a file the shadow wrote a minute ago is on the page at its next refresh, without restarting anything. Both need the dashboard key like every other route.
+- A **Kronos** page in the sidebar, under Research: what the model is and that nothing here touches a trade; the test (stage 0 on the Mac and the PC: regression, pinned revisions, lookahead proof, seconds per forecast, sample count, sessions, stock-times; and the result per horizon when it exists, with IC, partial IC given the last hour's move, the quintile spread against the 33.26 bp two-leg bar, both halves, and the gate's verdict in plain words); today's shadow, one time at a time, with each stock's forecasts in basis points, the scanner's side and score, whether the bars were live, and the realised move where known, with the day's running statistics; and one row per day. It refreshes every minute.
+
+**What it is not.** No decision reads it. No entry, size, exit, scanner score or checklist read touches the store or its files; the engine never imports the module, and the module never imports research code or torch. Rule RES-32 states it, and two tests hold it: only `app.py` may import `kronos_store`, for its two routes, and the store's imports are checked against the research and torch packages. A shadow day is an anecdote, and the page says so; the test is the pre-registered 79-session pass, and its gate is the only thing that can earn Kronos a trial.
+
+**Checked.** Ten tests on a synthetic day and summary, targets filled later, a torn file, the three records, the routes on a bare FastAPI app, and the boundary. The page was checked in a browser against a stub that served the two routes from a throwaway copy of the data and proxied everything else to the running backend; the PR that added this section carries the screenshot.
+
+### 103. More predictive tools, surveyed: what can be tested next, and what cannot
+
+The owner asked (2026-09-29) for more prediction tools, libraries and agents that could be tested. Three research agents searched in parallel, without redoing the sweep of §79: time-series foundation models that fit the Kronos harness, finance ML libraries and agent frameworks, and India-specific tools with the newest evidence. 55 candidates are recorded with their licence, size, known leakage bugs and independent net-of-cost evidence (`docs/research/predictive-tools-sweep-2026-09-29.md`, full lists in `docs/research/data/predictive-tools-sweep/`). Nothing was run.
+
+- **No candidate has independent, net-of-cost evidence on intraday stocks.** Three outside tests of Kronos itself are negative, on NSE daily data and US ETFs.
+- **Most of the newest models cannot use the Kronos sample.** A model's weights must predate the prices it is examined on. Chronos-2, TiRex-2, Toto 2.0, Granite PatchTST-FM-r2 and TimesFM-3.0 were released after September 2025, so they can be tested only on the 2026 held-out window or forward, from live sessions.
+- **Testable now, zero-shot, in the Kronos harness:** TimesFM-2.5, Moirai 2.0, Sundial, FlowState, Chronos-Bolt and TiRex v1, as one pre-registered family.
+- **Testable as a trained look:** Qlib's LightGBM on its Alpha158 factor set. The project has never trained a model on its own bars; this would close that gap with a number.
+- **Skipped:** LLM agent frameworks (independent audits show 50 to 72% of their performance disappears after the model's training cutoff), order-book deep models, deep reinforcement learning, and tools with no record.
+
+Every test would be pre-registered first, and the expected result for each is a null. Nothing reaches the engine without a pass, a trial and confirmation.
+
+### 104. The night of 2026-09-29: eight forecasting models and 75 combinations tested, none pays
+
+The owner asked, before going to sleep, for Kronos to be added if it passed, for other models to be tested if it did not, and for combinations with candlestick rules to be tried. Every step was pre-registered before its result could be seen, decisions were taken by a decision agent against a written charter, and every decision is logged (`docs/research/decisions/log-2026-09-30.md`; the morning summary is `docs/research/decisions/morning-note-2026-09-30.md`). The heavy work ran on the owner's PC (an RTX 3060 Ti), reached over SSH; the trading Mac was left alone.
+
+| Test | What it asked | Result |
+| --- | --- | --- |
+| **L40, Kronos** (§93) | Does its forecast rank the next 15, 30 or 60 minutes past cost? | **Fail.** Best top-minus-bottom gap +1.6 bp against 33.26 bp |
+| **L46, six more foundation models** (Chronos-Bolt, TimesFM-2.5, Moirai 2.0, FlowState, TiRex, Sundial) | The same question, the same rule | **Fail, 18 of 18.** Gaps −2.3 to +0.5 bp; 16 of 18 negative |
+| **L47, a model trained on our own bars** (Qlib's LightGBM on its 158 standard factors) | The same question, trained on 2024-09 to 2025-08 | **Fail.** Gaps 0.0 to +0.5 bp |
+| **Trials 128–202, 75 combinations** of those forecasts with candlestick patterns | Does any combination earn more than it costs? | **None.** Every one loses after costs; the best loses 13.8 bp a trade. The patterns alone earn about zero before costs over 5,074 trades |
+
+**What this means.** Nothing is added to Trader Sahab. Some of the models rank the next hour a little better or worse than chance with statistical significance, but the effect is at most a few basis points against a round trip of 16.63 bp a leg. This is the project's standing finding again, measured eight more ways: at this horizon and these costs, the entry signal is not the binding constraint. The trial count of record is now 202. Kronos's live shadow still runs today as a labelled record on the Kronos page.
+
+Results: `results-kronos-feature-ic.md`, `results-tsfm-family.md`, `results-qlib-lgbm-alpha158.md`, `results-combo-search.md`.
+
+### 109. Market breadth and intermarket moves, measured (run 2026-09-25, merged 2026-09-30): neither predicts the session by enough to trade
 
 The owner asked to focus on the methods page's "read, but not (yet) built in" list rather than the Varsity checklist. Two items on it bring information the 76-configuration search (§69) never used:
 - **market breadth over every NSE equity**: the advance-decline ratio, the McClellan Oscillator and TRIN, built from two years of NSE bhavcopies;
@@ -3299,7 +3899,7 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 - **Point & Figure and time cycles** are price-only, the class §69 already found empty.
 - **ML models** now have the data, but on the same price inputs they have the same information.
 
-The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L35), not a trial, so trials stay at **117**.
+The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
 ## Backtest results
 
@@ -3385,272 +3985,53 @@ python backtester.py --no-costs   # frictionless, for reference only
    gradient boosting / deep learning / RL once there's enough real trade
    history to justify them (see `research/ml4t_integration_plan.md`).
 
-## Architecture
+## Architecture and design
+
+The design lives in [`docs/architecture/`](docs/architecture/README.md).
+
+| Document | Read it for |
+| --- | --- |
+| [High-level design](docs/architecture/HLD.md) | The parts, a trading day, where entries stop today, how it fails, known gaps |
+| [Low-level design](docs/architecture/LLD.md) | Every module, the tick sequence, formulas, the API, the database, the settings |
+| [Rules checklist](docs/architecture/RULES.md) | Every rule, each with the code that enforces it and a way to check it |
+| [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) | How the code and the research connect |
+| [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) | Search, filter and tick the rules; private to the owner |
+
+```mermaid
+flowchart LR
+    Owner(["Owner"]) --> Dash["Dashboard<br/>React, localhost:5500"]
+    Dash <-->|"X-Api-Key header<br/>WebSocket, key in first message"| Back["Backend<br/>FastAPI + engine"]
+    Back --> Journal[("Journal<br/>SQLite")]
+    Back <--> Kite["Zerodha Kite<br/>prices, order book, orders"]
+    Back --> Feeds["yfinance, NSE, news"]
+    Back --> Models["TypeSafe Jev, Claude"]
+    Back -->|"evening job"| Book["Momentum book"]
+    Research["Research scripts<br/>one run per hypothesis"] -.->|"a pass earns a paper book"| Book
+```
+
+One backend process owns all state and is the only writer of the journal.
+Only Kite can receive an order, and only in Live mode. The paper books run
+beside the engine and are not affected by its mode, pause or kill switch.
+Research scripts are never imported by live code.
 
 ```
 webapp/
 ├── backend/
-│   ├── app.py                   # FastAPI: REST + WebSocket, API-key middleware, runs the engine
-│   ├── config.py                # SCANNER, MARKET_FILTER, NEWS, STRATEGY_PARAMS, RISK, COSTS, FNO, DASHBOARD_API_KEY
-│   ├── trading_engine.py        # loop: scan → per-stock brain → market/risk gates → execute (cash + F&O) → activity log
-│   ├── scanner.py               # ★ NIFTY 100 ranking: market context, tradability, setup, in-play, catalysts
-│   ├── trader_brain.py          # ★ confluence timing strategy with explanations (shared by cash and F&O)
-│   ├── confidence.py            # ★ F&O per-trade confidence check, scaled by the Dimaag Scorecard
-│   ├── options_pricing.py       # ★ Black-Scholes-Merton pricing, Greeks, implied-volatility solve
-│   ├── fno_instruments.py       # ★ resolves live NFO contracts via Kite's own instrument dump
-│   ├── fno_risk.py              # ★ premium-based position sizing (options-buying only, capped max loss)
-│   ├── evaluation.py            # ★ Deflated Sharpe Ratio + the Dimaag Scorecard
-│   ├── methods.py               # ★ assembles the Technical Analysis page from real code constants
-│   ├── holidays.py              # NSE trading holiday calendar
-│   ├── news_sentiment.py        # ★ multi-source news aggregation (NSE, Google, Marketaux, Alpha Vantage) + market catalyst discovery
-│   ├── fundamentals.py          # ★ real ROE/margin/PEG/debt-equity via Yahoo Finance — §41
-│   ├── llm_sentiment.py         # ★ Claude Haiku headline scoring — real usage/cost tracking, budget, cache, toggle
-│   ├── chaywanaprash.py         # ★ platform research analyst — real journal stats + Claude Sonnet, read-only — §29, §30
-│   ├── portfolio_diagnostic.py  # ★ technical read on real Kite holdings (trend/RSI/levels/patterns), not a forecast
-│   ├── nse_feed.py              # ★ NSE announcements + results calendar + FII/DII flows + bulk/block deals + market breadth/TRIN — §20, §33
-│   ├── sentiment_lexicon.py     # India-tuned finance sentiment lexicon
-│   ├── universe.py              # NIFTY 100 list (cached in data/nifty100.csv)
-│   ├── indicators.py            # EMA, RSI, MACD, Bollinger, VWAP, ADX, Stochastic, ATR, OBV, resampling
-│   ├── candlestick_patterns.py  # context-aware pattern recognition (24 patterns)
-│   ├── swing_patterns.py        # Bulkowski daily patterns + Murphy reversal days (scanner only)
-│   ├── market_structure.py      # swings, Dow trend, S/R zones, breakouts, Fibonacci, CPR
-│   ├── seasonality.py           # ★ real, cited calendar effects only — March effect, Budget day — §18
-│   ├── sectoral_indices.py      # ★ real NSE sectoral index trend confluence check — §20
-│   ├── risk_manager.py          # cash-equity risk sizing, 33% notional cap, ATR stops, daily loss limit
-│   ├── liquidity.py             # ★ entry-time order-book check: spread, impact of our size, entry AND exit depth; journals every reading — §58
-│   ├── day_plan.py              # ★ real risk-boundary sizing at a given capital + today's actual outcome — §16
-│   ├── database.py              # ★ Sahab's Journal — scans, checklist reads, trades, F&O evaluations/trades, factor IC, McClellan — §30, §31, §33, §38
-│   ├── backtester.py            # same strategy/risk/confidence-gate code over history, with costs; --universe/--walk-forward modes — §20, §35
-│   ├── tune_entry_params.py     # ★ grid-search min_confidence_to_trade/min_rrr, ranked by Deflated Sharpe Ratio — §35
-│   ├── diagnose_entry_edge.py   # ★ why the checklist loses: friction, timeframe, no-timing baseline, held-out split — §36
-│   ├── swing_backtester.py      # ★ multi-day long-only holds on daily bars vs an every-stock benchmark, plus daily ranking IC — §37
-│   ├── research/                # ★ phase-2/3 research harnesses (splits, null test, friction, 3a/3b/3c, #74 before/after); no live module imports it — tested
-│   ├── tests/                   # ★ pytest — position sizing, stop/target math, confidence gate, fault injection — §19, §24, §28
-│   ├── costs.py · data_provider.py · state.py · paper_broker.py · kite_broker.py · generate_access_token.py
-│   └── data/nifty100.csv
-└── frontend/                     # React + Vite dashboard (migrated from a single-file vanilla-JS app)
-    ├── src/
-    │   ├── App.jsx                # routing (react-router) + layout shell
-    │   ├── api.js                 # apiFetch, dashboard-key handling, useAppState() WebSocket hook
-    │   ├── helpers.js             # domain helpers shared across pages (scanRows, analysisFor, primaryRule, ...)
-    │   ├── format.js              # number/money/date formatting + the hover-tooltip glossary (GLOSSARY)
-    │   ├── notifications.js       # ★ browser Notification wrapper — permission + on/off, all client-side
-    │   ├── useAlerts.js           # ★ watches state for new trades/risk warnings/price moves, fires notifications
-    │   ├── components/
-    │   │   ├── Header.jsx          # topbar: market status/countdown, realized/open P&L, Kite connect, Paper/Live
-    │   │   ├── Chart.jsx            # ★ Lightweight Charts v5 wrapper — see Low-Level Design below
-    │   │   ├── Tip.jsx              # the hover/focus glossary tooltip
-    │   │   ├── RuleBook.jsx · Pill.jsx · SymLink.jsx · Feed.jsx
-    │   │   ├── LlmSentimentPanel.jsx # ★ live usage/cost + on-off toggle for llm_sentiment.py
-    │   │   └── LiveLog.jsx          # ★ terminal-style live activity drawer, available from any page — §22
-    │   └── pages/
-    │       ├── Overview.jsx · Screener.jsx · Stock.jsx · Trades.jsx
-    │       ├── PreMarket.jsx      # ★ renders scanner.run_premarket()'s daily-only pre-open ranking
-    │       ├── DayPlan.jsx        # ★ renders day_plan.py — real risk-boundary sizing, never a return forecast
-    │       ├── TechnicalAnalysis.jsx
-    │       ├── Portfolio.jsx      # incl. the synced-capital Kite margins card — see §15
-    │       ├── PortfolioDiagnostic.jsx # ★ renders portfolio_diagnostic.py's read on your holdings
-    │       └── Journal.jsx
-    └── legacy/index.html          # the original single-file version, kept working for reference
+│   ├── app.py, auth.py, config.py        API, dashboard key, settings
+│   ├── trading_engine.py, state.py       tick loop, the only order path, shared state
+│   ├── scanner.py, trader_brain.py       what to watch; the setup describer
+│   ├── confidence.py, evaluation.py      the evidence gate, Deflated Sharpe, Scorecard
+│   ├── risk_manager.py, liquidity.py, costs.py, review_queue.py
+│   ├── momentum_book.py, jev_book.py, depth_sampler.py    paper books and the sampler
+│   ├── data_provider.py, nse_feed.py, news_sentiment.py   market data and context
+│   ├── database.py                       the journal
+│   ├── research/                         pre-registered tests; never imported by live code
+│   └── tests/                            pytest
+├── frontend/src/                         React dashboard: 12 pages, one WebSocket
+├── docs/architecture/                    design documents and the rules catalogue
+├── docs/research/                        pre-registrations, results, the trial ledger
+└── tools/build_rules_docs.py             builds the rules pages from rules.json
 ```
-
-## High-Level Design
-
-```mermaid
-flowchart TB
-    subgraph Client["Your browser"]
-        SPA["React SPA (Vite)\nhash-free routing, WebSocket state"]
-    end
-
-    subgraph Backend["FastAPI backend — single process"]
-        API["REST + WebSocket\nApiKeyMiddleware gates every route\nexcept /kite/callback"]
-        Engine["TradingEngine loop\n(async, runs forever)"]
-        Scanner["scanner.py\nNIFTY 100 ranking"]
-        Brain["trader_brain.py\nGrand Checklist — shared by cash & F&O"]
-        Risk["risk_manager.py / fno_risk.py\nposition sizing"]
-        Conf["confidence.py\nscaled by the Dimaag Scorecard"]
-        Liq["liquidity.py\norder-book check before every entry"]
-        News["news_sentiment.py\naggregation + relevance filter"]
-        Diag["portfolio_diagnostic.py\nread-only holdings snapshot"]
-        DB[("sahab_journal.db\nSQLite — scans, checklist reads,\ntrades, F&O evaluations, liquidity checks")]
-    end
-
-    subgraph External["External services"]
-        Kite["Zerodha Kite Connect\norders, quotes, holdings, F&O instruments"]
-        YF["yfinance\ndelayed OHLCV fallback"]
-        NSE["nseindia.com\nfilings, holidays, results calendar"]
-        NewsAPIs["Google News / Marketaux /\nAlpha Vantage"]
-        Claude["Anthropic Claude API\nHaiku 4.5 — headline sentiment ONLY"]
-    end
-
-    SPA <-->|"WebSocket /ws\n?key=... every 3s"| API
-    SPA -->|"REST, X-Api-Key header"| API
-    API --> Engine
-    Engine --> Scanner --> Brain --> Risk --> Liq
-    Brain --> Conf
-    Engine -->|"paper fill, or\nreal order"| Kite
-    Scanner --> YF
-    Scanner --> NSE
-    Engine --> News
-    News --> NewsAPIs
-    News -.->|"score_headline()\noff by default, budget-capped"| Claude
-    Engine --> DB
-    API --> Diag
-    Diag --> Kite
-    Diag --> YF
-```
-
-**Why this shape:** one backend process owns all state (`state.py`'s
-`AppState`, behind a lock) and pushes it to every connected browser over
-the WebSocket — there's no separate state store the frontend and backend
-could disagree about. The engine loop is the only writer; the REST API and
-the diagnostic/LLM paths are read-mostly extensions bolted onto the side,
-which is why they can be built, tested, and toggled independently without
-touching the core scan → brain → risk → liquidity → execute chain. External services
-are all optional except Kite for live data/orders and yfinance for
-backtesting — everything else (Marketaux, Alpha Vantage, Claude) degrades
-to "skip this source" on its own, never blocking a decision.
-
-## Low-Level Design
-
-Three pieces added this session don't have detailed documentation
-elsewhere in this README (the trading logic itself is documented narrative-
-style in [How the agent decides](#how-the-agent-decides) above, which *is*
-effectively its LLD) — their internals, below.
-
-### LLM-read news sentiment (`llm_sentiment.py`)
-
-```mermaid
-sequenceDiagram
-    participant Agg as news_sentiment._aggregate()
-    participant LLM as llm_sentiment.score_headline()
-    participant Cache as _cache (in-process dict)
-    participant Budget as _budget (daily counters)
-    participant API as Anthropic API (Haiku 4.5)
-    participant Lex as sentiment_lexicon.score_text()
-
-    Agg->>Agg: de-dup headline, check it actually names the company
-    Agg->>LLM: score_headline(title, summary)
-    LLM->>Cache: seen this exact headline before?
-    alt cached
-        Cache-->>LLM: return cached score
-    else not cached
-        LLM->>Budget: _allowed()? (key set, toggle on, under daily_limit)
-        alt not allowed
-            Budget-->>LLM: False
-            LLM-->>Agg: None
-            Agg->>Lex: score_text(title + summary)
-            Lex-->>Agg: score in [-1, 1]
-        else allowed
-            Budget-->>LLM: True (used += 1)
-            LLM->>API: messages.create(system=..., headline)
-            API-->>LLM: {"score": x} + real input/output token counts
-            LLM->>Budget: add real token counts (for cost tracking)
-            LLM->>Cache: store score, keyed by sha256(title+summary)
-            LLM-->>Agg: score in [-1, 1]
-        end
-    end
-    Agg->>Agg: weight by source trust x recency, accumulate
-```
-
-Any exception anywhere in the API-call branch (network error, bad JSON,
-rate limit) is caught, logged, and treated as "not allowed right now" —
-`score_headline()` returns `None` and the caller falls back to the lexicon
-in the exact same code path as a disabled/unconfigured LLM. There is no
-branch where a failure surfaces as a wrong score instead of a graceful
-fallback.
-
-`stats()` (backing `GET /api/llm-sentiment/status`, polled every 15s by
-`LlmSentimentPanel.jsx`) reads `_budget`'s real accumulated
-`input_tokens`/`output_tokens` and multiplies by the published per-token
-price — not `used_today × an assumed average call size`. `set_enabled()`
-(backing `POST /api/llm-sentiment/enable`) mutates
-`config.NEWS["use_llm_sentiment"]` directly, so the toggle takes effect on
-the very next headline scored, no restart.
-
-### Holdings diagnostic (`portfolio_diagnostic.py`)
-
-```mermaid
-sequenceDiagram
-    participant FE as PortfolioDiagnostic.jsx
-    participant API as GET /api/portfolio/diagnostic
-    participant Kite as kite_broker.get_holdings()
-    participant YF as scanner.download_batch()
-    participant Ind as indicators.py / market_structure.py / swing_patterns.py
-
-    FE->>API: fetch on page load
-    API->>API: 400 if Kite isn't connected
-    API->>Kite: holdings() — real symbols, quantities, avg cost, P&L
-    API->>YF: download_batch([sym.NS for sym in holdings], "1y", "1d")
-    loop each holding with >= 60 daily bars
-        API->>Ind: EMA20/50, RSI(14), ATR(14), 52w high/low
-        API->>Ind: swing_points + key_levels -> nearest support/resistance
-        API->>Ind: scan_daily_patterns() + detect_reversal_day()
-        Ind-->>API: one diagnostic row: trend, rsi, levels, posture[]
-    end
-    API-->>FE: {rows: [...], unreadable: [symbols yfinance couldn't fetch]}
-    FE->>FE: render as a table — no score, no buy/sell column, no target
-```
-
-`_posture()` is the only place this module makes a judgment call, and it's
-a bounded one: it names which real, already-computed signals are present
-(`"Uptrend, RSI overbought"`, `"Within 3% of its 52-week high"`) — it never
-combines them into a single number, because that number would look like a
-recommendation whether or not it was labeled as one.
-
-### Enhancing the chart (`components/Chart.jsx`)
-
-Four independent `useEffect` hooks, each keyed on exactly the props that
-should trigger it — not one big effect that redoes everything on every
-render:
-
-1. **Mount-only** — creates the chart once (`createChart`), the candlestick
-   series, two `LineSeries` (EMA 20/50), a `HistogramSeries` on its own
-   price scale (the volume panel, squeezed into the bottom 18% via
-   `scaleMargins`), and a `ResizeObserver`. Cleans up (`chart.remove()`) on
-   unmount.
-2. **Keyed on `symbol`** — fetches `/api/candles/:symbol`, sets the
-   candlestick data, then recomputes EMA 20/50 *client-side* from those
-   same closes (`emaSeriesJS()`, the identical formula
-   `indicators.ema_series()` uses server-side — not a separately-fetched or
-   guessed value) and sets the volume histogram, colored per bar direction.
-3. **Keyed on `plan`** (support/resistance/VWAP + the checklist's
-   entry/stop/target) — removes and redraws price lines. Worth repeating
-   the framing from "Read this first" above: entry/stop/target are the
-   checklist's actual computed trade plan, never a projected future price
-   — there is no forecasting model backing a price curve, and the chart
-   draws none.
-4. **Keyed on `patterns`/`barTime`** — arrow markers
-   (`createSeriesMarkers`, the v5 API; v4 used `series.setMarkers()`
-   directly) on the most recently detected candlestick pattern's bar.
-
-Lightweight Charts was upgraded 4 → 5 as part of the React migration, which
-changed series creation from `chart.addCandlestickSeries(...)` to
-`chart.addSeries(CandlestickSeries, ...)` (series types are now imported
-values, not method names) — worth knowing if you're diffing this against
-older Lightweight Charts examples online. `kineticScroll`, `handleScroll`,
-and `handleScale` are all explicitly enabled in the chart options; they
-aren't v5 defaults.
-
-### Frontend state flow
-
-```mermaid
-flowchart LR
-    WS["WebSocket /ws"] -->|"JSON snapshot\nevery 3s"| Hook["useAppState()\napi.js"]
-    Poll["10s REST poll\n(belt-and-braces fallback)"] --> Hook
-    Hook -->|"state"| Shell["<Shell> in App.jsx"]
-    Shell --> Header["<Header state=.../>"]
-    Shell --> Router["<Routes>"]
-    Router --> Pages["Overview / Screener / Stock /\nPortfolio / Journal / Trades"]
-    Pages -->|"apiFetch() for\npage-specific data"| REST["REST endpoints\n(methods, portfolio, journal, ...)"]
-```
-
-There is exactly one WebSocket connection and one source of truth
-(`state` in `App.jsx`'s `<Shell>`) — every page receives it as a prop rather
-than opening its own connection or keeping local copies that could drift.
-Page-specific data (news, methods, journal, the diagnostic) is fetched
-independently per page via `apiFetch()`, since that data doesn't change
-every 3 seconds and doesn't belong in the constant WebSocket stream.
 
 ## Development workflow
 
@@ -3679,10 +4060,13 @@ uvicorn app:app --port 8000
 ```
 
 On first run, the backend auto-generates a **dashboard API key**
-(`backend/.dashboard_key.json`, gitignored) and logs it on startup. Every
-route except `/kite/callback` requires it (`X-Api-Key` header, or `?key=`
-for the WebSocket and the Kite-login popup, since neither can set a custom
-header).
+(`backend/.dashboard_key.json`, gitignored). It logs the key in full on that
+run only; later starts log a masked reference. Every route except
+`/kite/callback` requires it in the **`X-Api-Key` header**. A `?key=` query
+string is refused with 401, because uvicorn logs every request line (#87).
+The WebSocket takes the key as its first message, and the Connect Kite
+button fetches the login URL with the header instead of opening a keyed
+link. Never put the key in a URL.
 
 In another terminal:
 
@@ -3692,8 +4076,8 @@ npm install
 npm run dev          # http://localhost:5500
 ```
 
-It'll prompt for the dashboard API key once (or pass it via `?key=...` in
-the URL), then remember it via `localStorage`. The key requirement exists
+It prompts for the dashboard API key once and keeps it in the browser's
+`localStorage`. The key requirement exists
 because the backend sometimes needs to be reachable from the public
 internet (see "Connecting Kite locally" below) and has real control
 surface — without it, anyone with the URL could flip the dashboard to live
@@ -3734,8 +4118,10 @@ the form. Two ways around it:
 
 **If the tunnel is down when you log in**, Kite still redirects to it and the page fails to load. The address bar keeps the whole redirect, though. Replace the tunnel host with `http://127.0.0.1:8000` and keep the rest of the URL unchanged (`/kite/callback?...&request_token=...`), then open it. The running backend completes the login the same way. The request token can only be used once and expires within minutes, so do this straight away. (Verified 2026-09-23 with ngrok stopped.)
 
-**Kite sessions expire daily.** Whichever method you used, you'll need to
-redo it each morning before trading live —
+**Kite sessions expire daily, at 06:00.** Whichever method you used, redo
+it each trading morning before 09:15, even in paper mode. The order-book
+test needs a live Kite feed for every session it counts, and without one
+the engine falls back to yfinance prices about 15 minutes behind.
 `python generate_access_token.py` doesn't depend on any tunnel still being
 up, which is why it's the more durable daily habit.
 
@@ -3758,6 +4144,28 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
    you're ready — it stays off by default even with a valid key, and you
    can turn it off again any time without restarting anything.
 
+### Storing the TypeSafe API key (for the Jev book)
+
+The Jev book ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)) calls TypeSafe's official API and needs a key;
+without one, each day is recorded as "Jev unavailable" and nothing is
+traded. TypeSafe is prepaid: add credits, then create a key at
+[console.typesafe.ai/keys](https://console.typesafe.ai/keys). At about
+34,000 input tokens a trading day it costs roughly $0.03 a month.
+
+Copy the key to the clipboard and run, from the repo root:
+
+```bash
+pbpaste | backend/.venv/bin/python backend/typesafe_key.py set
+backend/.venv/bin/python backend/typesafe_key.py test     # one tiny request
+backend/.venv/bin/python backend/typesafe_key.py status   # never prints the key
+```
+
+`set` with nothing piped in asks for the key at a hidden prompt. Never pass
+the key as a command-line argument: it lands in shell history. The key is
+written to `backend/.typesafe_key.json` with mode 0600 (gitignored), and the
+`TYPESAFE_API_KEY` environment variable overrides it. The engine reads the
+key on each call, so no restart is needed.
+
 ### Going live (only once backtests and paper results justify it)
 
 1. Create an app at https://developers.kite.trade and subscribe to the
@@ -3775,8 +4183,13 @@ pulls in the `anthropic` SDK, so no separate install once you have a key.
 
 ## Known limitations
 
-- Net-negative in every backtest. There's no edge yet, in cash equity or F&O.
-- **Square-off time is later than the broker's (#78, open).** Since the closing auction started on 2026-08-03, Zerodha auto-squares MIS positions in F&O-eligible stocks at **15:12**, and charges ₹50 + GST per auto square-off order. The engine squares off at 15:15. That covers nearly the whole NIFTY 100, so **fix it before trading live**. Paper mode is unaffected.
+- Every intraday rule, in cash equity or F&O, is net-negative in backtests. The one pass is the monthly delivery momentum book ([§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026)), and it runs in paper only.
+- **Known gaps, filed while the design was mapped (2026-09-28).** None affects today's paper operation with automatic entries off.
+  - Before going live: slippage has never been measured from real fills ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66); a first reading from the order book is in §98). Live fills booked at the modelled price and a live position unwatched after a restart were fixed in §98, untested against a real order.
+  - Before enabling options: options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)); live option orders book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)); open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)); paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189)).
+  - For the paper books: [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) (Jev book) and [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) (momentum book).
+  - Housekeeping: [#160](https://github.com/harshece16/intraday-trading-agent/issues/160), [#161](https://github.com/harshece16/intraday-trading-agent/issues/161), [#162](https://github.com/harshece16/intraday-trading-agent/issues/162), [#163](https://github.com/harshece16/intraday-trading-agent/issues/163).
+- **Square-off time (#78, fixed).** Zerodha auto-squares MIS positions in F&O-eligible stocks at 15:12 and charges ₹50 + GST per order. The engine squares off at **15:08**.
 - **Slippage is still an assumption** (3 bp per leg), because no real-money order has ever been placed. The charges side of the cost model now matches Zerodha's published tariff to within about 0.03 bp (#79). Measured spreads have been accumulating in `liquidity_checks` since §58, but only for setups that reach the last gate.
 - **Cash equity only, in practice.** At a small account, NFO futures and all but one MCX contract are out of reach on margin, and Kite has no intraday history for expired F&O/MCX/CDS contracts. A non-equity backtest would need a forward-collected cache first (`docs/research/phase3-scoping.md`).
 - F&O confidence currently borrows cash equity's Scorecard rather than

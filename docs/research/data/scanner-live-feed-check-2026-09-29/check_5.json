@@ -1,0 +1,474 @@
+{
+ "at": "14:08:23",
+ "seconds": {
+  "delayed": 36.6,
+  "live": 14.9
+ },
+ "daily_completed_from_nse": {
+  "delayed": 16,
+  "live": 16
+ },
+ "feed": {
+  "prices": "live",
+  "rows_live": 100,
+  "rows_delayed": 0,
+  "quotes_at": "2026-09-29T14:08:14+05:30",
+  "why_delayed": null
+ },
+ "gap_error_points": {
+  "engine_now": {
+   "median": 0.138,
+   "max": 2.566,
+   "off_by_0_3_or_more": 23,
+   "of_them_in_the_16": 14,
+   "n": 100
+  },
+  "delayed_with_fix": {
+   "median": 0.119,
+   "max": 1.328,
+   "off_by_0_3_or_more": 14,
+   "of_them_in_the_16": 5,
+   "n": 100
+  },
+  "live_with_fix": {
+   "median": 0.002,
+   "max": 0.005,
+   "off_by_0_3_or_more": 0,
+   "of_them_in_the_16": 0,
+   "n": 100
+  }
+ },
+ "day_change_error_points": {
+  "engine_now": {
+   "median": 0.054,
+   "max": 2.532,
+   "off_by_0_3_or_more": 16,
+   "of_them_in_the_16": 16,
+   "n": 100
+  },
+  "delayed_with_fix": {
+   "median": 0.02,
+   "max": 0.138,
+   "off_by_0_3_or_more": 0,
+   "of_them_in_the_16": 0,
+   "n": 100
+  },
+  "live_with_fix": {
+   "median": 0.012,
+   "max": 0.098,
+   "off_by_0_3_or_more": 0,
+   "of_them_in_the_16": 0,
+   "n": 100
+  }
+ },
+ "the_16": [
+  {
+   "symbol": "ABB",
+   "nse_gap": -0.32,
+   "engine_gap": -1.5,
+   "delayed_gap": -0.37,
+   "live_gap": -0.32,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 74.1,
+   "live_score": 60.8,
+   "rs10": [
+    -1.94,
+    -1.5
+   ],
+   "atr_pct": [
+    2.11,
+    2.15
+   ],
+   "trend": [
+    "down",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "APOLLOHOSP",
+   "nse_gap": 0.28,
+   "engine_gap": -0.04,
+   "delayed_gap": 0.28,
+   "live_gap": 0.28,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 44.6,
+   "live_score": 58.8,
+   "rs10": [
+    1.7,
+    2.91
+   ],
+   "atr_pct": [
+    1.66,
+    1.66
+   ],
+   "trend": [
+    "up",
+    "up"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "BAJAJHLDNG",
+   "nse_gap": -0.65,
+   "engine_gap": -0.61,
+   "delayed_gap": 0.68,
+   "live_gap": -0.65,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 35.6,
+   "live_score": 19.0,
+   "rs10": [
+    -0.64,
+    -0.36
+   ],
+   "atr_pct": [
+    2.03,
+    2.05
+   ],
+   "trend": [
+    "sideways",
+    "sideways"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "BOSCHLTD",
+   "nse_gap": 0.27,
+   "engine_gap": -2.25,
+   "delayed_gap": 0.31,
+   "live_gap": 0.27,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 15.7,
+   "live_score": 24.9,
+   "rs10": [
+    0.36,
+    -0.18
+   ],
+   "atr_pct": [
+    2.21,
+    2.17
+   ],
+   "trend": [
+    "up",
+    "sideways"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "CIPLA",
+   "nse_gap": 0.46,
+   "engine_gap": -0.83,
+   "delayed_gap": 0.32,
+   "live_gap": 0.46,
+   "engine_side": "LONG",
+   "live_side": "SHORT",
+   "engine_score": 16.2,
+   "live_score": 23.8,
+   "rs10": [
+    3.57,
+    3.94
+   ],
+   "atr_pct": [
+    1.72,
+    1.75
+   ],
+   "trend": [
+    "sideways",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "HCLTECH",
+   "nse_gap": 0.0,
+   "engine_gap": -0.13,
+   "delayed_gap": 0.3,
+   "live_gap": 0.0,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 59.5,
+   "live_score": 57.1,
+   "rs10": [
+    5.4,
+    6.5
+   ],
+   "atr_pct": [
+    2.79,
+    2.82
+   ],
+   "trend": [
+    "down",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "INDIGO",
+   "nse_gap": -0.09,
+   "engine_gap": -1.56,
+   "delayed_gap": -0.24,
+   "live_gap": -0.09,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 30.4,
+   "live_score": 28.0,
+   "rs10": [
+    0.44,
+    0.66
+   ],
+   "atr_pct": [
+    2.09,
+    2.15
+   ],
+   "trend": [
+    "down",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "JINDALSTEL",
+   "nse_gap": -0.18,
+   "engine_gap": -2.75,
+   "delayed_gap": -0.6,
+   "live_gap": -0.18,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 58.8,
+   "live_score": 46.0,
+   "rs10": [
+    5.05,
+    4.35
+   ],
+   "atr_pct": [
+    2.47,
+    2.62
+   ],
+   "trend": [
+    "up",
+    "sideways"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "NESTLEIND",
+   "nse_gap": -0.37,
+   "engine_gap": -1.29,
+   "delayed_gap": -0.07,
+   "live_gap": -0.37,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 79.4,
+   "live_score": 67.0,
+   "rs10": [
+    -0.4,
+    -0.06
+   ],
+   "atr_pct": [
+    1.96,
+    1.97
+   ],
+   "trend": [
+    "down",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "SBILIFE",
+   "nse_gap": 0.2,
+   "engine_gap": -0.6,
+   "delayed_gap": 0.2,
+   "live_gap": 0.2,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 31.0,
+   "live_score": 24.0,
+   "rs10": [
+    4.5,
+    5.22
+   ],
+   "atr_pct": [
+    2.28,
+    2.23
+   ],
+   "trend": [
+    "sideways",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "SIEMENS",
+   "nse_gap": -0.42,
+   "engine_gap": -2.75,
+   "delayed_gap": -0.4,
+   "live_gap": -0.42,
+   "engine_side": "SHORT",
+   "live_side": "LONG",
+   "engine_score": 30.5,
+   "live_score": 33.0,
+   "rs10": [
+    -0.92,
+    -1.69
+   ],
+   "atr_pct": [
+    2.32,
+    2.41
+   ],
+   "trend": [
+    "sideways",
+    "sideways"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "TVSMOTOR",
+   "nse_gap": -0.49,
+   "engine_gap": -2.1,
+   "delayed_gap": -0.62,
+   "live_gap": -0.49,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 48.6,
+   "live_score": 30.8,
+   "rs10": [
+    1.88,
+    1.91
+   ],
+   "atr_pct": [
+    2.04,
+    2.11
+   ],
+   "trend": [
+    "up",
+    "sideways"
+   ],
+   "on_list": true
+  },
+  {
+   "symbol": "TORNTPHARM",
+   "nse_gap": 0.32,
+   "engine_gap": -2.21,
+   "delayed_gap": 0.2,
+   "live_gap": 0.32,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 53.8,
+   "live_score": 34.2,
+   "rs10": [
+    1.56,
+    0.7
+   ],
+   "atr_pct": [
+    1.87,
+    1.98
+   ],
+   "trend": [
+    "up",
+    "sideways"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "ULTRACEMCO",
+   "nse_gap": -0.14,
+   "engine_gap": -1.34,
+   "delayed_gap": -0.18,
+   "live_gap": -0.14,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 44.3,
+   "live_score": 51.2,
+   "rs10": [
+    2.51,
+    2.87
+   ],
+   "atr_pct": [
+    1.65,
+    1.64
+   ],
+   "trend": [
+    "sideways",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "UNITDSPR",
+   "nse_gap": -0.52,
+   "engine_gap": -0.99,
+   "delayed_gap": -0.4,
+   "live_gap": -0.52,
+   "engine_side": "SHORT",
+   "live_side": "SHORT",
+   "engine_score": 81.5,
+   "live_score": 84.3,
+   "rs10": [
+    3.17,
+    4.1
+   ],
+   "atr_pct": [
+    1.82,
+    1.85
+   ],
+   "trend": [
+    "down",
+    "down"
+   ],
+   "on_list": false
+  },
+  {
+   "symbol": "VBL",
+   "nse_gap": -0.31,
+   "engine_gap": -1.1,
+   "delayed_gap": 0.0,
+   "live_gap": -0.31,
+   "engine_side": "LONG",
+   "live_side": "LONG",
+   "engine_score": 52.3,
+   "live_score": 58.0,
+   "rs10": [
+    5.49,
+    5.88
+   ],
+   "atr_pct": [
+    1.99,
+    2.08
+   ],
+   "trend": [
+    "sideways",
+    "sideways"
+   ],
+   "on_list": false
+  }
+ ],
+ "sides_engine_to_live": [
+  [
+   "SIEMENS",
+   "SHORT",
+   "LONG",
+   false
+  ],
+  [
+   "CIPLA",
+   "LONG",
+   "SHORT",
+   false
+  ],
+  [
+   "TATACAP",
+   "SHORT",
+   "LONG",
+   false
+  ]
+ ],
+ "sides_delayed_to_live": [],
+ "exclusions_engine_to_live": [],
+ "sectors": null,
+ "warnings": []
+}

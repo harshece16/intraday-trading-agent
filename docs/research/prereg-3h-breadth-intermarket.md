@@ -1,5 +1,8 @@
 # Pre-registration — 3h: does new information (market breadth and intermarket moves) predict the intraday session?
 
+> **Merged 2026-09-30 as research look L48.** This was written and run on 2026-09-25 under the labels "3h" and "L35". By the time it merged, main had given L35 to the NSE-filings event study and 3h to the slow-momentum strategy (trial 119), so the ledger records this look as **L48**. The text below is unchanged from the run; the commit order it cites (`db82c9a` → `1ea0ab5` → `ba66991`) is preserved in PR #126.
+
+
 **Written and committed before any code for this measurement exists.** On
 2026-09-25 the owner asked to stop working on the Varsity checklist and focus
 on the methods page's "Read, but not (yet) built in" list. Two items on that

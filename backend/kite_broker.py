@@ -11,10 +11,24 @@ live order will be accepted — see the README's "Going live" section.
 """
 
 import logging
+import time
 
 import config
 
 logger = logging.getLogger("trading_bot")
+
+# Kite's order statuses that will never change again. Anything else (OPEN,
+# TRIGGER PENDING, the VALIDATION/PUT ORDER REQ steps) is still in flight.
+ORDER_FINAL = ("COMPLETE", "REJECTED", "CANCELLED")
+ORDER_UNKNOWN = "UNKNOWN"
+
+
+class OrderNotFilled(Exception):
+    """Kite confirmed that the order bought or sold nothing."""
+
+
+class OrderUnconfirmed(Exception):
+    """The order was sent, but Kite never told us how it ended."""
 
 # Kite's own quote symbols for index spot prices — not a tradingsymbol,
 # the exchange's literal quote key for the index itself.
@@ -44,6 +58,57 @@ class KiteExecutor:
         )
         logger.info(f"[LIVE] {side} {quantity} {symbol} -> order {order_id}")
         return order_id
+
+    def order_state(self, order_id):
+        """The order's latest state from Kite: {"status", "filled_quantity",
+        "average_price", "message"}. Raises whatever Kite raises."""
+        history = self.kite.order_history(order_id)
+        if not history:
+            return {"status": ORDER_UNKNOWN, "filled_quantity": 0, "average_price": 0.0, "message": "no order history"}
+        last = history[-1]
+        return {"status": last.get("status") or ORDER_UNKNOWN,
+                "filled_quantity": int(last.get("filled_quantity") or 0),
+                "average_price": float(last.get("average_price") or 0.0),
+                "message": last.get("status_message") or ""}
+
+    def wait_for_fill(self, order_id, deadline_s=None, poll_s=None, sleep=time.sleep):
+        """Poll the order until Kite says it is finished, and return its state
+        (see order_state). A MARKET order normally completes at once, but it
+        carries a market-protection limit, so in a fast market it can sit
+        partly filled. Past the deadline the rest is cancelled, so that what
+        comes back is final and nothing can fill later behind the engine's
+        back. Status UNKNOWN means Kite could not be read or the order would
+        not cancel: the caller must not assume either a fill or no fill.
+        Never raises."""
+        deadline_s = config.KITE_FILL_DEADLINE_S if deadline_s is None else deadline_s
+        poll_s = config.KITE_FILL_POLL_S if poll_s is None else poll_s
+        unknown = {"status": ORDER_UNKNOWN, "filled_quantity": 0, "average_price": 0.0, "message": ""}
+
+        def read_until(end):
+            state = dict(unknown)
+            while True:
+                try:
+                    state = self.order_state(order_id)
+                except Exception as exc:
+                    logger.warning(f"[LIVE] couldn't read order {order_id}: {exc}")
+                    state = {**unknown, "message": str(exc)}
+                if state["status"] in ORDER_FINAL or time.monotonic() >= end:
+                    return state
+                sleep(poll_s)
+
+        state = read_until(time.monotonic() + deadline_s)
+        if state["status"] in ORDER_FINAL:
+            return state
+        try:
+            from kiteconnect import KiteConnect
+            self.kite.cancel_order(variety=KiteConnect.VARIETY_REGULAR, order_id=order_id)
+            logger.warning(f"[LIVE] order {order_id} was still {state['status']} after {deadline_s}s — cancelled the rest")
+        except Exception as exc:
+            # It may have completed in the meantime, which is fine: the read
+            # below will say so.
+            logger.warning(f"[LIVE] couldn't cancel order {order_id}: {exc}")
+        state = read_until(time.monotonic() + deadline_s)
+        return state if state["status"] in ORDER_FINAL else {**state, "status": ORDER_UNKNOWN}
 
     def get_positions(self):
         """Today's intraday (MIS) positions specifically — Kite's "day" book,

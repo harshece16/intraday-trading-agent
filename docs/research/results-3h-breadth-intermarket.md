@@ -1,5 +1,8 @@
 # Results — 3h, market breadth and intermarket moves as new information (L35)
 
+> **Merged 2026-09-30 as research look L48.** This was written and run on 2026-09-25 under the labels "3h" and "L35". By the time it merged, main had given L35 to the NSE-filings event study and 3h to the slow-momentum strategy (trial 119), so the ledger records this look as **L48**. The text below is unchanged from the run; the commit order it cites (`db82c9a` → `1ea0ab5` → `ba66991`) is preserved in PR #126.
+
+
 **2026-09-25. NO PASS: 0 of 8 predictors survive Benjamini-Hochberg at 5%, and
 none has an extreme tercile that could pay the 16.63 bp round trip.**
 Pre-registered in `prereg-3h-breadth-intermarket.md` (commit `db82c9a`); code

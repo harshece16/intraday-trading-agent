@@ -70,3 +70,52 @@ def sample(symbols, now_ts, fetch=None):
             logger.warning(f"Depth samples not written: {exc}")
             return 0
     return len(rows)
+
+
+def _in_windows(hhmm, windows):
+    return any(start <= hhmm < end for start, end in windows)
+
+
+def index_row(name, quote, ts):
+    """A depth_samples row for an index: level only, no book."""
+    ltp = (quote or {}).get("last_price")
+    return {"ts": ts, "symbol": name, "ltp": ltp} if ltp else None
+
+
+def sample_windows(now, now_ts, fetch=None):
+    """Order books of the overnight-hold ETFs, plus the index level, inside the
+    entry and exit windows only (README section 81). The overnight test needs
+    the spread a trader would actually cross at 15:20-15:29 to buy and at
+    09:16-09:20 to sell; NIFTYBEES is not in the pre-open auction, so the exit
+    is the continuous market, and its opening prints are noisy. One quote
+    call per tick inside a window, none outside. Never raises."""
+    cfg = getattr(config, "DEPTH_SAMPLER", {})
+    symbols = cfg.get("window_symbols") or []
+    indices = cfg.get("window_indices") or []
+    if not cfg.get("enabled", True) or not (symbols or indices):
+        return 0
+    if not _in_windows(now.strftime("%H:%M"), cfg.get("windows") or []):
+        return 0
+    instruments = [f"NSE:{s}" for s in symbols] + [f"NSE:{i}" for i in indices]
+    try:
+        if fetch is None:
+            import data_provider
+            if not data_provider.kite_data_active():
+                return 0
+            quotes = data_provider._get_kite().quote(instruments)
+        else:
+            quotes = fetch(instruments)
+    except Exception as exc:
+        logger.warning(f"Window depth sample skipped: {exc}")
+        return 0
+    rows = [snapshot(s, quotes.get(f"NSE:{s}") or {}, now_ts) for s in symbols]
+    rows += [index_row(i, quotes.get(f"NSE:{i}"), now_ts) for i in indices]
+    rows = [r for r in rows if r]
+    if rows:
+        try:
+            database.record_depth_samples(rows)
+        except Exception as exc:
+            logger.warning(f"Window depth samples not written: {exc}")
+            return 0
+    return len(rows)
+

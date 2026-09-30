@@ -1,0 +1,28 @@
+{
+ "tick_alone": {
+  "seconds": 8.7,
+  "symbols": 25,
+  "from_kite": 25
+ },
+ "tick": {
+  "seconds": 16.2,
+  "symbols": 25,
+  "from_kite": 25
+ },
+ "scan": {
+  "seconds": 22.2,
+  "feed": "live",
+  "rows_live": 100,
+  "listed_bars_from_kite": 25
+ },
+ "at": "14:14:08",
+ "requests_alone": 25,
+ "requests_together": 50,
+ "gap_between_request_starts_s": {
+  "smallest": 0.351,
+  "median": 0.36,
+  "largest": 0.36
+ },
+ "most_in_any_one_second": 3,
+ "warnings": []
+}

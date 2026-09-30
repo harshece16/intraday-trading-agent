@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 
+import config
 import data_provider
 import database
 import telegram_alerts
@@ -31,6 +32,9 @@ def isolated_db(tmp_path, monkeypatch):
     # messages on the owner's phone.
     monkeypatch.setattr(telegram_alerts, "_token", "")
     monkeypatch.setattr(telegram_alerts, "_chat_id", "")
+    # Tests that drive the engine tick past the close must not start a real
+    # Chaywanaprash review (an LLM call); test_chaywanaprash.py turns it back on.
+    monkeypatch.setattr(config, "CHAYWANAPRASH", {**config.CHAYWANAPRASH, "review_every_days": 0})
     monkeypatch.setattr(database, "DB_PATH", tmp_path / "test_journal.db")
     database._local.conn = None
     yield

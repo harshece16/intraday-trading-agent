@@ -7,7 +7,7 @@ script. This is that logic, committed and tested, so phase-2 results are
 reproducible and the two harnesses agree on where the boundary sits.
 
 RESEARCH ONLY. Nothing in the live path may import from `backend.research`;
-`tests/test_research_isolation.py` asserts it.
+`tests/test_research_splits.py::test_no_live_module_imports_research` asserts it.
 
 The held-out split is not pristine
 ----------------------------------

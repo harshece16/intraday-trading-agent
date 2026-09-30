@@ -9,6 +9,7 @@ import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import Chart from "../components/Chart";
 import ReviewQueue from "../components/ReviewQueue";
+import { feedText, fixedText } from "../components/ListNotes";
 import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 
@@ -39,8 +40,8 @@ function OnboardingBanner({ s }) {
         <div>
           <h2 className="h" style={{ fontSize: 16 }}>First time here? Three things before you start</h2>
           <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.9 }}>
-            <li><b>Connect Kite</b> — click "Connect Kite" in the header, top right. Real prices, holdings and orders all need this; nothing trades without it.</li>
-            <li><b>Confirm you're in Paper mode</b> — check the Paper/Live toggle in the header (top right). Paper is the safe default and simulates everything; Live places real orders.</li>
+            <li><b>Connect Kite</b> — click "Connect Kite" in the bar at the top. Real prices, holdings and orders all need this; nothing trades without it.</li>
+            <li><b>Confirm you're in Paper mode</b> — check the Paper/Live switch in the bar at the top. Paper is the safe default and simulates everything; Live places real orders.</li>
             <li><b>Read the Dimaag Scorecard on the Journal page</b> before ever considering Live — it shows, honestly, whether this system has actually proven a real edge yet.</li>
           </ol>
         </div>
@@ -193,16 +194,16 @@ function AutonomyCard({ s }) {
   }
 
   return (
-    <div className="cardbox" style={{ marginBottom: 20, borderColor: live ? "var(--short)" : undefined }}>
+    <section className="cardbox controls" style={{ borderColor: live ? "var(--short)" : undefined }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 className="h" style={{ fontSize: 16 }}>
-            {live ? "Trading is live — running automatically" : "Autonomous trading is off (paper mode)"}
+          <h2 className="h" style={{ fontSize: 17 }}>
+            {live ? "Trading is live, running on its own" : "Paper trading: no real orders"}
           </h2>
           <div className="detail" style={{ marginTop: 2 }}>
             {live
-              ? "The engine is placing real orders on its own rules, unattended. No action needed from you."
-              : "Simulated orders only. Flip this on and the engine takes it from there — no per-trade confirmation, ever, once it's live."}
+              ? "The engine places real orders on its own rules, with no per-trade confirmation."
+              : "Every order is simulated. Going live hands the engine real orders with no per-trade confirmation."}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -224,36 +225,31 @@ function AutonomyCard({ s }) {
           New entries are paused. Open positions still have their stops, targets and the {s.square_off_time || "15:08"} square-off.
         </p>
       )}
-      <div className="rb-row" style={{ marginTop: 12 }}>
-        <div className="rb-chip">
-          <b>{usingPaperFigure ? "Paper capital (simulated)" : "Real capital"}</b>
-          <span>{money(capital)}</span>
+      <dl className="facts controls-facts">
+        <div><dt>{usingPaperFigure ? "Paper capital" : "Real capital"}</dt><dd>₹{num(capital, 0)}</dd></div>
+        {usingPaperFigure && <div><dt>Real Kite balance</dt><dd>₹{num(realCapital, 0)}</dd></div>}
+        <div><dt>F&amp;O (options)</dt><dd>{fno ? (fno.enabled ? "On" : "Off") : "…"}</dd></div>
+        <div>
+          <dt>Phone alerts</dt>
+          <dd>
+            {!telegram ? "…" : !telegram.configured ? <span className="muted">Not set up</span> : (
+              <>
+                {telegram.enabled ? "On" : "Off"}{" "}
+                <button className="more inline" onClick={toggleTelegram}>{telegram.enabled ? "turn off" : "turn on"}</button>{" "}
+                <button className="more inline" onClick={testTelegram}>test</button>
+              </>
+            )}
+          </dd>
+          {telegram?.last_error && <dd className="down" style={{ fontSize: 12, fontWeight: 400 }}>Last send failed: {telegram.last_error}</dd>}
         </div>
-        {usingPaperFigure && (
-          <div className="rb-chip"><b>Real Kite balance</b><span>{money(realCapital)}</span></div>
-        )}
-        <div className="rb-chip"><b>F&amp;O (options)</b><span>{fno ? (fno.enabled ? "ON" : "OFF") : "…"}</span></div>
-        <div className="rb-chip">
-          <b>Phone alerts (Telegram)</b>
-          <span>
-            {!telegram ? "…" : !telegram.configured ? "Not set up — see README §66" : telegram.enabled ? "ON" : "Off"}
-            {telegram?.last_error ? ` · last send failed: ${telegram.last_error}` : ""}
-          </span>
-        </div>
-        {telegram?.configured && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn" onClick={toggleTelegram}>{telegram.enabled ? "Turn phone alerts off" : "Turn phone alerts on"}</button>
-            <button className="btn" onClick={testTelegram}>Send test</button>
-          </div>
-        )}
-        <div className="rb-chip"><b>Browser alerts</b><span>{alertsSupported() ? (alertsEnabled() ? "ON" : "Off — enable in the header") : "Not supported in this browser"}</span></div>
+        <div><dt>Browser alerts</dt><dd>{alertsSupported() ? (alertsEnabled() ? "On" : <span className="muted">Off</span>) : "—"}</dd></div>
         {scorecard && (
-          <div className="rb-chip">
-            <b>Proven edge (Dimaag Scorecard)</b>
-            <span><StatusPill status={scorecard.some((r) => r.status === "fail") ? "fail" : scorecard.every((r) => r.status === "pass") ? "pass" : "pending"} /></span>
+          <div>
+            <dt>Proven edge</dt>
+            <dd><StatusPill status={scorecard.some((r) => r.status === "fail") ? "fail" : scorecard.every((r) => r.status === "pass") ? "pass" : "pending"} /></dd>
           </div>
         )}
-      </div>
+      </dl>
       {scorecard && scorecard.some((r) => r.status === "fail") && (
         <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
           {scorecardSummary(scorecard)}{" "}
@@ -274,7 +270,7 @@ function AutonomyCard({ s }) {
           <Link className="more" to="/day-plan">See exactly which picks would size →</Link>
         </p>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -396,8 +392,6 @@ export default function Overview({ state: s }) {
     <>
       <KiteSessionAlert s={s} />
       <OnboardingBanner s={s} />
-      <AutonomyCard s={s} />
-      <ReviewQueue s={s} />
       <section className="hero">
         <h1>{copy.lead}</h1>
         <p>{copy.rest}</p>
@@ -420,36 +414,23 @@ export default function Overview({ state: s }) {
         </div>
       </section>
 
-      <h2 className="h">Today's picks</h2>
-      <p className="sub">The stocks Trader Sahab is actively watching for an entry, ranked by scan score. <a className="more" href="/screener">See the full ranked list →</a></p>
+      <AutonomyCard s={s} />
+      <ReviewQueue s={s} />
+
+      <h2 className="h" style={{ marginTop: 40 }}>Today's picks</h2>
+      <p className="sub">
+        {sc?.selection?.mode === "liquidity"
+          ? `Today's list is the most-traded eligible stocks, chosen once and kept all day. ${fixedText(sc.selection)} It is chosen for low trading cost, not as a prediction. Cards are ordered by scan score. ${feedText(sc.feed)} `
+          : "The stocks Trader Sahab is actively watching for an entry, ranked by scan score. "}
+        <Link className="more" to="/screener">See the full list →</Link>
+      </p>
       {picks.length ? (
         <div className="grid3">{picks.map((r) => <PickCard key={r.symbol} s={s} r={r} held={held} />)}</div>
       ) : (
         <p className="empty">The scan hasn't found a stock that passes every filter yet.</p>
       )}
 
-      {picks.length > 0 && (
-        <div className="section-gap">
-          <h2 className="h">Live charts</h2>
-          <p className="sub">
-            Real candles, EMA 20/50 and the checklist's current plan for each pick — the entry, stop and target lines are
-            the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
-          </p>
-          <div className="mini-chart-grid">
-            {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}
-          </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Latest session shown. Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>.
-          </p>
-        </div>
-      )}
-
       <div className="section-gap grid2">
-        <div>
-          <h2 className="h">What Trader Sahab is doing</h2>
-          <p className="sub">The last few scans, picks and trades.</p>
-          <Feed items={(s.activity || []).slice(0, 6)} />
-        </div>
         <div>
           <h2 className="h">Open positions</h2>
           <div className="cardbox">
@@ -470,7 +451,28 @@ export default function Overview({ state: s }) {
             )}
           </div>
         </div>
+        <div>
+          <h2 className="h">What Trader Sahab is doing</h2>
+          <p className="sub">The last few scans, picks and trades.</p>
+          <Feed items={(s.activity || []).slice(0, 6)} />
+        </div>
       </div>
+
+      {picks.length > 0 && (
+        <div className="section-gap">
+          <h2 className="h">Live charts</h2>
+          <p className="sub">
+            Real candles, EMA 20/50 and the checklist's current plan for each pick — the entry, stop and target lines are
+            the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
+          </p>
+          <div className="mini-chart-grid">
+            {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Latest session shown. Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>.
+          </p>
+        </div>
+      )}
     </>
   );
 }

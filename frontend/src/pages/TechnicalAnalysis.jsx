@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiJson } from "../api";
+import { useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { BiasPill } from "../components/Pill";
 import LlmSentimentPanel from "../components/LlmSentimentPanel";
 
@@ -14,15 +14,8 @@ function RuleChips({ rules }) {
 }
 
 export default function TechnicalAnalysis() {
-  const [m, setM] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    apiJson("/api/methods").then((data) => !cancelled && setM(data)).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!m) return <p className="empty">Loading the method book…</p>;
+  const { data: m, error, reload } = useApi("/api/methods");
+  if (!m) return <LoadState error={error} onRetry={reload} label="Loading the method book…" />;
 
   const noteCard = (section) =>
     section && (

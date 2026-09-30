@@ -1,0 +1,1139 @@
+{
+ "what": "Printed prices of three stocks the book held, 2021-05-31 to 2021-08-02, from the repaired panel, with the lock flag of rule H3. Evidence for the June and July 2021 differences between trial 126 and trial 120. No return of any book is computed here.",
+ "stocks": {
+  "ATGL": {
+   "first_trade_for_trade_row": "2021-06-09",
+   "back_in_eq_by_2021_08_02": [],
+   "close_on_2021_06_01": 1440.6,
+   "close_on_2021_07_01": 968.9,
+   "default_panel_last_row_on_or_before_2021_07_01": {
+    "date": "2021-06-08",
+    "close": 1640.85
+   },
+   "lower_band_locks_2021_06_11_to_2021_07_01": 12,
+   "locked_at_lower_band_on_the_fill_day_2021_07_01": true,
+   "first_session_a_sell_could_fill": {
+    "date": "2021-07-06",
+    "close": 918.2
+   },
+   "rows": [
+    {
+     "date": "2021-05-31",
+     "series": "EQ",
+     "close": 1348.85,
+     "return_on_previous_close": 0.0053,
+     "lock": 0,
+     "traded_value": 1149865215.15
+    },
+    {
+     "date": "2021-06-01",
+     "series": "EQ",
+     "close": 1440.6,
+     "return_on_previous_close": 0.068,
+     "lock": 0,
+     "traded_value": 3106298346.95
+    },
+    {
+     "date": "2021-06-02",
+     "series": "EQ",
+     "close": 1579.85,
+     "return_on_previous_close": 0.0967,
+     "lock": 0,
+     "traded_value": 4258076384.2
+    },
+    {
+     "date": "2021-06-03",
+     "series": "EQ",
+     "close": 1620.4,
+     "return_on_previous_close": 0.0257,
+     "lock": 0,
+     "traded_value": 4636168864.95
+    },
+    {
+     "date": "2021-06-04",
+     "series": "EQ",
+     "close": 1637.5,
+     "return_on_previous_close": 0.0106,
+     "lock": 0,
+     "traded_value": 2843195460.2
+    },
+    {
+     "date": "2021-06-07",
+     "series": "EQ",
+     "close": 1626.95,
+     "return_on_previous_close": -0.0064,
+     "lock": 0,
+     "traded_value": 2589079494.95
+    },
+    {
+     "date": "2021-06-08",
+     "series": "EQ",
+     "close": 1640.85,
+     "return_on_previous_close": 0.0085,
+     "lock": 0,
+     "traded_value": 2339522904.2
+    },
+    {
+     "date": "2021-06-09",
+     "series": "BE",
+     "close": 1588.2,
+     "return_on_previous_close": -0.0321,
+     "lock": 0,
+     "traded_value": 1378446726.15
+    },
+    {
+     "date": "2021-06-10",
+     "series": "BE",
+     "close": 1594.05,
+     "return_on_previous_close": 0.0037,
+     "lock": 0,
+     "traded_value": 1489159778.9
+    },
+    {
+     "date": "2021-06-11",
+     "series": "BE",
+     "close": 1626.2,
+     "return_on_previous_close": 0.0202,
+     "lock": 0,
+     "traded_value": 1410176908.55
+    },
+    {
+     "date": "2021-06-14",
+     "series": "BE",
+     "close": 1544.9,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 153838052.2
+    },
+    {
+     "date": "2021-06-15",
+     "series": "BE",
+     "close": 1467.7,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 1478201794.2
+    },
+    {
+     "date": "2021-06-16",
+     "series": "BE",
+     "close": 1394.35,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 326124521.5
+    },
+    {
+     "date": "2021-06-17",
+     "series": "BE",
+     "close": 1324.65,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 38110180.5
+    },
+    {
+     "date": "2021-06-18",
+     "series": "BE",
+     "close": 1258.45,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 433179883.65
+    },
+    {
+     "date": "2021-06-21",
+     "series": "BE",
+     "close": 1321.35,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 1755166972.2
+    },
+    {
+     "date": "2021-06-22",
+     "series": "BE",
+     "close": 1387.4,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 1167391511.3
+    },
+    {
+     "date": "2021-06-23",
+     "series": "BE",
+     "close": 1318.05,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 772371004.2
+    },
+    {
+     "date": "2021-06-24",
+     "series": "BE",
+     "close": 1251.95,
+     "return_on_previous_close": -0.0501,
+     "lock": -1,
+     "traded_value": 151566014.05
+    },
+    {
+     "date": "2021-06-25",
+     "series": "BE",
+     "close": 1189.4,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 118044381.8
+    },
+    {
+     "date": "2021-06-28",
+     "series": "BE",
+     "close": 1129.95,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 123732914.85
+    },
+    {
+     "date": "2021-06-29",
+     "series": "BE",
+     "close": 1073.5,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 160806006.0
+    },
+    {
+     "date": "2021-06-30",
+     "series": "BE",
+     "close": 1019.85,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 113861153.25
+    },
+    {
+     "date": "2021-07-01",
+     "series": "BE",
+     "close": 968.9,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 51466030.2
+    },
+    {
+     "date": "2021-07-02",
+     "series": "BE",
+     "close": 920.5,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 65233994.0
+    },
+    {
+     "date": "2021-07-05",
+     "series": "BE",
+     "close": 874.5,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 56356278.0
+    },
+    {
+     "date": "2021-07-06",
+     "series": "BE",
+     "close": 918.2,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 1115240885.65
+    },
+    {
+     "date": "2021-07-07",
+     "series": "BE",
+     "close": 900.8,
+     "return_on_previous_close": -0.019,
+     "lock": 0,
+     "traded_value": 944485856.65
+    },
+    {
+     "date": "2021-07-08",
+     "series": "BE",
+     "close": 921.95,
+     "return_on_previous_close": 0.0235,
+     "lock": 0,
+     "traded_value": 316191110.1
+    },
+    {
+     "date": "2021-07-09",
+     "series": "BE",
+     "close": 917.15,
+     "return_on_previous_close": -0.0052,
+     "lock": 0,
+     "traded_value": 195634685.25
+    },
+    {
+     "date": "2021-07-12",
+     "series": "BE",
+     "close": 909.3,
+     "return_on_previous_close": -0.0086,
+     "lock": 0,
+     "traded_value": 234748806.45
+    },
+    {
+     "date": "2021-07-13",
+     "series": "BE",
+     "close": 923.7,
+     "return_on_previous_close": 0.0158,
+     "lock": 0,
+     "traded_value": 232399762.55
+    },
+    {
+     "date": "2021-07-14",
+     "series": "BE",
+     "close": 881.25,
+     "return_on_previous_close": -0.046,
+     "lock": 0,
+     "traded_value": 398931066.85
+    },
+    {
+     "date": "2021-07-15",
+     "series": "BE",
+     "close": 892.9,
+     "return_on_previous_close": 0.0132,
+     "lock": 0,
+     "traded_value": 337045185.4
+    },
+    {
+     "date": "2021-07-16",
+     "series": "BE",
+     "close": 896.55,
+     "return_on_previous_close": 0.0041,
+     "lock": 0,
+     "traded_value": 205046011.15
+    },
+    {
+     "date": "2021-07-19",
+     "series": "BE",
+     "close": 855.0,
+     "return_on_previous_close": -0.0463,
+     "lock": 0,
+     "traded_value": 293000165.8
+    },
+    {
+     "date": "2021-07-20",
+     "series": "BE",
+     "close": 815.7,
+     "return_on_previous_close": -0.046,
+     "lock": 0,
+     "traded_value": 515494557.8
+    },
+    {
+     "date": "2021-07-22",
+     "series": "BE",
+     "close": 856.1,
+     "return_on_previous_close": 0.0495,
+     "lock": 0,
+     "traded_value": 644836645.95
+    },
+    {
+     "date": "2021-07-23",
+     "series": "BE",
+     "close": 880.6,
+     "return_on_previous_close": 0.0286,
+     "lock": 0,
+     "traded_value": 165924209.75
+    },
+    {
+     "date": "2021-07-26",
+     "series": "BE",
+     "close": 907.45,
+     "return_on_previous_close": 0.0305,
+     "lock": 0,
+     "traded_value": 173324002.75
+    },
+    {
+     "date": "2021-07-27",
+     "series": "BE",
+     "close": 931.05,
+     "return_on_previous_close": 0.026,
+     "lock": 0,
+     "traded_value": 267880131.95
+    },
+    {
+     "date": "2021-07-28",
+     "series": "BE",
+     "close": 933.4,
+     "return_on_previous_close": 0.0025,
+     "lock": 0,
+     "traded_value": 146020998.7
+    },
+    {
+     "date": "2021-07-29",
+     "series": "BE",
+     "close": 922.2,
+     "return_on_previous_close": -0.012,
+     "lock": 0,
+     "traded_value": 150161210.2
+    },
+    {
+     "date": "2021-07-30",
+     "series": "BE",
+     "close": 892.55,
+     "return_on_previous_close": -0.0322,
+     "lock": 0,
+     "traded_value": 257558727.35
+    },
+    {
+     "date": "2021-08-02",
+     "series": "BE",
+     "close": 888.35,
+     "return_on_previous_close": -0.0047,
+     "lock": 0,
+     "traded_value": 101909272.95
+    }
+   ]
+  },
+  "ADANIGREEN": {
+   "first_trade_for_trade_row": "2021-06-09",
+   "back_in_eq_by_2021_08_02": [],
+   "close_on_2021_06_01": 1271.05,
+   "close_on_2021_07_01": 1068.7,
+   "default_panel_last_row_on_or_before_2021_07_01": {
+    "date": "2021-06-08",
+    "close": 1267.55
+   },
+   "lower_band_locks_2021_06_11_to_2021_07_01": 2,
+   "locked_at_lower_band_on_the_fill_day_2021_07_01": true,
+   "first_session_a_sell_could_fill": {
+    "date": "2021-07-06",
+    "close": 1012.75
+   },
+   "rows": [
+    {
+     "date": "2021-05-31",
+     "series": "EQ",
+     "close": 1268.2,
+     "return_on_previous_close": 0.0236,
+     "lock": 0,
+     "traded_value": 510059310.45
+    },
+    {
+     "date": "2021-06-01",
+     "series": "EQ",
+     "close": 1271.05,
+     "return_on_previous_close": 0.0022,
+     "lock": 0,
+     "traded_value": 840708902.05
+    },
+    {
+     "date": "2021-06-02",
+     "series": "EQ",
+     "close": 1299.8,
+     "return_on_previous_close": 0.0226,
+     "lock": 0,
+     "traded_value": 1792984405.35
+    },
+    {
+     "date": "2021-06-03",
+     "series": "EQ",
+     "close": 1286.9,
+     "return_on_previous_close": -0.0099,
+     "lock": 0,
+     "traded_value": 1539081179.75
+    },
+    {
+     "date": "2021-06-04",
+     "series": "EQ",
+     "close": 1277.25,
+     "return_on_previous_close": -0.0075,
+     "lock": 0,
+     "traded_value": 1080119397.45
+    },
+    {
+     "date": "2021-06-07",
+     "series": "EQ",
+     "close": 1264.85,
+     "return_on_previous_close": -0.0097,
+     "lock": 0,
+     "traded_value": 824669572.15
+    },
+    {
+     "date": "2021-06-08",
+     "series": "EQ",
+     "close": 1267.55,
+     "return_on_previous_close": 0.0021,
+     "lock": 0,
+     "traded_value": 856657983.9
+    },
+    {
+     "date": "2021-06-09",
+     "series": "BE",
+     "close": 1239.15,
+     "return_on_previous_close": -0.0224,
+     "lock": 0,
+     "traded_value": 375642841.5
+    },
+    {
+     "date": "2021-06-10",
+     "series": "BE",
+     "close": 1233.5,
+     "return_on_previous_close": -0.0046,
+     "lock": 0,
+     "traded_value": 1674160817.4
+    },
+    {
+     "date": "2021-06-11",
+     "series": "BE",
+     "close": 1217.7,
+     "return_on_previous_close": -0.0128,
+     "lock": 0,
+     "traded_value": 2313000530.9
+    },
+    {
+     "date": "2021-06-14",
+     "series": "BE",
+     "close": 1212.9,
+     "return_on_previous_close": -0.0039,
+     "lock": 0,
+     "traded_value": 2332121173.8
+    },
+    {
+     "date": "2021-06-15",
+     "series": "BE",
+     "close": 1212.2,
+     "return_on_previous_close": -0.0006,
+     "lock": 0,
+     "traded_value": 2388254172.2
+    },
+    {
+     "date": "2021-06-16",
+     "series": "BE",
+     "close": 1182.75,
+     "return_on_previous_close": -0.0243,
+     "lock": 0,
+     "traded_value": 2131559881.7
+    },
+    {
+     "date": "2021-06-17",
+     "series": "BE",
+     "close": 1123.65,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 1926023454.05
+    },
+    {
+     "date": "2021-06-18",
+     "series": "BE",
+     "close": 1067.55,
+     "return_on_previous_close": -0.0499,
+     "lock": 0,
+     "traded_value": 1310962643.7
+    },
+    {
+     "date": "2021-06-21",
+     "series": "BE",
+     "close": 1120.9,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 2152659170.95
+    },
+    {
+     "date": "2021-06-22",
+     "series": "BE",
+     "close": 1167.4,
+     "return_on_previous_close": 0.0415,
+     "lock": 0,
+     "traded_value": 2926532936.35
+    },
+    {
+     "date": "2021-06-23",
+     "series": "BE",
+     "close": 1166.15,
+     "return_on_previous_close": -0.0011,
+     "lock": 0,
+     "traded_value": 1400511504.15
+    },
+    {
+     "date": "2021-06-24",
+     "series": "BE",
+     "close": 1139.7,
+     "return_on_previous_close": -0.0227,
+     "lock": 0,
+     "traded_value": 1876585943.0
+    },
+    {
+     "date": "2021-06-25",
+     "series": "BE",
+     "close": 1167.25,
+     "return_on_previous_close": 0.0242,
+     "lock": 0,
+     "traded_value": 2283648578.65
+    },
+    {
+     "date": "2021-06-28",
+     "series": "BE",
+     "close": 1119.85,
+     "return_on_previous_close": -0.0406,
+     "lock": 0,
+     "traded_value": 2140562939.95
+    },
+    {
+     "date": "2021-06-29",
+     "series": "BE",
+     "close": 1126.3,
+     "return_on_previous_close": 0.0058,
+     "lock": 0,
+     "traded_value": 2238928131.75
+    },
+    {
+     "date": "2021-06-30",
+     "series": "BE",
+     "close": 1124.9,
+     "return_on_previous_close": -0.0012,
+     "lock": 0,
+     "traded_value": 2091969843.95
+    },
+    {
+     "date": "2021-07-01",
+     "series": "BE",
+     "close": 1068.7,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 249588271.75
+    },
+    {
+     "date": "2021-07-02",
+     "series": "BE",
+     "close": 1015.3,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 154453009.15
+    },
+    {
+     "date": "2021-07-05",
+     "series": "BE",
+     "close": 964.55,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 157920278.35
+    },
+    {
+     "date": "2021-07-06",
+     "series": "BE",
+     "close": 1012.75,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 331273742.6
+    },
+    {
+     "date": "2021-07-07",
+     "series": "BE",
+     "close": 1017.05,
+     "return_on_previous_close": 0.0042,
+     "lock": 0,
+     "traded_value": 244010864.3
+    },
+    {
+     "date": "2021-07-08",
+     "series": "BE",
+     "close": 1028.65,
+     "return_on_previous_close": 0.0114,
+     "lock": 0,
+     "traded_value": 170025422.8
+    },
+    {
+     "date": "2021-07-09",
+     "series": "BE",
+     "close": 1019.4,
+     "return_on_previous_close": -0.009,
+     "lock": 0,
+     "traded_value": 93938582.4
+    },
+    {
+     "date": "2021-07-12",
+     "series": "BE",
+     "close": 1004.2,
+     "return_on_previous_close": -0.0149,
+     "lock": 0,
+     "traded_value": 62298901.55
+    },
+    {
+     "date": "2021-07-13",
+     "series": "BE",
+     "close": 989.2,
+     "return_on_previous_close": -0.0149,
+     "lock": 0,
+     "traded_value": 108491650.0
+    },
+    {
+     "date": "2021-07-14",
+     "series": "BE",
+     "close": 979.7,
+     "return_on_previous_close": -0.0096,
+     "lock": 0,
+     "traded_value": 414385340.0
+    },
+    {
+     "date": "2021-07-15",
+     "series": "BE",
+     "close": 995.8,
+     "return_on_previous_close": 0.0164,
+     "lock": 0,
+     "traded_value": 123881393.95
+    },
+    {
+     "date": "2021-07-16",
+     "series": "BE",
+     "close": 1008.65,
+     "return_on_previous_close": 0.0129,
+     "lock": 0,
+     "traded_value": 235482132.95
+    },
+    {
+     "date": "2021-07-19",
+     "series": "BE",
+     "close": 979.15,
+     "return_on_previous_close": -0.0292,
+     "lock": 0,
+     "traded_value": 112699726.2
+    },
+    {
+     "date": "2021-07-20",
+     "series": "BE",
+     "close": 945.1,
+     "return_on_previous_close": -0.0348,
+     "lock": 0,
+     "traded_value": 196832912.65
+    },
+    {
+     "date": "2021-07-22",
+     "series": "BE",
+     "close": 988.25,
+     "return_on_previous_close": 0.0457,
+     "lock": 0,
+     "traded_value": 276185952.35
+    },
+    {
+     "date": "2021-07-23",
+     "series": "BE",
+     "close": 980.25,
+     "return_on_previous_close": -0.0081,
+     "lock": 0,
+     "traded_value": 77414160.7
+    },
+    {
+     "date": "2021-07-26",
+     "series": "BE",
+     "close": 942.2,
+     "return_on_previous_close": -0.0388,
+     "lock": 0,
+     "traded_value": 90818212.15
+    },
+    {
+     "date": "2021-07-27",
+     "series": "BE",
+     "close": 914.45,
+     "return_on_previous_close": -0.0295,
+     "lock": 0,
+     "traded_value": 101702401.3
+    },
+    {
+     "date": "2021-07-28",
+     "series": "BE",
+     "close": 945.65,
+     "return_on_previous_close": 0.0341,
+     "lock": 0,
+     "traded_value": 150309546.2
+    },
+    {
+     "date": "2021-07-29",
+     "series": "BE",
+     "close": 924.3,
+     "return_on_previous_close": -0.0226,
+     "lock": 0,
+     "traded_value": 88957035.55
+    },
+    {
+     "date": "2021-07-30",
+     "series": "BE",
+     "close": 882.3,
+     "return_on_previous_close": -0.0454,
+     "lock": 0,
+     "traded_value": 212660019.9
+    },
+    {
+     "date": "2021-08-02",
+     "series": "BE",
+     "close": 876.15,
+     "return_on_previous_close": -0.007,
+     "lock": 0,
+     "traded_value": 980790349.7
+    }
+   ]
+  },
+  "ADANIENSOL": {
+   "first_trade_for_trade_row": "2021-06-09",
+   "back_in_eq_by_2021_08_02": [],
+   "close_on_2021_06_01": 1499.45,
+   "close_on_2021_07_01": 1006.5,
+   "default_panel_last_row_on_or_before_2021_07_01": {
+    "date": "2021-06-08",
+    "close": 1592.6
+   },
+   "lower_band_locks_2021_06_11_to_2021_07_01": 8,
+   "locked_at_lower_band_on_the_fill_day_2021_07_01": true,
+   "first_session_a_sell_could_fill": {
+    "date": "2021-07-06",
+    "close": 953.8
+   },
+   "rows": [
+    {
+     "date": "2021-05-31",
+     "series": "EQ",
+     "close": 1473.6,
+     "return_on_previous_close": 0.0199,
+     "lock": 0,
+     "traded_value": 679457423.7
+    },
+    {
+     "date": "2021-06-01",
+     "series": "EQ",
+     "close": 1499.45,
+     "return_on_previous_close": 0.0175,
+     "lock": 0,
+     "traded_value": 2306975398.75
+    },
+    {
+     "date": "2021-06-02",
+     "series": "EQ",
+     "close": 1558.25,
+     "return_on_previous_close": 0.0392,
+     "lock": 0,
+     "traded_value": 2484262112.25
+    },
+    {
+     "date": "2021-06-03",
+     "series": "EQ",
+     "close": 1577.9,
+     "return_on_previous_close": 0.0126,
+     "lock": 0,
+     "traded_value": 2414309446.2
+    },
+    {
+     "date": "2021-06-04",
+     "series": "EQ",
+     "close": 1602.05,
+     "return_on_previous_close": 0.0153,
+     "lock": 0,
+     "traded_value": 1478732060.1
+    },
+    {
+     "date": "2021-06-07",
+     "series": "EQ",
+     "close": 1589.45,
+     "return_on_previous_close": -0.0079,
+     "lock": 0,
+     "traded_value": 1014603703.25
+    },
+    {
+     "date": "2021-06-08",
+     "series": "EQ",
+     "close": 1592.6,
+     "return_on_previous_close": 0.002,
+     "lock": 0,
+     "traded_value": 1259457148.5
+    },
+    {
+     "date": "2021-06-09",
+     "series": "BE",
+     "close": 1571.5,
+     "return_on_previous_close": -0.0132,
+     "lock": 0,
+     "traded_value": 359544156.45
+    },
+    {
+     "date": "2021-06-10",
+     "series": "BE",
+     "close": 1589.9,
+     "return_on_previous_close": 0.0117,
+     "lock": 0,
+     "traded_value": 228365538.9
+    },
+    {
+     "date": "2021-06-11",
+     "series": "BE",
+     "close": 1602.6,
+     "return_on_previous_close": 0.008,
+     "lock": 0,
+     "traded_value": 294007556.3
+    },
+    {
+     "date": "2021-06-14",
+     "series": "BE",
+     "close": 1522.5,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 135511635.0
+    },
+    {
+     "date": "2021-06-15",
+     "series": "BE",
+     "close": 1446.4,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 259105393.85
+    },
+    {
+     "date": "2021-06-16",
+     "series": "BE",
+     "close": 1374.1,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 96610222.8
+    },
+    {
+     "date": "2021-06-17",
+     "series": "BE",
+     "close": 1305.4,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 45566292.4
+    },
+    {
+     "date": "2021-06-18",
+     "series": "BE",
+     "close": 1240.15,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 228785352.3
+    },
+    {
+     "date": "2021-06-21",
+     "series": "BE",
+     "close": 1302.15,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 1036328864.25
+    },
+    {
+     "date": "2021-06-22",
+     "series": "BE",
+     "close": 1367.25,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 412007917.5
+    },
+    {
+     "date": "2021-06-23",
+     "series": "BE",
+     "close": 1321.45,
+     "return_on_previous_close": -0.0335,
+     "lock": 0,
+     "traded_value": 459792330.1
+    },
+    {
+     "date": "2021-06-24",
+     "series": "BE",
+     "close": 1255.65,
+     "return_on_previous_close": -0.0498,
+     "lock": 0,
+     "traded_value": 383120775.25
+    },
+    {
+     "date": "2021-06-25",
+     "series": "BE",
+     "close": 1192.9,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 340059631.0
+    },
+    {
+     "date": "2021-06-28",
+     "series": "BE",
+     "close": 1159.0,
+     "return_on_previous_close": -0.0284,
+     "lock": 0,
+     "traded_value": 233604349.45
+    },
+    {
+     "date": "2021-06-29",
+     "series": "BE",
+     "close": 1115.2,
+     "return_on_previous_close": -0.0378,
+     "lock": 0,
+     "traded_value": 375225825.35
+    },
+    {
+     "date": "2021-06-30",
+     "series": "BE",
+     "close": 1059.45,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 222347245.95
+    },
+    {
+     "date": "2021-07-01",
+     "series": "BE",
+     "close": 1006.5,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 50893672.5
+    },
+    {
+     "date": "2021-07-02",
+     "series": "BE",
+     "close": 956.2,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 71895721.8
+    },
+    {
+     "date": "2021-07-05",
+     "series": "BE",
+     "close": 908.4,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 46343842.8
+    },
+    {
+     "date": "2021-07-06",
+     "series": "BE",
+     "close": 953.8,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 314989725.6
+    },
+    {
+     "date": "2021-07-07",
+     "series": "BE",
+     "close": 939.7,
+     "return_on_previous_close": -0.0148,
+     "lock": 0,
+     "traded_value": 361177232.25
+    },
+    {
+     "date": "2021-07-08",
+     "series": "BE",
+     "close": 986.65,
+     "return_on_previous_close": 0.05,
+     "lock": 1,
+     "traded_value": 221001977.25
+    },
+    {
+     "date": "2021-07-09",
+     "series": "BE",
+     "close": 1000.5,
+     "return_on_previous_close": 0.014,
+     "lock": 0,
+     "traded_value": 141199132.7
+    },
+    {
+     "date": "2021-07-12",
+     "series": "BE",
+     "close": 1000.4,
+     "return_on_previous_close": -0.0001,
+     "lock": 0,
+     "traded_value": 282618079.15
+    },
+    {
+     "date": "2021-07-13",
+     "series": "BE",
+     "close": 986.9,
+     "return_on_previous_close": -0.0135,
+     "lock": 0,
+     "traded_value": 196540878.45
+    },
+    {
+     "date": "2021-07-14",
+     "series": "BE",
+     "close": 974.15,
+     "return_on_previous_close": -0.0129,
+     "lock": 0,
+     "traded_value": 339576457.8
+    },
+    {
+     "date": "2021-07-15",
+     "series": "BE",
+     "close": 980.2,
+     "return_on_previous_close": 0.0062,
+     "lock": 0,
+     "traded_value": 169785033.65
+    },
+    {
+     "date": "2021-07-16",
+     "series": "BE",
+     "close": 1016.55,
+     "return_on_previous_close": 0.0371,
+     "lock": 0,
+     "traded_value": 171101357.4
+    },
+    {
+     "date": "2021-07-19",
+     "series": "BE",
+     "close": 968.05,
+     "return_on_previous_close": -0.0477,
+     "lock": 0,
+     "traded_value": 146967879.25
+    },
+    {
+     "date": "2021-07-20",
+     "series": "BE",
+     "close": 919.65,
+     "return_on_previous_close": -0.05,
+     "lock": -1,
+     "traded_value": 55792770.85
+    },
+    {
+     "date": "2021-07-22",
+     "series": "BE",
+     "close": 964.55,
+     "return_on_previous_close": 0.0488,
+     "lock": 0,
+     "traded_value": 218459807.95
+    },
+    {
+     "date": "2021-07-23",
+     "series": "BE",
+     "close": 963.6,
+     "return_on_previous_close": -0.001,
+     "lock": 0,
+     "traded_value": 78620004.65
+    },
+    {
+     "date": "2021-07-26",
+     "series": "BE",
+     "close": 939.7,
+     "return_on_previous_close": -0.0248,
+     "lock": 0,
+     "traded_value": 53509952.15
+    },
+    {
+     "date": "2021-07-27",
+     "series": "BE",
+     "close": 901.1,
+     "return_on_previous_close": -0.0411,
+     "lock": 0,
+     "traded_value": 67992938.3
+    },
+    {
+     "date": "2021-07-28",
+     "series": "BE",
+     "close": 940.75,
+     "return_on_previous_close": 0.044,
+     "lock": 0,
+     "traded_value": 81906471.3
+    },
+    {
+     "date": "2021-07-29",
+     "series": "BE",
+     "close": 937.9,
+     "return_on_previous_close": -0.003,
+     "lock": 0,
+     "traded_value": 78254044.45
+    },
+    {
+     "date": "2021-07-30",
+     "series": "BE",
+     "close": 893.45,
+     "return_on_previous_close": -0.0474,
+     "lock": 0,
+     "traded_value": 150214924.6
+    },
+    {
+     "date": "2021-08-02",
+     "series": "BE",
+     "close": 908.8,
+     "return_on_previous_close": 0.0172,
+     "lock": 0,
+     "traded_value": 68965719.8
+    }
+   ]
+  }
+ }
+}

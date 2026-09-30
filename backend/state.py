@@ -34,9 +34,12 @@ def _new_position():
     # "charges" holds the brokerage + statutory charges already paid to open
     # this position. They're released against the realized figure when it
     # closes, so a round trip's P&L is net of both legs (issue #21).
+    # "live" is whether the position is real money: True or False from the
+    # order that opened it, and it decides where the closing order goes,
+    # whatever mode the engine is in by then (#156). None follows the mode.
     return {"quantity": 0, "avg_price": 0.0, "entry_atr": None,
             "stop_price": None, "target_price": None, "initial_risk": None, "position_id": None,
-            "charges": 0.0}
+            "charges": 0.0, "live": None}
 
 
 class AppState:
@@ -60,7 +63,8 @@ class AppState:
         # underlying NSE symbol -> one open long-option position (see fno_risk.py:
         # options-buying only, so "quantity" here is always > 0 — there is no short side).
         # {"tradingsymbol", "underlying", "is_call", "lots", "lot_size", "entry_premium",
-        #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id"}
+        #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id",
+        #  "strike", "expiry", "entry_iv"}  (the last three reprice a paper position, #154)
         self.fno_positions = {}
         self.set_watchlist(watchlist)
         # review_queue.ReviewQueue, attached by TradingEngine. Kept here only so
@@ -118,12 +122,15 @@ class AppState:
         or square-off watching it. Found 2026-09-25 09:50, when a deploy
         restart orphaned two manually approved paper shorts (GRASIM, HYUNDAI).
 
-        Rebuild every position of the CURRENT mode whose first leg is today
-        and which has no later leg. Stop and target come from the entry note
+        Rebuild every position whose first leg is today and which has no
+        later leg: paper legs when the engine is in paper mode, and live legs
+        always. A restart comes back in Paper, and skipping the live leg left
+        real money with no stop, no target and no square-off (#156). A
+        restored live position keeps "live": True, so it is closed with a
+        real order. Stop and target come from the entry note
         ("Stop X, target Y", the last such pair: every entry path writes it);
         the entry leg's charges carry over so the close is still net of both
         legs. Returns the restored symbols, for the engine and the log."""
-        mode = "paper" if self.paper_mode else "live"
         legs = {}
         for t in todays_trades:  # oldest first
             if t.get("position_id"):
@@ -134,7 +141,11 @@ class AppState:
             # One leg = still open. Entry legs are journaled with realized 0.0
             # (not None), so "realized" can't tell an entry from an exit; the
             # leg count can.
-            if len(ls) > 1 or entry.get("mode") != mode:
+            live = entry.get("mode") == "live"
+            if len(ls) > 1 or not (live or self.paper_mode):
+                continue
+            # Real money wins the slot if a paper leg is open in the same stock.
+            if not live and self.positions.get(entry["symbol"], {}).get("live"):
                 continue
             m = _STOP_TARGET_RE.findall(entry.get("note") or "")
             stop, target = (float(m[-1][0]), float(m[-1][1])) if m else (None, None)
@@ -143,9 +154,10 @@ class AppState:
             pos.update(quantity=qty if entry["side"] == "BUY" else -qty, avg_price=float(entry["price"]),
                        stop_price=stop, target_price=target, position_id=pid,
                        initial_risk=abs(float(entry["price"]) - stop) if stop else None,
-                       charges=float(entry.get("charges") or 0.0))
+                       charges=float(entry.get("charges") or 0.0), live=live)
             self.positions[entry["symbol"]] = pos
-            restored.append(entry["symbol"])
+            if entry["symbol"] not in restored:
+                restored.append(entry["symbol"])
         return restored
 
     def _rehydrate_entry_counts(self, todays_trades):
@@ -294,7 +306,7 @@ class AppState:
 
     def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None,
                      charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None,
-                     realized_gross=None):
+                     realized_gross=None, signal_price=None, order_id=None):
         """`realized` is net of both legs' charges; `realized_gross` is the same
         figure before them, and `charges` stays this one leg's own charges, so
         summing the column over every row still gives the day's total (#21)."""
@@ -305,6 +317,7 @@ class AppState:
             "reason": reason, "note": note, "realized": realized,
             "realized_gross": realized_gross, "charges": charges,
             "initial_risk": initial_risk, "r_multiple": r_multiple,
+            "signal_price": signal_price, "order_id": order_id,
         }
         with self.lock:
             self.trades.insert(0, trade)

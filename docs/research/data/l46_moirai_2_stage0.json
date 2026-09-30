@@ -1,0 +1,207 @@
+{
+ "stage0": {
+  "look": "L46",
+  "model": "moirai_2",
+  "repo": "Salesforce/moirai-2.0-R-small",
+  "output_used": "median quantile",
+  "started": "2026-09-30T02:02:24.674804",
+  "argv": [
+   "--model",
+   "moirai_2"
+  ],
+  "prereg": "docs/research/prereg-tsfm-family.md",
+  "environment": {
+   "python": "3.11.9",
+   "machine": "AMD64",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "torch": "2.4.1+cu124",
+   "numpy": "1.26.4",
+   "uni2ts": "2.0.0",
+   "huggingface_hub": "2.0.0",
+   "cuda": true,
+   "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  },
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "revisions": {
+   "commits": [
+    [
+     "30f43ff08c8494f4943ae1521e9d4e94a0fbb389",
+     "2026-01-29T02:01:22+00:00"
+    ],
+    [
+     "caee210dd41229a3f80da16cd3470930fb3e47a1",
+     "2026-01-16T03:11:23+00:00"
+    ],
+    [
+     "4c645a88f771c169f23726519477e596ec7a1155",
+     "2026-01-16T03:09:57+00:00"
+    ],
+    [
+     "5e57b910cf821c72bf397d2af976959fec294f3b",
+     "2025-08-11T08:15:26+00:00"
+    ],
+    [
+     "c1b8789901bf60568fc4b2726f7d3aa256ac4ac8",
+     "2025-08-11T08:12:40+00:00"
+    ],
+    [
+     "f2ed354ddbca961d7aa80b741f35bbd6e422e9b7",
+     "2025-08-06T15:47:14+00:00"
+    ],
+    [
+     "5f248ffae4a32cd2f4e8a0afa9c9709f00c8f257",
+     "2025-08-06T14:03:58+00:00"
+    ]
+   ],
+   "with_weights": [
+    "30f43ff08c8494f4943ae1521e9d4e94a0fbb389",
+    "caee210dd41229a3f80da16cd3470930fb3e47a1",
+    "4c645a88f771c169f23726519477e596ec7a1155",
+    "5e57b910cf821c72bf397d2af976959fec294f3b",
+    "c1b8789901bf60568fc4b2726f7d3aa256ac4ac8",
+    "f2ed354ddbca961d7aa80b741f35bbd6e422e9b7"
+   ],
+   "picked": [
+    "5e57b910cf821c72bf397d2af976959fec294f3b",
+    "2025-08-11T08:15:26+00:00"
+   ],
+   "moved_window": null
+  },
+  "smoke": {
+   "ok": true,
+   "first": [
+    103.6645,
+    103.5595,
+    103.4878,
+    103.4114
+   ]
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19412,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 21890,
+    "identical": true
+   },
+   {
+    "symbol": "BAJAJHLDNG",
+    "idx": 18701,
+    "identical": true
+   },
+   {
+    "symbol": "M&M",
+    "idx": 20804,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 20972,
+    "identical": true
+   },
+   {
+    "symbol": "BEL",
+    "idx": 17960,
+    "identical": true
+   },
+   {
+    "symbol": "ADANIPOWER",
+    "idx": 19478,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 21179,
+    "identical": true
+   },
+   {
+    "symbol": "SOLARINDS",
+    "idx": 20003,
+    "identical": true
+   },
+   {
+    "symbol": "TATASTEEL",
+    "idx": 18017,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 17810,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 19010,
+    "identical": true
+   },
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19037,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 19562,
+    "identical": true
+   },
+   {
+    "symbol": "BPCL",
+    "idx": 22838,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 21938,
+    "identical": true
+   },
+   {
+    "symbol": "TATAPOWER",
+    "idx": 22763,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 19112,
+    "identical": true
+   },
+   {
+    "symbol": "GRASIM",
+    "idx": 20999,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 22949,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per": 0.0005940520763397217,
+   "est_hours_total": 0.007155357259511948
+  },
+  "coverage": {
+   "sessions": 79,
+   "first_half": 39,
+   "second_half": 40,
+   "stock_times": 43362,
+   "sessions_below_min_stocks": []
+  },
+  "samples": 43362
+ },
+ "status": "STAGE0_DONE"
+}

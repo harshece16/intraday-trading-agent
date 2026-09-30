@@ -30,6 +30,14 @@ cd frontend && npm run lint && npm run build
 
 `scanner.py` (what to trade) · `trader_brain.py` (when — Varsity checklist) · `trading_engine.py` (execution) · `risk_manager.py` · `costs.py` (slippage/charges) · `backtester.py` / `swing_backtester.py` · `chaywanaprash.py` (internal self-review LLM) · `app.py` (routes) · `kite_broker.py` / `paper_broker.py`.
 
+## Design documents
+
+`docs/architecture/`: `HLD.md`, `LLD.md`, `RULES.md`, `KNOWLEDGE_GRAPH.md`. Read `HLD.md` first in a new session.
+
+- The rules live in `docs/architecture/rules.json`. After editing it, run `python3 tools/build_rules_docs.py` and commit `RULES.md` and `rules.html` with it. `tests/test_rules_catalogue.py` fails on a stale page or a rule that names code that no longer exists.
+- A change that adds, removes or changes a rule updates the catalogue in the same PR.
+- The knowledge graph is local (`graphify-out/`, not committed). `graphify update .` refreshes it after code changes.
+
 ## Workflow (see WORKFLOW.md)
 
 - Never commit straight to `main`: branch `type/short-desc` → Conventional Commit (`feat:`/`fix:`/`docs:`…) with a prose body explaining why → PR using `.github/PULL_REQUEST_TEMPLATE.md` (include real verification evidence and `Closes #N`) → CI green → squash merge.

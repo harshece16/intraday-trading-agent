@@ -1,3 +1,168 @@
+## Note for the record — the night of 2026-09-29/30: L46, L47 and trials 128–202, all FAIL. Brought back for review.
+
+**2026-09-30.** Branch `research/overnight-2026-09-30`. The owner, going to sleep, asked for other models and candlestick combinations to be tested if Kronos failed. Decisions were taken by a decision agent against `decisions/charter-2026-09-30.md` and logged in `decisions/log-2026-09-30.md`. Pre-registrations were committed before the results they govern: L46 and the combination search at 00:14 (before L40's result was read), L47 at 01:08 (after L40's and Chronos-Bolt's results; the design is the sweep's, written before either).
+
+| Look / trials | Result | Record |
+| --- | --- | --- |
+| L46, six zero-shot models | FAIL 18 of 18; spreads −2.3 to +0.5 bp; BH across 18, no survivor | `results-tsfm-family.md` |
+| Trials 128–202, 75 combinations | FAIL 0 of 75; none positive net; best −13.8 bp a trade | `results-combo-search.md` |
+| L47, LightGBM on Alpha158 trained on our bars | FAIL; spreads +0.11 / +0.03 / +0.51 bp; BH within 3 and across 24, no survivor | `results-qlib-lgbm-alpha158.md` |
+
+**Disclosed.** L46's amendments 1 and 2 (revisions with weights; TimesFM's fused projections; FlowState's median) came after smoke tests on a synthetic series, before any project data. L47's code was not approved at the first independent review (a one-run hole and an infinite-value difference in CORD) and was approved after amendment 1; its stage 0 was reviewed before training. The combination search reuses L40's sample, which the seven looks had scored; it was fixed before any of them was read and judged at 75. The only night-wide BH survivor is Chronos-Bolt at 30 minutes with a negative spread; not a pass, and a reversed signal was never pre-registered. Issue #204 records a latent defect in L40's moved-window code that was never triggered.
+
+## Re: Entry 19 — L40 run of record finished: FAIL at all three horizons. No trial spent. Brought back as the closure.
+
+**2026-09-30.** Branch `research/kronos-l40-run`. Since the stage 0 entry below: amendment 4 (`5b24e12`, 22:59 on 2026-09-29, the owner's decision, before any statistic from any run) moved the run of record to the owner's PC at sample_count 3; the Mac's run was stopped at 3,649 of 43,362 forecasts and its rows used only for a forecast-to-forecast comparison. The PC's pass ran 22:56 to 00:49:50. Results: `results-kronos-feature-ic.md`, `data/kronos_l40_result.json`.
+
+| Horizon | Spread, bp (t) | Rank IC (t) | Partial IC given m60 (t) | Gate |
+| --- | --- | --- | --- | --- |
+| 15 min | +0.27 (0.63) | 0.010 (1.57) | 0.008 (1.36) | fail |
+| 30 min | +0.51 (0.78) | 0.018 (2.61) | 0.011 (1.74) | fail |
+| 60 min | +1.61 (1.43) | 0.022 (2.86) | 0.013 (1.90) | fail |
+
+**Disclosed.** 78 sessions scored of 79: the Muhurat session of 2025-10-21 has no decision time. The moved-window code loads the latest revision while starting the window at the earliest; never triggered here, recorded in the results note. The decision agent of the overnight charter took D1 on this result (overnight branch).
+
+## Re: Entry 19 — L40 stage 0 run on the Mac: all six checks pass, sample_count 1 by the timing rule. The pass is started under amendment 3; no statistic exists until it ends.
+
+**2026-09-29.** Branch `research/kronos-l40-run`. Order of commits: amendment
+3 and the harness `8d709c6` → stage 0 run 20:32 to 20:53 → its record
+`docs/research/data/kronos_l40_stage0.json` → this entry → the pass. The
+owner asked for the run ("run Kronos", 2026-09-29). Kronos is installed in
+the project's research environment only; nothing in the live path can
+import it (`test_no_live_module_imports_research` still holds).
+
+| Check | Result |
+| --- | --- |
+| 1. Install matches upstream | The Kronos repository's regression test: 4 passed in 19 s, on the revisions that test pins (`901c26c`, `0e01173`) |
+| 2. Revisions | Latest before 2025-09-01: model `12b7990` and tokenizer `f6c7de7`, both 2025-08-17. Window unchanged |
+| 3. Lookahead | 20 of 20 forecasts bit-identical with and without later bars |
+| 4. Timing | 5.20 s a forecast at sample_count 3, 62.6 hours for 43,362 forecasts. Over 36 hours, so **sample_count 1** |
+| 5. Adjustment | One fetch run (2026-09-20, 1,302 spans). No stock-session straddles a step; 0 dropped |
+| 6. Coverage | 79 sessions, 2025-09-01 to 2025-12-23; halves 39 and 40; 43,362 stock-times; no session below 20 stocks |
+
+**Disclosed.**
+
+- Device CPU, 4 threads, pandas 2.2.2, the rest as amendment 3 lists. pandas
+  was 2.3.3 at the first install and was pinned before any model was loaded.
+- The regression test and the look load different revisions, as amendment
+  3 says: the test proves the code path on the authors' pinned weights, the
+  look uses the weights §2 picks.
+- At sample_count 1 each forecast is one draw, not a mean of three. That
+  makes the feature noisier, which on average can only weaken a measured
+  rank correlation, not strengthen it. The prereg allows the choice on
+  timing alone and it was made before any forecast met a return.
+- No check needed a judgement the text does not settle, so under amendment
+  3 the pass starts now: about 21 hours of computing, stopped through the
+  session of 2026-09-30, so the result is expected on 2026-10-01. The script
+  computes nothing from the forecasts until every one is done. A defect
+  found in this record before then stops the run with no result.
+
+## Note for the record — the paper book has trial 126's fill rules and band, by the owner's decisions (PR #191). Not a research step; no review requested.
+
+**2026-09-29.** The owner chose, from a list, to add the waiting-order fill
+rules to the paper book (#180) and to change the band's expected figure to
++0.71% a month. Both were done before the book's first rebalance. The band
+uses trial 126's mean and standard deviation, 0.71% and 3.89%; this loosens
+the floor from −14.0% to −14.8% at six months. Run over 2010-02 to 2025-11 the
+paper book's code gives trial 126's monthly values to within 7e-16, with the
+same holdings and the same counts of waiting orders. No new return was read:
+the comparison is against trial 126's saved series. Nothing dated 2026 was
+read. A second dated note is in `prereg-3i-momentum-corrected-data.md`.
+
+## Note for the record — the paper book's loader is repaired, by the owner's decision (PR #181). Not a research step; no review requested.
+
+**2026-09-28.** Entry 24 filed the loader fix as the owner's decision. The
+owner's words the same evening: "yes fix the momentum book loader before 1
+october". `backend/momentum_book.py`'s loader is now a copy of the research
+loader's repaired panel; on the cache to 2025-12-31 the two panels have 0
+differences and the ranked universe matches at 36 of 36 month-ends. The
+rule, the costs and the band are unchanged. The fill rules of trial 126 are
+not in the paper book (#180), and the band's expected figure is unchanged;
+both wait on the owner. A dated note is in `prereg-3i-momentum-corrected-data.md`.
+Nothing dated 2026 was read for the checks.
+
+## Re: Entry 24 — H1 to H14 applied in one commit. PR opened. Three things go to the owner with the results.
+
+**2026-09-28.** Branch `research/universe-width`. Every replacement wording
+in Entry 24 is applied. Two were strengthened with evidence instead of
+weakened: the margins in H3 were recomputed from the saved series (Deflated
+Sharpe margin 0.006% a month, 0.02 points of slippage a side; t margin 0.03%
+a month, 0.10 points), and H4's June 2021 claim now cites printed prices and
+lock flags committed as `data/momentum_width_june_2021.json` (three stocks in
+trade-for-trade from 9 June; locked at the lower band on 1, 2 and 5 July;
+first session a sell could fill, 6 July). Nothing was re-run.
+
+**To the owner, with the results:** the main question could not be tested,
+and whether to register a new test; the paper book's loader, whether and
+when; the forward band's expected figure. The owner is also told the pass is
+narrow.
+
+## Re: Entry 23 — amendment 4 and the list's script committed (`c93936e`); A′, B′, the three tier records and W run once each. Brought back with the results.
+
+**2026-09-28.** F1, F3 to F8, G1 to G7 and G10 are in amendment 4. The
+script is `backend/research/panel_differences.py`; the regenerated list has
+the same 743 rows. The simulator was not touched after stage 0 run 2
+(`3d210ce`). Results: `results-universe-width.md`. Trial 126 survives trial
+120's criteria; L42 survives L38's; trial 127 FAILS on criteria 1, 2 and 6;
+L43 to L45 were not taken.
+
+## Re: Entry 22 — the panel-difference list holds 743 rows, not ten. Stopped before A′ and brought it back.
+
+**2026-09-28.** Entry 22 said to stop if the list held anything beyond the
+ten expected rows. It did: 640 actions were applied at the next EQ row
+because the stock was in trade-for-trade on its ex-date, 42 of the 743 on
+stocks inside the 400 most-traded. I proposed no decomposition run. The list
+was committed (`0e829a7`) and the finding added to issue #175.
+
+## Re: Entry 21 — amendment 2 (`ac42d2d`), code aligned (`1991648`), stage 0 run twice. Run 1 failed gate 6; amendment 3 (`142134c`), code `3d210ce`, run 2 passed. **The tiers cannot be tested.**
+
+**2026-09-28.** R1 to R10 are in amendment 2. Stage 0 run 1 failed gate 6 on
+two real actions outside the loader's bounds and showed seven overstated
+dividend amounts (#178). Amendment 3 fixed all three in the repaired panel
+only. With screen S3 the list reaches 600 names only from 2020-08, so T3, T4
+and T5 have 63, 56 and 30 months against the 120 required and K is 400. S3
+was not changed. #177 filed for consolidations.
+
+**The owner was told on 2026-09-28**, before stage 0 ran, that ranks 401–600
+would be read by this test (they were not, in the end), and after stage 0
+that the main question could not be tested and why.
+
+## Re: Entry 20 — amendment 1 written (`a2372f8`), text only. C1 to C18 answered; O1 adopted; O2 read from the owner's request; O3 not taken.
+
+**2026-09-28.** N_family is 10, t ≥ 2.807. A′ is trial 126 and W is trial
+127. K is fixed (option a), with criterion 8. A pass produces a
+recommendation only. The sweep note was reworded in seven places and the
+ledger records what the sweep read. One software check had run before the
+review came back (loader parity, 0 differences); it is disclosed in the
+amendment. The code `946cc31` was committed before the review and was not
+approved by it; it was aligned later in its own commit.
+
+## Re: Entry 19 — L38 code and tests written after the accepted prereg; nothing run against project data. Stage 0 waits for the Mac.
+
+**2026-09-28.** Branch `claude/ideas-integration-analysis-emfua6`. Order of
+commits: prereg `0657a0e` → reviewer Entry 19 + amendment 1 `61e4832` →
+code (this commit). Amendment 1 states the partial-IC condition sits outside
+the BH family, as Entry 19 asked; `splits.py`'s stale docstring path is fixed.
+
+**What exists:** `backend/research/kronos_feature_ic.py` (the six stage-0
+halts in the prereg's order, then one IC pass with resumable row storage,
+then the §7 statistics and the §8 gate), `backend/tests/test_kronos_feature_ic.py`
+(33 tests on the pure parts: decision bar = the bar that closes at t, entry at
+the next bar's open, lookback/target lookahead isolation, m60, matched-horizon
+features, revision pinning and the moved-window rule, the embargoed selection
+window, the partial IC removing a momentum echo, the gate, the #108 adjustment
+straddle), and `backend/research/requirements-kronos.txt` for the research-only
+venv. The vendored repo and row files are gitignored. `backend/requirements.txt`
+is untouched and `test_no_live_module_imports_research` passes (494 passed,
+15 skipped).
+
+**Disclosed:** this session has no candle cache and cannot reach Hugging
+Face, so the orchestration was smoke-tested only on synthetic bars with
+random-weight models of the Kronos architecture (lookahead check identical,
+resume without recomputation, statistics and gate evaluate). No forecast has
+touched project data; no number exists. Stage 0 runs on the Mac and comes
+back for review before the IC pass, per Entry 19.
+
 ## Re: Entry 17 — amendment 4 written with the five pre-commitments, run once: **FAIL, 93.41%. 3f is closed at stage 0.** Brought back for review as the closure.
 
 **2026-09-24.** Branch `research/3f-stage0`, PR #107. Amendment 4 and its

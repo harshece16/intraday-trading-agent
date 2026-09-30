@@ -1,0 +1,213 @@
+{
+ "stage0": {
+  "look": "L46",
+  "model": "tirex",
+  "repo": "NX-AI/TiRex",
+  "output_used": "median quantile",
+  "started": "2026-09-30T02:05:53.069301",
+  "argv": [
+   "--model",
+   "tirex"
+  ],
+  "prereg": "docs/research/prereg-tsfm-family.md",
+  "environment": {
+   "python": "3.11.9",
+   "machine": "AMD64",
+   "platform": "Windows-10-10.0.26200-SP0",
+   "torch": "2.14.0+cu126",
+   "numpy": "2.4.6",
+   "tirex": "installed",
+   "huggingface_hub": "2.0.0",
+   "cuda": true,
+   "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  },
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "revisions": {
+   "commits": [
+    [
+     "63c740922493f5fbe60b277609ec62babfba2762",
+     "2026-02-05T13:20:11+00:00"
+    ],
+    [
+     "9ef196de35e10dd56915200a8e7070eda4a29644",
+     "2025-12-14T16:56:22+00:00"
+    ],
+    [
+     "c7704f1da607289c5640d408a2b655fb70e9546c",
+     "2025-12-14T16:50:28+00:00"
+    ],
+    [
+     "fa77b31b7813d1a1d971f6cca5f2deb024c016a7",
+     "2025-06-06T07:41:47+00:00"
+    ],
+    [
+     "7eb7a5970aa470107b55a38040d98c5c7f2bc5cf",
+     "2025-06-01T08:12:15+00:00"
+    ],
+    [
+     "74fd9c9c4ff453ada374ea684cfeb4855b934307",
+     "2025-05-31T16:57:46+00:00"
+    ],
+    [
+     "4bc47e3235b4a88e6ea37794040fa464cc460369",
+     "2025-05-29T07:10:08+00:00"
+    ],
+    [
+     "d76a39c9fce7cbac8550a8db53626c76abd83f21",
+     "2025-05-26T07:15:46+00:00"
+    ]
+   ],
+   "with_weights": [
+    "63c740922493f5fbe60b277609ec62babfba2762",
+    "9ef196de35e10dd56915200a8e7070eda4a29644",
+    "c7704f1da607289c5640d408a2b655fb70e9546c",
+    "fa77b31b7813d1a1d971f6cca5f2deb024c016a7",
+    "7eb7a5970aa470107b55a38040d98c5c7f2bc5cf",
+    "74fd9c9c4ff453ada374ea684cfeb4855b934307",
+    "4bc47e3235b4a88e6ea37794040fa464cc460369",
+    "d76a39c9fce7cbac8550a8db53626c76abd83f21"
+   ],
+   "picked": [
+    "fa77b31b7813d1a1d971f6cca5f2deb024c016a7",
+    "2025-06-06T07:41:47+00:00"
+   ],
+   "moved_window": null
+  },
+  "smoke": {
+   "ok": true,
+   "first": [
+    103.5495,
+    103.4089,
+    103.2803,
+    103.1894
+   ]
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19412,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 21890,
+    "identical": true
+   },
+   {
+    "symbol": "BAJAJHLDNG",
+    "idx": 18701,
+    "identical": true
+   },
+   {
+    "symbol": "M&M",
+    "idx": 20804,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 20972,
+    "identical": true
+   },
+   {
+    "symbol": "BEL",
+    "idx": 17960,
+    "identical": true
+   },
+   {
+    "symbol": "ADANIPOWER",
+    "idx": 19478,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 21179,
+    "identical": true
+   },
+   {
+    "symbol": "SOLARINDS",
+    "idx": 20003,
+    "identical": true
+   },
+   {
+    "symbol": "TATASTEEL",
+    "idx": 18017,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 17810,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 19010,
+    "identical": true
+   },
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19037,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 19562,
+    "identical": true
+   },
+   {
+    "symbol": "BPCL",
+    "idx": 22838,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 21938,
+    "identical": true
+   },
+   {
+    "symbol": "TATAPOWER",
+    "idx": 22763,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 19112,
+    "identical": true
+   },
+   {
+    "symbol": "GRASIM",
+    "idx": 20999,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 22949,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per": 0.016812225580215456,
+   "est_hours_total": 0.20250325711369518
+  },
+  "coverage": {
+   "sessions": 79,
+   "first_half": 39,
+   "second_half": 40,
+   "stock_times": 43362,
+   "sessions_below_min_stocks": []
+  },
+  "samples": 43362
+ },
+ "status": "STAGE0_DONE"
+}

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import { useAppState } from "./api";
+import { API_BASE, useAppState } from "./api";
+import LoadState from "./components/LoadState";
 import { useAlerts } from "./useAlerts";
-import Header from "./components/Header";
+import StatusBar, { Sidebar } from "./components/Header";
 import LiveLog from "./components/LiveLog";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
@@ -14,14 +15,25 @@ import Portfolio from "./pages/Portfolio";
 import PortfolioDiagnostic from "./pages/PortfolioDiagnostic";
 import Journal from "./pages/Journal";
 import Trades from "./pages/Trades";
+import MomentumBook from "./pages/MomentumBook";
+import JevBook from "./pages/JevBook";
+import Kronos from "./pages/Kronos";
 
 function Page({ children }) {
   const location = useLocation();
   return <main className="page" key={location.pathname}>{children}</main>;
 }
 
+function Connecting() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t); }, []);
+  return slow
+    ? <LoadState error={`can't reach the engine at ${API_BASE}. Is the backend running? This page keeps retrying`} />
+    : <LoadState label="Connecting to the engine…" />;
+}
+
 function AppRoutes({ state }) {
-  if (!state) return <Page><p className="empty">Connecting…</p></Page>;
+  if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
       <Route path="/" element={<Page><Overview state={state} /></Page>} />
@@ -34,6 +46,9 @@ function AppRoutes({ state }) {
       <Route path="/portfolio/diagnostic" element={<Page><PortfolioDiagnostic /></Page>} />
       <Route path="/journal" element={<Page><Journal /></Page>} />
       <Route path="/trades" element={<Page><Trades state={state} /></Page>} />
+      <Route path="/momentum-book" element={<Page><MomentumBook /></Page>} />
+      <Route path="/jev-book" element={<Page><JevBook /></Page>} />
+      <Route path="/kronos" element={<Page><Kronos /></Page>} />
     </Routes>
   );
 }
@@ -43,11 +58,14 @@ function Shell() {
   useAlerts(state);
   const [liveLogOpen, setLiveLogOpen] = useState(false);
   return (
-    <>
-      <Header state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
-      <AppRoutes state={state} />
+    <div className="app">
+      <Sidebar state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
+      <div className="app-main">
+        <StatusBar state={state} />
+        <AppRoutes state={state} />
+      </div>
       <LiveLog state={state} open={liveLogOpen} onClose={() => setLiveLogOpen(false)} />
-    </>
+    </div>
   );
 }
 

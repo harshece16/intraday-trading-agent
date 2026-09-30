@@ -1,0 +1,333 @@
+{
+ "prereg": "prereg-3i-momentum-corrected-data.md",
+ "part": "A",
+ "held_out": true,
+ "run_at": "2026-09-26T20:09:56",
+ "meta": {
+  "files": 4397,
+  "bad_files": 0,
+  "sessions": 4397,
+  "chains": 3226,
+  "fund_units_excluded": 372,
+  "actions_applied": {
+   "split": 615,
+   "bonus": 616,
+   "rights": 301,
+   "demerger": 172,
+   "dividend": 21762,
+   "unparsed": 37,
+   "unparsed_rights": 28,
+   "rejected": 63,
+   "no_chain": 211,
+   "no_session": 1298
+  },
+  "built_seconds": 76.1
+ },
+ "first_month": "2025-12",
+ "last_month": "2026-08",
+ "strategy": {
+  "cagr": 0.25143214768256317,
+  "ann_vol": 0.25254154489428265,
+  "sharpe_rf0": 0.9956070704636582,
+  "max_drawdown": -0.149837795307876,
+  "worst_month": -0.09673574095776138,
+  "best_month": 0.1389260173322342,
+  "months_positive": 6,
+  "n_months": 8
+ },
+ "benchmark": {
+  "cagr": 0.08825827706715383,
+  "ann_vol": 0.2011385123425,
+  "sharpe_rf0": 0.43879352610934624,
+  "max_drawdown": -0.10942197218464267,
+  "worst_month": -0.0740003475725135,
+  "best_month": 0.13000191338766176,
+  "months_positive": 5,
+  "n_months": 8
+ },
+ "cagr_gap_pp": 16.317387061540934,
+ "excess_net": {
+  "mean_monthly": 0.01280992368978906,
+  "sd_monthly": 0.03351478607534357,
+  "t": 1.0810731582375692,
+  "n": 8,
+  "half1": {
+   "mean": null,
+   "t": null,
+   "n": 0
+  },
+  "half2": {
+   "mean": 0.01280992368978906,
+   "t": 1.0810731582375692,
+   "n": 8
+  },
+  "last3": {
+   "mean": 0.01280992368978906,
+   "t": 1.0810731582375692,
+   "n": 8
+  }
+ },
+ "excess_net_series": [
+  -0.03847712981826423,
+  0.006820371116881274,
+  -0.010482084355597832,
+  0.008924103944572437,
+  0.03272150188277334,
+  0.010527195819756585,
+  0.01456579467794028,
+  0.07787963625025063
+ ],
+ "dsr_family": {
+  "dsr": null,
+  "note": "Only 8 trades \u2014 need at least 10 before a Sharpe ratio means anything."
+ },
+ "dsr_project_wide_information": {
+  "dsr": null,
+  "note": "Only 8 trades \u2014 need at least 10 before a Sharpe ratio means anything."
+ },
+ "turnover": {
+  "buys": 37,
+  "sells": 22,
+  "forced_exits": 1,
+  "one_sided_pct_of_avg_book_per_year": 274.9323187681668,
+  "cost_pct_of_avg_book_per_year": 0.948990513813408
+ },
+ "capital_columns": {
+  "100000": {
+   "cagr": 0.24598954892753033,
+   "excess_mean": 0.012434178316738362,
+   "excess_t": 1.0512593170148703
+  },
+  "1000000": {
+   "cagr": 0.25143214768256317,
+   "excess_mean": 0.01280992368978906,
+   "excess_t": 1.0810731582375692
+  },
+  "2500000": {
+   "cagr": 0.2517952686720393,
+   "excess_mean": 0.012834940605379624,
+   "excess_t": 1.0830528939848376
+  }
+ },
+ "holdings": [
+  {
+   "month": "2025-12",
+   "holdings": [
+    "ABCAPITAL",
+    "APOLLO",
+    "AUBANK",
+    "CANBK",
+    "CARTRADE",
+    "CUPID",
+    "EICHERMOT",
+    "FORCEMOT",
+    "INDIANB",
+    "LAURUSLABS",
+    "LTF",
+    "MARUTI",
+    "MUTHOOTFIN",
+    "NYKAA",
+    "RBLBANK"
+   ]
+  },
+  {
+   "month": "2026-01",
+   "holdings": [
+    "ABCAPITAL",
+    "APOLLO",
+    "AUBANK",
+    "CANBK",
+    "CARTRADE",
+    "CUPID",
+    "EICHERMOT",
+    "FORCEMOT",
+    "INDIANB",
+    "LAURUSLABS",
+    "LTF",
+    "MARUTI",
+    "MUTHOOTFIN",
+    "NYKAA",
+    "RBLBANK"
+   ]
+  },
+  {
+   "month": "2026-02",
+   "holdings": [
+    "ABCAPITAL",
+    "APOLLO",
+    "ASHOKLEY",
+    "AUBANK",
+    "CANBK",
+    "CUPID",
+    "EICHERMOT",
+    "FORCEMOT",
+    "HINDCOPPER",
+    "INDIANB",
+    "LAURUSLABS",
+    "LTF",
+    "MUTHOOTFIN",
+    "NATIONALUM",
+    "RBLBANK"
+   ]
+  },
+  {
+   "month": "2026-03",
+   "holdings": [
+    "ABCAPITAL",
+    "ASHOKLEY",
+    "CANBK",
+    "CUPID",
+    "EICHERMOT",
+    "FORCEMOT",
+    "GVT&D",
+    "HINDCOPPER",
+    "INDIANB",
+    "LAURUSLABS",
+    "LTF",
+    "MCX",
+    "MTARTECH",
+    "NATIONALUM",
+    "SBIN"
+   ]
+  },
+  {
+   "month": "2026-04",
+   "holdings": [
+    "ASHOKLEY",
+    "CUPID",
+    "FEDERALBNK",
+    "FORCEMOT",
+    "GVT&D",
+    "HINDCOPPER",
+    "INDIANB",
+    "LAURUSLABS",
+    "MCX",
+    "MTARTECH",
+    "NATIONALUM",
+    "PFOCUS",
+    "POWERINDIA",
+    "SBIN",
+    "VEDL"
+   ]
+  },
+  {
+   "month": "2026-05",
+   "holdings": [
+    "ADANIPOWER",
+    "BHARATFORG",
+    "CUMMINSIND",
+    "CUPID",
+    "FEDERALBNK",
+    "FORCEMOT",
+    "GVT&D",
+    "HINDCOPPER",
+    "LAURUSLABS",
+    "MCX",
+    "MTARTECH",
+    "NATIONALUM",
+    "NETWEB",
+    "POWERINDIA",
+    "VEDL"
+   ]
+  },
+  {
+   "month": "2026-06",
+   "holdings": [
+    "ADANIPOWER",
+    "ATHERENERG",
+    "BHARATFORG",
+    "CUMMINSIND",
+    "CUPID",
+    "FEDERALBNK",
+    "GVT&D",
+    "HFCL",
+    "HINDCOPPER",
+    "LAURUSLABS",
+    "MCX",
+    "NATIONALUM",
+    "NETWEB",
+    "POWERINDIA",
+    "VEDL"
+   ]
+  },
+  {
+   "month": "2026-07",
+   "holdings": [
+    "ACUTAAS",
+    "ADANIPOWER",
+    "ATHERENERG",
+    "BHARATFORG",
+    "CUMMINSIND",
+    "CUPID",
+    "FEDERALBNK",
+    "GVT&D",
+    "HFCL",
+    "LAURUSLABS",
+    "NATIONALUM",
+    "NETWEB",
+    "POWERINDIA",
+    "SYRMA",
+    "VEDL"
+   ]
+  },
+  {
+   "month": "2026-08",
+   "holdings": [
+    "ACUTAAS",
+    "ADANIENSOL",
+    "ADANIPOWER",
+    "ATHERENERG",
+    "BHARATFORG",
+    "CUMMINSIND",
+    "CUPID",
+    "FEDERALBNK",
+    "HFCL",
+    "LAURUSLABS",
+    "NETWEB",
+    "POWERINDIA",
+    "SONACOMS",
+    "SYRMA",
+    "WELCORP"
+   ]
+  }
+ ],
+ "values": {
+  "strategy": [
+   998312.594,
+   901740.0855119452,
+   927046.8044369731,
+   848727.6358869533,
+   966637.9861405304,
+   1002636.5859308958,
+   1037170.6576653516,
+   1080491.1357304952,
+   1159323.808151086
+  ],
+  "benchmark": [
+   998312.5939999986,
+   940152.28879049,
+   960124.8324198204,
+   889075.2611077523,
+   1004656.746197395,
+   1009197.3263776236,
+   1033333.3535197665,
+   1061442.233848174,
+   1056220.3626243372
+  ]
+ },
+ "months": [
+  "2025-12",
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08"
+ ],
+ "yearly_excess_sum": {
+  "2026": 0.10247938951831248
+ },
+ "confirms": true
+}

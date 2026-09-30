@@ -130,6 +130,34 @@ SCANNER = {
     # beyond the old top-6 are, by definition, lower-conviction than the
     # ones that used to be the whole list.
     "active_count": 25,
+    # How the active_count stocks are chosen (README section 91):
+    #   "liquidity" - the most-traded eligible stocks by 20-day average turnover,
+    #                 chosen once per session and kept all day. One rule, known
+    #                 before the open; the cheapest names to trade; every stock
+    #                 watched for the whole session.
+    #   "score"     - the old list: best final_score first, re-chosen every scan.
+    #                 Its ranking was measured to carry no information (README
+    #                 sections 37 and 52), and it rotated about 50 names a day.
+    # Scores, sides and reasons are still computed and shown in both modes.
+    "selection": "liquidity",
+    # Fix the day's list only once the scan has data for this share of the
+    # universe, so one missing download can't drop a stock for the whole day.
+    "freeze_min_coverage": 0.9,
+    # The day's list is fixed before the open, from daily data, at the first
+    # pre-market read at or after this time on a trading day (README section
+    # 100). If the engine starts later, the first scan of the session fixes it.
+    "fix_list_from": "08:45",
+    # Live prices for the scanner (README section 101). When Kite is connected
+    # one quote request gives every stock's last price, NSE's opening price,
+    # the day's volume and its average traded price. When it is not, the
+    # scanner uses the delayed feed and the page says so.
+    "live_feed": True,
+    # Tradability guards from two NSE files (README section 100): the F&O ban
+    # list, and the price-band list with each stock's series and surveillance
+    # remark. A stock with a fixed band is long-only, and is left alone when
+    # its price is within this many per cent of either band.
+    "guards": True,
+    "near_band_pct": 2.0,
     "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
     # Raised alongside active_count — this is what selects which candidates
@@ -187,9 +215,21 @@ NEWS = {
 # heavier on-demand call, not hundreds of small per-headline ones. Shares
 # NEWS['anthropic_api_key'] rather than duplicating the key.
 CHAYWANAPRASH = {
-    "enabled": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    # It runs when asked (POST /api/chaywanaprash/analyze) and once a week on
+    # its own (the review below), so it is on whenever there is something to call.
+    "enabled": True,
+    # "auto" uses the Anthropic API when ANTHROPIC_API_KEY is set, and the
+    # Claude Code CLI (`claude -p`, billed to your Claude plan) otherwise or
+    # when the API call fails. Or pick one: "anthropic_api" / "claude_cli".
+    "llm_backend": "auto",
     "daily_limit": 12,
     "lookback_hours": 24,
+    # The fortnightly review: after the close, once every 7 days, it reads the
+    # last 14 days of the journal with every change merged in that time and
+    # the rules as they stand, and proposes. It changes nothing. 0 turns it off.
+    "review_every_days": 7,
+    "review_lookback_days": 14,
+    "review_after": "15:40",
 }
 
 # Sahab's Research Desk (research_desk.py): TradingAgents-style research briefs.
@@ -284,7 +324,54 @@ RISK = {
 # Order-book sampling (depth_sampler.py): one Kite quote call per engine tick
 # for the watchlist, rows to depth_samples. Pure data collection for a future
 # brain built on the book rather than on candle shapes (README section 69/71).
-DEPTH_SAMPLER = {"enabled": True}
+DEPTH_SAMPLER = {
+    "enabled": True,
+    # Overnight-hold research (README section 81): the ETFs' own books and the
+    # index level, only inside the exit window after the open and the entry
+    # window before the close. Times are IST, [start, end).
+    "window_symbols": ["NIFTYBEES", "SETFNIF50"],
+    "window_indices": ["NIFTY 50"],
+    "windows": [["09:15", "09:30"], ["15:00", "15:30"]],
+}
+
+# The paper momentum book (momentum_book.py, README section 83): the
+# positional strategy that passed 3i. Paper only; an evening job in its own
+# process after the close. The forward band switches it off automatically.
+MOMENTUM_BOOK = {
+    "enabled": True,
+    "capital": 1_000_000.0,        # paper capital for the book (separate from intraday)
+    "universe": 200,
+    "hold": 15,
+    "rank_keep": 30,
+    "slippage": 0.0005,
+    # Trial 126's figures: the rule on repaired prices with orders that wait
+    # (README section 99). They were 0.0082 and 0.0387, trial 120's, until the
+    # owner's decision of 2026-09-29. The change moves the six-month floor from
+    # -14.0% to -14.8%.
+    "expected_monthly_excess": 0.0071,
+    "monthly_excess_sd": 0.0389,
+    "band_from_month": 6,
+    "job_after": "19:30",
+    "job_until": "23:30",
+    "retry_minutes": 30,
+}
+
+# The Jev book (jev_book.py, README section 86): a forward paper test of the
+# TypeSafe Jev LLM judge on the scanner's daily shortlist — buy / short / skip
+# at 09:45, closed at the 15:08 square-off. Paper only; never places an order.
+# Needs a TypeSafe API key (TYPESAFE_API_KEY, or `typesafe_key.py set`);
+# until then it records "Jev unavailable" and trades nothing.
+JEV_BOOK = {
+    "enabled": True,
+    "decide_at": "09:45",
+    "max_names": 15,
+    "notional": 100_000.0,
+    "timeout_s": 90,
+    "kill_after": 100,          # pre-registered kill rule (prereg-jev-book.md)
+    "kill_t": -2.0,
+    "endpoint": "https://api.typesafe.ai/v1/systemone",   # TypeSafe's official API
+    "model": "jev-latest",
+}
 
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
@@ -450,6 +537,12 @@ def save_kite_session(access_token: str) -> None:
 # Connect developer dashboard before placing any live order — this is not
 # optional and isn't something this code can do for you.
 KITE_MARKET_PROTECTION_PCT = 1
+
+# After a live order is sent, how long to wait for Kite to report it finished
+# before cancelling whatever hasn't filled, and how often to ask (#155). The
+# wait runs on the thread that sent the order, so it holds up the tick.
+KITE_FILL_DEADLINE_S = 5
+KITE_FILL_POLL_S = 0.25
 
 # Whether to use Kite for market data (real-time) instead of yfinance
 # (~15-min delayed). Only takes effect once KITE_API_KEY/KITE_ACCESS_TOKEN

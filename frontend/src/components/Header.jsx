@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { apiFetch, explainRefusal, openKiteLogin, setTradingMode } from "../api";
 import { clock, money, num, tone } from "../format";
-import { sessionInfo } from "../helpers";
+import { heldSymbols, scanRows, sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
-const PAGES = [
-  ["/", "Overview"], ["/premarket", "Pre-Market"], ["/day-plan", "Day Plan"], ["/screener", "Screener"],
-  ["/technical-analysis", "Technical Analysis"], ["/portfolio", "Portfolio"], ["/journal", "Journal"], ["/trades", "Trades"],
+// Ten pages in one flat row read as a wall of links. Grouped by the question
+// each answers: what's happening today, what the market offers, which
+// strategies are running, and what you actually hold and did.
+const NAV = [
+  ["Today", [["/", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"]]],
+  ["Market", [["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"]]],
+  ["Strategies", [["/momentum-book", "Momentum book"], ["/jev-book", "Jev book"]]],
+  ["Research", [["/kronos", "Kronos"]]],
+  ["Your book", [["/portfolio", "Portfolio", "held"], ["/trades", "Trades"], ["/journal", "Journal"]]],
 ];
 
 async function setMode(paperMode) {
@@ -19,11 +25,8 @@ async function setMode(paperMode) {
   }
 }
 
-export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
-  const navigate = useNavigate();
-  const [kite, setKite] = useState(null);
+export function Sidebar({ state, liveLogOpen, onToggleLiveLog }) {
   const [alertsOn, setAlertsOn] = useState(false);
-
   useEffect(() => { setAlertsOn(alertsEnabled()); }, []);
 
   async function toggleAlerts() {
@@ -36,6 +39,50 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
     setAlertsOn(ok);
     if (!ok) alert("Notifications are blocked for this site. Allow them in your browser's site settings to get trade and price alerts.");
   }
+
+  const counts = state ? {
+    picks: scanRows(state).filter((r) => r.status === "ACTIVE").length,
+    held: heldSymbols(state).length,
+  } : {};
+  const open = state?.market_status === "open";
+
+  return (
+    <aside className="sidebar">
+      <Link to="/" className="brand">
+        <span className={"dot" + (open ? " open" : "")} aria-hidden="true"></span>
+        <b>Trader Sahab</b>
+      </Link>
+      <nav aria-label="Pages">
+        {NAV.map(([group, links]) => (
+          <div className="navgroup" key={group}>
+            <div className="navgroup-label">{group}</div>
+            {links.map(([path, label, count]) => (
+              <NavLink key={path} to={path} end={path === "/"} className="navlink">
+                {label}
+                {count && counts[count] > 0 && <span className="n">{counts[count]}</span>}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="sidebar-foot">
+        <button className={`sidebtn ${liveLogOpen ? "on" : ""}`} onClick={onToggleLiveLog} aria-pressed={liveLogOpen}
+          title="Live terminal: every scan, setup, trade and alert, streamed as it happens">
+          Live log
+        </button>
+        {alertsSupported() && (
+          <button className={`sidebtn ${alertsOn ? "on" : ""}`} onClick={toggleAlerts} aria-pressed={alertsOn}
+            title="Browser notifications for trade fills, risk warnings and price moves, while this tab is open">
+            Browser alerts {alertsOn ? "on" : "off"}
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+export default function StatusBar({ state }) {
+  const [kite, setKite] = useState(null);
 
   useEffect(() => {
     let stopped = false;
@@ -73,63 +120,38 @@ export default function Header({ state, liveLogOpen, onToggleLiveLog }) {
       Object.values(state.fno_positions || {}).reduce((sum, p) => sum + (p.lots || 0) * (p.lot_size || 0) * (p.entry_premium || 0), 0)
     : 0;
   const k = describeKite(kite);
+  const live = state && !state.paper_mode;
 
   return (
-    <>
-      <header className="topbar">
-        <button className="brand" onClick={() => navigate("/")}>
-          <span className={"dot" + (open ? " open" : "")}></span>
-          <b>Trader Sahab</b>
-          <span>{open ? "Market open" : "Market closed"}{state?.last_update_ts ? `, updated ${clock(state.last_update_ts)}` : ""}</span>
-          <span className="countdown">{si ? `· ${si.label}` : ""}</span>
-        </button>
-        <div className="stat"><small>Invested</small><strong>₹{num(invested, 0)}</strong></div>
-        <div className="stat" title="After brokerage, STT, exchange fees, GST and stamp duty">
-          <small>Realized today</small>
-          <strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong>
-        </div>
-        <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
-        <span className="divider"></span>
-        <div className="kite">
-          <span className={`kite-chip kite-chip--${k.tone}`} title={k.detail} aria-live="polite">
-            <span className="dot" aria-hidden="true"></span>
-            {k.label}
-          </span>
-          <button
-            className={`btn ${k.urgent ? "primary" : ""}`}
-            title={k.detail}
-            onClick={openKiteLogin}
-          >
-            {k.action}
-          </button>
-        </div>
+    <header className={`statusbar${live ? " is-live" : ""}`}>
+      <div className="session">
+        <strong>{open ? "Market open" : "Market closed"}</strong>
+        <span>{si ? si.label : ""}{state?.last_update_ts ? ` · updated ${clock(state.last_update_ts)}` : ""}</span>
+      </div>
+      <div className="stat"><small>Invested</small><strong>₹{num(invested, 0)}</strong></div>
+      <div className="stat" title="After brokerage, STT, exchange fees, GST and stamp duty">
+        <small>Realized today</small>
+        <strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong>
+      </div>
+      <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
+      <div className="statusbar-right">
         {state?.entries_paused && (
-          <span className="kite-chip kite-chip--warn" title={`No new positions will open. Stops, targets and the ${state?.square_off_time || "15:08"} square-off still run. Resume from the Overview page.`}>
+          <span className="kite-chip kite-chip--warn" title={`No new positions will open. Stops, targets and the ${state?.square_off_time || "15:08"} square-off still run. Resume from Overview.`}>
             <span className="dot" aria-hidden="true"></span>
             Entries paused
           </span>
         )}
-        {alertsSupported() && (
-          <button className={`btn ${alertsOn ? "primary" : ""}`} onClick={toggleAlerts} title="Browser notifications for trade fills, risk warnings, and price moves">
-            {alertsOn ? "🔔 Alerts on" : "🔕 Enable alerts"}
-          </button>
-        )}
-        <button className={`btn ${liveLogOpen ? "primary" : ""}`} onClick={onToggleLiveLog} title="Live terminal — every scan, setup, trade and alert, streamed as it happens">
-          {liveLogOpen ? "▾ Live log" : "▸ Live log"}
-        </button>
+        <span className={`kite-chip kite-chip--${k.tone}`} title={k.detail} aria-live="polite">
+          <span className="dot" aria-hidden="true"></span>
+          {k.label}
+        </span>
+        <button className={`btn ${k.urgent ? "primary" : ""}`} title={k.detail} onClick={openKiteLogin}>{k.action}</button>
         <div className="segmented" role="group" aria-label="Trading mode">
-          <button className="paper" aria-pressed={String(!!state?.paper_mode)} onClick={() => setMode(true)}>Paper</button>
-          <button className="live" aria-pressed={String(!state?.paper_mode)} onClick={() => { if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false); }}>Live</button>
+          <button className="paper" aria-pressed={String(state?.paper_mode === true)} onClick={() => setMode(true)}>Paper</button>
+          <button className="live" aria-pressed={String(state?.paper_mode === false)} onClick={() => { if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false); }}>Live</button>
         </div>
-        <div className="session-bar"><div className="session-bar-fill" style={{ width: `${si ? si.pct : 0}%` }}></div></div>
-      </header>
-      <nav className="pagenav">
-        {PAGES.map(([path, label]) => (
-          <NavLink key={path} to={path} end={path === "/"} className="navlink">
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-    </>
+      </div>
+      <div className="session-bar"><div className="session-bar-fill" style={{ width: `${si ? si.pct : 0}%` }}></div></div>
+    </header>
   );
 }
