@@ -27,17 +27,17 @@ Companions: [High-Level Design](HLD.md) · [Low-Level Design](LLD.md) · [Knowle
 
 | Area | Rules | Enforced now | With a test | Known gaps |
 | --- | --- | --- | --- | --- |
-| [Entry gates](#entry-gates) | 27 | 25 | 21 | [#102](https://github.com/harshece16/intraday-trading-agent/issues/102) [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
-| [Risk and sizing](#risk-and-sizing) | 10 | 10 | 9 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) |
+| [Entry gates](#entry-gates) | 27 | 25 | 21 | – |
+| [Risk and sizing](#risk-and-sizing) | 10 | 10 | 9 | – |
 | [Execution](#execution) | 8 | 8 | 7 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) |
 | [Exits and square-off](#exits-and-square-off) | 7 | 6 | 5 | – |
 | [Costs](#costs) | 4 | 3 | 4 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) |
-| [Options (F&O)](#options-fo) | 12 | 0 | 7 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) [#186](https://github.com/harshece16/intraday-trading-agent/issues/186) [#187](https://github.com/harshece16/intraday-trading-agent/issues/187) [#189](https://github.com/harshece16/intraday-trading-agent/issues/189) |
-| [Scanner](#scanner) | 26 | 25 | 18 | [#192](https://github.com/harshece16/intraday-trading-agent/issues/192) [#193](https://github.com/harshece16/intraday-trading-agent/issues/193) [#196](https://github.com/harshece16/intraday-trading-agent/issues/196) [#197](https://github.com/harshece16/intraday-trading-agent/issues/197) |
+| [Options (F&O)](#options-fo) | 12 | 0 | 7 | – |
+| [Scanner](#scanner) | 26 | 25 | 18 | – |
 | [Market data](#market-data) | 12 | 12 | 11 | – |
 | [External services](#external-services) | 10 | 9 | 8 | – |
-| [Momentum book](#momentum-book) | 15 | 15 | 13 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) [#175](https://github.com/harshece16/intraday-trading-agent/issues/175) [#177](https://github.com/harshece16/intraday-trading-agent/issues/177) [#178](https://github.com/harshece16/intraday-trading-agent/issues/178) [#180](https://github.com/harshece16/intraday-trading-agent/issues/180) |
-| [Jev book](#jev-book) | 15 | 14 | 13 | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) |
+| [Momentum book](#momentum-book) | 15 | 15 | 13 | – |
+| [Jev book](#jev-book) | 15 | 14 | 13 | – |
 | [Order-book sampler](#order-book-sampler) | 5 | 4 | 4 | – |
 | [Research desk and diagnostics](#research-desk-and-diagnostics) | 9 | 7 | 8 | – |
 | [Research protocol](#research-protocol) | 32 | 32 | 13 | – |
@@ -379,7 +379,7 @@ The manual review queue is off by default. It is turned on in memory only, so a 
 </details>
 
 <details>
-<summary><code>ENT-23</code> <b>Active</b> · known gap #166 — A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked.</summary>
+<summary><code>ENT-23</code> <b>Active</b> — A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked.</summary>
 
 A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked. It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share. When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.
 
@@ -391,12 +391,11 @@ A review card is offered only when exactly one required checklist item failed, o
 | **How to check** | manual_reviews table (status 'withheld' with withheld_reason for a held-back near-miss); activity kind 'review'; Overview page review queue and its 'Held back today' list |
 | **Test** | `backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even` |
 | **Source** | README §64, §105 |
-| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 
 <details>
-<summary><code>ENT-24</code> <b>Active</b> · known gap #166 — Each (stock, side) has one review card at a time per session, remembered across restarts from manual_reviews.</summary>
+<summary><code>ENT-24</code> <b>Active</b> — Each (stock, side) has one review card at a time per session, remembered across restarts from manual_reviews.</summary>
 
 Each (stock, side) has one review card at a time per session, remembered across restarts from manual_reviews. A pending, approved, rejected or refused card closes it for the day. A card that expired unanswered can be replaced by a later near-miss read on a later bar that came closer: a larger share of its failed item's bar reached (R:R after costs over 1.5, volume over its average, stop over cost, confidence over 60; pattern, S/R and trend count as 0). A held-back near-miss doesn't take the card; the first one per stock and side is journaled.
 
@@ -407,7 +406,6 @@ Each (stock, side) has one review card at a time per session, remembered across 
 | **How to check** | manual_reviews rows per session_date: an expired card followed by a later card for the same stock and side |
 | **Test** | `backend/tests/test_review_queue.py::test_one_card_per_stock_side_and_day_and_it_is_journaled; backend/tests/test_review_queue.py::test_a_later_closer_near_miss_replaces_an_expired_card; backend/tests/test_review_queue.py::test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss; backend/tests/test_review_queue.py::test_no_new_card_unless_the_last_one_expired_and_this_one_is_later_and_closer` |
 | **Source** | README §64, §105 |
-| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 
@@ -442,7 +440,7 @@ An approval overrides only the card's blocker and the confidence gate. At click 
 </details>
 
 <details>
-<summary><code>ENT-27</code> <b>Active</b> · known gap #102 · known gap #166 — Every unapproved card, and every near-miss held back by the R:R floor, is replayed once a minute as if approved at the offer: bars that start after…</summary>
+<summary><code>ENT-27</code> <b>Active</b> — Every unapproved card, and every near-miss held back by the R:R floor, is replayed once a minute as if approved at the offer: bars that start after…</summary>
 
 Every unapproved card, and every near-miss held back by the R:R floor, is replayed once a minute as if approved at the offer: bars that start after the offer, exit at the first of stop (assumed first on a both-touch bar), target or 15:08 square-off, with real slippage and charges. The result stays provisional until a completed bar settles it.
 
@@ -454,8 +452,6 @@ Every unapproved card, and every near-miss held back by the R:R floor, is replay
 | **How to check** | manual_reviews.shadow_json; 'If approved' column on Overview; the 'Held back today' list and its total |
 | **Test** | `backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both; backend/tests/test_review_queue.py::test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved` |
 | **Source** | README §68, §105, issue #102 |
-| **Known gap** | [#102](https://github.com/harshece16/intraday-trading-agent/issues/102) |
-| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 
@@ -566,7 +562,7 @@ Daily loss limit: once today's net realized P&L is &lt;= -2% of capital (-₹2,0
 </details>
 
 <details>
-<summary><code>RSK-08</code> <b>Active</b> · known gap #157 — At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together.</summary>
+<summary><code>RSK-08</code> <b>Active</b> — At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together.</summary>
 
 At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together. The industry comes from the scan row, falling back to the static NIFTY 100 universe list.
 
@@ -578,7 +574,6 @@ At most 1 open position per industry, counting cash positions and open option po
 | **How to check** | blocked reason 'already at the max of 1 open position(s) in &lt;industry>' |
 | **Test** | `backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too` |
 | **Source** | README §19 |
-| **Known gap** | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) |
 
 </details>
 
@@ -941,7 +936,7 @@ Options buying only: a call on a LONG read, a put on a SHORT read. No writing/se
 </details>
 
 <details>
-<summary><code>FNO-03</code> <b>Off by default</b> · known gap #157 — At most one open option contract per underlying (an option order Kite hasn't confirmed counts as one).</summary>
+<summary><code>FNO-03</code> <b>Off by default</b> — At most one open option contract per underlying (an option order Kite hasn't confirmed counts as one).</summary>
 
 At most one open option contract per underlying (an option order Kite hasn't confirmed counts as one). An option buy acts on the edge-triggered entry signal, like a cash entry, and needs confidence >= 60 (so it is blocked today by the evidence gate). Every evaluation, executed or not, is journaled.
 
@@ -953,7 +948,6 @@ At most one open option contract per underlying (an option order Kite hasn't con
 | **How to check** | fno_evaluations table; GET /api/fno/journal |
 | **Test** | `backend/tests/test_fno_entry_rules.py::test_a_standing_long_ok_without_a_signal_buys_nothing, backend/tests/test_fno_entry_rules.py::test_the_signal_is_taken_once` |
 | **Source** | README §7, §8, §110 |
-| **Known gap** | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) |
 
 </details>
 
@@ -988,7 +982,7 @@ Lots = floor(20% of the ₹10,000 F&O allocation / (premium x lot size)); 0 lots
 </details>
 
 <details>
-<summary><code>FNO-06</code> <b>Off by default</b> · known gap #189 — Premium exits: close if the premium falls 40% or rises 80% from the premium paid, checked each open-phase tick whether or not F&amp;O is switched on.</summary>
+<summary><code>FNO-06</code> <b>Off by default</b> — Premium exits: close if the premium falls 40% or rises 80% from the premium paid, checked each open-phase tick whether or not F&amp;O is switched on.</summary>
 
 Premium exits: close if the premium falls 40% or rises 80% from the premium paid, checked each open-phase tick whether or not F&O is switched on. A live position reads Kite's quote; a paper one is a model price, Black-Scholes at the entry volatility on the underlying's live price, read for an index under its quote name (NIFTY as NSE:NIFTY 50 / ^NSEI, BANKNIFTY as NSE:NIFTY BANK / ^NSEBANK). If that price can't be read, nothing fires on that tick.
 
@@ -1000,7 +994,6 @@ Premium exits: close if the premium falls 40% or rises 80% from the premium paid
 | **How to check** | trades reason 'fno_stop_loss' / 'fno_take_profit' |
 | **Test** | `backend/tests/test_paper_fno_stops.py, backend/tests/test_fno_index_quote.py::test_a_paper_nifty_option_reprices_from_the_index, backend/tests/test_fno_restart.py::test_the_restored_option_is_watched_with_fno_switched_off` |
 | **Source** | README §7, §98, §110 |
-| **Known gap** | [#189](https://github.com/harshece16/intraday-trading-agent/issues/189) |
 
 </details>
 
@@ -1035,7 +1028,7 @@ No stock-option buy in a stock on NSE's F&O ban list (Market Wide Position Limit
 </details>
 
 <details>
-<summary><code>FNO-09</code> <b>Off by default</b> · known gap #157 — An option buy passes the cash entry rules on its underlying, a call counting as a LONG and a put as a SHORT: one entry per stock per day, shared with…</summary>
+<summary><code>FNO-09</code> <b>Off by default</b> — An option buy passes the cash entry rules on its underlying, a call counting as a LONG and a put as a SHORT: one entry per stock per day, shared with…</summary>
 
 An option buy passes the cash entry rules on its underlying, a call counting as a LONG and a put as a SHORT: one entry per stock per day, shared with cash; the pause; an untracked Kite position in the stock; the scanner's exclusion and short limits (SCANNER.allow_shorts = False refuses a put); the market bias; the daily loss limit; the open-position cap; and the sector cap, which counts cash and option positions together. An untracked Kite position in any contract on the underlying also blocks it. Not applied: the checklist's re-check of its stop and target at the live price (an option's exits are on the premium) and cash sizing (FNO-05 sizes it).
 
@@ -1047,12 +1040,11 @@ An option buy passes the cash entry rules on its underlying, a call counting as 
 | **How to check** | activity 'F&O entry signal skipped — …'; fno_evaluations block_reason |
 | **Test** | `backend/tests/test_fno_entry_rules.py::test_one_entry_per_stock_per_day_counts_a_cash_entry_too, backend/tests/test_fno_entry_rules.py::test_market_bias_blocks_calls_in_risk_off_and_puts_in_risk_on, backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too, backend/tests/test_fno_entry_rules.py::test_an_untracked_kite_position_in_any_contract_on_the_stock_blocks` |
 | **Source** | README §110 |
-| **Known gap** | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) |
 
 </details>
 
 <details>
-<summary><code>FNO-10</code> <b>Off by default</b> · known gap #157 — Liquidity gate on the contract's own NFO book, the last check before an option buy: refuse if the spread is over 2% of the mid premium, five levels…</summary>
+<summary><code>FNO-10</code> <b>Off by default</b> — Liquidity gate on the contract's own NFO book, the last check before an option buy: refuse if the spread is over 2% of the mid premium, five levels…</summary>
 
 Liquidity gate on the contract's own NFO book, the last check before an option buy: refuse if the spread is over 2% of the mid premium, five levels can't fill the order, filling it moves the price over 1% from the mid, or either side holds under 3x the order. With no book to read, paper goes ahead (journaled as unchecked) and live is refused.
 
@@ -1064,12 +1056,11 @@ Liquidity gate on the contract's own NFO book, the last check before an option b
 | **How to check** | liquidity_checks rows whose symbol is an NFO contract; blocked reason 'liquidity: the option's …' |
 | **Test** | `backend/tests/test_fno_entry_rules.py::test_assess_option_rules, backend/tests/test_fno_entry_rules.py::test_paper_goes_ahead_without_a_book_and_live_does_not` |
 | **Source** | README §110 |
-| **Known gap** | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) |
 
 </details>
 
 <details>
-<summary><code>FNO-11</code> <b>Off by default</b> · known gap #186 — A live option order is booked only from Kite's report of it, as EXE-07 does for cash: the executed premium and quantity, and the premium stop, target…</summary>
+<summary><code>FNO-11</code> <b>Off by default</b> — A live option order is booked only from Kite's report of it, as EXE-07 does for cash: the executed premium and quantity, and the premium stop, target…</summary>
 
 A live option order is booked only from Kite's report of it, as EXE-07 does for cash: the executed premium and quantity, and the premium stop, target and maximum loss worked out from the premium paid. A rejected buy books nothing and doesn't spend the day's entry; a rejected sale leaves the position open and watched. A part fill books what filled. An unconfirmed order books nothing, blocks further option orders on the underlying, and is booked when Kite answers. Closing takes a claim, so two threads can't both sell.
 
@@ -1081,12 +1072,11 @@ A live option order is booked only from Kite's report of it, as EXE-07 does for 
 | **How to check** | A live NFO row in trades has order_id and signal_price, and its note gives the slippage in bp against the quoted premium |
 | **Test** | `backend/tests/test_fno_live_fills.py::test_a_live_buy_is_booked_at_kites_premium_and_quantity, backend/tests/test_fno_live_fills.py::test_a_rejected_exit_leaves_the_position_open_and_watched, backend/tests/test_fno_live_fills.py::test_an_unconfirmed_buy_books_nothing_blocks_a_second_and_is_booked_when_kite_answers` |
 | **Source** | README §110 |
-| **Known gap** | [#186](https://github.com/harshece16/intraday-trading-agent/issues/186) |
 
 </details>
 
 <details>
-<summary><code>FNO-12</code> <b>Off by default</b> · known gap #187 — On restart, today's open option positions are rebuilt from fno_trades and their legs in trades (the quantity still open, entry charges, premium stop…</summary>
+<summary><code>FNO-12</code> <b>Off by default</b> — On restart, today's open option positions are rebuilt from fno_trades and their legs in trades (the quantity still open, entry charges, premium stop…</summary>
 
 On restart, today's open option positions are rebuilt from fno_trades and their legs in trades (the quantity still open, entry charges, premium stop and target), kept out of the cash restore, and counted against their underlying's entry for the day. Paper legs in Paper, live legs always. A live one keeps its real-money flag, so its closing order is real in either mode, and sends no order until Kite's day book confirms it is still open (flat in Kite: dropped, no order). An option the engine holds is not an untracked Kite position.
 
@@ -1097,7 +1087,6 @@ On restart, today's open option positions are rebuilt from fno_trades and their 
 | **How to check** | activity 'Restored N open F&O position(s) from today's journal after a restart'; 'A LIVE option position is open' at error level |
 | **Test** | `backend/tests/test_fno_restart.py::test_an_open_paper_option_is_restored_as_an_option_not_as_cash, backend/tests/test_fno_restart.py::test_kite_flat_drops_it_and_sends_nothing, backend/tests/test_fno_restart.py::test_reconciliation_verifies_it_and_does_not_call_it_untracked` |
 | **Source** | README §110 |
-| **Known gap** | [#187](https://github.com/harshece16/intraday-trading-agent/issues/187) |
 
 </details>
 
@@ -1106,7 +1095,7 @@ On restart, today's open option positions are rebuilt from fno_trades and their 
 Which stocks are watched, and the market bias.
 
 <details>
-<summary><code>SCN-01</code> <b>Active</b> · known gap #193 — When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume…</summary>
+<summary><code>SCN-01</code> <b>Active</b> — When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume…</summary>
 
 When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21, SCN-25).
 
@@ -1118,7 +1107,6 @@ When Kite is connected the scanner's prices are live: one Kite quote request giv
 | **How to check** | Screener page: 'Prices are live from Kite as of HH:MM'; /api/scanner feed |
 | **Test** | `backend/tests/test_scanner_live_feed.py::test_with_kite_connected_the_scan_describes_today_before_the_delayed_feed_has_a_bar` |
 | **Source** | README §101 |
-| **Known gap** | [#193](https://github.com/harshece16/intraday-trading-agent/issues/193) |
 
 </details>
 
@@ -1333,7 +1321,7 @@ A guard file that cannot be fetched or read is unknown, not empty: it excludes n
 </details>
 
 <details>
-<summary><code>SCN-21</code> <b>Active</b> · known gap #192 · known gap #196 — When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file.</summary>
+<summary><code>SCN-21</code> <b>Active</b> — When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file.</summary>
 
 When the daily bars do not hold the last completed session, it is added from NSE's equity bhavcopy and index closing file. The session is looked for by date, so it is added in its place when the bars already end with today's. If that fails, the pre-market read says which session it ranked on.
 
@@ -1344,8 +1332,6 @@ When the daily bars do not hold the last completed session, it is added from NSE
 | **How to check** | Pre-market page: 'Ranked on the &lt;date> close'; /api/premarket result.daily |
 | **Test** | `backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched` |
 | **Source** | README §100 |
-| **Known gap** | [#192](https://github.com/harshece16/intraday-trading-agent/issues/192) |
-| **Known gap** | [#196](https://github.com/harshece16/intraday-trading-agent/issues/196) |
 
 </details>
 
@@ -1397,7 +1383,7 @@ The day's list survives a restart. It is written to the journal when it is fixed
 </details>
 
 <details>
-<summary><code>SCN-25</code> <b>Active</b> · known gap #197 — A stock's score gets +6 when its industry's real NSE sector index is in a daily uptrend or downtrend (close, EMA20 and EMA50 in order) on the side of…</summary>
+<summary><code>SCN-25</code> <b>Active</b> — A stock's score gets +6 when its industry's real NSE sector index is in a daily uptrend or downtrend (close, EMA20 and EMA50 in order) on the side of…</summary>
 
 A stock's score gets +6 when its industry's real NSE sector index is in a daily uptrend or downtrend (close, EMA20 and EMA50 in order) on the side of the trade, and −6 against it. The trend needs 51 daily bars before the session. When the delayed feed gives an index fewer, its history is built from NSE's index closing files for the last 60 sessions, NSE's bar kept where both have one. Each file is downloaded once and kept; NSE is asked once a day, at most 60 files a day, half a second apart, and a pass that missed a session is tried again after an hour. An industry whose trend still cannot be worked out is listed in the scan result as sector_trends_unavailable and named on the Screener.
 
@@ -1409,7 +1395,6 @@ A stock's score gets +6 when its industry's real NSE sector index is in a daily 
 | **How to check** | /api/scanner sector_trends_unavailable is empty and sector_history_from_nse names the indices built from NSE's files; the Screener shows no 'Sector trend unavailable' line |
 | **Test** | `backend/tests/test_sector_index_history.py::test_a_scan_takes_the_trend_from_nses_history_and_names_what_it_could_not_work_out` |
 | **Source** | README §107 |
-| **Known gap** | [#197](https://github.com/harshece16/intraday-trading-agent/issues/197) |
 
 </details>
 
@@ -1999,7 +1984,7 @@ Once switched off, the momentum book stops processing: no more trades, and the N
 </details>
 
 <details>
-<summary><code>MOM-11</code> <b>Active</b> · known gap #159 · known gap #177 · known gap #178 — Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers…</summary>
+<summary><code>MOM-11</code> <b>Active</b> — Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers…</summary>
 
 Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers, dividends) into total-return closes, and positions are valued by total-return ratio from the fill date. A dividend is read without face values or bracketed remarks, and is applied when it is below the previous close. A demerger is applied when it leaves between 1% and 98% of the price. A failed refresh of the corporate-actions file is logged as a warning, and the Momentum Book page shows the date of the file in use and says when the last refresh failed.
 
@@ -2010,9 +1995,6 @@ Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actio
 | **How to check** | Parity test against the repaired panel of research/nse_prices.py; on the real cache the two panels have 0 differences; the page footer 'corporate-actions file from ...'; state.data.corporate_actions_refreshed |
 | **Test** | `backend/tests/test_momentum_book.py::test_the_panel_is_the_research_loaders_repaired_panel` |
 | **Source** | README §82, §97, §113 |
-| **Known gap** | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) |
-| **Known gap** | [#177](https://github.com/harshece16/intraday-trading-agent/issues/177) |
-| **Known gap** | [#178](https://github.com/harshece16/intraday-trading-agent/issues/178) |
 
 </details>
 
@@ -2033,7 +2015,7 @@ The momentum evening job starts only on weekdays that are not holidays, between 
 </details>
 
 <details>
-<summary><code>MOM-13</code> <b>Active</b> · known gap #159 — The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 when its data is incomplete, and 0 once today's session is processed.</summary>
+<summary><code>MOM-13</code> <b>Active</b> — The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 when its data is incomplete, and 0 once today's session is processed.</summary>
 
 The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 when its data is incomplete, and 0 once today's session is processed. Evenings it missed are caught up in order on the next run. Each run asks NSE again for every day of the last 31 without a bhavcopy (a 404 means no session that day). The book stops before a past day whose download failed, and before a month turn whose ranking comes out empty, keeping the sessions before it, until a later run has the data. The reason is kept in state.data.problem and shown on the page.
 
@@ -2044,12 +2026,11 @@ The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 w
 | **How to check** | momentum_book.log lines 'daily done code=N' and any warning before them; state.last_processed advances; state.data.problem is null; the Momentum Book page shows no 'stopped early' line |
 | **Test** | `backend/tests/test_momentum_book_data.py::test_the_book_waits_at_a_day_whose_download_failed; backend/tests/test_momentum_book_data.py::test_a_day_that_failed_is_fetched_again_after_a_later_day_succeeded; backend/tests/test_momentum_book_data.py::test_an_empty_month_end_ranking_stops_the_job_and_leaves_the_book_as_it_was; backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed` |
 | **Source** | README §83, §113; docs/research/prereg-3i-momentum-corrected-data.md (third note on the forward paper book) |
-| **Known gap** | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) |
 
 </details>
 
 <details>
-<summary><code>MOM-14</code> <b>Active</b> · known gap #175 — The price panel reads the EQ, BE and BZ series.</summary>
+<summary><code>MOM-14</code> <b>Active</b> — The price panel reads the EQ, BE and BZ series.</summary>
 
 The price panel reads the EQ, BE and BZ series. A holding that moves to trade-for-trade is valued and sold at the price it traded for, not at its last EQ close. When a symbol has more than one of these series on a day, the EQ row is used.
 
@@ -2060,12 +2041,11 @@ The price panel reads the EQ, BE and BZ series. A holding that moves to trade-fo
 | **How to check** | On the real bhavcopy cache the book's panel equals the research loader's repaired panel row for row (0 differences, 2026-09-28) |
 | **Test** | `backend/tests/test_momentum_book.py::test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for` |
 | **Source** | README §97; docs/research/results-universe-width.md |
-| **Known gap** | [#175](https://github.com/harshece16/intraday-trading-agent/issues/175) |
 
 </details>
 
 <details>
-<summary><code>MOM-15</code> <b>Active</b> · known gap #180 — An order fills at the fill day's close unless the stock did not trade that day, or closed locked against the order: a buy at its upper price band, a…</summary>
+<summary><code>MOM-15</code> <b>Active</b> — An order fills at the fill day's close unless the stock did not trade that day, or closed locked against the order: a buy at its upper price band, a…</summary>
 
 An order fills at the fill day's close unless the stock did not trade that day, or closed locked against the order: a buy at its upper price band, a sell at its lower. An order that cannot fill waits and is tried again each session. A buy that has waited five sessions is cancelled and its cash stays uninvested until the next rebalance. A sell waits until it fills. Orders still open at the next month-end are dropped and decided again.
 
@@ -2077,7 +2057,6 @@ An order fills at the fill day's close unless the stock did not trade that day, 
 | **How to check** | Momentum Book page: 'Orders waiting', and the Note column of Recent trades. Run over 2010 to 2025 the book equals trial 126 month by month (largest difference 7e-16) |
 | **Test** | `backend/tests/test_momentum_book.py::test_the_book_is_trial_126s_simulator_month_by_month` |
 | **Source** | docs/research/prereg-universe-width.md (rules H1 to H5); README §99 |
-| **Known gap** | [#180](https://github.com/harshece16/intraday-trading-agent/issues/180) |
 
 </details>
 
@@ -2163,7 +2142,7 @@ TypeSafe calls retry HTTP 429, 529, 5xx and connection errors with backoff of ma
 </details>
 
 <details>
-<summary><code>JEV-06</code> <b>Active</b> · known gap #158 — If Jev can't be reached, or no key is stored, before any stock of the day has been decided, the day is recorded as 'jev_unavailable' with the error…</summary>
+<summary><code>JEV-06</code> <b>Active</b> — If Jev can't be reached, or no key is stored, before any stock of the day has been decided, the day is recorded as 'jev_unavailable' with the error…</summary>
 
 If Jev can't be reached, or no key is stored, before any stock of the day has been decided, the day is recorded as 'jev_unavailable' with the error and nothing is traded. If it fails after some stocks were decided, the round stops there: the day stays open with the decisions made so far, they close at the square-off like any other round, and the stop is recorded under 'interrupted' (the time, the error and the stocks not asked).
 
@@ -2174,7 +2153,6 @@ If Jev can't be reached, or no key is stored, before any stock of the day has be
 | **How to check** | Jev Book page 'Jev unavailable' pill and error; for a round stopped part-way, the line 'Today's round stopped after N of M stocks'; state days[date].interrupted; typesafe_key.py status |
 | **Test** | `backend/tests/test_jev_book.py::test_no_key_records_unavailable_and_trades_nothing; backend/tests/test_jev_book.py::test_a_round_typesafe_interrupts_keeps_its_decisions_and_closes_them` |
 | **Source** | README §86, §113; docs/research/prereg-jev-book.md (Clarification 9) |
-| **Known gap** | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) |
 
 </details>
 
@@ -2194,7 +2172,7 @@ Kite-only fills: Jev entries and exits come only from Kite's live last traded pr
 </details>
 
 <details>
-<summary><code>JEV-08</code> <b>Active</b> · known gap #158 — If Kite has no live session when the round is due (not connected, rejected, or past the 06:00 IST expiry without a reconnect), the day is recorded as…</summary>
+<summary><code>JEV-08</code> <b>Active</b> — If Kite has no live session when the round is due (not connected, rejected, or past the 06:00 IST expiry without a reconnect), the day is recorded as…</summary>
 
 If Kite has no live session when the round is due (not connected, rejected, or past the 06:00 IST expiry without a reconnect), the day is recorded as 'no_live_prices', Jev is not asked, and the day does not count as a session. The check is repeated before each stock: if Kite stops part-way, the remaining stocks are not asked and the round is recorded as interrupted (JEV-06).
 
@@ -2205,7 +2183,6 @@ If Kite has no live session when the round is due (not connected, rejected, or p
 | **How to check** | Jev Book page 'No live prices' pill and explanation |
 | **Test** | `backend/tests/test_jev_book.py::test_no_live_prices_skips_the_day_without_asking_jev; backend/tests/test_jev_book.py::test_the_live_price_gate_knows_the_0600_expiry; backend/tests/test_jev_book.py::test_a_kite_session_that_dies_mid_round_stops_asking_jev` |
 | **Source** | docs/research/prereg-jev-book.md (Clarifications 3 and 9); README §113 |
-| **Known gap** | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) |
 
 </details>
 
