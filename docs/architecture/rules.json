@@ -1,6 +1,6 @@
 {
  "title": "Trader Sahab rules catalogue",
- "as_of": "2026-09-29",
+ "as_of": "2026-09-30",
  "note": "Source of truth for docs/architecture/RULES.md and rules.html. Edit this file, then run tools/build_rules_docs.py.",
  "interactive_url": "https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK",
  "statuses": {
@@ -1012,7 +1012,7 @@
    "id": "SCN-15",
    "area": "scanner",
    "status": "active",
-   "rule": "The day's list is fixed before the open, at the first pre-market read at or after 08:45 on a trading day, and kept all day. A stock that stops being eligible later in the day is dropped, not replaced, so the list only shrinks. If no read ran before the open, the first scan with data for at least 90% of the universe fixes it, and the page says so.",
+   "rule": "The day's list is fixed before the open, at the first pre-market read at or after 08:45 on a trading day, and kept all day, a restart included (SCN-24). A stock that stops being eligible later in the day is dropped, not replaced, so the list only shrinks. If no read ran before the open, the first scan with data for at least 90% of the universe fixes it, and the page says so.",
    "why": "A stable list lets every watched stock be observed for the whole session, which the order-book test needs, and stops the review queue and the Jev book from seeing a different set of stocks every few minutes.",
    "enforced_in": "backend/scanner.py:Scanner.fix_day_list and day_list_for; backend/trading_engine.py:should_fix_list and _fix_day_list",
    "config": "SCANNER.fix_list_from = \"08:45\"; SCANNER.freeze_min_coverage = 0.9",
@@ -1119,6 +1119,18 @@
    "verify": "/api/candles/<symbol> for a listed stock ends on the current bar",
    "source": "README §101",
    "test": "backend/tests/test_scanner_live_feed.py::test_the_days_list_gets_live_bars_and_with_them_its_opening_range"
+  },
+  {
+   "id": "SCN-24",
+   "area": "scanner",
+   "status": "active",
+   "rule": "The day's list survives a restart. It is written to the journal when it is fixed and read back when the backend starts. A list already fixed for the session is used as it is, with the time it was first fixed and how; the first list written for a session stands. A list for an earlier session is not reused. After a restart the engine watches the list from the first tick, and the ordinary pre-market read does not seed another.",
+   "why": "The list was held in memory only, so a restart chose it again: the restart of 2026-09-29 at 18:08 put HINDALCO in place of TVSMOTOR (#198). The watchdog restarts a backend that stops answering, so a restart inside a session is expected. The engine, the order-book sampler and Jev's round would each have seen a different list part-way through the day.",
+   "enforced_in": "backend/database.py:record_day_list, get_day_list, latest_day_list; backend/scanner.py:Scanner._stored_list and _keep; backend/trading_engine.py:_restore_day_list and _maybe_seed_watchlist_from_premarket",
+   "config": "SCANNER.selection = 'liquidity'",
+   "verify": "After a restart in a session: the Screener still reads 'Fixed before the open at HH:MM' with the first time; the activity log says the list was read back from the journal; the journal's day_lists table has one row for the session",
+   "source": "README §106",
+   "test": "backend/tests/test_day_list_restart.py::test_a_restarted_scanner_keeps_the_list_and_the_time_it_was_fixed; backend/tests/test_day_list_restart.py::test_the_engines_pre_open_fix_is_written_and_a_restarted_engine_watches_it; backend/tests/test_scanner_live_feed.py::test_after_a_restart_the_scan_keeps_the_list_and_the_time_it_was_fixed"
   },
   {
    "id": "SCN-09",

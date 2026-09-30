@@ -275,3 +275,20 @@ again at 18:09, after the round had closed at 15:08, and put HINDALCO in place
 of TVSMOTOR (#198). The round was asked about the list as it stood at 09:45.
 A scan recorded after 18:09 does not show that list.
 
+
+---
+
+# Clarification 8 — 2026-09-30, written before the change is deployed
+
+**What had been seen:** no fill, verdict or score of this book was read in
+writing this.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §106, #198.
+
+The day's list is written to the journal when it is fixed and read back when
+the backend starts. A restart before 09:45 no longer gives the round a list
+chosen again: the first scan after the restart returns the list fixed before
+the open, and the round reads that scan as before.
+
+**Unchanged:** everything else in the protocol.

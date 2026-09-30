@@ -298,6 +298,20 @@ def test_the_days_list_gets_live_bars_and_with_them_its_opening_range(feeds, mon
             assert r["long_score"] == bare[r["symbol"]]["long_score"]
 
 
+def test_after_a_restart_the_scan_keeps_the_list_and_the_time_it_was_fixed(feeds, monkeypatch):
+    """#198: the list was held in memory only, and the first scan after a
+    restart chose it again. The engine's watchlist, the order-book sampler
+    and Jev's round all take the scan's `active`."""
+    _live(feeds, monkeypatch)
+    scanner.Scanner(CFG).fix_day_list(SESSION, ["AAA", "BBB", "CCC"], now=1000.0)   # before the restart
+    res = scanner.Scanner(CFG).run()                                                 # the first scan after it
+    assert res["active"] == ["AAA", "BBB", "CCC"]
+    assert res["selection"]["fixed"] and res["selection"]["fixed_at"] == 1000.0
+    assert res["selection"]["fixed_when"] == "before the open"
+    # choosing again would have taken the most-traded three
+    assert scanner.select_liquid([r for r in res["rows"] if not r["excluded"]], CFG) == ["FFF", "EEE", "DDD"]
+
+
 def test_without_kite_the_scan_is_the_delayed_one_and_says_why(feeds, monkeypatch):
     monkeypatch.setattr(data_provider, "kite_quotes", lambda symbols, indices=(): {})
     monkeypatch.setattr(data_provider, "kite_data_active", lambda: False)

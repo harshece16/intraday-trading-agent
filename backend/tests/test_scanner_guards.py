@@ -214,18 +214,17 @@ def test_a_failed_read_is_tried_again_after_five_minutes(monkeypatch):
 
 
 def test_the_pre_open_read_fixes_the_list_and_the_engine_watches_it(monkeypatch):
-    engine = _engine(monkeypatch)
     result = {"watchlist": ["RELIANCE", "HDFCBANK", "ICICIBANK"], "market": {"bias": "neutral"}}
     monkeypatch.setattr(trading_engine, "run_premarket", lambda cfg: result)
+    # the ordinary daily read does not fix anything
+    other = _engine(monkeypatch)
+    other._run_premarket_scan()
+    assert other.scanner.day_list is None and trading_engine.database.latest_day_list() is None
+    engine = _engine(monkeypatch)
     engine._run_premarket_scan(fix_list_for="2026-09-29")
     assert engine.scanner.day_list["symbols"] == ["RELIANCE", "HDFCBANK", "ICICIBANK"]
     assert engine.scanner.day_list["when"] == "before the open"
     assert list(engine.state.watchlist) == ["RELIANCE", "HDFCBANK", "ICICIBANK"]
-    # the ordinary daily read does not fix anything
-    other = _engine(monkeypatch)
-    monkeypatch.setattr(trading_engine, "run_premarket", lambda cfg: result)
-    other._run_premarket_scan()
-    assert other.scanner.day_list is None
 
 
 # --- the last completed session, from NSE's own files -------------------------------------------
