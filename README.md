@@ -4182,6 +4182,31 @@ Rules: INT-07, INT-08, SEC-06, SEC-07, SEC-15 (new), OPS-13, SCN-05. Files: `bac
 
 Rules: ENT-21, SCN-06, SCN-07 and JEV-11 changed; SCN-26 new. Files: `backend/scanner.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/jev_book.py`, `backend/research_desk.py`, `backend/day_plan.py`, `backend/research/kronos_shadow.py`, `backend/config.py` (comment), `backend/tests/test_scanner_side_shadow_log.py`, `backend/tests/test_scanner_selection.py`, the dashboard pages named above, `docs/architecture/` (HLD, LLD, rules).
 
+### 117. How could it make money? Four research agents on momentum, tax and current technology
+
+The owner decided (2026-09-30) to make the monthly momentum book the core and stop searching for an intraday edge. He then asked how the project could be made profitable, from as many sources as possible, and how people use current technology to make money. Four research agents searched in parallel:
+- India's momentum evidence and live index products;
+- ways to improve momentum;
+- how money is made with AI, machine learning and automation;
+- other low-turnover strategies.
+
+The note is `docs/research/profitability-sweep-2026-10-01.md`; the agents' reports are in `docs/research/data/profitability-sweep/`. Nothing was run and no trial was spent.
+
+- **The money current technology makes goes to market makers, speed and capital.** In SEBI's FY26 data, algorithmic prop firms and foreign investors took the F&O profits and 87.7% of individual traders lost. No AI trading agent has a live record, net of costs, that beats holding the index by more than luck.
+- **Momentum is real, but much weaker live.** NSE's factor indices kept a median of about a fifth of their backtested excess after launch. A realistic expectation for the book is +1 to +3 points a year over its equal-weighted benchmark, before tax, and zero cannot be ruled out. In the backtest, the band would have switched off a book started in September 2024.
+- **Tax is the biggest cost no test has modelled.** The book realises most gains within a year, at 20%. It needs about +2.3 to +2.8 points a year more than a harvested index fund just to tie after tax. On current evidence a Nifty200 Momentum 30 index fund is the better route for an individual. This is a research finding, not investment advice.
+- **Next.** First, five measurements that spend no trial:
+  - the book's trades after tax (look L53, registered separately);
+  - its excess against the momentum and equal-weight indices;
+  - turnover under wider keep ranks and slower rebalancing;
+  - real fills;
+  - overlap with known factors.
+  
+  Then at most one or two trials, the first a rule that holds a winner until its gain turns long-term.
+- **Defence.** SEBI's retail algo rules (from 2026-04-01) apply before any real order. The engine already sends market protection on market orders; a static IP is still needed. No track record anyone sells can be SEBI-verified before May 2026.
+
+The agents read 2026 index and fund data. `trials.md` lists it, so a later 2026 check of these strategy families is known to be partly seen.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
