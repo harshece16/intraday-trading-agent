@@ -310,6 +310,7 @@ a statistic was computed. The window is only as clean as this list says.
 | 2026-09-26 | main session (3i held-out confirmation, pre-registered) | All 2026 bhavcopies to 2026-09-25 and NSE's 2026 corporate actions; the held-out run of 3i Part A's rules over 2026-01 → 2026-08 | **Yes — the pre-registered held-out statistic (spent once, for the momentum family)** |
 | 2026-09-28 | stock-picking sweep (evidence agent) | Published returns of NSE momentum, value, quality and low-volatility indices and of index funds tracking them, to 31 August 2026, from NSE's monthly dashboards, factsheets and AMFI NAVs | Live excess of each index over its parent; no strategy return. **A later 2026 check of a wider momentum book, or of a value or low-volatility rule, is partly seen** |
 | 2026-10-01 | L53 author, while checking file formats | The first 600 bytes of R1's NIFTY200 Momentum 30 TRI file (TRI on 25–30 Sep 2026) and of the UTI Nifty200 Momentum 30 fund's NAV file (NAV on 18–29 Sep 2026) were printed | None. Recorded in `prereg-after-tax-l53.md` §0 with the research sweep's own 2026 reads of these series |
+| 2026-10-01 | L53 independent reviewer | `prereg-after-tax-l53.md` §0 as committed (`ec7cb12`), which printed the NIFTY200 Momentum 30 TRI levels of 25–30 Sep 2026 and the UTI fund's NAV of 18–29 Sep 2026 (redacted by amendment 2) | None |
 
 **Consequence:** index-level 2026 held-out evidence has been partly seen
 (open/close tracking on six sessions, a factsheet's 2026 figures). A future
