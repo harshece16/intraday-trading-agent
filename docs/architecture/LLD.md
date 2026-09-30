@@ -701,6 +701,14 @@ five-level quantities, `imbalance5 = (bidQ − askQ) / (bidQ + askQ)`, volume
 and the exchange's total buy and sell quantities. Both functions write only
 when Kite data is active and never raise. No live code reads the table.
 
+Since #188 (README §112) a row also holds the book itself, in
+`bid_levels_json` and `ask_levels_json`: each non-empty level, best first, as
+`[price, quantity, orders]`. The summary columns are computed from the same
+levels as before, so level 1 is `(bid, bid_qty1)` and the quantities add up to
+`bid_qty5`. Rows from before the deploy, and index rows, have NULL there.
+`research/measure_real_slippage.py` walks the recorded levels when a row has
+them and the modelled one-tick ladder when it does not, and counts each.
+
 ## 11. Research desk and holdings diagnostic
 
 ### 11.1 Research desk (`research_desk.py`)
@@ -898,7 +906,12 @@ that the server pushes a snapshot every 3 seconds and reads nothing more.
 ## 14. Database schema
 
 `backend/data/sahab_journal.db`, or the path in `SAHAB_DB_PATH`. Schema
-changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
+changes are additive: `CREATE IF NOT EXISTS` runs on every connection, and a
+column added to a table already in use is added by `database._migrate` with
+`ALTER TABLE ... ADD COLUMN`, once. That changes the table's definition only:
+existing rows are not rewritten and read NULL in the new column. The one
+migration that also rewrote rows, on purpose, is `trades.realized_gross`
+(#21), which restated `realized` net of charges.
 
 | Table | Holds | Written by | Read by |
 | --- | --- | --- | --- |
@@ -912,7 +925,7 @@ changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
 | `activity` | Every log line | `record_activity` | Blocked-signal views, once-a-day guards |
 | `manual_reviews` | Review cards, held-back near-misses (status `withheld`), decisions and shadow outcomes | `review_queue` | `review_queue` |
 | `liquidity_checks` | Every order-book check before an entry | `liquidity.check` | Journal |
-| `depth_samples` | Order-book samples | `depth_sampler` | The order-book test |
+| `depth_samples` | Order-book samples: touch, spread, level-1 and five-level quantities, imbalance; since #188 also each level's price, quantity and orders (`bid_levels_json`, `ask_levels_json`, NULL on older rows). The level columns were added by `_migrate` (ALTER TABLE ADD COLUMN; no row rewritten) | `depth_sampler` | The order-book test (summary columns only); `research/measure_real_slippage.py` |
 | `fno_evaluations`, `fno_trades` | Options evaluations and trades | Engine | `fno_journal_summary` |
 | `market_breadth_daily` | One row per session | `scanner.run` | `mcclellan_oscillator` |
 | `research_briefs` | Research desk briefs | `research_desk` | Stock page |

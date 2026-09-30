@@ -1940,6 +1940,18 @@
    "test": null
   },
   {
+   "id": "OBK-05",
+   "area": "orderbook",
+   "status": "active",
+   "rule": "Every depth_samples row with a book also stores the book itself: each non-empty level of each side, best first, as [price, quantity, orders] in bid_levels_json and ask_levels_json. The summary columns (bid, ask, spread_bp, bid_qty1, ask_qty1, bid_qty5, ask_qty5, imbalance5, volume, total_buy_qty, total_sell_qty) are computed from the same levels, exactly as before. The level columns were added by a migration that rewrote no row: rows recorded before the deploy, and index rows, hold NULL there.",
+   "why": "With only the touch and the five-level sums, the cost of an order past level 1 (#66) could only be modelled. The pre-registered order-book test reads the summary columns, so their meaning must not change.",
+   "enforced_in": "backend/depth_sampler.py:snapshot, levels_json; backend/database.py:_migrate, record_depth_samples; backend/research/measure_real_slippage.py:measure",
+   "config": null,
+   "verify": "GET /api/journal/depth-samples -> rows_with_levels grows from the first session after the deploy; SELECT ask_levels_json FROM depth_samples ORDER BY ts DESC LIMIT 1",
+   "source": "README §112, #188; docs/research/prereg-orderbook.md (Amendment 6)",
+   "test": "backend/tests/test_depth_sampler.py::test_snapshot_records_all_five_levels_with_orders_from_a_kite_quote; backend/tests/test_depth_sampler.py::test_the_existing_columns_keep_their_meaning; backend/tests/test_depth_sampler.py::test_the_migration_adds_the_level_columns_to_an_old_journal_and_rewrites_nothing; backend/tests/test_measure_real_slippage.py::test_main_uses_recorded_levels_where_a_row_has_them_and_says_so"
+  },
+  {
    "id": "DSK-01",
    "area": "desk",
    "status": "off-by-default",

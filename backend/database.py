@@ -128,7 +128,8 @@ CREATE TABLE IF NOT EXISTS chaywanaprash_reports (
 CREATE TABLE IF NOT EXISTS depth_samples (
     ts REAL NOT NULL, symbol TEXT NOT NULL, ltp REAL, bid REAL, ask REAL, spread_bp REAL,
     bid_qty1 INTEGER, ask_qty1 INTEGER, bid_qty5 INTEGER, ask_qty5 INTEGER, imbalance5 REAL,
-    volume INTEGER, total_buy_qty INTEGER, total_sell_qty INTEGER
+    volume INTEGER, total_buy_qty INTEGER, total_sell_qty INTEGER,
+    bid_levels_json TEXT, ask_levels_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_depth_symbol_ts ON depth_samples(symbol, ts);
 CREATE TABLE IF NOT EXISTS liquidity_checks (
@@ -192,6 +193,14 @@ def _migrate(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(manual_reviews)")}
     if "shadow_json" not in cols:
         conn.execute("ALTER TABLE manual_reviews ADD COLUMN shadow_json TEXT")
+    # The book level by level (#188): [[price, quantity, orders], ...] best
+    # first, per side. ADD COLUMN only changes the table's definition, so
+    # the rows already recorded are not rewritten; they read NULL here, and
+    # every existing column keeps its meaning (the order-book test reads them).
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(depth_samples)")}
+    for col in ("bid_levels_json", "ask_levels_json"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE depth_samples ADD COLUMN {col} TEXT")
     # The shadow log of the scanner audit's passes 1 to 3 (README §115): the
     # inputs a later pre-registered test reads, on the rows already written
     # for every stock of every scan. Rows from before this have NULL here.
@@ -606,19 +615,23 @@ def reviews_on(session_date):
 
 
 def record_depth_samples(rows):
-    """One tick's order-book snapshots for the watchlist (depth_sampler.py)."""
+    """One tick's order-book snapshots for the watchlist (depth_sampler.py).
+    An index row has no book, so its level columns stay NULL."""
     cols = ("ts", "symbol", "ltp", "bid", "ask", "spread_bp", "bid_qty1", "ask_qty1", "bid_qty5", "ask_qty5",
-            "imbalance5", "volume", "total_buy_qty", "total_sell_qty")
+            "imbalance5", "volume", "total_buy_qty", "total_sell_qty", "bid_levels_json", "ask_levels_json")
     with _conn() as c:
         c.executemany(f"INSERT INTO depth_samples ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
                       [tuple(r.get(k) for k in cols) for r in rows])
 
 
 def depth_sample_stats():
+    """rows_with_levels counts the rows that carry the book level by level
+    (#188); rows from before that was deployed have none."""
     with _conn() as c:
         row = c.execute("SELECT COUNT(*) n, COUNT(DISTINCT symbol) s, COUNT(DISTINCT date(ts,'unixepoch','+330 minutes')) d, "
-                        "MIN(ts) lo, MAX(ts) hi FROM depth_samples").fetchone()
-    return {"rows": row["n"], "symbols": row["s"], "sessions": row["d"], "first_ts": row["lo"], "last_ts": row["hi"]}
+                        "MIN(ts) lo, MAX(ts) hi, COUNT(bid_levels_json) lv FROM depth_samples").fetchone()
+    return {"rows": row["n"], "symbols": row["s"], "sessions": row["d"], "first_ts": row["lo"], "last_ts": row["hi"],
+            "rows_with_levels": row["lv"]}
 
 
 def record_liquidity_check(symbol, side, qty, ltp, mode, result):
