@@ -948,13 +948,88 @@ def daily(today=None, state_path=STATE_PATH, fetch=True):
 
 # --- read side (the API) ------------------------------------------------------------
 
+def next_rebalance(after_day):
+    """(ISO date, whether NSE's holiday list covers it) of the first session of
+    the month after `after_day`'s month: the next month turn, whose close the
+    rebalance trades at. A day processed in a month is past that month's turn,
+    so this is the next rebalance for any book whose last session is
+    `after_day`. In a year with no holiday list every weekday counts (#162),
+    so the date may fall on a holiday; the flag says so."""
+    import holidays
+    d = datetime.date.fromisoformat(after_day[:10])
+    first = (d.replace(day=1) + datetime.timedelta(days=32)).replace(day=1)
+    while first.weekday() >= 5 or holidays.is_holiday(first):
+        first += datetime.timedelta(days=1)
+    return first.isoformat(), holidays.calendar_missing(first) is None
+
+
+def monthly_report(state):
+    """The book against its benchmark, one row per completed month (README
+    section 116). Read-only: it recomputes from the month points and trades
+    the job already saved, and changes nothing.
+
+    A month runs from one rebalance close to the next. Its return is the
+    month points' ratio, so it is net of the charges of every trade inside
+    it, including the rebalance that closes it; turnover and costs count the
+    same trades. Excess and cumulative excess are the band's own figures:
+    the monthly excess summed, as process_session sums it. The opening
+    rebalance's trades come before the first point and belong to no month."""
+    pts = state.get("month_points") or []
+    trades = [t for t in state.get("trades") or [] if t.get("side") in ("BUY", "SELL")]
+    months, cum = [], 0.0
+    for k in range(1, len(pts)):
+        a, b = pts[k - 1], pts[k]
+        book_r = b["book"] / a["book"] - 1
+        bench_r = b["bench"] / a["bench"] - 1
+        cum += book_r - bench_r
+        inside = [t for t in trades if a["date"] < t["date"] <= b["date"]]
+        traded = sum(t["value"] for t in inside)
+        months.append({"month": a["date"][:7], "start": a["date"], "end": b["date"], "n": k,
+                       "book_return": book_r, "bench_return": bench_r, "excess": book_r - bench_r,
+                       "cumulative_excess": cum, "turnover": traded / 2 / a["book"] if a["book"] else None,
+                       "costs": round(sum(t["cost"] for t in inside), 2),
+                       "bought": sum(1 for t in inside if t["side"] == "BUY"),
+                       "sold": sum(1 for t in inside if t["side"] == "SELL")})
+    opening = None
+    if pts:
+        first = [t for t in trades if t["date"] <= pts[0]["date"]]
+        opening = {"date": pts[0]["date"], "costs": round(sum(t["cost"] for t in first), 2),
+                   "bought": sum(1 for t in first if t["side"] == "BUY"),
+                   "invested": round(sum(t["value"] for t in first if t["side"] == "BUY"), 2)}
+    return {"months": months, "opening": opening}
+
+
+def band_status(state, conf=None):
+    """Where the book stands against its switch-off band: expected cumulative
+    excess n x mean, and the floor n x mean - 2 x sd x sqrt(n), which applies
+    from month `band_from_month` (prereg-3i, notes on the forward paper book)."""
+    conf = conf or cfg()
+    mean, sd, start = conf["expected_monthly_excess"], conf["monthly_excess_sd"], conf["band_from_month"]
+    n = state.get("excess_months", 0) if state else 0
+    cum = state.get("cumulative_excess") if n else None
+    active = n >= start
+    floor = band_threshold(n, mean, sd) if active else None
+    if state and state.get("status") == "switched_off":
+        where = "switched_off"
+    elif not active:
+        where = "not_active"
+    else:
+        where = "inside" if cum >= floor else "below"
+    return {"from_month": start, "expected_monthly_excess": mean, "monthly_excess_sd": sd, "months": n,
+            "cumulative_excess": cum, "expected_cumulative": n * mean, "floor": floor,
+            "floor_at_start": band_threshold(start, mean, sd), "active": active, "state": where}
+
+
 def summary(state_path=STATE_PATH):
     """What the dashboard shows. Cheap: reads the state file only."""
     conf = cfg()
     s = load_state(state_path)
     if not s:
+        nxt, cal_ok = next_rebalance(datetime.date.today().isoformat())
         return {"enabled": conf["enabled"], "status": "not_started",
-                "note": "The first evening job hasn't run yet. The book trades after the first month-end close."}
+                "note": "The first evening job hasn't run yet. The book trades after the first month-end close.",
+                "months": [], "opening_rebalance": None, "band": band_status(None, conf),
+                "next_rebalance": nxt, "next_rebalance_calendar_ok": cal_ok}
     last = s["nav"][-1] if s["nav"] else None
     out = {"enabled": conf["enabled"], "status": s["status"], "status_reason": s.get("status_reason"),
            "capital": s["capital"], "created": s["created"], "last_processed": s["last_processed"],
@@ -971,6 +1046,18 @@ def summary(state_path=STATE_PATH):
                                "reason": o.get("waiting")} for o in s["book"].get("orders", [])],
            "fills": s.get("fills", {}), "data": s.get("data", {}),
            "cash": round(s["book"]["cash"], 2), "recent_trades": s["trades"][-40:]}
+    rep = monthly_report(s)
+    nxt, cal_ok = next_rebalance(s["last_processed"] or s["created"])
+    pts = s["month_points"]
+    mtd = None
+    if pts and last and last["date"] > pts[-1]["date"]:
+        # the month under way: shown apart, never counted before it completes
+        mtd = {"start": pts[-1]["date"], "to": last["date"], "book": last["book"] / pts[-1]["book"] - 1,
+               "bench": last["bench"] / pts[-1]["bench"] - 1}
+    out.update(months=rep["months"], opening_rebalance=rep["opening"], band=band_status(s, conf), month_to_date=mtd,
+               next_rebalance=nxt, next_rebalance_calendar_ok=cal_ok,
+               first_rebalance=s["month_points"][0]["date"] if s["month_points"] else None,
+               since_start={"book": out["book_value"] / s["capital"] - 1, "bench": out["bench_value"] / s["capital"] - 1})
     return out
 
 

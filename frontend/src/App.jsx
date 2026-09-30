@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { API_BASE, useAppState } from "./api";
 import LoadState from "./components/LoadState";
 import { useAlerts } from "./useAlerts";
 import StatusBar, { Sidebar } from "./components/Header";
 import LiveLog from "./components/LiveLog";
+import IntradayRecordBanner from "./components/IntradayRecordBanner";
 import Overview from "./pages/Overview";
 import PreMarket from "./pages/PreMarket";
 import DayPlan from "./pages/DayPlan";
@@ -19,9 +20,22 @@ import MomentumBook from "./pages/MomentumBook";
 import JevBook from "./pages/JevBook";
 import Kronos from "./pages/Kronos";
 
-function Page({ children }) {
+// `intraday` marks a page of the intraday paper record: it opens with the
+// banner that says so (README section 116).
+function Page({ children, intraday = false }) {
   const location = useLocation();
-  return <main className="page" key={location.pathname}>{children}</main>;
+  return (
+    <main className="page" key={location.pathname}>
+      {intraday && <IntradayRecordBanner />}
+      {children}
+    </main>
+  );
+}
+
+// An old address still opens its page, with its query string kept.
+function Redirect({ to }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: to, search, hash }} replace />;
 }
 
 function Connecting() {
@@ -36,19 +50,23 @@ function AppRoutes({ state }) {
   if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
-      <Route path="/" element={<Page><Overview state={state} /></Page>} />
-      <Route path="/premarket" element={<Page><PreMarket state={state} /></Page>} />
-      <Route path="/day-plan" element={<Page><DayPlan /></Page>} />
-      <Route path="/screener" element={<Page><Screener state={state} /></Page>} />
-      <Route path="/stock/:symbol" element={<Page><Stock state={state} /></Page>} />
-      <Route path="/technical-analysis" element={<Page><TechnicalAnalysis /></Page>} />
+      {/* The momentum book is the strategy, so it is the front page (README section 116). */}
+      <Route path="/" element={<Page><MomentumBook /></Page>} />
+      <Route path="/momentum-book" element={<Redirect to="/" />} />
+      {/* The intraday engine's pages: a paper record, each under the banner. */}
+      <Route path="/intraday" element={<Page intraday><Overview state={state} /></Page>} />
+      <Route path="/overview" element={<Redirect to="/intraday" />} />
+      <Route path="/premarket" element={<Page intraday><PreMarket state={state} /></Page>} />
+      <Route path="/day-plan" element={<Page intraday><DayPlan /></Page>} />
+      <Route path="/screener" element={<Page intraday><Screener state={state} /></Page>} />
+      <Route path="/stock/:symbol" element={<Page intraday><Stock state={state} /></Page>} />
+      <Route path="/technical-analysis" element={<Page intraday><TechnicalAnalysis /></Page>} />
+      <Route path="/trades" element={<Page intraday><Trades state={state} /></Page>} />
+      <Route path="/journal" element={<Page intraday><Journal /></Page>} />
+      <Route path="/jev-book" element={<Page intraday><JevBook /></Page>} />
+      <Route path="/kronos" element={<Page intraday><Kronos /></Page>} />
       <Route path="/portfolio" element={<Page><Portfolio state={state} /></Page>} />
       <Route path="/portfolio/diagnostic" element={<Page><PortfolioDiagnostic /></Page>} />
-      <Route path="/journal" element={<Page><Journal /></Page>} />
-      <Route path="/trades" element={<Page><Trades state={state} /></Page>} />
-      <Route path="/momentum-book" element={<Page><MomentumBook /></Page>} />
-      <Route path="/jev-book" element={<Page><JevBook /></Page>} />
-      <Route path="/kronos" element={<Page><Kronos /></Page>} />
     </Routes>
   );
 }
