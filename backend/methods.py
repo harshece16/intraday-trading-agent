@@ -225,10 +225,12 @@ def get_methods():
                            "into the scanner and checklist above. The rest is either too subjective to encode "
                            "reliably (Elliott Wave's wave-counting requires judgment calls Murphy himself says "
                            "trained analysts disagree on), redundant with what's already implemented (Point & "
-                           "Figure vs. the candlestick/bar-chart patterns already in place), needs data this "
-                           "system doesn't fetch (market-breadth needs every NSE constituent, not just the "
-                           "watchlist), or doesn't apply to a single-stock intraday cash strategy (intermarket "
-                           "analysis is built for cross-asset macro trading)."},
+                           "Figure vs. the candlestick/bar-chart patterns already in place). Market breadth and "
+                           "intermarket analysis were measured on 2026-09-25 (README §109): whole-NSE breadth "
+                           "from two years of bhavcopies (A/D ratio, McClellan, TRIN) and overnight moves in "
+                           "India VIX, the S&P 500, USD/INR, crude and US yields. None predicts the 09:20 to "
+                           "15:10 session by enough to pay a round trip, so neither is a rule; breadth stays "
+                           "on the dashboard as context."},
                 {"name": "NISM Series VIII (Equity Derivatives) workbook — the parts not yet used",
                  "reason": "Read in full. Its Greeks and long-option payoff definitions now power the F&O "
                            "section above. Still not built in: SPAN margining (this engine never writes/sells "
