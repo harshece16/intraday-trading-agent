@@ -8,8 +8,10 @@ unattended engine needs a channel that reaches a phone with the laptop shut.
 What is sent: the activity lines the engine already writes that someone
 away from the screen would act on — fills, errors, risk events (loss limit,
 square-off, kill switch, pause), review-queue cards waiting for a decision,
-warn-level system events (mode switches) and the end-of-session summary.
-Scans, watchlist churn and blocked signals stay on the dashboard.
+warn-level system events (mode switches), the end-of-session summary, and the
+momentum book's rebalances and evening-job failures (momentum_alerts.py,
+README section 116). Scans, watchlist churn and blocked signals stay on the
+dashboard.
 
 Setup: create a bot with @BotFather, message it once, then put
 {"bot_token": "...", "chat_id": "..."} in backend/.telegram.json (gitignored),
@@ -36,7 +38,7 @@ logger = logging.getLogger("trading_bot")
 _FILE = Path(__file__).parent / ".telegram.json"
 API = "https://api.telegram.org/bot{token}/sendMessage"
 
-ALWAYS = {"trade", "error", "risk", "summary"}
+ALWAYS = {"trade", "error", "risk", "summary", "momentum"}
 WARN_ONLY = {"system", "review"}
 DEDUPE_SECONDS = 30 * 60    # the same line again within 30 min is dropped
 MAX_PER_MINUTE = 20         # Telegram allows ~30/s; this is about not spamming a phone

@@ -4,12 +4,14 @@ Trader Sahab is a paper-mode trading system for Indian equities, built around
 one rule: **nothing trades until it passes a test that was written down before
 its data was read.** It began as an intraday agent that scans the NIFTY 100
 and follows Zerodha Varsity's Grand Checklist. That approach was measured,
-and it does not work. After 127 recorded strategy trials and two broad research
-sweeps, the one strategy that has passed is slow: a **monthly momentum book
-held in delivery**. It now runs in paper, and new ideas are tested the same
-way beside it.
+and it does not work. After 202 recorded strategy trials and many research
+looks, the one strategy that has passed is slow: a **monthly momentum book
+held in delivery**. Since 2026-09-30 it is the core of Trader Sahab and the
+dashboard's front page ([§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)). It runs in paper; real money needs months
+of paper results and the owner's decision.
 
-The dashboard still runs the intraday engine: live scans of the NIFTY 100,
+The intraday engine still runs, in paper, as a record: no intraday edge was
+found. It keeps its live scans of the NIFTY 100,
 the checklist's labels, a review queue where you decide, risk-based sizing,
 and a plain-language explanation of every decision with a link to its
 source. Everything runs in **paper mode** by default. The code can route real
@@ -23,13 +25,13 @@ going live is the owner's decision alone.
 [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) ·
 [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK)
 
-## What it runs today (2026-09-28)
+## What it runs today (2026-09-30)
 
 | Book | What it does | Evidence | Status |
 | --- | --- | --- | --- |
-| **Momentum book** ([§83](#83-the-paper-momentum-book)), on the dashboard's *Momentum Book* page | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session, lets an order wait when a stock is locked at its price band, and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: +0.82% a month over its own universe after every delivery charge (t 2.91). Re-run on repaired prices with orders that wait, which is what the book now runs: **+0.71% a month** (t 2.51; 20.6% a year against 11.9%), a narrow pass ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better), [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month)). Confirmed on 200 stocks never read before and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
+| **Momentum book** ([§83](#83-the-paper-momentum-book), [§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)): **the strategy**, and the dashboard's front page, with a monthly report against its benchmark and an alert at each rebalance | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session, lets an order wait when a stock is locked at its price band, and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: +0.82% a month over its own universe after every delivery charge (t 2.91). Re-run on repaired prices with orders that wait, which is what the book now runs: **+0.71% a month** (t 2.51; 20.6% a year against 11.9%), a narrow pass ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better), [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month)). Confirmed on 200 stocks never read before and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
 | **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. Running since **28 September 2026** |
-| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades |
+| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades. A paper record, not the strategy, since 2026-09-30 ([§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)) |
 | **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
 
 ## ⚠️ Read this first
@@ -63,7 +65,7 @@ going live is the owner's decision alone.
   ₹15.34 DP charge per stock sold. The momentum book survives because it
   replaces about three names a month, which costs about 0.7% of the book a
   year.
-- **Trials of record: 127** (`docs/research/trials.md`). New ideas are
+- **Trials of record: 202** (`docs/research/trials.md`). New ideas are
   judged against their own family of tries ([§80](#80-two-owner-decisions-overnight-etf-holds-are-allowed-paper-and-new-ideas-are-judged-against-their-own-family)), with a corrected
   Deflated Sharpe ratio ([§77](#77-the-deflated-sharpe-gate-could-never-pass-fixed)). The 2026 held-out window has been
   spent once, for the momentum family.
@@ -2994,7 +2996,10 @@ labeled price lines, and arrows marking the latest detected candlestick
 pattern — explicitly **not** a projected price path, see
 [Enhancing the chart](docs/architecture/LLD.md#173-chart-componentschartjsx) below.
 
-- **Overview** — one-sentence headline of what the agent is doing, a market
+- **Momentum book** — the front page (`/`) since 2026-09-30 ([§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)):
+  the book's value against its benchmark, a month-by-month report, where it
+  stands against its switch-off band, the next rebalance and what it holds.
+- **Overview** (`/intraday`, part of the intraday paper record) — one-sentence headline of what the agent is doing, a market
   countdown ("opens in 2h 14m" / a live session-progress bar, computed
   server-side in IST and holiday-aware), NIFTY/VIX/breadth/sectors, today's
   picks, open positions, and the activity log.
@@ -4181,6 +4186,42 @@ Rules: INT-07, INT-08, SEC-06, SEC-07, SEC-15 (new), OPS-13, SCN-05. Files: `bac
 **Running tests.** `prereg-jev-book.md` clarification 10: Jev's snapshot and the book's baseline keep the old score's side, read from `score_side`, so neither changes; only the engine no longer acts on it. `prereg-orderbook.md` amendment 7: no effect on L37, whose list is unchanged and which never read the side.
 
 Rules: ENT-21, SCN-06, SCN-07 and JEV-11 changed; SCN-26 new. Files: `backend/scanner.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/jev_book.py`, `backend/research_desk.py`, `backend/day_plan.py`, `backend/research/kronos_shadow.py`, `backend/config.py` (comment), `backend/tests/test_scanner_side_shadow_log.py`, `backend/tests/test_scanner_selection.py`, the dashboard pages named above, `docs/architecture/` (HLD, LLD, rules).
+
+### 116. The momentum book is the strategy; the intraday engine is a paper record
+
+**The owner's decision, 2026-09-30** ([decision record](docs/research/decisions/decision-2026-09-30-momentum-core.md)). After 202 strategy trials and research looks L40 to L51 found no intraday edge that pays the ~16.6 bp round trip, the owner said "ok go ahead" to making the monthly momentum book the core of Trader Sahab. The book is the one strategy that passed its pre-registered test (trial 120) and, narrowly, its re-run on repaired prices with orders that wait (trial 126: +0.71% a month over its benchmark, t 2.51 against a 2.394 bar; at the family of ten now counted it would not clear). It has run on paper with ₹10 lakh since 2026-09-26, and its first rebalance is at the 1 October 2026 close. The intraday engine keeps running in paper as a record, not as the strategy. **No real money**: that needs months of paper results compared with the backtest, and a separate decision by the owner.
+
+**1. The front page is the Momentum Book** (`/`). The intraday Overview moves to `/intraday`; `/momentum-book` and `/overview` still open their pages. The sidebar leads with the book, then groups the intraday engine's pages as the *intraday paper record* (Overview, Pre-market, Day plan, Screener, Technical analysis, Trades, Journal), the *intraday research* (Jev book, Kronos), and the *account* (Portfolio). The page now shows:
+
+- **Month by month against the benchmark.** One row per completed month: the book's return, the benchmark's, the excess, the cumulative excess, the band's floor for that month (from month 6), one-sided turnover and the costs paid. A month runs from one rebalance close to the next, and its return is net of every trade in it, including the rebalance that closes it. The cumulative excess is the band's own sum. **Before the first month completes there is no row**, and the page says so instead of showing zeros; the month under way is shown apart and not counted.
+- **The switch-off band**: months counted, the expected cumulative excess (n × 0.71%), the cumulative excess, and the floor n × 0.71% − 2 × 3.89% × √n, which applies from month 6 (−14.8% then).
+- **The next rebalance** (the first session of next month, holidays skipped: 2 November 2026 after the October rebalance) and **what the book holds now**.
+- The benchmark is named plainly: the pre-registered one, the equal-weighted 200 (the same 200 most-traded NSE stocks the book ranks, equal-weighted). It is not a NIFTY index.
+
+`GET /api/momentum-book` gains `months`, `opening_rebalance`, `band`, `month_to_date`, `next_rebalance` and `since_start`. They are computed from the state file the job already writes (`momentum_book.monthly_report`, `band_status`, `next_rebalance`); nothing in the book's rules changed.
+
+**2. An alert at each rebalance, and when the evening job fails** (`backend/momentum_alerts.py`). On each closed-phase tick, after the engine's call that starts the evening job, a check reads what the job did:
+
+| What happened | What is sent |
+| --- | --- |
+| The job completed a rebalance | One line: the month, the stocks bought and sold (and any order still waiting), the book against the benchmark for the month just ended and since the start, the band, the next rebalance date |
+| The job failed (an exit code other than 0, 3 or 4, or a signal) | One line with the exit code and the last line of `momentum_book.log`, once per reason a day |
+| The job stopped early (exit 4: a day's file is missing, or an empty ranking) | One line with the job's own reason, once per reason a day |
+| A weekday's session is still not processed at 23:30, after a run that day | One line: NSE's file was not in, and tomorrow's run catches up (and makes the rebalance, on a month's first session) |
+
+Each line goes to the activity log (kind `momentum`, shown as *Momentum book*) and, through `telegram_alerts.py`, to the phone when Telegram is set up and switched on: `momentum` joins the kinds it always sends. A browser notification fires too when browser alerts are on. **Exactly one alert per rebalance, across restarts:** what was alerted is kept in `backend/data/momentum_book_alerts.json` (gitignored, written only by the engine). The rebalance alert reads the state file's month points, not the job's process handle, so a rebalance made while the backend was down is alerted once after it comes back; with no record yet, only the latest rebalance is alerted. The record is written before the line, so an alert can be lost but never sent twice. The check never raises, never writes the book's state, and runs after the job is started, so it cannot stop the job from running.
+
+**3. The intraday pages carry a banner**: they are a paper record, no intraday edge was found (with links to §88, §104, §109, this section and the trial log), and the strategy is the momentum book. No intraday rule, gate or order path changed.
+
+**What does not change.** The book's universe, signal, fills, costs, benchmark and band; the parity tests in `test_momentum_book.py` are untouched and pass. The engine stays in paper; F&O stays off. No new intraday look is started (rule RES-33). L52, the forward test of the five newest forecasting models, stays on hold and is scored only if the owner asks. The Kronos shadow stays display-only (§102). The Jev book (trial 123) and the order-book test continue as registered; whether either should stop is left to the owner.
+
+**Checked.**
+
+- `backend/tests/test_momentum_alerts.py`, 20 tests, with a fake job for each exit code and hand-written state files: a first rebalance and a later one each give one line and one Telegram message, and the next tick gives none; a restart (memory cleared, record on disk) repeats nothing; a rebalance made while the engine was down is alerted once; a failed run (exit 1, and a signal) and a stopped run are alerted once each, with the reason, also across a restart; the 23:30 line comes once, and never on a holiday or once the day is in; an unreadable state or record is survived; the real engine tick at 20:00 starts the job before the check, and a check that raises does not stop the tick. The monthly report equals the band's own sum exactly, and every trade's cost falls in exactly one month or the opening rebalance.
+- The dashboard, from this branch, against a mock API serving what the real `summary()` returns for four states: tonight's live state (no rebalance yet), and three replays by the book's own code on 2025 sessions, which trials 120 and 126 already read (one rebalance, month one open; three months; six months, band applied). No 2026 session was processed for them. Checked in the browser, at desktop and phone width.
+- Not checked live: the first real alert comes after the job's run on the evening of 2026-10-01, and only once this is deployed.
+
+Rules: MOM-16, MOM-17, RES-33 and UI-04 new; INT-09 and UI-02 changed. Files: `backend/momentum_alerts.py` (new), `backend/momentum_book.py` (read side only), `backend/trading_engine.py`, `backend/telegram_alerts.py`, `backend/tests/conftest.py`, `backend/tests/test_momentum_alerts.py` (new), `frontend/src/App.jsx`, `frontend/src/components/Header.jsx`, `frontend/src/components/IntradayRecordBanner.jsx` (new), `frontend/src/pages/MomentumBook.jsx`, `frontend/src/pages/PreMarket.jsx`, `frontend/src/helpers.js`, `frontend/src/useAlerts.js`, `frontend/src/index.css`, `docs/architecture/` (HLD, LLD, rules), `docs/research/decisions/decision-2026-09-30-momentum-core.md`.
 
 ## Backtest results
 

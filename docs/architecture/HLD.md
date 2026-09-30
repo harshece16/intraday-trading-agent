@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Describes `main` as of 2026-09-28 |
+| **Status** | Describes `main` as of 2026-09-30 |
 | **Audience** | The owner, a reviewer, or a new session that needs the whole system in one read |
 | **Companions** | [Low-Level Design](LLD.md) · [Rules checklist](RULES.md) · [Knowledge graph](KNOWLEDGE_GRAPH.md) |
 | **Source of truth** | The code. Every statement here was checked against it; where the code and this page disagree, the code wins and this page has a bug |
@@ -17,11 +17,15 @@ has two jobs that share one codebase:
 2. **Decide what is allowed to run** by testing every idea against a rule
    written down before its data is read.
 
-The second job governs the first. After 127 recorded trials, one strategy has
+The second job governs the first. After 202 recorded trials, one strategy has
 passed (monthly momentum held in delivery), so that is the only strategy with
-a book of its own. The intraday engine still scans, labels setups and
-enforces risk, but its automatic entries are switched off by the evidence
-gate.
+a book of its own. Since 2026-09-30 it is the core of the system, by the
+owner's decision (`docs/research/decisions/decision-2026-09-30-momentum-core.md`):
+the dashboard opens on it, with a monthly report against its benchmark, and
+each rebalance is alerted. The intraday engine still scans, labels setups and
+enforces risk, in paper, as a record: no intraday edge was found, its
+automatic entries are switched off by the evidence gate, and no new intraday
+look is started.
 
 No real-money order has ever been placed.
 
@@ -102,6 +106,7 @@ flowchart TB
     subgraph Disk["Local disk, all gitignored"]
         DB[("sahab_journal.db<br/>SQLite, 15 tables")]
         MB["momentum_book_state.json"]
+        MA["momentum_book_alerts.json<br/>what was alerted"]
         JB["jev_book_state.json"]
         Bhav["bhavcopies and<br/>corporate actions"]
         Hist[("kite_history.db<br/>overnight_1m.db")]
@@ -120,6 +125,8 @@ flowchart TB
     Engine --> JevT
     API --> DeskT
     Engine -->|"spawns"| Child
+    Engine -->|"reads, after the job"| MB
+    Engine --> MA
     Engine --> DB
     State --> DB
     JevT --> JB
@@ -155,11 +162,11 @@ flowchart TB
 | **F&O** | Buy calls and puts, never write | `fno_instruments`, `options_pricing`, `fno_risk` | Off |
 | **Market data** | One interface over Kite and yfinance; Kite session lifecycle | `data_provider`, `kite_tunnel`, `kite_history` | Kite when connected, else delayed |
 | **News and context** | Filings, headlines, flows, breadth, fundamentals | `nse_feed`, `news_sentiment`, `llm_sentiment`, `fundamentals` | Running |
-| **Momentum book** | Paper run of the strategy that passed | `momentum_book` | Waiting for the month turn; first trades at the 1 Oct close |
+| **Momentum book** | The strategy: the paper run of the one that passed, the dashboard's front page, a monthly report against its benchmark, and an alert at each rebalance or failed evening job | `momentum_book`, `momentum_alerts` | Waiting for the month turn; first trades at the 1 Oct close |
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
-| **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 127 trials of record |
+| **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 202 trials of record; no new intraday look since 2026-09-30 |
 | **Journal** | Persistence and every read model the dashboard uses | `database` | Running |
 | **Security and ops** | Dashboard key, log redaction, alerts, watchdog | `auth`, `telegram_alerts`, `scripts/` | Running |
 
@@ -183,7 +190,8 @@ and `square_off_window` (15:08 to 15:30).
 | 15:00 to 15:30 | ETF window sampling | Yes |
 | 15:08 | Phase `square_off_window`. Every cash and F&O position is closed. Jev positions are closed and scored | Yes for Jev |
 | 15:30 | Phase `closed`. Session summary is logged | |
-| 19:30 to 23:30 | Evening job: download the bhavcopy, rebuild prices, mark the momentum book. On a month's first session, rebalance | No |
+| 19:30 to 23:30 | Evening job: download the bhavcopy, rebuild prices, mark the momentum book. On a month's first session, rebalance. After it, one alert per rebalance, failed run or early stop | No |
+| 23:30 | If a run that day left the day unprocessed, one alert | No |
 
 ### 6.2 One engine tick
 
@@ -194,6 +202,7 @@ flowchart TD
     Roll --> Ph{"Market phase"}
     Ph -->|closed| C1["Session summary once after 15:30"]
     C1 --> C2["Evening job hook<br/>19:30 to 23:30"]
+    C2 --> C3["Momentum alert check<br/>after the hook, never raises"]
     Ph -->|open| O0["Sample watchlist order books"]
     O0 --> O1["Fetch 5-minute candles in one batch"]
     O1 --> O2["For each watched symbol"]
@@ -207,7 +216,7 @@ flowchart TD
     F --> SW["Sync the tick stop watcher"]
     Ph -->|square_off_window| S1["Close every position<br/>repeat until flat"]
     S1 --> S2["Close and score Jev positions"]
-    C2 --> Com
+    C3 --> Com
     SW --> Com
     S2 --> Com
     Com["Common hooks: pre-market once a day, scanner when due,<br/>ETF windows, Jev round from 09:45, review shadows"] --> E(["Stamp last update"])
@@ -326,7 +335,7 @@ flowchart TD
     Own -->|"only the owner"| Real(["Real money"])
 ```
 
-Trials of record: **127**. Passed: **1** (trial 120; re-run on repaired prices as trial 126, it survives narrowly, with a smaller edge). Held-out window: spent
+Trials of record: **202**. Passed: **1** (trial 120; re-run on repaired prices as trial 126, it survives narrowly, with a smaller edge). Held-out window: spent
 once, for the momentum family.
 
 ## 9. Security model
@@ -377,6 +386,7 @@ journal (`SAHAB_DB_PATH`), or the engine lock refuses to start it.
 | Backend crashes or the Mac sleeps | Watchdog restarts it; today's trades, counts and open paper positions are rebuilt from the journal |
 | Two engines on one journal | The second refuses to start |
 | Bhavcopy not published yet | Evening job exits and retries every 30 minutes until 23:30 |
+| Evening job fails or stops early | One alert with the reason, in the activity log and on Telegram when it is set up; one more at 23:30 if a run that day left the day unprocessed. A rebalance is alerted once, restart or not |
 
 ## 12. Known gaps
 
