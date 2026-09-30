@@ -3957,6 +3957,23 @@ Rule: SCN-24. Files: `backend/database.py`, `backend/scanner.py`, `backend/tradi
 
 The trend from 60 bars is therefore close to, but not exactly, what a year of bars gives. IT and Pharma still use the feed's year.
 
+### 108. F&O entries respect NSE's ban list (Market Wide Position Limit)
+
+When market-wide open interest in a stock's derivatives passes 95% of its limit, NSE puts the stock in a **ban period**. A trade that increases a position in its derivatives is then penalised, from ₹5,000 to ₹1,00,000 (NISM Series VIII). The dashboard's methods page listed this as a gap on the F&O side: nothing there checked it.
+
+**Now the F&O path checks it.** After the confidence gate and before any contract lookup, premium quote or order, `_try_enter_fno` reads NSE's daily `fo_secban.csv` and refuses a stock-option buy in a banned stock. It reads the list through `nse_feed.fno_ban_list()`, the same parser and 30-minute cache as the scanner's ban guard (§100); there is one fetcher and one parser of the file, not two. The block goes to the activity log and to the `fno_evaluations` journal with its reason, like every other F&O block (rule FNO-08).
+
+- **An unknown list refuses stock options, and says so.** If the list cannot be read, the ban status is unknown, as it is for the scanner; the F&O path treats a list published for another trade date the same way. The scanner excludes nothing on an unknown list, because trading a stock's shares in its ban is not penalised. The F&O path refuses stock-option buys, with the reason "the ban status is unknown", because a new derivative position is where the penalty falls. It never reports an unknown list as a ban or as a clear day.
+- **Index options (NIFTY, BANKNIFTY) are exempt.** The ban covers single-stock derivatives only.
+- **What it adds to the scanner's guard.** With `FNO.underlyings` empty, F&O trades the scanner's list, which already leaves out a banned stock whenever a scan could read the ban list. This check also covers explicit `FNO.underlyings`, a ban list the scan could not read, and the scanner's guards switched off (`SCANNER.guards = False`).
+- F&O is still **off** (`FNO.enabled = False`), so nothing changes in the running engine. The check is in place for when it is switched on.
+
+The methods page lists the rule under F&O and no longer calls the ban a gap. Its machine-learning item, which said a week of paper trading was too little data, now says what has been tested since: gradient boosting (L47) and seven forecasting models (L40, L46), all failed (§93, §104).
+
+Checked against NSE's live file at 09:38 on 2026-09-30: the list for that date was SAIL alone; SAIL was refused with the ban reason, and RELIANCE and NIFTY passed. `backend/tests/test_fno_mwpl.py` drives `_try_enter_fno` with a banned, an unknown, a clear and an index underlying and reads back the journal.
+
+Files: `backend/fno_risk.py`, `backend/trading_engine.py`, `backend/methods.py`, `backend/nse_feed.py` (comment only), `backend/tests/test_fno_mwpl.py`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
 ### 109. Market breadth and intermarket moves, measured (run 2026-09-25, merged 2026-09-30): neither predicts the session by enough to trade
 
 The owner asked to focus on the methods page's "read, but not (yet) built in" list rather than the Varsity checklist. Two items on it bring information the 76-configuration search (§69) never used:

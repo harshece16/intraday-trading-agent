@@ -212,6 +212,9 @@ def get_methods():
                  "source": "Black & Scholes (1973); Merton (1973) — standard industry model, not NSE-specific"},
                 {"name": "Expiry >= 5 days out only (avoids the sharpest theta decay window)",
                  "source": "NISM Series VIII + Murphy on time decay"},
+                {"name": "No stock-option buy in a stock under NSE's Market Wide Position Limit ban; an "
+                         "unreadable ban list means unknown, and no stock option is bought. Index options exempt",
+                 "source": "NISM Series VIII; NSE's daily fo_secban.csv"},
             ],
         },
         "not_yet_used": {
@@ -234,16 +237,25 @@ def get_methods():
                            "on the dashboard as context."},
                 {"name": "NISM Series VIII (Equity Derivatives) workbook — the parts not yet used",
                  "reason": "Read in full. Its Greeks and long-option payoff definitions now power the F&O "
-                           "section above. Still not built in: SPAN margining (this engine never writes/sells "
-                           "options, so it never posts margin), and the Market Wide Position Limit ban — NSE "
-                           "penalises INCREASING a position once market-wide F&O open interest in a stock "
-                           "crosses its limit (1% of value, ₹5,000-₹1,00,000 penalty), which could in principle "
-                           "block a new option-buy too. There's no live MWPL-status check in code yet — a real "
-                           "gap if F&O volume grows, not something to assume away."},
+                           "section above. SPAN margining is still not built in: this engine never writes or "
+                           "sells options, so it never posts margin. The Market Wide Position Limit ban is "
+                           "enforced (README §108): before any contract lookup or order, the F&O path reads "
+                           "NSE's daily ban list, the same file the scanner's ban guard reads, and refuses a "
+                           "stock-option buy in a banned stock, because increasing a position there is "
+                           "penalised (₹5,000 to ₹1,00,000). If the list can't be read, or is for another "
+                           "date, the ban status is unknown and no stock option is bought; the reason says so. "
+                           "Index options are exempt. F&O itself is switched off."},
                 {"name": "Gradient boosting, deep time series, autoencoders, GANs, reinforcement learning, "
                          "RAG/knowledge graphs (Jansen, Machine Learning for Trading, ch 9-24)",
-                 "reason": "Need thousands of examples or months of history; a week of paper trading isn't "
-                           "in range. See research/ml4t_integration_plan.md for the full reasoning."},
+                 "reason": "Not blocked by data: the Kite cache holds two years of 5-minute bars for the "
+                           "NIFTY 100. Two of these have been tested on them and neither is built in. Gradient "
+                           "boosting (Qlib's LightGBM on 158 standard factors, look L47) and seven deep "
+                           "time-series forecasting models (Kronos, L40, and six more, L46) all failed to rank "
+                           "the next 15 to 60 minutes by more than costs (README §93, §104). Deep reinforcement "
+                           "learning was surveyed and skipped (§103); the rest are not tried. The standing "
+                           "finding is that price-and-volume inputs at this horizon carry too little to pay "
+                           "for the round trip. A genuinely new input, such as the order-book samples being "
+                           "recorded (§71), is what would make another model worth a trial."},
             ],
         },
     }

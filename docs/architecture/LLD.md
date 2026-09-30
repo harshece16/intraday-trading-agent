@@ -399,6 +399,7 @@ phase and only with Kite credentials.
 | --- | --- | --- |
 | Side | A call on a long read, a put on a short read. Buying only | `_try_enter_fno` |
 | Gate | Confidence at least 60; one contract per underlying; shared position and loss limits | `_try_enter_fno` |
+| Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options; index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list` |
 | Expiry | Nearest monthly expiry 5 to 35 days out | `fno_instruments.nearest_expiry` |
 | Strike | The strike whose delta is nearest 0.45, priced at a fixed 20% volatility | `fno_instruments.find_contract` |
 | Size | `floor(20% × ₹10,000 ÷ (premium × lot size))` lots | `fno_risk.lots_to_buy` |

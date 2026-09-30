@@ -253,8 +253,9 @@ def results_calendar():
 # ---- F&O ban list (Market Wide Position Limit) -----------------------------
 # Once market-wide open interest in a stock's derivatives crosses 95% of its
 # limit, the stock enters the "ban period". NSE publishes the list for each
-# trade date as a small CSV. Index derivatives are never in it. (The parser
-# and the fetch were first written for PR #124, which is not merged.)
+# trade date as a small CSV. Index derivatives are never in it. Two readers:
+# the scanner's ban guard (scanner.guard_check) and the F&O entry path
+# (fno_risk.mwpl_block_reason, called from trading_engine._try_enter_fno).
 
 ARCHIVES = "https://nsearchives.nseindia.com"
 FNO_BAN_URL = ARCHIVES + "/content/fo/fo_secban.csv"
