@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+import holidays
 from sentiment_lexicon import score_text
 
 logger = logging.getLogger("trading_bot")
@@ -224,18 +225,13 @@ def market_breadth():
         return None
 
 
-def _next_trading_day(d):
-    n = d + timedelta(days=1)
-    while n.weekday() >= 5:
-        n += timedelta(days=1)
-    return n
-
-
 def results_calendar():
     """{SYMBOL: {"date", "purpose"}} for results due today or on the next trading day."""
     data = _fetch("/api/event-calendar", "/companies-listing/corporate-filings-event-calendar", 21600) or []
     today = datetime.now(IST).date()
-    horizon = _next_trading_day(today)
+    # The next session skips NSE holidays as well as weekends (#162), so results
+    # due the day after a holiday are excluded on the day before it.
+    horizon = holidays.next_trading_day(today)
     out = {}
     for e in data if isinstance(data, list) else []:
         text = f"{e.get('purpose', '')} {e.get('bm_desc', '')}".lower()
@@ -365,7 +361,6 @@ _last_session_cache = {}
 
 def previous_trading_day(day):
     """The last weekday before `day` that was not an NSE holiday."""
-    import holidays
     d = day - timedelta(days=1)
     while d.weekday() >= 5 or holidays.is_holiday(d):
         d -= timedelta(days=1)

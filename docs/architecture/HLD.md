@@ -392,8 +392,6 @@ affects today's paper operation with automatic entries off.
 | [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) | F&O entries skip several cash entry rules | Before enabling F&O |
 | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) | Jev book: interrupted rounds and the live-price gate | Now, for the test's record |
 | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) | Momentum book: silent data gaps and a skippable rebalance | Before 1 Oct |
-| [#160](https://github.com/harshece16/intraday-trading-agent/issues/160) | LLM features switch on with the key alone | Now, small cost |
-| [#161](https://github.com/harshece16/intraday-trading-agent/issues/161) | Dashboard key file isn't mode 0600 | Now, low risk |
-| [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only | Before 2027 |
+| [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only. A year without a list is now loud (an error at start-up and on each pre-market read, `holiday_calendar_missing` in the state); NSE's 2027 list is not published yet | Before 2027 |
 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) | One slippage figure for every stock, never measured | Every intraday test's hurdle |
 | [#163](https://github.com/harshece16/intraday-trading-agent/issues/163) | Stale comments and UI text | Readers |

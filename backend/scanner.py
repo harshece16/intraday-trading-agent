@@ -8,7 +8,8 @@ are actually "in play" — leaders to buy on strong days, laggards to short on
 weak ones. This encodes that routine over the NIFTY 100:
 
   Market context   NIFTY trend and day change, breadth (advancers/decliners),
-                   India VIX. The bias decides which side gets the slots.
+                   India VIX. The bias blocks entries against it (the engine's
+                   market filter); only score mode also caps picks against it.
   Tradability      price, turnover and daily ATR% floors — a stock that
                    doesn't move 1.2%+ a day can't pay for intraday costs.
   Daily setup      daily trend (EMA20/50), 10-day relative strength vs NIFTY,
@@ -21,8 +22,15 @@ weak ones. This encodes that routine over the NIFTY 100:
   Event risk       results due today/next session → no new trades.
 
 Every stock is scored as a long AND as a short; the stronger side is kept.
-The top candidates get a full Sahab's Dimaag read (with per-stock news); the
-best of those become the engine's active watchlist.
+
+Which stocks are watched depends on SCANNER["selection"] (README section 91):
+  "liquidity"      The default. The day's list is the active_count eligible
+                   stocks with the highest 20-day average turnover, fixed
+                   before the open and kept all day. No score chooses it; the
+                   list gets the Sahab's Dimaag read (with per-stock news).
+  "score"          The old list. The top candidates get the Dimaag read and
+                   the best final scores become the active watchlist, chosen
+                   again every scan (select_active).
 """
 
 import bisect
