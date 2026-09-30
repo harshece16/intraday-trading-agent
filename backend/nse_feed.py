@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+import holidays
 from sentiment_lexicon import score_text
 
 logger = logging.getLogger("trading_bot")
@@ -224,18 +225,13 @@ def market_breadth():
         return None
 
 
-def _next_trading_day(d):
-    n = d + timedelta(days=1)
-    while n.weekday() >= 5:
-        n += timedelta(days=1)
-    return n
-
-
 def results_calendar():
     """{SYMBOL: {"date", "purpose"}} for results due today or on the next trading day."""
     data = _fetch("/api/event-calendar", "/companies-listing/corporate-filings-event-calendar", 21600) or []
     today = datetime.now(IST).date()
-    horizon = _next_trading_day(today)
+    # The next session skips NSE holidays as well as weekends (#162), so results
+    # due the day after a holiday are excluded on the day before it.
+    horizon = holidays.next_trading_day(today)
     out = {}
     for e in data if isinstance(data, list) else []:
         text = f"{e.get('purpose', '')} {e.get('bm_desc', '')}".lower()
@@ -260,8 +256,15 @@ def results_calendar():
 ARCHIVES = "https://nsearchives.nseindia.com"
 FNO_BAN_URL = ARCHIVES + "/content/fo/fo_secban.csv"
 PRICE_BANDS_URL = ARCHIVES + "/content/equities/sec_list.csv"
-_ban_cache = {"at": 0.0, "value": None}
-_bands_cache = {"at": 0.0, "value": None}
+ARCHIVE_TIMEOUT_S = 15
+# A file that could not be fetched or read is not asked for again for this
+# long (#212). Without it, while the archive is down every caller waits out
+# its own timeout, and the F&O ban check runs once per candidate.
+ARCHIVE_RETRY_S = 180
+# One per URL: the last good copy, and the last failure since it.
+_ban_cache = {"at": 0.0, "value": None, "failed": None}
+_bands_cache = {"at": 0.0, "value": None, "failed": None}
+_archive_locks = {}
 
 
 def parse_fno_ban(text):
@@ -288,22 +291,63 @@ def parse_fno_ban(text):
 
 def _archive(url, parse, cache, ttl, what):
     """A small static file from NSE's archives, parsed and cached. None when
-    it cannot be fetched or parsed: callers must treat that as UNKNOWN."""
-    if cache["value"] is not None and time.time() - cache["at"] < ttl:
-        return cache["value"]
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        parsed = parse(resp.text) if resp.status_code == 200 else None
-    except requests.RequestException as exc:
-        logger.warning(f"NSE {what} unavailable ({exc})")
-        parsed = None
-    if parsed is not None:
-        cache.update(at=time.time(), value=parsed)
-    return parsed
+    it cannot be fetched or parsed: callers must treat that as UNKNOWN, never
+    as an empty file. A good copy older than `ttl` is not returned in its
+    place.
+
+    A failure is remembered in `cache["failed"]` ({"at", "error",
+    "retry_at"}), and the file is not asked for again before `retry_at`,
+    ARCHIVE_RETRY_S later: until then the answer is None at once instead of
+    another wait on the timeout (#212). `last_failure(url)` says why. One
+    caller at a time fetches a given URL, so callers that arrive during a
+    fetch get its answer."""
+    with _archive_locks.setdefault(url, threading.Lock()):
+        if cache["value"] is not None and time.time() - cache["at"] < ttl:
+            return cache["value"]
+        failed = cache.get("failed")
+        if failed and time.time() < failed["retry_at"]:
+            return None
+        parsed, error, detail = None, None, None
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=ARCHIVE_TIMEOUT_S)
+            if resp.status_code != 200:
+                error = f"HTTP {resp.status_code}"
+            else:
+                parsed = parse(resp.text)
+                error = None if parsed is not None else "not in the expected format"
+        except requests.RequestException as exc:
+            error = (f"no answer within {ARCHIVE_TIMEOUT_S} s" if isinstance(exc, requests.Timeout)
+                     else type(exc).__name__)
+            detail = str(exc)
+        now = time.time()
+        if parsed is None:
+            cache["failed"] = {"at": now, "error": error, "retry_at": now + ARCHIVE_RETRY_S}
+            logger.warning(f"NSE {what} unavailable ({detail or error}); not asked for again for {ARCHIVE_RETRY_S} s")
+            return None
+        cache.update(at=now, value=parsed, failed=None)
+        return parsed
+
+
+def last_failure(url):
+    """Why the archive file at `url` is unknown: {"at", "error", "retry_at"}
+    for its last fetch, which failed, or None if that fetch worked or none has
+    been made. Times are epoch seconds."""
+    cache = {FNO_BAN_URL: _ban_cache, PRICE_BANDS_URL: _bands_cache}.get(url) or {}
+    failed = cache.get("failed")
+    return dict(failed) if failed else None
+
+
+def failure_text(failure):
+    """A failure from last_failure() in words, for a reason or a log line."""
+    if not failure:
+        return ""
+    at, again = (datetime.fromtimestamp(failure[k], IST).strftime("%H:%M:%S") for k in ("at", "retry_at"))
+    return f"the last try, at {at} IST, failed ({failure['error']}); it is tried again after {again}"
 
 
 def fno_ban_list(ttl=1800):
-    """The F&O ban list for the current trade date, cached for `ttl` seconds."""
+    """The F&O ban list for the current trade date, cached for `ttl` seconds.
+    None when unknown; `last_failure(FNO_BAN_URL)` says why."""
     return _archive(FNO_BAN_URL, parse_fno_ban, _ban_cache, ttl, "F&O ban list")
 
 
@@ -342,7 +386,8 @@ def parse_price_bands(text):
 
 
 def price_bands(ttl=6 * 3600):
-    """Today's price band, series and surveillance remark for every security."""
+    """Today's price band, series and surveillance remark for every security.
+    None when unknown; `last_failure(PRICE_BANDS_URL)` says why."""
     return _archive(PRICE_BANDS_URL, parse_price_bands, _bands_cache, ttl, "price-band list")
 
 
@@ -365,7 +410,6 @@ _last_session_cache = {}
 
 def previous_trading_day(day):
     """The last weekday before `day` that was not an NSE holiday."""
-    import holidays
     d = day - timedelta(days=1)
     while d.weekday() >= 5 or holidays.is_holiday(d):
         d -= timedelta(days=1)

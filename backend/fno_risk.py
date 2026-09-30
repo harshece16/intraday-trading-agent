@@ -22,6 +22,19 @@ never discovered later via a margin call.
 """
 
 import math
+import re
+
+# The volatility a paper option is priced at, and repriced with (#154): there
+# is no paper feed for premiums, so a paper buy is a Black-Scholes price.
+PAPER_VOL = 0.20
+
+
+def contract_on(tradingsymbol: str, underlying: str) -> bool:
+    """Whether an NFO tradingsymbol is a contract on `underlying`: the name,
+    then the two-digit year every NSE derivative symbol carries next
+    (RELIANCE26OCT1400CE, NIFTY2610624500PE). "NIFTY" is not a contract on
+    "NIFTYNXT50", and "M&M" is not one on "M&MFIN"."""
+    return bool(re.match(re.escape(underlying) + r"\d{2}", tradingsymbol or ""))
 
 
 def lots_to_buy(capital: float, max_premium_risk_pct: float, premium: float, lot_size: int) -> int:
@@ -52,12 +65,14 @@ def max_loss(premium: float, lots: int, lot_size: int) -> float:
     return round(premium * lots * lot_size, 2)
 
 
-def mwpl_block_reason(underlying: str, ban, today_iso: str, index_underlyings=()):
+def mwpl_block_reason(underlying: str, ban, today_iso: str, index_underlyings=(), unknown_why: str = ""):
     """Why a new option BUY on `underlying` must not be placed under NSE's
     Market Wide Position Limit ban, or None if it may.
 
     `ban` is nse_feed.fno_ban_list()'s value, the same list the scanner's
     ban guard reads: {"trade_date": "YYYY-MM-DD", "symbols": set} or None.
+    `unknown_why`, when the list is None, is why it could not be read
+    (nse_feed.failure_text), so the reason says when the last try failed.
 
     None means the ban status is UNKNOWN, as it does for the scanner, and so
     does a list published for another trade date. The scanner lets an unknown
@@ -70,7 +85,8 @@ def mwpl_block_reason(underlying: str, ban, today_iso: str, index_underlyings=()
     if underlying.upper() in {u.upper() for u in index_underlyings}:
         return None
     if ban is None:
-        return "NSE's F&O ban list could not be read, so the ban status is unknown; no stock option is bought"
+        why = f" ({unknown_why})" if unknown_why else ""
+        return f"NSE's F&O ban list could not be read{why}, so the ban status is unknown; no stock option is bought"
     if ban.get("trade_date") != today_iso:
         return (f"NSE's F&O ban list is for {ban.get('trade_date')}, not today ({today_iso}), "
                 "so the ban status is unknown; no stock option is bought")

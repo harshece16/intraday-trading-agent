@@ -1,4 +1,4 @@
-import { shortSource } from "../helpers";
+import { checklistSide, shortSource } from "../helpers";
 
 export function RuleTag({ text }) {
   if (!text) return null;
@@ -16,7 +16,7 @@ export default function RuleBook({ r, b }) {
     chips.push({ label, detail });
   };
   if (b && b.checklist) {
-    const side = r && r.side ? r.side.toLowerCase() : b.bias === "short" ? "short" : "long";
+    const side = checklistSide(r, b);
     const cl = b.checklist[side] || b.checklist.long;
     (cl ? cl.items : []).forEach((it) => add(shortSource(it.source), it.detail));
   }

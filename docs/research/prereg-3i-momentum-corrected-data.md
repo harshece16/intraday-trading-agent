@@ -236,3 +236,29 @@ configuration: the rule, on repaired prices, with orders that wait. Run over
 
 **What it still does not measure.** Real fills. The slippage of 0.05% a side
 is a judgement (#66), and trial 126's pass would fail at 0.07%.
+
+---
+
+# Third note on the forward paper book — 2026-09-30, before its first rebalance
+
+The book still holds nothing and has recorded no return. The rule does not
+change. What changes is what the evening job does when its data is missing
+(#159, README §113). Before, it carried on without the data; now it waits.
+
+- **A bhavcopy whose download failed** is fetched again on later runs, for 31
+  days. The old job never retried a day once a later day had arrived. The book
+  stops before a failed day until the file is in, rather than filling orders a
+  day late or ranking a month turn at the wrong close.
+- **An empty month-end ranking** stops the job with the book as it was, and
+  the next run tries again. The old job skipped that month's rebalance.
+- **A failed corporate-actions refresh** is logged, and the page shows the date
+  of the file in use.
+
+**Could the record differ?** Only when data is missing. The old job would then
+have recorded the month without the missing day or without its rebalance. The
+new one records it as the rule says, once the data is in, perhaps a day late.
+With complete data the record is the same. Two replays on the bhavcopy cache
+to 2026-09-30, from a copy of the book started on 2025-12-20 (9 rebalances)
+and on 2024-06-20 (27), gave identical states from the old and the new job
+(holdings, trades, values, month points). On a copy of the live state both
+gave the same state too.

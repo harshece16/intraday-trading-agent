@@ -130,9 +130,15 @@ def test_live_mode_still_uses_kites_premium(monkeypatch):
 
         def place_fno_order(self, *a):
             self.orders.append(a)
+            return "ord1"
+
+        def wait_for_fill(self, order_id):
+            return {"status": "COMPLETE", "filled_quantity": LOT, "average_price": entry * 2 - 0.5, "message": ""}
 
     monkeypatch.setattr(e, "_ensure_kite", lambda: Kite())
     assert e._check_fno_stop_take("ACME") is True
     t = _exit_trade(e)
-    assert t["reason"] == "fno_take_profit" and t["price"] == entry * 2
+    # Kite's quote fires the target; the exit is booked at Kite's executed premium (#186)
+    assert t["reason"] == "fno_take_profit" and t["price"] == entry * 2 - 0.5
+    assert (t["signal_price"], t["order_id"], t["mode"]) == (entry * 2, "ord1", "live")
     assert Kite.orders and Kite.orders[0][1] == "SELL"
