@@ -56,6 +56,7 @@ export default function MomentumBook() {
 
   const [pillClass, label, blurb] = STATUS[data.status] || ["neutral", data.status, ""];
   const excess = data.cumulative_excess;
+  const checks = data.data || {};           // the evening job's data checks (#159)
   const floor = data.band_floor;
 
   return (
@@ -68,6 +69,12 @@ export default function MomentumBook() {
         It is not a guarantee: momentum has losing years (−12% against its benchmark in 2025).
       </p>
       <p className="muted" style={{ marginTop: -8 }}>{data.status_reason || blurb}</p>
+      {checks.problem && (
+        <p className="down" role="alert" style={{ fontSize: 13 }}>
+          The last evening run stopped early: {checks.problem}. Nothing past that day is traded or marked until the
+          data is in.
+        </p>
+      )}
 
       <div className="grid3" style={{ margin: "16px 0" }}>
         <div className="stat"><small>Book value</small><strong>₹{num(data.book_value, 0)}</strong>
@@ -145,7 +152,9 @@ export default function MomentumBook() {
       ) : <p className="empty">No trades yet.</p>}
 
       <p className="muted" style={{ fontSize: 12, marginTop: 20 }}>
-        Last session processed: {data.last_processed || "—"} · latest NSE file: {data.latest_session || "—"} · updated {data.updated_at || "—"}.
+        Last session processed: {data.last_processed || "—"} · latest NSE file: {data.latest_session || "—"} · updated {data.updated_at || "—"}
+        {" "}· corporate-actions file from {checks.corporate_actions_as_of ? checks.corporate_actions_as_of.replace("T", " ") : "—"}
+        {checks.corporate_actions_refreshed === false && <span className="down"> (the last refresh failed)</span>}.
         Prices are NSE's daily bhavcopies, trade-for-trade rows included, adjusted with NSE's corporate-actions file.
         Fills are at the next session's close, unless the stock is locked at its band or did not trade.
         Rules and evidence: docs/research/results-3i-momentum-corrected-data.md and results-universe-width.md.

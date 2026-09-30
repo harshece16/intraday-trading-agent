@@ -50,6 +50,20 @@ function toneOf(x) {
   return x > 0 ? "up" : x < 0 ? "down" : "";
 }
 
+// A round that stopped part-way (#158): the decisions made before the stop are
+// still closed and scored at 15:08; the stocks after it were never asked.
+function Interrupted({ intr }) {
+  const why = intr.reason === "no_live_prices" ? "Kite stopped giving live prices" : "Jev couldn't be reached";
+  const rest = intr.not_asked || [];
+  return (
+    <p className="muted">
+      Today's round stopped after {intr.asked} of {intr.asked + rest.length} stocks at {(intr.at || "").slice(11, 16)}:
+      {" "}{why} (<code>{intr.error}</code>). The {intr.asked} decisions it made are scored at the 15:08 close like
+      any other round{rest.length ? `; ${rest.join(", ")} ${rest.length === 1 ? "was" : "were"} not asked` : ""}.
+    </p>
+  );
+}
+
 export default function JevBook() {
   const { data, error, reload } = useApi("/api/jev-book", 30000);
   if (!data) return <LoadState error={error} onRetry={reload} />;
@@ -81,11 +95,12 @@ export default function JevBook() {
       )}
       {noLive && (
         <p className="muted">
-          Kite wasn't connected when today's round was due, so Jev wasn't asked and the day doesn't count toward
-          the test: its fills must be live prices, not the delayed fallback. Reconnect Kite on the dashboard before
-          09:15 on trading days.
+          Kite had no live session when today's round was due (not connected, or not reconnected since Zerodha's
+          06:00 cutoff), so Jev wasn't asked and the day doesn't count toward the test: its fills must be live
+          prices, not the delayed fallback. Reconnect Kite on the dashboard before 09:15 on trading days.
         </p>
       )}
+      {day && day.interrupted && <Interrupted intr={day.interrupted} />}
       {unavailable && (
         <p className="muted">
           Today Jev couldn't be reached: <code>{day.error}</code>. Create a key at console.typesafe.ai/keys, copy it,

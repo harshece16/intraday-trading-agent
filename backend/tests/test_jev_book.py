@@ -175,6 +175,7 @@ def test_live_ltp_never_falls_back_to_delayed_prices(monkeypatch):
 
     noted = []
     monkeypatch.setattr(dp, "kite_data_active", lambda: True)
+    monkeypatch.setattr(dp, "kite_session_live", lambda: True)
     monkeypatch.setattr(dp, "_note_kite_failure", lambda exc: noted.append(exc))
     monkeypatch.setattr(dp, "_get_kite", lambda: types.SimpleNamespace(
         ltp=lambda keys: {"NSE:RELIANCE": {"last_price": 1412.5}}))
@@ -224,12 +225,109 @@ def test_engine_hooks_fill_only_at_live_kite_prices(monkeypatch, tmp_path):
     monkeypatch.setattr(jb, "decide_round", lambda scanner, now, get_ltp, **k: seen.update(decide=(get_ltp, k)))
     assert jb.maybe_decide(_scanner(), NOW, None)
     get_ltp, kw = seen["decide"]
-    assert get_ltp is jb.live_ltp and kw.get("live") is dp.kite_data_active
+    assert get_ltp is jb.live_ltp and kw.get("live") is jb.kite_live           # the expiry-aware gate (#158)
 
     jb.save_state({**jb.load_state(path), "days": {"2026-09-28": {"status": "open", "decisions": []}}}, path)
     monkeypatch.setattr(jb, "close_round", lambda now, get_ltp, **k: seen.update(close=get_ltp))
     assert jb.maybe_close(NOW.replace(hour=15, minute=8))
     assert seen["close"] is jb.live_ltp
+
+
+# --- an interrupted round, and the 06:00 expiry (#158) -----------------------------------------
+
+def test_a_round_typesafe_interrupts_keeps_its_decisions_and_closes_them(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    monkeypatch.setattr(jb, "STATE_PATH", path)
+    monkeypatch.setitem(jb._running, "decide", False)
+    post = _post([_resp(action="buy"), _resp(action="short"), _resp(status=401)])
+    jb.decide_round(_scanner(4), NOW, lambda s: 100.0, post=post, state_path=path, sleep=lambda s: None,
+                    live=lambda: True)
+    day = jb.load_state(path)["days"]["2026-09-28"]
+    assert len(post.calls) == 3                                   # the round stopped at the error
+    assert day["status"] == "open" and "error" not in day         # not "Jev unavailable": it has positions
+    assert [d["symbol"] for d in day["decisions"]] == ["S0", "S1"]
+    intr = day["interrupted"]
+    assert intr["reason"] == "jev_unavailable" and "rejected" in intr["error"]
+    assert intr["asked"] == 2 and intr["not_asked"] == ["S2", "S3"] and intr["at"]
+    # the engine's square-off closes it like any other round
+    monkeypatch.setattr(jb, "live_ltp", lambda s: 101.0)
+    assert jb.maybe_close(NOW.replace(hour=15, minute=8))
+    closed = jb.load_state(path)["days"]["2026-09-28"]
+    assert closed["status"] == "closed" and closed["interrupted"] == intr
+    rt = jb.round_trip_bp()
+    assert abs(closed["decisions"][0]["net_bp"] - (100.0 - rt)) < 1e-6
+    assert abs(closed["decisions"][1]["net_bp"] - (-100.0 - rt)) < 1e-6
+    s = jb.summary(path)
+    assert s["traded"] == 2 and s["sessions_closed"] == 1 and s["decisions"] == 2
+    assert s["last_day"]["interrupted"]["not_asked"] == ["S2", "S3"]
+
+
+def test_an_error_on_the_first_stock_still_records_jev_unavailable(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    jb.decide_round(_scanner(), NOW, lambda s: 100.0, post=_post([_resp(status=401)]), state_path=path,
+                    sleep=lambda s: None, live=lambda: True)
+    day = jb.load_state(path)["days"]["2026-09-28"]
+    assert day["status"] == "jev_unavailable" and "rejected" in day["error"] and day["decisions"] == []
+    assert "interrupted" not in day
+    monkeypatch.setattr(jb, "STATE_PATH", path)
+    assert not jb.maybe_close(NOW.replace(hour=15, minute=8))
+
+
+def test_a_kite_session_that_dies_mid_round_stops_asking_jev(tmp_path, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    answers = iter([True, True, False, False])                    # the start, S0, then Kite is gone
+    post = _post([_resp()])
+    jb.decide_round(_scanner(3), NOW, lambda s: 100.0, post=post, state_path=path, sleep=lambda s: None,
+                    live=lambda: next(answers))
+    day = jb.load_state(path)["days"]["2026-09-28"]
+    assert len(post.calls) == 1                                   # no Jev call for stocks it can't fill
+    assert day["status"] == "open" and [d["symbol"] for d in day["decisions"]] == ["S0"]
+    assert day["interrupted"]["reason"] == "no_live_prices" and day["interrupted"]["not_asked"] == ["S1", "S2"]
+    jb.close_round(NOW.replace(hour=15, minute=8), lambda s: 101.0, state_path=path)
+    assert jb.summary(path)["traded"] == 1
+
+
+def _kite_config(monkeypatch, generated_at):
+    import config
+    import data_provider as dp
+    monkeypatch.setattr(config, "USE_KITE_DATA", True)
+    monkeypatch.setattr(config, "KITE_API_KEY", "test-api-key")
+    monkeypatch.setattr(config, "KITE_ACCESS_TOKEN", "test-access-token")
+    monkeypatch.setattr(config, "KITE_SESSION_GENERATED_AT", generated_at)
+    monkeypatch.setattr(dp, "_kite_rejected_token", None)
+    return dp
+
+
+def test_the_live_price_gate_knows_the_0600_expiry(tmp_path, monkeypatch):
+    now_ist = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5, minutes=30)))
+    dp = _kite_config(monkeypatch, (now_ist - datetime.timedelta(days=2)).isoformat())
+    assert dp.kite_data_active()                                  # the old gate: a stored, unrejected token
+    assert not jb.kite_live()                                     # but it died at 06:00
+
+    def no_kite():
+        raise AssertionError("an expired session must not be asked for a price")
+    monkeypatch.setattr(dp, "_get_kite", no_kite)
+    try:
+        jb.live_ltp("RELIANCE")
+        assert False, "expected no live price"
+    except RuntimeError as exc:
+        assert "06:00" in str(exc)
+
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")
+    path = str(tmp_path / "s.json")
+    post = _post([_resp()])
+    jb.decide_round(_scanner(), NOW, jb.live_ltp, post=post, state_path=path, sleep=lambda s: None,
+                    live=jb.kite_live)
+    day = jb.load_state(path)["days"]["2026-09-28"]
+    assert day["status"] == "no_live_prices" and "06:00" in day["error"] and post.calls == []
+
+    _kite_config(monkeypatch, now_ist.isoformat())                # reconnected this morning
+    assert jb.kite_live()
+    dp.mark_kite_token_rejected()                                 # Kite said no: the gate closes again
+    assert not jb.kite_live()
 
 
 # --- the live mark of an open round: display only (README section 90) ------------------------
@@ -302,6 +400,7 @@ def test_no_live_mark_without_kite_and_never_from_the_delayed_feed(tmp_path, mon
     monkeypatch.setitem(jb._mark_cache, "key", None)
     noted = []
     monkeypatch.setattr(dp, "kite_data_active", lambda: True)
+    monkeypatch.setattr(dp, "kite_session_live", lambda: True)
     monkeypatch.setattr(dp, "_note_kite_failure", lambda exc: noted.append(exc))
 
     def broken(keys):

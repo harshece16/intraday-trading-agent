@@ -28,6 +28,12 @@ daily`), started by the engine after the close, so building the price panel
 (~70 s, a few hundred MB) never touches the trading process. State lives in
 data/momentum_book_state.json. Paper only: nothing here places an order.
 
+The job never trades past data it doesn't have (#159). A day whose bhavcopy
+failed to download is fetched again on later runs, and the book stops before
+it until it is in. A month turn whose ranking comes out empty stops the book
+the same way. A corporate-actions refresh that fails is logged, and the page
+shows how old the file is.
+
 The book switches itself off if, from six months on, the cumulative net
 excess over the benchmark falls below n x 0.71% - 2 x 3.89% x sqrt(n)
 (n months). The two figures are trial 126's, the configuration this book
@@ -138,18 +144,26 @@ def _curl(url, out, extra=None):
 
 
 def fetch_bhavcopy(d, out_dir=LIVE_DIR):
-    """Download one session's bhavcopy; returns the path, or None (holiday, not yet published)."""
+    """Download one session's bhavcopy; returns the path, or None (holiday, not yet published, failed)."""
+    return download_bhavcopy(d, out_dir)[0]
+
+
+def download_bhavcopy(d, out_dir=LIVE_DIR):
+    """(path or None, outcome) for one day's bhavcopy. The outcome is "cached",
+    "fetched", "no_file" (NSE answered 404: a weekend, a holiday, or a file
+    not published yet) or "failed" (any other answer, no answer, or a file
+    that is not a zip): a day that may have been a session but isn't here."""
     os.makedirs(out_dir, exist_ok=True)
     tag, url = bhav_url(d)
     path = os.path.join(out_dir, f"{tag}.zip")
     if os.path.exists(path) and os.path.getsize(path) > 5000:
-        return path
+        return path, "cached"
     code = _curl(url, path)
     if code != "200" or not zipfile.is_zipfile(path):
         if os.path.exists(path):
             os.remove(path)
-        return None
-    return path
+        return None, "no_file" if code == "404" else "failed"
+    return path, "fetched"
 
 
 def cached_dates():
@@ -166,19 +180,34 @@ def cached_dates():
     return dates
 
 
-def update_bhavcopies(today):
-    """Fetch every missing calendar day from the last cached session to today
-    (weekends included: NSE holds occasional special sessions)."""
+REFETCH_DAYS = 31      # a day whose download failed is tried again on every run for this long
+
+
+def update_bhavcopies(today, lookback_days=REFETCH_DAYS):
+    """Fetch every calendar day without a bhavcopy from `lookback_days` before
+    today, or from the last cached session if that is older, to today
+    (weekends included: NSE holds occasional special sessions). Returns
+    (files fetched, days whose download failed), the failed days sorted.
+
+    It used to start at the day after the newest cached file, so a day whose
+    download failed while a later one succeeded fell behind the start and was
+    never fetched again (#159). Days NSE has no file for (404) cost one quick
+    request each per run."""
     have = cached_dates()
     if not have:
-        return 0
-    d, got = max(have) + datetime.timedelta(days=1), 0
+        return 0, []
+    d = min(max(have) + datetime.timedelta(days=1), today - datetime.timedelta(days=lookback_days))
+    got, failed = 0, []
     while d <= today:
-        if d not in have and fetch_bhavcopy(d):
-            got += 1
+        if d not in have:
+            path, outcome = download_bhavcopy(d)
+            if path:
+                got += 1
+            elif outcome == "failed":
+                failed.append(d)
+            time.sleep(0.3)
         d += datetime.timedelta(days=1)
-        time.sleep(0.3)
-    return got
+    return got, failed
 
 
 def update_corporate_actions(year, ca_dir=CA_DIR):
@@ -788,10 +817,22 @@ def rebalance(state, chains, sessions, sess_idx, i, day, conf):
     return True
 
 
-def process_session(state, chains, sessions, day, conf, sess_idx=None):
+class IncompleteData(Exception):
+    """The panel can't carry out the rule on this session. The evening job
+    stops before it and leaves it for the next run (#159)."""
+
+
+def process_session(state, chains, sessions, day, conf, sess_idx=None, strict=False):
     """Advance the book through one session: rebalance on the first session of
     a month (ranking at the previous session's close), otherwise try the
-    orders that are waiting, then mark to market."""
+    orders that are waiting, then mark to market.
+
+    A month turn with nothing to rank is skipped, as the research simulator
+    skips the months before its panel has the history to rank. The evening
+    job passes strict=True: the live book's panel has years of history, so an
+    empty ranking there means broken data, and skipping would lose the month's
+    rebalance and mark and leave the next session no longer a month turn. It
+    raises IncompleteData instead, before the state is changed (#159)."""
     sess_idx = sess_idx or {d: i for i, d in enumerate(sessions)}
     i = sess_idx[day]
     if state["status"] == "switched_off":
@@ -801,6 +842,11 @@ def process_session(state, chains, sessions, day, conf, sess_idx=None):
     month_turn = prev is not None and prev[:7] != day[:7] and (state["last_processed"] or "") >= prev
     if month_turn:
         if not rebalance(state, chains, sessions, sess_idx, i, day, conf):
+            if strict:
+                uni = ranked_universe(chains, i - 1)[:conf["universe"]]
+                raise IncompleteData(
+                    f"the ranking at the {prev} close is empty ({len(uni)} stocks in the universe), so the "
+                    f"rebalance for {day} cannot be made; the book stops before {day} and the next run tries again")
             return
     else:
         for side in ("book", "bench"):
@@ -829,16 +875,35 @@ def process_session(state, chains, sessions, day, conf, sess_idx=None):
     state["last_processed"] = day
 
 
+def _file_time(path):
+    try:
+        return datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="seconds")
+    except OSError:
+        return None
+
+
 def daily(today=None, state_path=STATE_PATH, fetch=True):
     """The evening job: fetch data, then advance the book through every
     session it hasn't processed yet. Exit code 0 = processed today's session,
-    3 = today's bhavcopy isn't published yet (the engine retries)."""
+    3 = today's bhavcopy isn't published yet (the engine retries), 4 = the
+    data is incomplete: a past day's download failed, or a month-end ranking
+    came out empty. The book then stops before that day, keeps what it
+    processed up to it, and the next run tries again (#159)."""
     conf = cfg()
     today = today or datetime.date.today()
+    failed, ca_refreshed = [], None
     if fetch:
         refresh_reference_files()
-        update_corporate_actions(today.year)
-        update_bhavcopies(today)
+        ca_refreshed = bool(update_corporate_actions(today.year))
+        if not ca_refreshed:
+            logger.warning(
+                f"Momentum book: NSE's corporate-actions file for {today.year} could not be refreshed. Prices are "
+                f"adjusted with the copy from {_file_time(os.path.join(CA_DIR, f'ca_{today.year}.csv')) or 'no date'}; "
+                "a split or bonus announced since would show as a price drop (#159)")
+        failed = update_bhavcopies(today)[1]
+        if failed:
+            logger.warning(f"Momentum book: NSE's bhavcopy could not be downloaded for "
+                           f"{', '.join(d.isoformat() for d in failed)}; the next run tries again (#159)")
     sessions, chains = build_panel()
     state = load_state(state_path) or new_state(conf["capital"], today.isoformat())
     start = state["last_processed"] or state["created"]
@@ -849,12 +914,35 @@ def daily(today=None, state_path=STATE_PATH, fetch=True):
         before = [d for d in sessions if d <= state["created"]]
         state["last_processed"] = before[-1] if before else None
         todo = [d for d in sessions if d > (state["last_processed"] or "") and d <= today.isoformat()]
+    problem = None
+    # A past day whose download failed may have been a session. Processing the
+    # sessions after it would fill orders a day late, or rank a month turn at
+    # the wrong close, so the book waits for it (#159).
+    gap = next((d.isoformat() for d in failed
+                if d < today and d.isoformat() > (state["last_processed"] or "")), None)
+    if gap:
+        todo = [d for d in todo if d < gap]
+        problem = (f"NSE's bhavcopy for {gap} could not be downloaded; the book stops before it and the next "
+                   "run tries again")
     sess_idx = {d: i for i, d in enumerate(sessions)}
     for d in todo:
-        process_session(state, chains, sessions, d, conf, sess_idx)
+        try:
+            process_session(state, chains, sessions, d, conf, sess_idx, strict=True)
+        except IncompleteData as exc:
+            problem = str(exc)
+            break
     state["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
     state["latest_session"] = sessions[-1] if sessions else None
+    checks = state.setdefault("data", {})
+    if fetch:
+        checks["corporate_actions_refreshed"] = ca_refreshed
+        checks["failed_downloads"] = [d.isoformat() for d in failed]
+    checks["corporate_actions_as_of"] = _file_time(os.path.join(CA_DIR, f"ca_{today.year}.csv"))
+    checks["problem"] = problem
     save_state(state, state_path)
+    if problem:
+        logger.error(f"Momentum book: {problem} (#159)")
+        return 4
     return 0 if sessions and sessions[-1] == today.isoformat() else 3
 
 
@@ -881,7 +969,7 @@ def summary(state_path=STATE_PATH):
                               key=lambda r: r["symbol"]),
            "waiting_orders": [{"side": o["side"], "symbol": o["symbol"], "ordered": o["placed"],
                                "reason": o.get("waiting")} for o in s["book"].get("orders", [])],
-           "fills": s.get("fills", {}),
+           "fills": s.get("fills", {}), "data": s.get("data", {}),
            "cash": round(s["book"]["cash"], 2), "recent_trades": s["trades"][-40:]}
     return out
 
@@ -932,6 +1020,8 @@ def main():
         print(json.dumps(summary(), indent=1))
         return 0
     d = datetime.date.fromisoformat(a.date) if a.date else None
+    # The job's output goes to momentum_book.log; give its warnings a time.
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     t0 = time.time()
     code = daily(d, fetch=not a.no_fetch)
     print(f"{datetime.datetime.now().isoformat(timespec='seconds')} daily done code={code} in {time.time() - t0:.0f}s", flush=True)
