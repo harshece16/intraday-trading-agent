@@ -1,5 +1,7 @@
 # Phase 3 — scoping: which Kite segments can a ₹5,500 account reach, and is there anything documented to test in them?
 
+> **Closed 2026-09-30.** This note stopped for review on 2026-09-23. Its finding is negative and it recommends no pre-registration (§3); the reviewer later used it as precedent (Entry 14), and nothing in it was disputed. Of the two issues it filed, #78 and #79 are closed. The one line it leaves open is a forward-collected 5-minute cache for CDS or MCX GOLDPETAL, which has low costs but no documented effect; opening it is the owner's decision, and nothing is collected until then. Since this note, the project tested eight forecasting models and 75 combinations on NSE cash (README §104), all failing, which lowers the prior for any exploratory search further.
+
 **2026-09-23. Research only. Nothing in this document is a strategy, and no trial is spent.** No config was changed, no engine code was touched and no Kite order was placed. Every Kite call was read-only: the public instruments dump, `quote`, `historical_data`, and `order_margins`, which only calculates and places nothing. The trial count stands at 35, or 37 once PR #76 merges. Research looks are unchanged at 34.
 
 **Stopped for review.** Nothing below runs without reviewer review and the user's go-ahead.
