@@ -1104,12 +1104,14 @@ class TradingEngine:
                        symbol=symbol, level="warn")
         return card
 
-    def _refuse_review(self, review_id, reason):
-        card = self.review_queue.decide(review_id, "refused", outcome={"reason": reason})
+    def _refuse_review(self, review_id, reason, **detail):
+        """Close the card as refused, in the journal too, with the reason and
+        any numbers behind it (`detail`)."""
+        card = self.review_queue.decide(review_id, "refused", outcome={"reason": reason, **detail})
         if card:
             self.state.log("review", f"Your approval of {card['setup']} ({card['side'].lower()}) could not be "
                                      f"placed: {reason}", symbol=card["symbol"], level="info")
-        return {"ok": False, "status": "refused", "reason": reason}
+        return {"ok": False, "status": "refused", "reason": reason, **detail}
 
     def reject_review(self, review_id):
         card = self.review_queue.get(review_id)
@@ -1125,7 +1127,9 @@ class TradingEngine:
         """The user's Approve click. Overrides only the card's blocker and the
         confidence gate: every other entry rule is re-checked here, at the
         live price, and the order goes through the same _execute() path as
-        any engine entry. In live mode it needs confirm_live=True."""
+        any engine entry. A card blocked on reward-to-risk must clear the R:R
+        floor again at the live price (#211). In live mode it needs
+        confirm_live=True."""
         card = self.review_queue.get(review_id)
         if card is None:
             return {"ok": False, "status": None, "reason": "No such review card (it may be from an earlier day)."}
@@ -1181,7 +1185,16 @@ class TradingEngine:
             return self._refuse_review(review_id, f"the price {ltp:.2f} has already passed the stop {stop:.2f}")
         if (target - ltp) * s <= 0:
             return self._refuse_review(review_id, f"the price {ltp:.2f} has already reached the target {target:.2f}")
-        rrr = trader_brain._net_rrr(ltp, stop, target, params["cost_pct"])
+        # The same round-trip cost the offer deducted, so the R:R here and on
+        # the card differ only by the price.
+        cost_pct = card["cost_pct"] if card.get("cost_pct") is not None else params["cost_pct"]
+        rrr = trader_brain._net_rrr(ltp, stop, target, cost_pct)
+        # The offer held an R:R card to the floor at its own price; a price that
+        # has since moved toward the target can leave the fill below it (#211).
+        below = review_queue.floor_reason(card["blocker"], rrr, at=f"at the live price {ltp:.2f}")
+        if below:
+            was = f" (it was {card['net_rrr']:.2f} at the offer)" if card.get("net_rrr") is not None else ""
+            return self._refuse_review(review_id, below + was, net_rrr_live=round(rrr, 3), live_price=round(ltp, 2))
         candles = self.state.candles.get(symbol) or []
         atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) \
             if config.RISK.get("use_atr_risk") and candles else None
@@ -1369,9 +1382,12 @@ class TradingEngine:
             return
 
         # NSE's MWPL ban (FNO-08), read from the same list as the scanner's ban
-        # guard. Checked before any contract lookup, quote or order.
-        mwpl = fno_risk.mwpl_block_reason(underlying, nse_feed.fno_ban_list(),
-                                          datetime.now(IST).date().isoformat(), cfg["index_underlyings"])
+        # guard. Checked before any contract lookup, quote or order. While the
+        # list can't be fetched, this returns at once until the retry time (#212).
+        ban = nse_feed.fno_ban_list()
+        unknown_why = nse_feed.failure_text(nse_feed.last_failure(nse_feed.FNO_BAN_URL)) if ban is None else ""
+        mwpl = fno_risk.mwpl_block_reason(underlying, ban, datetime.now(IST).date().isoformat(),
+                                          cfg["index_underlyings"], unknown_why=unknown_why)
         if mwpl:
             self._blocked(underlying, "F&O entry", mwpl)
             return log_eval(False, mwpl)

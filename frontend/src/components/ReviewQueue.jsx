@@ -72,7 +72,10 @@ function PendingCard({ c, live }) {
     setBusy(true);
     const r = await post(`/api/review-queue/${c.id}/approve`, body);
     setBusy(false);
-    setMsg(r.ok ? `Placed: ${r.qty} @ ${num(r.fill_price)} (R:R ${num(r.net_rrr_at_fill)} at the fill)` : r.reason);
+    // A refusal (a risk limit, or the R:R floor at the live price, #211) is
+    // journaled with its reason; the card moves to the decided list with it.
+    setMsg(r.ok ? `Placed: ${r.qty} @ ${num(r.fill_price)} (R:R ${num(r.net_rrr_at_fill)} at the fill)`
+      : r.status === "refused" ? `Not placed: ${r.reason}.` : r.reason);
   }
 
   async function reject() {
@@ -223,7 +226,8 @@ export default function ReviewQueue({ s }) {
             {rq.enabled
               ? `Setups that failed exactly one rule appear here for ${Math.round(rq.expiry_seconds / 60)} minutes. ` +
                 (rq.min_net_rrr != null
-                  ? `A reward-to-risk miss is offered only if its R:R after costs is at least ${num(rq.min_net_rrr, 1)}. `
+                  ? `A reward-to-risk miss is offered only if its R:R after costs is at least ${num(rq.min_net_rrr, 1)}, ` +
+                    "and an approval is refused if it has fallen below that at the live price. "
                   : "") +
                 "Nothing is placed unless you approve."
               : "Off: setups that fail a rule are skipped, as usual. Turn it on to decide on near-misses yourself."}

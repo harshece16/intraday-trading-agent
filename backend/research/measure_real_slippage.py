@@ -17,16 +17,23 @@ What counts as a signal (one per symbol, side and 5-minute bar, first read):
 The reference price is the row's ltp, the price the engine saw when it read
 the checklist.
 
-WHAT depth_samples CANNOT DO. It stores the best bid and ask, the quantity at
-level 1 and the summed quantity of five levels, but NOT the prices of levels
-2-5. So a fill is one of:
+TWO KINDS OF depth_samples ROW. Every row has the best bid and ask, the
+quantity at level 1 and the summed quantity of five levels. Rows recorded
+since #188 was deployed also carry each level's price and quantity
+(bid_levels_json, ask_levels_json); rows from before it do not, and never
+will. So a fill is one of:
   level1        the order fits at the touch: impact is exact (half-spread)
-  ladder        it fits inside five levels: the price is MODELLED by putting
-                the rest of the quantity evenly on levels 2-5, one tick apart
-                (tick = the symbol's smallest spread seen). A real book with
-                gaps is worse than this; treat it as a floor.
+  recorded      it fits inside the recorded levels: walked on the real
+                prices and quantities of levels 2-5 (a measurement)
+  ladder        a row without recorded levels, and the order fits inside the
+                five-level sum: the price is MODELLED by putting the rest of
+                the quantity evenly on levels 2-5, one tick apart (tick = the
+                symbol's smallest spread seen). A real book with gaps is worse
+                than this; treat it as a floor.
   insufficient  five levels do not hold the size: counted, never extrapolated
-liquidity_checks holds true five-level walks, but only for entries taken.
+The output counts each kind, so it says which rows were walked on real levels
+and which on the model. liquidity_checks holds true five-level walks too, but
+only for entries taken.
 
 Usage:
   python research/measure_real_slippage.py --db /path/to/snapshot.db [--out result.json|.md]
@@ -53,6 +60,7 @@ DEFAULT_DB = os.environ.get("SAHAB_DB_PATH") or str(
 TABLES = ("depth_samples", "liquidity_checks", "checklist_evals")
 NEED = {"depth_samples": {"ts", "symbol", "ltp", "bid", "ask", "bid_qty1", "ask_qty1", "bid_qty5", "ask_qty5"},
         "checklist_evals": {"ts", "symbol", "ltp", "checklist_json"}}
+LEVELS = ("bid_levels_json", "ask_levels_json")    # since #188; optional, older rows are NULL
 MEASURES = ("half_spread_bp", "cross_bp", "impact_bp")
 MIN_SESSIONS, MIN_SIGNALS = 5, 30      # below either, no conclusion is offered
 
@@ -75,6 +83,19 @@ def walk(levels, qty):
     return None
 
 
+def parse_levels(text):
+    """[(price, quantity), ...] best first from a stored *_levels_json cell
+    ([[price, quantity, orders], ...]), or None when the row has none (a row
+    from before #188) or the cell cannot be read."""
+    if not text:
+        return None
+    try:
+        levels = [(float(lv[0]), float(lv[1])) for lv in json.loads(text) if lv[0] and lv[1]]
+    except (TypeError, ValueError, IndexError):
+        return None
+    return levels or None
+
+
 def ladder(best, qty1, qty5, tick, buy):
     """The modelled five levels: level 1 as recorded, the rest of the
     five-level quantity spread evenly over levels 2-5, one tick apart."""
@@ -83,9 +104,12 @@ def ladder(best, qty1, qty5, tick, buy):
     return [(best, qty1)] + [(best + i * step, rest) for i in range(1, 5)]
 
 
-def measure(bid, ask, bid_qty1, ask_qty1, bid_qty5, ask_qty5, side, qty, ref, tick):
+def measure(bid, ask, bid_qty1, ask_qty1, bid_qty5, ask_qty5, side, qty, ref, tick, levels=None):
     """Costs of one leg in bp. side is "long" (buy at the ask) or "short"
-    (sell at the bid). Positive = a cost. None for a crossed/empty book."""
+    (sell at the bid). Positive = a cost. None for a crossed/empty book.
+    `levels` is the recorded book of the side the order crosses, best first
+    (the asks for a buy), or None for a row from before #188: an order past
+    level 1 is then walked on the modelled ladder instead."""
     if not bid or not ask or ask < bid or not ref:
         return None
     mid = (bid + ask) / 2
@@ -98,6 +122,12 @@ def measure(bid, ask, bid_qty1, ask_qty1, bid_qty5, ask_qty5, side, qty, ref, ti
         out["fill"] = "zero_qty"
     elif qty <= q1:
         out["fill"], out["impact_bp"] = "level1", out["half_spread_bp"]
+    elif levels:
+        vwap = walk(levels, qty)
+        if vwap is None:
+            out["fill"] = "insufficient"
+        else:
+            out["fill"], out["impact_bp"] = "recorded", abs(vwap - mid) / mid * 1e4
     elif qty <= q5:
         vwap = walk(ladder(best, q1, q5, tick, buy), qty)
         out["fill"] = "ladder"
@@ -158,12 +188,16 @@ def inventory(con):
 
 
 def load_samples(con):
-    """{symbol: [(ts, ltp, bid, ask, bq1, aq1, bq5, aq5), ...] sorted by ts},
-    rows with a real two-sided book only (index rows carry a level, no book)."""
+    """{symbol: [(ts, ltp, bid, ask, bq1, aq1, bq5, aq5, bid_levels, ask_levels), ...]
+    sorted by ts}, rows with a real two-sided book only (index rows carry a
+    level, no book). bid_levels/ask_levels are parse_levels() of the recorded
+    book, None for a row without one (every row of a journal from before #188)."""
+    has_levels = set(LEVELS) <= columns(con, "depth_samples")
     book = defaultdict(list)
-    for r in con.execute("SELECT symbol, ts, ltp, bid, ask, bid_qty1, ask_qty1, bid_qty5, ask_qty5 "
-                         "FROM depth_samples WHERE bid > 0 AND ask >= bid ORDER BY symbol, ts"):
-        book[r[0]].append(r[1:])
+    for r in con.execute("SELECT symbol, ts, ltp, bid, ask, bid_qty1, ask_qty1, bid_qty5, ask_qty5, %s "
+                         "FROM depth_samples WHERE bid > 0 AND ask >= bid ORDER BY symbol, ts"
+                         % (", ".join(LEVELS) if has_levels else "NULL, NULL")):
+        book[r[0]].append(tuple(r[1:9]) + (parse_levels(r[9]), parse_levels(r[10])))
     return book
 
 
@@ -247,7 +281,8 @@ def table(title, summary, say):
             continue
         f = S["fills"]
         say(f"  {g}: legs={S['n']:,} sessions={S['sessions']} symbols={S['symbols']}  "
-            f"fill at level1={f.get('level1', 0):,} modelled ladder={f.get('ladder', 0):,} "
+            f"fill at level1={f.get('level1', 0):,} walked recorded levels={f.get('recorded', 0):,} "
+            f"modelled ladder={f.get('ladder', 0):,} "
             f"five levels insufficient={f.get('insufficient', 0):,} zero qty={f.get('zero_qty', 0):,}")
         for m in MEASURES:
             x = S[m]
@@ -310,11 +345,15 @@ def main(argv=None):
         sys.exit(f"\nToo little data: {n_samples} two-sided book samples over {len(book)} symbols; "
                  "three symbols are needed to form terciles.")
     sample_days = sorted({day(r[0]) for rows in book.values() for r in rows})
+    with_levels = sum(1 for rows in book.values() for r in rows if r[8] and r[9])
 
     tercile, depth_rs = terciles(book)
     tick = {s: max(min([round(r[3] - r[2], 2) for r in rows if r[3] > r[2]] or [0.05]), 0.01)
             for s, rows in book.items()}
     say(f"\nTwo-sided book samples used: {n_samples:,} over {len(book)} symbols, sessions {sample_days}")
+    say(f"Samples with the book recorded level by level (#188): {with_levels:,} of {n_samples:,}. "
+        "An order past level 1 is walked on the recorded levels in those, and on the modelled "
+        "one-tick ladder in the rest.")
     say("Liquidity measure: each symbol's median five-level depth in rupees, (bid_qty5+ask_qty5)/2 x mid.")
     for name in ("T1 most liquid", "T2 middle", "T3 least liquid"):
         d = sorted(depth_rs[s] for s in book if tercile[s] == name)
@@ -333,12 +372,13 @@ def main(argv=None):
         if hit is None or hit[0] - s["ts"] > a.max_gap:
             dropped_gap += 1
             continue
-        _, _ltp, bid, ask, bq1, aq1, bq5, aq5 = hit
+        _, _ltp, bid, ask, bq1, aq1, bq5, aq5, bid_lv, ask_lv = hit
         qty = engine_qty(s["json"], s["ref"], capital, risk_pct, cap_pct)
         how = "engine"
         if qty is None:
             qty, how = int(notional / ((bid + ask) / 2)), "notional"
-        m = measure(bid, ask, bq1, aq1, bq5, aq5, s["side"], qty, s["ref"], tick[s["symbol"]])
+        m = measure(bid, ask, bq1, aq1, bq5, aq5, s["side"], qty, s["ref"], tick[s["symbol"]],
+                    levels=ask_lv if s["side"] == "long" else bid_lv)
         if m is None:
             continue
         sized[how] += 1
@@ -361,10 +401,11 @@ def main(argv=None):
     # ---- every book sample, both sides -----------------------------------
     allrecs = []
     for sym, rows in book.items():
-        for ts, ltp, bid, ask, bq1, aq1, bq5, aq5 in rows:
+        for ts, ltp, bid, ask, bq1, aq1, bq5, aq5, bid_lv, ask_lv in rows:
             qty = int(notional / ((bid + ask) / 2))
             for side in ("long", "short"):
-                m = measure(bid, ask, bq1, aq1, bq5, aq5, side, qty, ltp or (bid + ask) / 2, tick[sym])
+                m = measure(bid, ask, bq1, aq1, bq5, aq5, side, qty, ltp or (bid + ask) / 2, tick[sym],
+                            levels=ask_lv if side == "long" else bid_lv)
                 if m:
                     allrecs.append({"symbol": sym, "day": day(ts), "tercile": tercile[sym], **m})
     all_sum = summarise(allrecs)
@@ -405,8 +446,13 @@ def main(argv=None):
     say("   - These are snapshots, not executed fills. No real order has ever been placed.")
     say("   - A MARKET order's real fill can be worse: latency between signal and order, queue position,")
     say("     and the book moving (or being pulled) before the order arrives.")
-    say("   - depth_samples has no prices for levels 2-5, so any impact beyond level 1 is MODELLED on a")
-    say("     one-tick ladder and is a floor, not a measurement. Only section C walks real levels.")
+    if with_levels < n_samples:
+        say(f"   - {n_samples - with_levels:,} of {n_samples:,} book samples predate #188 and have no prices for")
+        say("     levels 2-5, so an impact beyond level 1 on those rows is MODELLED on a one-tick ladder and is a")
+        say("     floor, not a measurement (fill 'modelled ladder'). Rows counted under 'walked recorded levels'")
+        say("     and section C walk real levels.")
+    else:
+        say("   - Every book sample carries its recorded levels: impact beyond level 1 is walked on real prices.")
     say("   - cross_bp compares against ltp, a last trade that may be stale or on either side of the book;")
     say("     it can be negative. The sample is taken up to --max-gap seconds after the signal.")
     say(f"   - The samples cover {len(sample_days)} session(s) ({sample_days[0]} -> {sample_days[-1]}); that window may not be")
@@ -417,6 +463,7 @@ def main(argv=None):
         if a.out.endswith(".json"):
             Path(a.out).write_text(json.dumps({
                 "db": a.db, "assumed_bp_per_leg": assumed_bp, "max_gap_s": a.max_gap, "notional": notional,
+                "book_samples": n_samples, "book_samples_with_levels": with_levels,
                 "inventory": inv, "signals": {"found": len(signals), "matched": len(recs), "kinds": dict(kinds),
                                               "dropped_gap": dropped_gap, "no_samples": no_samples, "sized": sized},
                 "signal_matched": sig_sum, "full_passes": pass_sum, "all_samples": all_sum,
@@ -425,7 +472,7 @@ def main(argv=None):
             Path(a.out).write_text("```\n" + "\n".join(lines) + "\n```\n")
         print(f"\nwrote {a.out}")
     return {"signal_matched": sig_sum, "all_samples": all_sum, "dropped_gap": dropped_gap,
-            "matched": recs, "too_thin": thin}
+            "matched": recs, "too_thin": thin, "book_samples": n_samples, "book_samples_with_levels": with_levels}
 
 
 if __name__ == "__main__":

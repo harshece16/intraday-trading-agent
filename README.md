@@ -3991,6 +3991,88 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 
 The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
+### 111. An approval is held to the R:R floor at the live price, and a failed NSE file is not fetched again for 3 minutes (#211, #212)
+
+**1. The R:R floor is checked again when you approve (#211).** Since §105 the review queue offers a card blocked on reward-to-risk only if its R:R after costs, at the offer, is at least `REVIEW_QUEUE["min_net_rrr"]` (1.0). Approval did not check it again. A card offered at 1.05 could be approved minutes later, after the price had moved toward the target, at a fill where the same trade netted well under 1.0.
+
+- **Now:** at the click, the engine works out the net R:R at the live price with the card's own stop, target and round-trip cost, the figures the offer used, so the two differ only by the price. Under the floor the approval is refused, for example: "reward-to-risk after costs is 0.63 at the live price 100.50, under the queue's floor of 1 (it was 1.00 at the offer)". The card stays in `manual_reviews` as `refused`, with that reason and `net_rrr_live`, and the activity log says so. The Overview page shows "Not placed: …" by the buttons and the reason in the decided list.
+- **Unchanged:** cards blocked on anything else (volume, pattern, confidence…) are not held to the floor, as at the offer. `min_net_rrr = None` switches it off in both places. Every other re-check (§64) runs as before.
+
+How much it bites, from the 71 real cards in the journal to 2026-09-30 (read-only copy; for each card, its net R:R at every live price the engine recorded while it was open):
+
+| Net R:R while a card was open, against its value at the offer | Prices (n = 425) | Cards whose lowest was this far down (n = 69) |
+| --- | --- | --- |
+| Lower at all | 45% | 53 |
+| More than 0.10 lower | 16% | 25 |
+| More than 0.25 lower | 5% | 6 |
+| More than 0.50 lower | 2% | 3 |
+
+So a card offered at 1.00 to 1.10 would often be refused if approved at a bad moment, and one offered at 1.25 or more rarely. No R:R card has cleared the floor at the offer yet (the floor goes live on 2026-10-01), so none of the 71 would have met this check. The 7 cards offered at 1.0 or more were all blocked on other items, and none went under 1.0 while open.
+
+**2. A failed NSE archive file is remembered (#212).** `nse_feed._archive` reads the F&O ban list and the price-band list from NSE's archives with a 15-second timeout. A failed fetch was not remembered, so while the archive was down every caller waited out its own timeout. The F&O ban check (§108) runs once per candidate.
+
+- **Now:** a failed fetch (no answer, a refusal such as HTTP 503, or a file not in the expected format) is remembered per file for `nse_feed.ARCHIVE_RETRY_S`, 180 seconds. Until then the file is unknown at once and NSE is not asked. One caller at a time fetches a given file, so a caller that arrives during a fetch gets its answer.
+- **Unknown, not empty, as before.** The answer is still "unknown", never a stale copy and never an empty list. The F&O path still refuses stock options on an unknown list, and its reason now says when the last try failed and when it is tried again: "NSE's F&O ban list could not be read (the last try, at 20:09:27 IST, failed (no answer within 15 s); it is tried again after 20:12:27), so the ban status is unknown; no stock option is bought". The scan result carries the same (`guards.unread`), and the Screener's guard line reads "F&O ban list: could not be read (the last try, at …, failed: …; tried again after …), so no stock is left out for it."
+
+**Checked on the real network, 2026-09-30.** NSE's live ban file was read in 0.11 s: trade date 2026-10-01, BANDHANBNK and SAIL. Then the same code was pointed at an address that never answers, and four candidates went through the ban check:
+
+| | Candidate 1 | 2 | 3 | 4 | Total |
+| --- | --- | --- | --- | --- | --- |
+| `main` | 15.0 s | 15.0 s | 15.0 s | 15.0 s | 60.0 s |
+| This change | 15.0 s | 0.00 s | 0.00 s | 0.00 s | 15.0 s |
+
+F&O is still off (`FNO.enabled = False`), so nothing in the running engine is faster today. The scanner reads the two files once per scan and is affected little.
+
+**Tests.** `backend/tests/test_review_queue.py`: a card offered at 1.00 and approved at 0.63 is refused, journaled and logged; one still at 1.00 is placed; a volume card is not held to the floor; `None` switches it off; a later change to the strategy's cost figure does not move the card's bar. `backend/tests/test_scanner_guards.py`: no second fetch before the retry time, and a fetch after it; the failure's time and reason; a refusal and an unreadable file remembered too; each file on its own; a caller during a fetch waits for it; the scan's `unread` note, with an unknown file still excluding nothing. `backend/tests/test_fno_mwpl.py`: with NSE down, three candidates make one fetch and all three reasons name the failed try.
+
+Rules: ENT-26, SCN-20, FNO-08. Files: `backend/review_queue.py`, `backend/trading_engine.py`, `backend/nse_feed.py`, `backend/fno_risk.py`, `backend/scanner.py`, `frontend/src/components/ReviewQueue.jsx`, `frontend/src/components/ListNotes.jsx`, the three test files, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
+### 112. The order-book samples keep every level (#188)
+
+**The problem.** The order-book sampler (§71) kept the best bid and ask, the quantity at level 1 and the summed quantity of five levels. It dropped the price and quantity of levels 2 to 5. So the cost of an order bigger than level 1 could only be modelled: in the first slippage measurement (#66, PR #185), 7,581 of 34,534 sampled legs (22%) needed a ladder that puts the rest of the quantity one tick apart, which is a floor, not a measurement.
+
+**The change.** Each `depth_samples` row with a book now also stores the book itself, in two new columns, `bid_levels_json` and `ask_levels_json`: each non-empty level, best first, as `[price, quantity, orders]` (Kite gives the number of orders at each level). It is the same quote call per tick; the levels were already in Kite's answer and were being thrown away.
+
+- **Every existing column keeps its meaning and its values.** They are computed from the same levels as before, because the pre-registered order-book test (L37, due after 15 full sessions) reads them. Checked: the new code and the old gave identical values on 20,000 random books. `prereg-orderbook.md` amendment 6 records the change before any sample has been joined to a return.
+- **The migration rewrites nothing.** The columns are added to the live journal at the next backend start, with `ALTER TABLE ... ADD COLUMN`, which changes the table's definition only. On a copy of the journal taken on 2026-09-30 (44,452 rows) it took 2 ms, the file size did not change, and every old row hashed the same before and after. Old rows read NULL in the new columns; they cannot be repaired.
+- **`research/measure_real_slippage.py` uses the real levels when a row has them.** An order past level 1 is walked on the recorded levels (counted as "walked recorded levels") and, on a row from before this change, on the modelled ladder as before ("modelled ladder"). The output says how many book samples carry levels: on the copy of 2026-09-30, 0 of 44,243, since every sample so far predates this.
+- `GET /api/journal/depth-samples` also reports `rows_with_levels`.
+
+**What this does not do.** It does not measure slippage yet. It starts recording what that measurement needs, from the first session after the next backend restart. A row grows by about 180 bytes, about 2.5 MB a session at 25 stocks.
+
+Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
+### 113. The two paper books keep their record when a round is cut short or data is missing (#158, #159)
+
+Two fixes to the forward paper tests. Neither changes a rule. Both change what happens when something fails part-way, so the record says what the rule says rather than what the failure left behind.
+
+**Jev book (#158, §86).**
+
+- **A round cut short keeps its decisions.** If TypeSafe failed after Jev had already answered for some stocks, the day was marked "Jev unavailable". The 15:08 close skips such days, so positions opened at a live Kite price never closed and never counted. Now the day stays open with the decisions made so far, they close at 15:08 like any other round, and the stop is recorded beside them: the time, the error and the stocks not asked. The Jev Book page says so ("Today's round stopped after 3 of 15 stocks…"). An error on the first stock still records the day as "Jev unavailable".
+- **"Live prices" now means a Kite session that is still alive.** The gate checked that a token was stored and not yet rejected. Zerodha ends every session at 06:00 IST, so on a morning without a reconnect the gate passed, Jev was asked about each stock, and every fill failed. The gate now also checks the 06:00 expiry (`kite_live()`: the check the dashboard's Kite status uses). Such a morning is recorded as "no live prices" and Jev is not asked. The fills and the live mark use the same check.
+- **The round stops when Kite stops.** The gate is asked again before each stock. If Kite rejects the session part-way, the rest of the list is not asked, and the round is kept as above.
+
+Neither case has happened: the three recorded rounds (28 to 30 September) closed with 15 decisions each and none excluded. Pre-registration clarification 9 records the change.
+
+**Momentum book (#159, §83).**
+
+- **A failed download is fetched again.** The evening job used to start at the day after the newest bhavcopy it had, so a day that failed while a later one arrived was never fetched again. Each run now asks NSE for every day of the last 31 without a file. NSE answers 404 for a weekend, a holiday or a file not yet out; anything else is a failed download.
+- **The book waits for missing data.** If a past day's download failed, the book stops before that day rather than trade past it: processing the next session without it would fill orders a day late or rank a month turn at the wrong close. It keeps the sessions before it, and the next run tries again. The same happens at a month turn whose ranking comes out empty. That used to skip the month's rebalance and mark, and the next session was no longer a month turn. The job exits with code 4 in both cases, and the Momentum Book page shows the reason in red.
+- **A failed corporate-actions refresh is logged**, and the page's footer gives the date of the file in use, with "the last refresh failed" when it did. A split or bonus missing from the file would show as a price drop.
+
+**Checked.**
+
+| Check | Result |
+| --- | --- |
+| Old and new evening job on the real bhavcopy cache to 2026-09-30, on copies of the state: the live book, a book started 2025-12-20 (9 rebalances) and one started 2024-06-20 (27) | Identical holdings, trades, values and month points in all three |
+| The new download window against NSE, 1 October, into a scratch folder | 10 days asked (weekends, 14 September's holiday, 1 October not yet out): all 404, none failed, 5 seconds |
+| The research parity tests (`test_momentum_book.py`) | Pass unchanged |
+| The two pages, on the worktree's dashboard against a mock of the two endpoints | The interruption line, the new "no live prices" text, the red "stopped early" line and the corporate-actions date show as written |
+
+The Jev part goes live with the next backend restart. The momentum job runs from the main checkout's file, so its part goes live when `main` is pulled there; the first rebalance is on the evening of 1 October.
+
+Rules: JEV-06, JEV-07, JEV-08, MOM-11, MOM-13. Files: `backend/jev_book.py`, `backend/momentum_book.py`, `backend/tests/test_jev_book.py`, `backend/tests/test_momentum_book_data.py`, `frontend/src/pages/JevBook.jsx`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-jev-book.md`, `docs/research/prereg-3i-momentum-corrected-data.md`, `docs/architecture/` (rules, HLD, LLD).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
