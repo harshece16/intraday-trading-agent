@@ -181,14 +181,14 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
    - **The look-ahead proof** draws 240 pairs, 80 per window, at decision bars closing 09:45 to 15:15.
    - **The threshold C** is the computed 6.946 bp, which the text rounds to 6.95.
    - **§9.4's hand check** re-reads the two bars from the cache rather than from the loaded arrays.
-4. **2026-09-30, 20:35 IST, after the first stage-0 run halted at §9.1 and before any other check ran.** That run computed nothing beyond the session lists: no characteristic check, factor, predictor check, target, fit or forecast had run. The halt was in the check's definition, not the data:
+4. **2026-09-30, 20:30 IST, after the first stage-0 run halted at §9.1 and before any other check ran.** That run computed nothing beyond the session lists: no characteristic check, factor, predictor check, target, fit or forecast had run. The halt was in the check's definition, not the data:
    - **The Muhurat session of 2024-11-01 ran 18:00 to 19:00 IST.** Both databases have it: 60 index minutes, and 12 stock bars from 18:00 to 18:55. None of it falls in the 09:15–15:25 window, so the index has no regular-hours bars that day, and the check, written for a 60-minute session inside the window, misfiled it. The 2025-10-21 session (13:45 to 14:45) fell as expected.
    - **The stock cache has a session on 2026-01-01** (100 symbols, 75 bars each). The loader's pre-registered cut, before 2026-01-02 (`splits.HELD_OUT_START`, as L47), keeps it. The index database ends on 2025-12-31, so that session has no index bars and is dropped. It lies after the scoring sample, in the embargo before the held-out window, and nothing uses it. It is not held-out data by the project's definition, but it is a 2026 date; recorded here.
    - **§9.1 now reads:**
      - the dropped sessions are exactly 2024-11-01 (no regular-hours bars), 2025-10-21 (60 index minutes) and 2026-01-01 (no index bars);
      - the stock cache's sessions up to 2025-12-31 equal the index database's, counting any minute of the day.
    - Every other condition of §9.1 is unchanged.
-5. **2026-09-30, 20:50 IST, after stage-0 run 2 halted at §9.7 (`data/l51_stage0_run2.json`, head e5ed55d). No scoring-sample target has been read.**
+5. **2026-09-30, 20:33 IST, after stage-0 run 2 halted at §9.7 (`data/l51_stage0_run2.json`, head e5ed55d). No scoring-sample target has been read.**
    - **Checks 1 to 6 passed** in run 2:
      - coverage (78 scoring sessions, 39 per half, 85 to 94 members a session);
      - alignment (correlation 0.888 at lag 0, |r| < 0.02 at lags ±1 and ±2);
@@ -204,4 +204,6 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
      - the 0.5 control is kept and reported every run as **information on the design's power**, not as a halt;
      - the halt rule otherwise stands: at 0.7 the control must pass both horizons, and the negative control must pass neither.
    - **What run 2 already says about L51, before any scoring target is read:** a forecast with an IC of about 0.4 against the realised return only just clears 6.95 bp at 30 minutes (+2.1 bp a trade, t 1.24). The paper's R² of 0.2% corresponds to an IC of about 0.045. The first-window cross-validation picked α = 100 at 30 minutes and α = 31.6 at 60 minutes. Their validation MSE is 0.02% and 0.12% below the intercept-only level, so the 92 predictors add almost nothing there. L51 is expected to fail on the trade count, and its IC is the informative number.
+
+**Stage 0, run 3 (2026-09-30, 20:33 IST, head ebbc5a4): STAGE0_DONE.** Every halt passed. The two earlier runs are kept as `l51_stage0_run1.json` and `l51_stage0_run2.json`. The times of amendments 4 and 5 are corrected here to their commit times (20:30 and 20:33); they had been written as 20:35 and 20:50. The scoring pass waits for the independent review and the main session's go-ahead.
 
