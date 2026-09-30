@@ -1,0 +1,953 @@
+{
+ "stage0": {
+  "look": "L49",
+  "prereg": "docs/research/prereg-scanner-features.md",
+  "prereg_commit": "dc06a10",
+  "started": "2026-09-30T20:39:28.260927+05:30",
+  "argv": [
+   "--stage0"
+  ],
+  "environment": {
+   "python": "3.9.6",
+   "platform": "macOS-26.6.2-arm64-arm-64bit",
+   "machine": "arm64",
+   "niceness": 15,
+   "head": "985bb62a95397f6aecf2e175eb485835d8ccea10",
+   "module_dirty": false,
+   "candle_db": "/Users/harshgupta/Projects/webapp/backend/data/kite_history.db",
+   "data_dir": "/Users/harshgupta/Projects/webapp/backend/data"
+  },
+  "1_features": {
+   "features": [
+    "gap",
+    "rvol",
+    "vwap_dist",
+    "sector",
+    "gap_reversal"
+   ],
+   "tests": {
+    "gap_f15": [
+     "gap",
+     "f15"
+    ],
+    "gap_f30": [
+     "gap",
+     "f30"
+    ],
+    "gap_f60": [
+     "gap",
+     "f60"
+    ],
+    "rvol_f15": [
+     "rvol",
+     "f15"
+    ],
+    "rvol_f30": [
+     "rvol",
+     "f30"
+    ],
+    "rvol_f60": [
+     "rvol",
+     "f60"
+    ],
+    "vwap_dist_f15": [
+     "vwap_dist",
+     "f15"
+    ],
+    "vwap_dist_f30": [
+     "vwap_dist",
+     "f30"
+    ],
+    "vwap_dist_f60": [
+     "vwap_dist",
+     "f60"
+    ],
+    "sector_f15": [
+     "sector",
+     "f15"
+    ],
+    "sector_f30": [
+     "sector",
+     "f30"
+    ],
+    "sector_f60": [
+     "sector",
+     "f60"
+    ],
+    "gap_reversal_f60": [
+     "gap_reversal",
+     "f60"
+    ]
+   },
+   "n_tests": 13,
+   "passes": true
+  },
+  "2_data": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "latest_bar_read": "2025-12-31T15:25:00",
+   "symbols_loaded": 100,
+   "bhav_files": {
+    "count": 103,
+    "first": "2025-08-01",
+    "last": "2025-12-31",
+    "date_mismatches": []
+   },
+   "corporate_actions_file": "ca_2025.csv",
+   "industries_file": "/Users/harshgupta/Projects/webapp/.claude/worktrees/l49/backend/research/data/l49_industries.csv",
+   "passes": true
+  },
+  "3_l40_sample": {
+   "got": {
+    "sessions": 79,
+    "sessions_with_data": 78,
+    "stock_times": 43362,
+    "halves": [
+     39,
+     40
+    ]
+   },
+   "expected": {
+    "sessions": 79,
+    "sessions_with_data": 78,
+    "stock_times": 43362,
+    "halves": [
+     39,
+     40
+    ]
+   },
+   "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+   "l40_record": {
+    "coverage": {
+     "sessions": 79,
+     "first_half": 39,
+     "second_half": 40,
+     "stock_times": 43362,
+     "sessions_below_min_stocks": []
+    },
+    "dropped": {},
+    "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23"
+   },
+   "dropped": {},
+   "passes": true
+  },
+  "4_alignment": {
+   "pairs": 7263,
+   "share_within_tol": 1.0,
+   "tol_bp": 5.0,
+   "min_share": 0.95,
+   "median_bp": 0.0,
+   "p95_bp": 0.43128906383471666,
+   "max_bp": 2.0910320243583413,
+   "worst": [
+    {
+     "symbol": "ONGC",
+     "from": "2025-09-10",
+     "to": "2025-09-11",
+     "move_bp": 2.0910320243583413,
+     "factor_from": 0.953484380363886,
+     "factor_to": 0.9536837570012926
+    },
+    {
+     "symbol": "KOTAKBANK",
+     "from": "2025-08-29",
+     "to": "2025-09-01",
+     "move_bp": 2.039532513986586,
+     "factor_from": 0.19997948928315043,
+     "factor_to": 0.2000202757502028
+    },
+    {
+     "symbol": "BANKBARODA",
+     "from": "2025-09-12",
+     "to": "2025-09-15",
+     "move_bp": 1.891845157019345,
+     "factor_from": 0.9687486730924377,
+     "factor_to": 0.9685654008438819
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-10-06",
+     "to": "2025-10-07",
+     "move_bp": 1.8751696523322536,
+     "factor_from": 0.9535286120380669,
+     "factor_to": 0.9537074148296593
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-09-26",
+     "to": "2025-09-29",
+     "move_bp": 1.8179265805251532,
+     "factor_from": 0.9535503204861401,
+     "factor_to": 0.9537236689334881
+    },
+    {
+     "symbol": "ADANIPOWER",
+     "from": "2025-09-04",
+     "to": "2025-09-05",
+     "move_bp": 1.6469061657398143,
+     "factor_from": 0.19998351331299977,
+     "factor_to": 0.2000164487211119
+    },
+    {
+     "symbol": "ADANIPOWER",
+     "from": "2025-09-05",
+     "to": "2025-09-08",
+     "move_bp": 1.6365673976470596,
+     "factor_from": 0.2000164487211119,
+     "factor_to": 0.1999837146812149
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-09-09",
+     "to": "2025-09-10",
+     "move_bp": 1.6359429080303745,
+     "factor_from": 0.9536403904872489,
+     "factor_to": 0.953484380363886
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-12-19",
+     "to": "2025-12-22",
+     "move_bp": 1.614774830990262,
+     "factor_from": 0.9770877944325482,
+     "factor_to": 0.9769300167547365
+    },
+    {
+     "symbol": "BPCL",
+     "from": "2025-09-04",
+     "to": "2025-09-05",
+     "move_bp": 1.5777387360538242,
+     "factor_from": 0.9524777239330935,
+     "factor_to": 0.9523274478330658
+    },
+    {
+     "symbol": "WIPRO",
+     "from": "2025-09-10",
+     "to": "2025-09-11",
+     "move_bp": 1.5349617205073773,
+     "factor_from": 0.9749247743229689,
+     "factor_to": 0.9747751271020728
+    },
+    {
+     "symbol": "BANKBARODA",
+     "from": "2025-09-03",
+     "to": "2025-09-04",
+     "move_bp": 1.5233613786436173,
+     "factor_from": 0.9685698657802836,
+     "factor_to": 0.9687174139728885
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-10-10",
+     "to": "2025-10-13",
+     "move_bp": 1.4919956059733508,
+     "factor_from": 0.9535373158491176,
+     "factor_to": 0.9536795831976556
+    },
+    {
+     "symbol": "ONGC",
+     "from": "2025-12-05",
+     "to": "2025-12-08",
+     "move_bp": 1.4913410838124364,
+     "factor_from": 0.976926246394726,
+     "factor_to": 0.9770719394194363
+    },
+    {
+     "symbol": "VEDL",
+     "from": "2025-09-08",
+     "to": "2025-09-09",
+     "move_bp": 1.4873380837054917,
+     "factor_from": 0.5233623713089717,
+     "factor_to": 0.5234402129876143
+    }
+   ],
+   "skipped": {
+    "ex_date": 58
+   },
+   "run1_anchor_last_information": {
+    "pairs": 7263,
+    "median_bp": 0.5955926146516966,
+    "p95_bp": 20.289855072463947,
+    "share_within_tol": 0.728486851163431
+   },
+   "same_day_spread_of_three_ratios_information": {
+    "n": 7263,
+    "median_bp": 0.0,
+    "p95_bp": 0.842956126714256,
+    "max_bp": 27.72540756349029
+   },
+   "passes": true
+  },
+  "5_coverage": {
+   "features": {
+    "gap": {
+     "stock_times": 43362,
+     "defined": 43020,
+     "undefined_by_reason": {
+      "ca_exdate": 342
+     },
+     "undefined_by_stock": {
+      "HINDUNILVR": 24,
+      "INFY": 24,
+      "NTPC": 24,
+      "ONGC": 24,
+      "ADANIENT": 12,
+      "ADANIPOWER": 12,
+      "ASIANPAINT": 12,
+      "BAJAJHLDNG": 12,
+      "BPCL": 12,
+      "COALINDIA": 12,
+      "GODREJCP": 12,
+      "HCLTECH": 12,
+      "IOC": 12,
+      "IRFC": 12,
+      "LTM": 12,
+      "MAZDOCK": 12,
+      "PFC": 12,
+      "PIDILITIND": 12,
+      "POWERGRID": 12,
+      "RECLTD": 12,
+      "SHREECEM": 12,
+      "SHRIRAMFIN": 12,
+      "TCS": 12,
+      "TMPV": 12,
+      "TECHM": 6
+     },
+     "missing_share": 0.0,
+     "unregistered_reasons": []
+    },
+    "rvol": {
+     "stock_times": 43362,
+     "defined": 42858,
+     "undefined_by_reason": {
+      "ca_volume_unit": 504
+     },
+     "undefined_by_stock": {
+      "ADANIPOWER": 126,
+      "PIDILITIND": 126,
+      "HDFCBANK": 108,
+      "TVSMOTOR": 102,
+      "NESTLEIND": 42
+     },
+     "missing_share": 0.0,
+     "unregistered_reasons": []
+    },
+    "vwap_dist": {
+     "stock_times": 43362,
+     "defined": 43360,
+     "undefined_by_reason": {
+      "missing:zero_volume": 2
+     },
+     "undefined_by_stock": {
+      "HINDUNILVR": 1,
+      "TMPV": 1
+     },
+     "missing_share": 4.612333379456667e-05,
+     "unregistered_reasons": []
+    },
+    "sector": {
+     "stock_times": 43362,
+     "defined": 42288,
+     "undefined_by_reason": {
+      "singleton_industry": 1062,
+      "ca_exdate_peers": 12
+     },
+     "undefined_by_stock": {
+      "BHARTIARTL": 468,
+      "LT": 468,
+      "PIDILITIND": 126,
+      "TITAN": 12
+     },
+     "missing_share": 0.0,
+     "unregistered_reasons": []
+    },
+    "gap_reversal": {
+     "stock_times": 7227,
+     "defined": 7170,
+     "undefined_by_reason": {
+      "ca_exdate": 57
+     },
+     "undefined_by_stock": {
+      "HINDUNILVR": 4,
+      "INFY": 4,
+      "NTPC": 4,
+      "ONGC": 4,
+      "ADANIENT": 2,
+      "ADANIPOWER": 2,
+      "ASIANPAINT": 2,
+      "BAJAJHLDNG": 2,
+      "BPCL": 2,
+      "COALINDIA": 2,
+      "GODREJCP": 2,
+      "HCLTECH": 2,
+      "IOC": 2,
+      "IRFC": 2,
+      "LTM": 2,
+      "MAZDOCK": 2,
+      "PFC": 2,
+      "PIDILITIND": 2,
+      "POWERGRID": 2,
+      "RECLTD": 2,
+      "SHREECEM": 2,
+      "SHRIRAMFIN": 2,
+      "TCS": 2,
+      "TMPV": 2,
+      "TECHM": 1
+     },
+     "missing_share": 0.0,
+     "unregistered_reasons": []
+    }
+   },
+   "tests": {
+    "gap_f15": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "gap_f30": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "gap_f60": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "rvol_f15": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "rvol_f30": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "rvol_f60": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "vwap_dist_f15": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "vwap_dist_f30": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "vwap_dist_f60": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "sector_f15": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "sector_f30": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "sector_f60": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    },
+    "gap_reversal_f60": {
+     "sessions": 78,
+     "halves": [
+      39,
+      39
+     ]
+    }
+   },
+   "passes": true
+  },
+  "6_hand_calculation": {
+   "stock_times": [
+    {
+     "symbol": "APOLLOHOSP",
+     "date": "2025-10-07",
+     "hhmm": "13:30",
+     "module": {
+      "gap": 16.314278256330805,
+      "rvol": 0.6471455637877368,
+      "vwap_dist": 17.1354124050227,
+      "sector": 24.04005349420979,
+      "gap_reversal": -25.450274079874546
+     },
+     "hand": {
+      "gap": 16.314278256330805,
+      "rvol": 0.6471455637877368,
+      "vwap_dist": 17.135412405020478,
+      "sector": 24.040053494209783,
+      "gap_reversal": -25.450274079874546
+     },
+     "max_abs_diff_bp": 2.220446049250313e-12,
+     "mismatches": {}
+    },
+    {
+     "symbol": "HDFCBANK",
+     "date": "2025-11-26",
+     "hhmm": "12:45",
+     "module": {
+      "gap": -85.87593453222908,
+      "rvol": 1.0137663297799506,
+      "vwap_dist": 70.51053668832185,
+      "sector": 134.76440558250005,
+      "gap_reversal": -137.90664780763962
+     },
+     "hand": {
+      "gap": -85.87593453222908,
+      "rvol": 1.0137663297799506,
+      "vwap_dist": 70.51053668832185,
+      "sector": 134.76440558250005,
+      "gap_reversal": -137.90664780763962
+     },
+     "max_abs_diff_bp": 0.0,
+     "mismatches": {}
+    },
+    {
+     "symbol": "BAJAJHLDNG",
+     "date": "2025-09-23",
+     "hhmm": "10:30",
+     "module": {
+      "gap": null,
+      "rvol": 0.25592471067704753,
+      "vwap_dist": 17.113918896567437,
+      "sector": 5.234202508586823,
+      "gap_reversal": null
+     },
+     "hand": {
+      "gap": null,
+      "rvol": 0.25592471067704753,
+      "vwap_dist": 17.113918896567437,
+      "sector": 5.234202508586825,
+      "gap_reversal": null
+     },
+     "max_abs_diff_bp": 1.7763568394002505e-15,
+     "mismatches": {}
+    },
+    {
+     "symbol": "M&M",
+     "date": "2025-11-06",
+     "hhmm": "09:45",
+     "module": {
+      "gap": 122.30537250083717,
+      "rvol": 2.882155579107457,
+      "vwap_dist": -12.629815574453085,
+      "sector": -1.9865548192575524,
+      "gap_reversal": -185.6919468334639
+     },
+     "hand": {
+      "gap": 122.30537250083717,
+      "rvol": 2.882155579107457,
+      "vwap_dist": -12.629815574453085,
+      "sector": -1.9865548192575524,
+      "gap_reversal": -185.6919468334639
+     },
+     "max_abs_diff_bp": 0.0,
+     "mismatches": {}
+    },
+    {
+     "symbol": "HDFCBANK",
+     "date": "2025-11-10",
+     "hhmm": "11:15",
+     "module": {
+      "gap": 0.0,
+      "rvol": 0.9671982383410802,
+      "vwap_dist": 46.47096849060395,
+      "sector": 25.904389596747144,
+      "gap_reversal": -78.38745800671899
+     },
+     "hand": {
+      "gap": 0.0,
+      "rvol": 0.9671982383410802,
+      "vwap_dist": 46.470968490608385,
+      "sector": 25.90438959674714,
+      "gap_reversal": -78.38745800671899
+     },
+     "max_abs_diff_bp": 4.433786671143025e-12,
+     "mismatches": {}
+    },
+    {
+     "symbol": "BAJAJFINSV",
+     "date": "2025-10-06",
+     "hhmm": "09:45",
+     "module": {
+      "gap": -23.989204857814972,
+      "rvol": 1.8760551114546975,
+      "vwap_dist": 74.9538687130058,
+      "sector": 56.0813150522433,
+      "gap_reversal": -181.41836173721782
+     },
+     "hand": {
+      "gap": -23.989204857814972,
+      "rvol": 1.8760551114546975,
+      "vwap_dist": 74.9538687130058,
+      "sector": 56.08131505224329,
+      "gap_reversal": -181.41836173721782
+     },
+     "max_abs_diff_bp": 7.105427357601002e-15,
+     "mismatches": {}
+    },
+    {
+     "symbol": "UNITDSPR",
+     "date": "2025-10-16",
+     "hhmm": "09:45",
+     "module": {
+      "gap": -60.010501837821636,
+      "rvol": 0.5438691687649669,
+      "vwap_dist": 29.84876359897859,
+      "sector": 62.496012644391385,
+      "gap_reversal": -77.26352111619761
+     },
+     "hand": {
+      "gap": -60.010501837821636,
+      "rvol": 0.5438691687649669,
+      "vwap_dist": 29.84876359897859,
+      "sector": 62.496012644391385,
+      "gap_reversal": -77.26352111619761
+     },
+     "max_abs_diff_bp": 0.0,
+     "mismatches": {}
+    },
+    {
+     "symbol": "ZYDUSLIFE",
+     "date": "2025-09-24",
+     "hhmm": "09:45",
+     "module": {
+      "gap": 27.276642580276178,
+      "rvol": 0.3728443044943247,
+      "vwap_dist": -64.9980829707375,
+      "sector": -28.943877597799965,
+      "gap_reversal": 80.39431497343985
+     },
+     "hand": {
+      "gap": 27.276642580276178,
+      "rvol": 0.3728443044943247,
+      "vwap_dist": -64.9980829707375,
+      "sector": -28.94387759779997,
+      "gap_reversal": 80.39431497343985
+     },
+     "max_abs_diff_bp": 3.552713678800501e-15,
+     "mismatches": {}
+    },
+    {
+     "symbol": "ADANIPORTS",
+     "date": "2025-09-01",
+     "hhmm": "09:45",
+     "module": {
+      "gap": 41.89518586227958,
+      "rvol": 0.31529851266051034,
+      "vwap_dist": 36.07277815868004,
+      "sector": -27.45306411618853,
+      "gap_reversal": -131.77940280316935
+     },
+     "hand": {
+      "gap": 41.89518586227958,
+      "rvol": 0.31529851266051034,
+      "vwap_dist": 36.07277815868226,
+      "sector": -27.45306411618853,
+      "gap_reversal": -131.77940280316935
+     },
+     "max_abs_diff_bp": 2.2239987629291136e-12,
+     "mismatches": {}
+    },
+    {
+     "symbol": "HINDUNILVR",
+     "date": "2025-09-09",
+     "hhmm": "09:45",
+     "module": {
+      "gap": 49.9256831434125,
+      "rvol": 0.40459630045476547,
+      "vwap_dist": 15.010517945817092,
+      "sector": 9.670895300218758,
+      "gap_reversal": -10.290026296733146
+     },
+     "hand": {
+      "gap": 49.9256831434125,
+      "rvol": 0.40459630045476547,
+      "vwap_dist": 15.010517945817092,
+      "sector": 9.67089530021876,
+      "gap_reversal": -10.290026296733146
+     },
+     "max_abs_diff_bp": 1.7763568394002505e-15,
+     "mismatches": {}
+    }
+   ],
+   "defined_per_feature": {
+    "gap": 9,
+    "rvol": 10,
+    "vwap_dist": 10,
+    "sector": 10,
+    "gap_reversal": 9
+   },
+   "tol_bp": 1e-09,
+   "passes": true
+  },
+  "7_lookahead": {
+   "stock_times": 200,
+   "identical": 200,
+   "defined_per_feature": {
+    "gap": 198,
+    "rvol": 199,
+    "vwap_dist": 200,
+    "sector": 194,
+    "gap_reversal": 198
+   },
+   "at_0945": 20,
+   "failures": [],
+   "passes": true
+  },
+  "8_positive_control": {
+   "stock_times": 44856,
+   "noise_bp": 5.0,
+   "tests": {
+    "pos_f15": {
+     "sessions": 84,
+     "spread_mean_bp": 59.44575453320017,
+     "spread_t": 44.625966976776674,
+     "spread_over_bar": 1.7873047063499752,
+     "halves_mean_bp": [
+      64.55644253938192,
+      54.33506652701843
+     ],
+     "pic_mean": 0.9571648662677631,
+     "pic_t": 652.9228123957699,
+     "passes": true
+    },
+    "pos_f30": {
+     "sessions": 84,
+     "spread_mean_bp": 81.54920682012838,
+     "spread_t": 52.287274217904915,
+     "spread_over_bar": 2.4518703193063254,
+     "halves_mean_bp": [
+      85.27012273826726,
+      77.82829090198948
+     ],
+     "pic_mean": 0.9760099598643417,
+     "pic_t": 1239.7599870902363,
+     "passes": true
+    },
+    "pos_f60": {
+     "sessions": 84,
+     "spread_mean_bp": 114.68171636909442,
+     "spread_t": 52.6282250628454,
+     "spread_over_bar": 3.4480371728531094,
+     "halves_mean_bp": [
+      120.769253095844,
+      108.59417964234484
+     ],
+     "pic_mean": 0.9876276476714511,
+     "pic_t": 2232.272551423336,
+     "passes": true
+    },
+    "neg_f15": {
+     "sessions": 84,
+     "spread_mean_bp": -59.44575453320017,
+     "spread_t": -44.625966976776674,
+     "spread_over_bar": -1.7873047063499752,
+     "halves_mean_bp": [
+      -64.55644253938192,
+      -54.33506652701843
+     ],
+     "pic_mean": -0.9571648662677631,
+     "pic_t": -652.9228123957699,
+     "passes": false
+    },
+    "neg_f30": {
+     "sessions": 84,
+     "spread_mean_bp": -81.54920682012838,
+     "spread_t": -52.287274217904915,
+     "spread_over_bar": -2.4518703193063254,
+     "halves_mean_bp": [
+      -85.27012273826726,
+      -77.82829090198948
+     ],
+     "pic_mean": -0.9760099598643417,
+     "pic_t": -1239.7599870902363,
+     "passes": false
+    },
+    "neg_f60": {
+     "sessions": 84,
+     "spread_mean_bp": -114.68171636909442,
+     "spread_t": -52.6282250628454,
+     "spread_over_bar": -3.4480371728531094,
+     "halves_mean_bp": [
+      -120.769253095844,
+      -108.59417964234484
+     ],
+     "pic_mean": -0.9876276476714511,
+     "pic_t": -2232.272551423336,
+     "passes": false
+    },
+    "null_f15": {
+     "sessions": 84,
+     "spread_mean_bp": -0.04776480460549021,
+     "spread_t": -0.14981062028072265,
+     "spread_over_bar": -0.0014361035660099282,
+     "halves_mean_bp": [
+      -0.23078420813980302,
+      0.1352545989288226
+     ],
+     "pic_mean": 3.72111362756327e-05,
+     "pic_t": 0.008421693530302837,
+     "passes": false
+    },
+    "null_f30": {
+     "sessions": 84,
+     "spread_mean_bp": -0.05979139929712545,
+     "spread_t": -0.1340359891867932,
+     "spread_over_bar": -0.0017976969121204286,
+     "halves_mean_bp": [
+      0.21871454517044359,
+      -0.3382973437646945
+     ],
+     "pic_mean": 0.00045416657000567855,
+     "pic_t": 0.09464650527032784,
+     "passes": false
+    },
+    "null_f60": {
+     "sessions": 84,
+     "spread_mean_bp": 0.5055175063417742,
+     "spread_t": 0.7975517370393356,
+     "spread_over_bar": 0.015198962908652261,
+     "halves_mean_bp": [
+      0.6844701512904245,
+      0.3265648613931237
+     ],
+     "pic_mean": 0.0035000433102435626,
+     "pic_t": 0.7114845070844434,
+     "passes": false
+    }
+   },
+   "passes": true,
+   "segment": [
+    "2025-05-01",
+    "2025-08-29"
+   ],
+   "sessions_listed": 84,
+   "dropped": {}
+  },
+  "9_distributions": {
+   "gap": {
+    "n": 43020,
+    "mean": 13.24070608778914,
+    "sd": 53.95871385047566,
+    "min": -630.1719938637684,
+    "max": 733.414485696895,
+    "quantiles": {
+     "0.01": -112.0970289204004,
+     "0.05": -53.05039787798393,
+     "0.25": -4.057892601108115,
+     "0.5": 6.712228459848646,
+     "0.75": 35.743744844651815,
+     "0.95": 81.26735932517227,
+     "0.99": 183.90827585241354
+    }
+   },
+   "rvol": {
+    "n": 42858,
+    "mean": 1.0406843239710526,
+    "sd": 1.4251277546192889,
+    "min": 0.0,
+    "max": 102.1935716826118,
+    "quantiles": {
+     "0.01": 0.20947945347532365,
+     "0.05": 0.3134589301148543,
+     "0.25": 0.5275472345612876,
+     "0.5": 0.7551198119063377,
+     "0.75": 1.1329566253648686,
+     "0.95": 2.4681993698336218,
+     "0.99": 5.604011416038048
+    }
+   },
+   "vwap_dist": {
+    "n": 43360,
+    "mean": -2.1034335907098782,
+    "sd": 41.40809342055971,
+    "min": -340.1293572664388,
+    "max": 442.55590715659207,
+    "quantiles": {
+     "0.01": -108.48952480042473,
+     "0.05": -66.83711539500092,
+     "0.25": -25.263495018424955,
+     "0.5": -2.3212174666742413,
+     "0.75": 20.43049139914377,
+     "0.95": 63.10459146594116,
+     "0.99": 109.75385275216354
+    }
+   },
+   "sector": {
+    "n": 42288,
+    "mean": 9.971555911355628,
+    "sd": 73.67043676662685,
+    "min": -934.7360580951491,
+    "max": 560.639932801354,
+    "quantiles": {
+     "0.01": -168.60499425188368,
+     "0.05": -104.77965874007954,
+     "0.25": -32.30043365310764,
+     "0.5": 10.175989007493465,
+     "0.75": 49.96615290405793,
+     "0.95": 123.77215356882016,
+     "0.99": 218.07827131601567
+    }
+   },
+   "gap_reversal": {
+    "n": 7170,
+    "mean": -10.55005796428481,
+    "sd": 86.30954641535891,
+    "min": -643.8583986695168,
+    "max": 673.7327188940089,
+    "quantiles": {
+     "0.01": -259.917920656636,
+     "0.05": -143.6879917892564,
+     "0.25": -55.11328842620955,
+     "0.5": -8.3455038597946,
+     "0.75": 38.046924540267035,
+     "0.95": 111.78476695718031,
+     "0.99": 202.5747822794388
+    }
+   }
+  },
+  "seconds": 19,
+  "finished": "2026-09-30T20:39:47.361213+05:30"
+ },
+ "status": "STAGE0_DONE"
+}
