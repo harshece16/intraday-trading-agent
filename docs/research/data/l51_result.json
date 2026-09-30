@@ -2,7 +2,7 @@
  "look": "L51",
  "prereg": "docs/research/prereg-index-timing.md",
  "mode": "score",
- "status": "STARTED",
+ "status": "DONE",
  "go": "main session instruction after independent second review APPROVED at c2d77c2, 2026-09-30",
  "owner_approved_rescore": null,
  "started": "2026-09-30T21:11:09.434972",
@@ -48,5 +48,608 @@
    "gst_pct": 18.0,
    "slippage_pct": 0.005
   }
- }
+ },
+ "started_commit": "eaf6152dbb7b33a992028b81d461b1983316cb54",
+ "finished": "2026-09-30T21:11:14.876567",
+ "result": {
+  "scoring_sample": [
+   "2025-09-01",
+   "2025-12-23",
+   78
+  ],
+  "pseudo_oos_sample": [
+   "2025-03-03",
+   "2025-08-29",
+   122
+  ],
+  "h30": {
+   "trades": 0,
+   "sessions": 78,
+   "sessions_with_trades": 0,
+   "mean_net_bp_per_trade": null,
+   "mean_gross_bp_per_trade": null,
+   "per_session_mean_bp": null,
+   "t": null,
+   "se": null,
+   "half1_bp": null,
+   "half2_bp": null,
+   "half_sessions": [
+    39,
+    39
+   ],
+   "dsr": null,
+   "sharpe_per_session": null,
+   "dsr_n_trials": 2,
+   "checks": {
+    "enough_trades": false,
+    "positive_net": false,
+    "t_over_2": false,
+    "both_halves_positive": false,
+    "dsr_over_bar": false
+   },
+   "passes": false,
+   "decisions": 858,
+   "forecast_stats": {
+    "n": 858,
+    "ic": 0.01636947096532492,
+    "ic_t": 0.47899361110969163,
+    "rank_ic": -0.0035647414624624834,
+    "rank_ic_t": -0.10429600642773133,
+    "r2_oos_uncentred": -5.522074284991518e-05,
+    "hit_rate": 0.479020979020979,
+    "sign_rule_gross_bp": 0.07765423089531452,
+    "forecast_abs_pct": {
+     "50": 0.12410889144211545,
+     "90": 0.17022794454338958,
+     "99": 0.20351055828889078,
+     "100": 0.253357663010786
+    },
+    "share_above_cost": 0.0
+   },
+   "xb_headline": {
+    "pooled": {
+     "n": 858,
+     "ic": 0.038747308382090645,
+     "t_clustered": 1.1624592258443045,
+     "clusters": 78
+    },
+    "halves": [
+     {
+      "n": 429,
+      "ic": 0.09920910117676632,
+      "t_clustered": 2.0843738540184877,
+      "clusters": 39
+     },
+     {
+      "n": 429,
+      "ic": -0.013862099987930438,
+      "t_clustered": -0.27360563162994334,
+      "clusters": 39
+     }
+    ],
+    "mean_per_session_ic": {
+     "mean": -0.005838060574358735,
+     "t": -0.14774465932911748,
+     "sessions": 78
+    },
+    "hit_rate_sign_xb": 0.5116550116550117,
+    "sign_xb_rule_gross_bp": {
+     "mean_of_session_means": 0.324168132115767,
+     "t": 0.7236963348466743,
+     "sessions": 78
+    },
+    "reading": "no direction"
+   },
+   "by_decision_time": {},
+   "by_side": {},
+   "net_at_2025_tariff_bp_per_trade": null,
+   "pseudo_oos_information": {
+    "judge": {
+     "trades": 0,
+     "sessions": 122,
+     "sessions_with_trades": 0,
+     "mean_net_bp_per_trade": null,
+     "mean_gross_bp_per_trade": null,
+     "per_session_mean_bp": null,
+     "t": null,
+     "se": null,
+     "half1_bp": null,
+     "half2_bp": null,
+     "half_sessions": [
+      61,
+      61
+     ],
+     "dsr": null,
+     "sharpe_per_session": null,
+     "dsr_n_trials": 2,
+     "checks": {
+      "enough_trades": false,
+      "positive_net": false,
+      "t_over_2": false,
+      "both_halves_positive": false,
+      "dsr_over_bar": false
+     },
+     "passes": false
+    },
+    "forecast_stats": {
+     "n": 1342,
+     "ic": -0.025672795530601616,
+     "ic_t": -0.9400884747630378,
+     "rank_ic": -0.03600717183122727,
+     "rank_ic_t": -1.3189341950407638,
+     "r2_oos_uncentred": -0.00203478727248374,
+     "hit_rate": 0.4858420268256334,
+     "sign_rule_gross_bp": -0.3057782579482273,
+     "forecast_abs_pct": {
+      "50": 0.20020153805110527,
+      "90": 0.6702310988601253,
+      "99": 0.8091583605211619,
+      "100": 0.8820467083749203
+     },
+     "share_above_cost": 0.0
+    },
+    "xb": {
+     "pooled": {
+      "n": 1342,
+      "ic": 0.035368571744589725,
+      "t_clustered": 1.0098798241107614,
+      "clusters": 122
+     },
+     "halves": [
+      {
+       "n": 671,
+       "ic": 0.022143134324028545,
+       "t_clustered": 0.48040640825902886,
+       "clusters": 61
+      },
+      {
+       "n": 671,
+       "ic": 0.07142852903004661,
+       "t_clustered": 2.2957565933545268,
+       "clusters": 61
+      }
+     ],
+     "mean_per_session_ic": {
+      "mean": 0.028978138766533355,
+      "t": 1.0151781335331105,
+      "sessions": 122
+     },
+     "hit_rate_sign_xb": 0.5145413870246085,
+     "sign_xb_rule_gross_bp": {
+      "mean_of_session_means": 0.36659992468916114,
+      "t": 0.9125321401008087,
+      "sessions": 122
+     },
+     "reading": "no direction"
+    }
+   },
+   "december_top_coefficients": [
+    {
+     "predictor": "FIN_prev",
+     "coef_bp_per_sd": -0.006327742832903428
+    },
+    {
+     "predictor": "TURN_prev",
+     "coef_bp_per_sd": -0.00574611656928049
+    },
+    {
+     "predictor": "IT_last30",
+     "coef_bp_per_sd": -0.005001472064706091
+    },
+    {
+     "predictor": "FIN_last30",
+     "coef_bp_per_sd": 0.004705838292662739
+    },
+    {
+     "predictor": "REV21_prev",
+     "coef_bp_per_sd": 0.00468551325959835
+    },
+    {
+     "predictor": "VOL_last30",
+     "coef_bp_per_sd": 0.004637285530342035
+    },
+    {
+     "predictor": "REV1_sofar",
+     "coef_bp_per_sd": -0.00462366663088602
+    },
+    {
+     "predictor": "RANGE_last30",
+     "coef_bp_per_sd": 0.0043814622860834625
+    },
+    {
+     "predictor": "IVOL_sofar",
+     "coef_bp_per_sd": 0.004374474585729026
+    },
+    {
+     "predictor": "IVOL_last30",
+     "coef_bp_per_sd": 0.004180924735897748
+    }
+   ],
+   "alpha": 100.0,
+   "refits": [
+    {
+     "month": "2025-03",
+     "train_first": "2024-09-23",
+     "train_last": "2025-02-20",
+     "first_forecast": "2025-03-03",
+     "gap_sessions": 5,
+     "train_rows": 6405
+    },
+    {
+     "month": "2025-04",
+     "train_first": "2024-09-23",
+     "train_last": "2025-03-21",
+     "first_forecast": "2025-04-01",
+     "gap_sessions": 5,
+     "train_rows": 7564
+    },
+    {
+     "month": "2025-05",
+     "train_first": "2024-09-23",
+     "train_last": "2025-04-23",
+     "first_forecast": "2025-05-02",
+     "gap_sessions": 5,
+     "train_rows": 8723
+    },
+    {
+     "month": "2025-06",
+     "train_first": "2024-09-23",
+     "train_last": "2025-05-23",
+     "first_forecast": "2025-06-02",
+     "gap_sessions": 5,
+     "train_rows": 10004
+    },
+    {
+     "month": "2025-07",
+     "train_first": "2024-09-23",
+     "train_last": "2025-06-23",
+     "first_forecast": "2025-07-01",
+     "gap_sessions": 5,
+     "train_rows": 11285
+    },
+    {
+     "month": "2025-08",
+     "train_first": "2024-09-23",
+     "train_last": "2025-07-24",
+     "first_forecast": "2025-08-01",
+     "gap_sessions": 5,
+     "train_rows": 12688
+    },
+    {
+     "month": "2025-09",
+     "train_first": "2024-09-23",
+     "train_last": "2025-08-21",
+     "first_forecast": "2025-09-01",
+     "gap_sessions": 5,
+     "train_rows": 13847
+    },
+    {
+     "month": "2025-10",
+     "train_first": "2024-09-23",
+     "train_last": "2025-09-23",
+     "first_forecast": "2025-10-01",
+     "gap_sessions": 5,
+     "train_rows": 15189
+    },
+    {
+     "month": "2025-11",
+     "train_first": "2024-09-23",
+     "train_last": "2025-10-24",
+     "first_forecast": "2025-11-03",
+     "gap_sessions": 5,
+     "train_rows": 16409
+    },
+    {
+     "month": "2025-12",
+     "train_first": "2024-09-23",
+     "train_last": "2025-11-21",
+     "first_forecast": "2025-12-01",
+     "gap_sessions": 5,
+     "train_rows": 17568
+    }
+   ],
+   "pseudo_oos_forecast_max_abs_diff_vs_stage0_bp": 0.0
+  },
+  "h60": {
+   "trades": 0,
+   "sessions": 78,
+   "sessions_with_trades": 0,
+   "mean_net_bp_per_trade": null,
+   "mean_gross_bp_per_trade": null,
+   "per_session_mean_bp": null,
+   "t": null,
+   "se": null,
+   "half1_bp": null,
+   "half2_bp": null,
+   "half_sessions": [
+    39,
+    39
+   ],
+   "dsr": null,
+   "sharpe_per_session": null,
+   "dsr_n_trials": 2,
+   "checks": {
+    "enough_trades": false,
+    "positive_net": false,
+    "t_over_2": false,
+    "both_halves_positive": false,
+    "dsr_over_bar": false
+   },
+   "passes": false,
+   "decisions": 390,
+   "forecast_stats": {
+    "n": 390,
+    "ic": 0.012588517686416936,
+    "ic_t": 0.24798469119976402,
+    "rank_ic": 0.007948365614096486,
+    "rank_ic_t": 0.15656959121859787,
+    "r2_oos_uncentred": -0.0005463035234030134,
+    "hit_rate": 0.46923076923076923,
+    "sign_rule_gross_bp": -0.34014725165776577,
+    "forecast_abs_pct": {
+     "50": 0.21157255286925103,
+     "90": 0.4066178837723716,
+     "99": 0.5349244447955479,
+     "100": 0.6324522221657285
+    },
+    "share_above_cost": 0.0
+   },
+   "xb_headline": {
+    "pooled": {
+     "n": 390,
+     "ic": 0.036417272808855636,
+     "t_clustered": 0.6313210534581314,
+     "clusters": 78
+    },
+    "halves": [
+     {
+      "n": 195,
+      "ic": 0.07730944597204173,
+      "t_clustered": 1.1831818916592027,
+      "clusters": 39
+     },
+     {
+      "n": 195,
+      "ic": -0.010398402993801816,
+      "t_clustered": -0.10536045764288353,
+      "clusters": 39
+     }
+    ],
+    "mean_per_session_ic": {
+     "mean": -0.02944455610645082,
+     "t": -0.49445136977653076,
+     "sessions": 78
+    },
+    "hit_rate_sign_xb": 0.5102564102564102,
+    "sign_xb_rule_gross_bp": {
+     "mean_of_session_means": 1.1248544571912835,
+     "t": 1.2992681047748522,
+     "sessions": 78
+    },
+    "reading": "no direction"
+   },
+   "by_decision_time": {},
+   "by_side": {},
+   "net_at_2025_tariff_bp_per_trade": null,
+   "pseudo_oos_information": {
+    "judge": {
+     "trades": 0,
+     "sessions": 122,
+     "sessions_with_trades": 0,
+     "mean_net_bp_per_trade": null,
+     "mean_gross_bp_per_trade": null,
+     "per_session_mean_bp": null,
+     "t": null,
+     "se": null,
+     "half1_bp": null,
+     "half2_bp": null,
+     "half_sessions": [
+      61,
+      61
+     ],
+     "dsr": null,
+     "sharpe_per_session": null,
+     "dsr_n_trials": 2,
+     "checks": {
+      "enough_trades": false,
+      "positive_net": false,
+      "t_over_2": false,
+      "both_halves_positive": false,
+      "dsr_over_bar": false
+     },
+     "passes": false
+    },
+    "forecast_stats": {
+     "n": 610,
+     "ic": -0.014888510536735644,
+     "ic_t": -0.3671564669726015,
+     "rank_ic": -0.0469952404258359,
+     "rank_ic_t": -1.1600742231943197,
+     "r2_oos_uncentred": -0.0024983603579278313,
+     "hit_rate": 0.49508196721311476,
+     "sign_rule_gross_bp": -0.278102525428639,
+     "forecast_abs_pct": {
+      "50": 0.3463773427957336,
+      "90": 1.260569139642254,
+      "99": 1.9585288975711892,
+      "100": 2.124402451845168
+     },
+     "share_above_cost": 0.0
+    },
+    "xb": {
+     "pooled": {
+      "n": 610,
+      "ic": 0.05297233694301822,
+      "t_clustered": 1.0958386310975516,
+      "clusters": 122
+     },
+     "halves": [
+      {
+       "n": 305,
+       "ic": 0.05524181292246167,
+       "t_clustered": 0.8794674089247713,
+       "clusters": 61
+      },
+      {
+       "n": 305,
+       "ic": 0.04821709736268658,
+       "t_clustered": 0.9004328670989452,
+       "clusters": 61
+      }
+     ],
+     "mean_per_session_ic": {
+      "mean": -0.0006200472447984392,
+      "t": -0.012692227626067766,
+      "sessions": 122
+     },
+     "hit_rate_sign_xb": 0.45901639344262296,
+     "sign_xb_rule_gross_bp": {
+      "mean_of_session_means": -0.47319761203596644,
+      "t": -0.555506850034416,
+      "sessions": 122
+     },
+     "reading": "no direction"
+    }
+   },
+   "december_top_coefficients": [
+    {
+     "predictor": "TURN_prev",
+     "coef_bp_per_sd": -0.03786761203207047
+    },
+    {
+     "predictor": "FIN_prev",
+     "coef_bp_per_sd": -0.03519440589115348
+    },
+    {
+     "predictor": "REV21_prev",
+     "coef_bp_per_sd": 0.0333313635532622
+    },
+    {
+     "predictor": "MOM_prev",
+     "coef_bp_per_sd": -0.03226958927500215
+    },
+    {
+     "predictor": "REV1_sofar",
+     "coef_bp_per_sd": -0.0266334605669702
+    },
+    {
+     "predictor": "TURN_last30",
+     "coef_bp_per_sd": -0.026587046348305162
+    },
+    {
+     "predictor": "MKT_prev",
+     "coef_bp_per_sd": 0.025362739727163807
+    },
+    {
+     "predictor": "TURN_sofar",
+     "coef_bp_per_sd": -0.022777558750233733
+    },
+    {
+     "predictor": "IVOL_sofar",
+     "coef_bp_per_sd": 0.02203616278335851
+    },
+    {
+     "predictor": "HIGH52_prev",
+     "coef_bp_per_sd": 0.022025170394244623
+    }
+   ],
+   "alpha": 31.622776601683793,
+   "refits": [
+    {
+     "month": "2025-03",
+     "train_first": "2024-09-23",
+     "train_last": "2025-02-20",
+     "first_forecast": "2025-03-03",
+     "gap_sessions": 5,
+     "train_rows": 5775
+    },
+    {
+     "month": "2025-04",
+     "train_first": "2024-09-23",
+     "train_last": "2025-03-21",
+     "first_forecast": "2025-04-01",
+     "gap_sessions": 5,
+     "train_rows": 6820
+    },
+    {
+     "month": "2025-05",
+     "train_first": "2024-09-23",
+     "train_last": "2025-04-23",
+     "first_forecast": "2025-05-02",
+     "gap_sessions": 5,
+     "train_rows": 7865
+    },
+    {
+     "month": "2025-06",
+     "train_first": "2024-09-23",
+     "train_last": "2025-05-23",
+     "first_forecast": "2025-06-02",
+     "gap_sessions": 5,
+     "train_rows": 9020
+    },
+    {
+     "month": "2025-07",
+     "train_first": "2024-09-23",
+     "train_last": "2025-06-23",
+     "first_forecast": "2025-07-01",
+     "gap_sessions": 5,
+     "train_rows": 10175
+    },
+    {
+     "month": "2025-08",
+     "train_first": "2024-09-23",
+     "train_last": "2025-07-24",
+     "first_forecast": "2025-08-01",
+     "gap_sessions": 5,
+     "train_rows": 11440
+    },
+    {
+     "month": "2025-09",
+     "train_first": "2024-09-23",
+     "train_last": "2025-08-21",
+     "first_forecast": "2025-09-01",
+     "gap_sessions": 5,
+     "train_rows": 12485
+    },
+    {
+     "month": "2025-10",
+     "train_first": "2024-09-23",
+     "train_last": "2025-09-23",
+     "first_forecast": "2025-10-01",
+     "gap_sessions": 5,
+     "train_rows": 13695
+    },
+    {
+     "month": "2025-11",
+     "train_first": "2024-09-23",
+     "train_last": "2025-10-24",
+     "first_forecast": "2025-11-03",
+     "gap_sessions": 5,
+     "train_rows": 14795
+    },
+    {
+     "month": "2025-12",
+     "train_first": "2024-09-23",
+     "train_last": "2025-11-21",
+     "first_forecast": "2025-12-01",
+     "gap_sessions": 5,
+     "train_rows": 15840
+    }
+   ],
+   "pseudo_oos_forecast_max_abs_diff_vs_stage0_bp": 0.0
+  },
+  "l51_clears": false,
+  "verdict": [
+   "L51 does not clear at 30 minutes: the forecast exceeded the 6.95 bp round trip on 0 of 858 decisions.",
+   "The 30-minute gate cannot be passed at any plausible IC: a planted forecast with an IC of 0.38 over 2025-03 to 2025-08 made +2.10 bp a trade, t 1.24; the same strength gave t 2.87 at 60 minutes.",
+   "L51 does not clear at 60 minutes: the forecast exceeded the 6.95 bp round trip on 0 of 390 decisions.",
+   "Stage 0's positive control was strengthened from a correlation of 0.5 to 0.7 after run 2 had failed at 30 minutes (amendment 5), so the halt it provides is weaker than first promised; the 0.5 figures are what a forecast of that strength earns.",
+   "Direction from the predictors at 30 minutes: no direction (xb IC 0.039, clustered t 1.162, halves 0.099 / -0.014).",
+   "Direction from the predictors at 60 minutes: no direction (xb IC 0.036, clustered t 0.631, halves 0.077 / -0.010).",
+   "The IC is measured on the index, whose stale constituent prices make it an upper bound on what a futures position could capture."
+  ]
+ },
+ "decisions_rows": 3200,
+ "decisions_sha256": "55674ef2a1e874cdd7b8f6b81038c68146d82b935d2d6e1a33447289c518fb16",
+ "models_sha256": "949b6a0b26e1a357b15dd1cfa3341ee47bcd00c0b836c253f841d18b58552f45"
 }
