@@ -160,3 +160,26 @@ def test_session_stats_and_summary_are_per_session_then_across():
     assert s["sessions"] == 60 and s["ic"]["n"] == 60
     assert abs(s["ic"]["mean"]) < 0.1 and s["ic"]["detectable_at_t2"] > 0
     assert len(s["spread"]["halves"]) == 2 and s["spread"]["halves"][0]["n"] == 30
+
+
+def test_a_readme_only_revision_is_not_a_model():
+    files = {"readme": ["README.md"], "w1": ["model.safetensors"], "w2": ["model.safetensors", "config.json"]}
+    commits = [("readme", "2025-06-01T00:00:00"), ("w1", "2025-08-17T00:00:00"), ("w2", "2025-09-09T00:00:00")]
+    assert [c[0] for c in k.with_weights(commits, lambda sha: files[sha])] == ["w1", "w2"]
+
+
+def test_revisions_before_the_cutoff_keep_the_window():
+    sessions = ["2025-09-01", "2025-10-01"]
+    kept, revs, info = k.choose_revisions({"m": [("a", "2025-08-17T00:00:00"), ("b", "2025-09-09T00:00:00")],
+                                           "t": [("c", "2025-08-17T00:00:00")]}, sessions)
+    assert kept == sessions and revs == {"m": "a", "t": "c"} and info["moved_window"] is None
+
+
+def test_a_moved_window_loads_the_revision_it_is_moved_to_not_the_latest():
+    """#204: the window started after the earliest revision while the latest was loaded."""
+    sessions = ["2025-09-01", "2025-09-10", "2025-10-01", "2025-11-01"]
+    kept, revs, info = k.choose_revisions({"m": [("first", "2025-09-02T00:00:00"), ("later", "2025-11-15T00:00:00")],
+                                           "t": [("tok", "2025-08-01T00:00:00")]}, sessions)
+    assert revs == {"m": "first", "t": "tok"}
+    assert kept == ["2025-09-10", "2025-10-01", "2025-11-01"]
+    assert info["moved_window"]["start"] == "2025-09-02" and info["moved_window"]["void"] is True
