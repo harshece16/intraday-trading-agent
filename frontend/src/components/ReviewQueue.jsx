@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api";
-import { clock, money, num } from "../format";
+import { clock, money, num, tone } from "../format";
 import { SidePill } from "./Pill";
 import SymLink from "./SymLink";
 
@@ -62,8 +62,8 @@ function PendingCard({ c, live }) {
       const ok = confirm(
         `REAL MONEY — this places a real Kite order.\n\n` +
         `${c.side === "LONG" ? "BUY" : "SELL (short, intraday)"} about ${c.qty} ${c.symbol} at the live price, ` +
-        `stop ${num(c.stop)}, target ${num(c.target)}.\nRisk ≈ ${money(-c.risk_rs)}, reward ≈ ${money(c.reward_rs)}, ` +
-        `costs ≈ ${money(-c.cost_rs)}.\n\n` +
+        `stop ${num(c.stop)}, target ${num(c.target)}.\n` +
+        (c.money ? `${c.money}\n\n` : `Risk ≈ ${money(-c.risk_rs)}, reward ≈ ${money(c.reward_rs)}, costs ≈ ${money(-c.cost_rs)}.\n\n`) +
         `The engine skipped this because it failed "${c.blocker.label}". ${c.verdict}\n\nPlace it?`,
       );
       if (!ok) return;
@@ -101,12 +101,21 @@ function PendingCard({ c, live }) {
         <div className="rb-chip"><b>Entry / stop / target</b><span>{num(c.entry)} / {num(c.stop)} / {num(c.target)}</span></div>
         <div className="rb-chip"><b>R:R after costs</b><span className={c.net_rrr < 1 ? "down" : ""}>{num(c.net_rrr)}</span></div>
         <div className="rb-chip"><b>Size</b><span>{c.qty} shares</span></div>
-        <div className="rb-chip"><b>Risk / reward</b><span>{money(-c.risk_rs)} / {money(c.reward_rs)}</span></div>
+        {c.target_net_rs != null ? (
+          <>
+            <div className="rb-chip"><b>Target hit, after costs</b><span className={tone(c.target_net_rs)}>{money(c.target_net_rs)}</span></div>
+            <div className="rb-chip"><b>Stop hit, after costs</b><span className="down">{money(c.stop_net_rs)}</span></div>
+          </>
+        ) : (
+          <div className="rb-chip"><b>Risk / reward</b><span>{money(-c.risk_rs)} / {money(c.reward_rs)}</span></div>
+        )}
         <div className="rb-chip"><b>Costs</b><span>{money(-c.cost_rs)} ({num(c.friction)}× of the stop)</span></div>
         <div className="rb-chip">
           <b>Needs to win</b>
           <span className={c.breakeven_win_rate == null || c.breakeven_win_rate > c.reference_win_rate ? "down" : "up"}>
-            {c.breakeven_win_rate == null ? "can't break even" : pct0(c.breakeven_win_rate)} vs {pct0(c.reference_win_rate)} measured
+            {c.breakeven_win_rate == null
+              ? "can't break even at any win rate"
+              : `${pct0(c.breakeven_win_rate)} vs ${pct0(c.reference_win_rate)} measured`}
           </span>
         </div>
         <div className="rb-chip"><b>Expected per trade</b><span className={c.expected_r < 0 ? "down" : "up"}>{c.expected_r > 0 ? "+" : ""}{num(c.expected_r)}R</span></div>
@@ -114,7 +123,10 @@ function PendingCard({ c, live }) {
           <div className="rb-chip"><b>Confidence</b><span>{conf.score}/100 (bar {conf.bar}; setup {conf.local} × {num(conf.multiplier)})</span></div>
         )}
       </div>
-      <p className="muted" style={{ margin: "8px 0 0", fontSize: 12.5 }}>
+      {c.money && (
+        <p style={{ margin: "8px 0 0", fontSize: 13.5 }} className={c.can_break_even ? "" : "down"}>{c.money}</p>
+      )}
+      <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>
         {c.verdict} Measured on {c.reference_source}.
       </p>
       {c.shadow && (
@@ -155,6 +167,24 @@ function DecidedRow({ c }) {
   );
 }
 
+// A near-miss the R:R floor kept back (#166): never offered, but replayed
+// like a card so the floor can be judged on the same record.
+function HeldBackRow({ c }) {
+  return (
+    <tr>
+      <td>{clock(c.created_ts)}</td>
+      <td><SymLink sym={c.symbol} /></td>
+      <td><SidePill side={c.side} /></td>
+      <td className={c.net_rrr <= 0 ? "down" : ""}>{num(c.net_rrr)}</td>
+      <td>
+        <span className={tone(c.target_net_rs)}>{money(c.target_net_rs)}</span>
+        {" / "}<span className="down">{money(c.stop_net_rs)}</span>
+      </td>
+      <td><ShadowText sh={c.shadow} /></td>
+    </tr>
+  );
+}
+
 export default function ReviewQueue({ s }) {
   const rq = s.review_queue;
   const [busy, setBusy] = useState(false);
@@ -162,6 +192,8 @@ export default function ReviewQueue({ s }) {
   const live = !s.paper_mode;
   const pending = rq.cards.filter((c) => c.status === "pending");
   const decided = rq.cards.filter((c) => c.status !== "pending");
+  const held = rq.withheld || [];
+  const hs = rq.withheld_summary;
 
   async function toggle() {
     if (!rq.enabled) {
@@ -189,7 +221,11 @@ export default function ReviewQueue({ s }) {
           </h2>
           <div className="detail" style={{ marginTop: 2 }}>
             {rq.enabled
-              ? `Setups that failed exactly one rule appear here for ${Math.round(rq.expiry_seconds / 60)} minutes. Nothing is placed unless you approve.`
+              ? `Setups that failed exactly one rule appear here for ${Math.round(rq.expiry_seconds / 60)} minutes. ` +
+                (rq.min_net_rrr != null
+                  ? `A reward-to-risk miss is offered only if its R:R after costs is at least ${num(rq.min_net_rrr, 1)}. `
+                  : "") +
+                "Nothing is placed unless you approve."
               : "Off: setups that fail a rule are skipped, as usual. Turn it on to decide on near-misses yourself."}
           </div>
         </div>
@@ -220,6 +256,26 @@ export default function ReviewQueue({ s }) {
               {rq.shadow_summary.provisional ? `, ${rq.shadow_summary.provisional} provisional` : ""}. {rq.shadow_summary.basis}
             </p>
           )}
+        </details>
+      )}
+      {held.length > 0 && (
+        <details className="more-block" style={{ marginTop: 12 }}>
+          <summary>
+            Held back today: {held.length} reward-to-risk near-miss{held.length > 1 ? "es" : ""} with R:R after costs under {num(rq.min_net_rrr, 1)}
+            {hs?.trades > 0 && (
+              <>, <span className={tone(hs.net_rs)}>{money(hs.net_rs)} ({hs.r > 0 ? "+" : ""}{num(hs.r)}R)</span> if all had been taken</>
+            )}
+          </summary>
+          <div className="table-wrap">
+            <table className="datatable">
+              <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>R:R after costs</th><th>Target hit / stop hit</th><th>If approved</th></tr></thead>
+              <tbody>{held.map((c) => <HeldBackRow key={c.id} c={c} />)}</tbody>
+            </table>
+          </div>
+          <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+            Not offered: at these prices the target pays too little for the risk and the round trip. They are replayed
+            the same way as the cards above{hs?.open ? `; ${hs.open} still open` : ""}{hs?.provisional ? `, ${hs.provisional} provisional` : ""}.
+          </p>
         </details>
       )}
     </section>

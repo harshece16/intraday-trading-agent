@@ -424,6 +424,13 @@ PREOPEN_KITE_CHECK_TIME = "08:45"
 REVIEW_QUEUE = {
     "enabled": False,
     "expiry_seconds": 300,          # a card older than this can't be approved; prices move
+    # A card blocked on reward-to-risk is offered only if its R:R after costs,
+    # at the price when it would be offered, is at least this. Below it the
+    # near-miss is journaled and replayed but not offered (#166): of 23
+    # replayed cards, the 18 at or below 0 lost -0.72R each and none won, and
+    # 14 of the 17 that hit their target still lost money. None disables it.
+    # Cards blocked by any other item are not affected.
+    "min_net_rrr": 1.0,
 }
 
 FNO = {
