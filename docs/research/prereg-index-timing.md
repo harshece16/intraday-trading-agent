@@ -181,14 +181,14 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
    - **The look-ahead proof** draws 240 pairs, 80 per window, at decision bars closing 09:45 to 15:15.
    - **The threshold C** is the computed 6.946 bp, which the text rounds to 6.95.
    - **§9.4's hand check** re-reads the two bars from the cache rather than from the loaded arrays.
-4. **2026-09-30, 20:30 IST, after the first stage-0 run halted at §9.1 and before any other check ran.** That run computed nothing beyond the session lists: no characteristic check, factor, predictor check, target, fit or forecast had run. The halt was in the check's definition, not the data:
+4. **2026-09-30, 20:30 IST, after the first stage-0 run halted at §9.1 and before any other check ran.** That run computed nothing beyond the session lists: no characteristic check, factor, predictor check, target, fit or forecast had run. *(Corrected in amendment 6, N3: it did build the characteristics, factors and predictors.)* The halt was in the check's definition, not the data:
    - **The Muhurat session of 2024-11-01 ran 18:00 to 19:00 IST.** Both databases have it: 60 index minutes, and 12 stock bars from 18:00 to 18:55. None of it falls in the 09:15–15:25 window, so the index has no regular-hours bars that day, and the check, written for a 60-minute session inside the window, misfiled it. The 2025-10-21 session (13:45 to 14:45) fell as expected.
    - **The stock cache has a session on 2026-01-01** (100 symbols, 75 bars each). The loader's pre-registered cut, before 2026-01-02 (`splits.HELD_OUT_START`, as L47), keeps it. The index database ends on 2025-12-31, so that session has no index bars and is dropped. It lies after the scoring sample, in the embargo before the held-out window, and nothing uses it. It is not held-out data by the project's definition, but it is a 2026 date; recorded here.
    - **§9.1 now reads:**
      - the dropped sessions are exactly 2024-11-01 (no regular-hours bars), 2025-10-21 (60 index minutes) and 2026-01-01 (no index bars);
      - the stock cache's sessions up to 2025-12-31 equal the index database's, counting any minute of the day.
    - Every other condition of §9.1 is unchanged.
-5. **2026-09-30, 20:33 IST, after stage-0 run 2 halted at §9.7 (`data/l51_stage0_run2.json`, head e5ed55d). No scoring-sample target has been read.**
+5. **2026-09-30, 20:33 IST, after stage-0 run 2 halted at §9.7 (`data/l51_stage0_run2.json`, head e5ed55d). No scoring-sample target has been read.** *(Two statements below are corrected in amendment 6, N2.)*
    - **Checks 1 to 6 passed** in run 2:
      - coverage (78 scoring sessions, 39 per half, 85 to 94 members a session);
      - alignment (correlation 0.888 at lag 0, |r| < 0.02 at lags ±1 and ±2);
@@ -206,4 +206,47 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
    - **What run 2 already says about L51, before any scoring target is read:** a forecast with an IC of about 0.4 against the realised return only just clears 6.95 bp at 30 minutes (+2.1 bp a trade, t 1.24). The paper's R² of 0.2% corresponds to an IC of about 0.045. The first-window cross-validation picked α = 100 at 30 minutes and α = 31.6 at 60 minutes. Their validation MSE is 0.02% and 0.12% below the intercept-only level, so the 92 predictors add almost nothing there. L51 is expected to fail on the trade count, and its IC is the informative number.
 
 **Stage 0, run 3 (2026-09-30, 20:33 IST, head ebbc5a4): STAGE0_DONE.** Every halt passed. The two earlier runs are kept as `l51_stage0_run1.json` and `l51_stage0_run2.json`. The times of amendments 4 and 5 are corrected here to their commit times (20:30 and 20:33); they had been written as 20:35 and 20:50. The scoring pass waits for the independent review and the main session's go-ahead.
+
+6. **2026-09-30, 21:00 IST, after the independent review of head 15f9015 (NOT APPROVED: two blocking findings, B1 and B2, and notes N1, N2, N3, N5, N7 and N10). No scoring-sample target has been read; the scoring pass has not run.** The review found the code sound: no look-ahead, the gate coherent, the cost correct. The findings are fixed as follows. Stage 0 is then re-run once, at the final head; run 3's record is kept as `l51_stage0_run3.json`.
+   - **B1: per-decision rows, so the one run can be rechecked.** In the same pass as the result, the scoring pass writes:
+     - `data/l51_decisions.csv`: one row per horizon per grid decision on the used sessions from 2025-03-03 to 2025-12-23. Columns:
+       - horizon, session, bar, decision close time, refit month;
+       - sample (`pseudo_oos` or `scoring`), and half (1 or 2 within that sample);
+       - forecast_bp, intercept_bp (that month's ȳ), xb_bp (forecast − intercept);
+       - target_bp, the index's entry `IO[i+1]` and exit `IC[i+k]`;
+       - side (−1, 0 or +1 by §7), gross_bp (side × target), net_bp (gross − 6.946 when traded, else 0), net_bp_2025 (gross − 3.922 when traded, else 0).
+     - `data/l51_models.json`: per horizon and refit month, the α, n, first and last training session, ȳ, winsorisation bounds, and the mu, sd and b vectors in predictor order, so every forecast can be recomputed from the predictors.
+     - Their SHA-256 hashes, recorded in `l51_result.json`.
+   - **N7: integrity guards on the scoring pass.** It:
+     - refuses unless the module, this pre-registration and the stage-0 record are tracked and clean in git;
+     - records the module's and the pre-registration's SHA-256, and refuses unless the module's equals the one the stage-0 run of record recorded;
+     - asserts stage 0's data fingerprints (the stock-bar and index-minute row counts it read);
+     - asserts that its forecasts for 2025-03 to 2025-08 reproduce those stage 0 now records, to 1e-9 bp;
+     - commits `l51_result.json` with status STARTED as soon as it is written, before any target is built, and commits the result, rows and model files when it finishes.
+     - A synthetic end-to-end test of the scoring pass covers both the zero-trade path and a path with trades.
+   - **B2: the pre-registered IC mostly measures the monthly intercept.**
+     - **Evidence, from pre-scoring forecasts only** (2025-03 to 2025-08, each from a model trained before its month; no realised return compared). Each month's intercept ȳ is the training mean of the winsorised target: −0.68 to −0.06 bp at 30 minutes, −1.28 to −0.12 bp at 60. It accounts for **89%** of the forecast's variance at 30 minutes and **63%** at 60. **99.4% and 93.0%** of forecasts are negative.
+     - So the §8 IC, hit rate and Sign rule would mostly measure "always short" and the drift from month to month, over only four scoring months, and the naive t (n − 2) treats decisions within a session as independent.
+     - **Kept:** every §8 statistic, as pre-registered.
+     - **Added, and named the headline:** xb = forecast − that month's intercept, the part the 92 predictors contribute.
+       - **xb IC:** the Pearson correlation of xb with the realised target over every scoring-grid decision.
+       - **Its session-clustered t:** regress the standardised target on standardised xb (no intercept; the slope is the IC), and take the cluster-robust standard error with sessions as clusters, scaled by G/(G−1) × (N−1)/(N−2).
+       - **Also reported:**
+         - the xb IC in each half;
+         - the mean of per-session xb ICs, with its t across sessions;
+         - the hit rate of sign(xb);
+         - the mean of sign(xb) × target, with a t across the per-session means.
+     - **Reading rule, fixed now:** the predictors carry direction at a horizon only if the xb IC's clustered t is above 2 and the xb IC is positive in each half. A clustered t below −2 is reported as anti-predictive, not as direction. The rule reads the forecast; it does not touch the gate, which alone decides whether L51 clears.
+     - **Verdict wording, fixed now, for a horizon with fewer than 100 trades:** "L51 does not clear at *h*: the forecast exceeded the 6.95 bp round trip on *n* of *m* decisions." For 30 minutes it goes on: "The 30-minute gate cannot be passed at any plausible IC: a planted forecast with an IC of 0.38 over 2025-03 to 2025-08 made +2.10 bp a trade, t 1.24; the same strength gave t 2.87 at 60 minutes." Then the **power caveat (N1):** "Stage 0's positive control was strengthened from a correlation of 0.5 to 0.7 after run 2 had failed at 30 minutes (amendment 5), so the halt it provides is weaker than first promised; the 0.5 figures are what a forecast of that strength earns." Then the xb reading, by the rule above.
+     - **The IC is measured on the index.** The index is computed from its constituents' last trades, which lag at a five-minute scale and make index returns a little predictable in a way futures prices are not. The IC is therefore an upper bound on what a futures position could capture.
+   - **N2: corrections to amendment 5.**
+     - How its figures were computed: the target standard deviations (19.1, 15.2, 26.4 and 22.5 bp) and the 52% share came from a one-off read in the builder's session, after run 2 halted and before amendment 5 was written. It used `build_targets(before=2025-09-01)`, the first training window's training rows and the grid rows of 2025-03 to 2025-08, with the population standard deviation. No forecast was compared with them. Run 3 recorded the same figures (`target_volatility_information`).
+     - **0.7 was not tried before it was fixed.** Amendment 5 was committed at 20:33:06; run 3, the first run at 0.7, started at 20:33:45.
+     - **Amendment 5 overclaimed.** It said a misaligned target would give an IC near zero. It would not: the planted predictor is built from the same Y as the target, so it correlates with Y whether Y is aligned or not. The control tests the fitting, the refits, the mapping from forecast to trade, the trade's sign and the statistics. Whether targets align with predictors is tested by §9.2 and the look-ahead proof, not by the control.
+   - **N3: correction to amendment 4.** Run 1 did build the characteristics, factors and predictors, because `load_all` builds them before the coverage check. It built no target, fitted nothing, forecast nothing, and ran no check after coverage.
+   - **N5: the 2026 cut.**
+     - Both loaders now stop before 2026-01-01, so no row dated in 2026 is read, and the panel's last session must be before 2026-01-01. §9.1's expected dropped sessions become the two Muhurat sessions only.
+     - The scoring pass builds targets only for sessions up to 2025-12-23, the last scoring session, and records no forecast after it.
+   - **N10: L48 is also index timing.** L48 (breadth and intermarket, 2026-09-25) asked whether breadth or overnight moves predict the NIFTY 100's 09:20→15:10 session. It belongs to the family "intraday index timing", so a follow-up trial in this family counts at least L48 and L51.
+   - **Stage 0 additionally records** the module's SHA-256, every pseudo-out-of-sample forecast (session, bar, forecast), and the intercept figures above, as information.
 
