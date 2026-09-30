@@ -287,12 +287,14 @@ With no order book to read, a paper entry proceeds and is recorded as
 
 | Piece | Behaviour |
 | --- | --- |
-| Offer | A card is offered when exactly one required item failed, or when only the confidence gate blocked. One card per stock, side and session |
-| Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost |
+| Offer | A card is offered when exactly one required item failed, or when only the confidence gate blocked. When the failed item is R:R, its net R:R at the offer must be at least `REVIEW_QUEUE.min_net_rrr` (1.0, #166) |
+| Held back | An R:R near-miss under the floor is not offered. `hold()` journals the first one per stock, side and session as status `withheld`; it is replayed, never approvable, and doesn't take the stock's card |
+| One at a time | One card per stock, side and session while it is pending or decided. `add()` lets a later near-miss replace an EXPIRED card only if it is read on a later bar and its `progress()` (share of the failed item's bar reached, from the item's `value`/`need`) is higher |
+| Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost, and `money`: a hit target and a stop after costs (`target_net_rs`, `stop_net_rs`), and the break-even rate or "cannot break even at any win rate" |
 | Expiry | 300 seconds after the offer |
 | Approval | `approve_review()` needs a pending, unexpired card. In live mode it also needs `confirm_live` |
 | Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. It does **not** re-apply the minimum R:R or the cost floor: the approval overrides the card's blocker |
-| Shadow | `shadow_outcome()` replays every unapproved card as if approved at the offer, with the same slippage and charges. If one bar touches both stop and target, the stop is assumed first |
+| Shadow | `shadow_outcome()` replays every unapproved card and every held-back near-miss as if approved at the offer, with the same slippage and charges. If one bar touches both stop and target, the stop is assumed first |
 
 The queue's switch is in memory only. A restart turns it off.
 
@@ -900,7 +902,7 @@ changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
 | `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` |
 | `signals` | Every signal | `record_signal` | Research only |
 | `activity` | Every log line | `record_activity` | Blocked-signal views, once-a-day guards |
-| `manual_reviews` | Review cards, decisions and shadow outcomes | `review_queue` | `review_queue` |
+| `manual_reviews` | Review cards, held-back near-misses (status `withheld`), decisions and shadow outcomes | `review_queue` | `review_queue` |
 | `liquidity_checks` | Every order-book check before an entry | `liquidity.check` | Journal |
 | `depth_samples` | Order-book samples | `depth_sampler` | The order-book test |
 | `fno_evaluations`, `fno_trades` | Options evaluations and trades | Engine | `fno_journal_summary` |

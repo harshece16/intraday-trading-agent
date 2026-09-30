@@ -27,7 +27,7 @@ Companions: [High-Level Design](HLD.md) · [Low-Level Design](LLD.md) · [Knowle
 
 | Area | Rules | Enforced now | With a test | Known gaps |
 | --- | --- | --- | --- | --- |
-| [Entry gates](#entry-gates) | 27 | 25 | 20 | – |
+| [Entry gates](#entry-gates) | 27 | 25 | 20 | [#102](https://github.com/harshece16/intraday-trading-agent/issues/102) [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 | [Risk and sizing](#risk-and-sizing) | 10 | 10 | 8 | – |
 | [Execution](#execution) | 8 | 8 | 7 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) |
 | [Exits and square-off](#exits-and-square-off) | 7 | 6 | 5 | – |
@@ -376,30 +376,35 @@ The manual review queue is off by default. It is turned on in memory only, so a 
 </details>
 
 <details>
-<summary><code>ENT-23</code> <b>Active</b> — A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked.</summary>
+<summary><code>ENT-23</code> <b>Active</b> · known gap #166 — A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked.</summary>
 
-A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked. It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share.
+A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked. It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share. When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.
 
 | | |
 | --- | --- |
-| **Why** | Only put setups in front of the user that could actually be taken. |
-| **Enforced in** | `backend/trading_engine.py:_offer_near_misses, _offer_review; backend/review_queue.py:single_blocker` |
-| **How to check** | manual_reviews table; activity kind 'review'; Overview page review queue |
-| **Test** | `backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails` |
-| **Source** | README §64 |
+| **Why** | Only put setups in front of the user that could actually be taken. Of 39 replayed R:R cards, all under 1.0, the mean was -0.78R (t -5.42) and 21 of the 25 that hit their target still lost money (#166). |
+| **Enforced in** | `backend/trading_engine.py:_offer_near_misses, _offer_review; backend/review_queue.py:single_blocker, floor_reason, build_card, ReviewQueue.hold` |
+| **Setting** | `REVIEW_QUEUE.min_net_rrr = 1.0` |
+| **How to check** | manual_reviews table (status 'withheld' with withheld_reason for a held-back near-miss); activity kind 'review'; Overview page review queue and its 'Held back today' list |
+| **Test** | `backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even` |
+| **Source** | README §64, §105 |
+| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 
 <details>
-<summary><code>ENT-24</code> <b>Active</b> — Each (stock, side) gets at most one review card per session, remembered across restarts from manual_reviews.</summary>
+<summary><code>ENT-24</code> <b>Active</b> · known gap #166 — Each (stock, side) has one review card at a time per session, remembered across restarts from manual_reviews.</summary>
+
+Each (stock, side) has one review card at a time per session, remembered across restarts from manual_reviews. A pending, approved, rejected or refused card closes it for the day. A card that expired unanswered can be replaced by a later near-miss read on a later bar that came closer: a larger share of its failed item's bar reached (R:R after costs over 1.5, volume over its average, stop over cost, confidence over 60; pattern, S/R and trend count as 0). A held-back near-miss doesn't take the card; the first one per stock and side is journaled.
 
 | | |
 | --- | --- |
-| **Why** | A setup hovering near the bar all afternoon is asked about once. |
-| **Enforced in** | `backend/review_queue.py:ReviewQueue.add, _roll` |
-| **How to check** | manual_reviews rows per session_date |
-| **Test** | `backend/tests/test_review_queue.py::test_one_card_per_stock_side_and_day_and_it_is_journaled` |
-| **Source** | README §64 |
+| **Why** | A setup hovering near the bar all afternoon is asked about once, but the first near-miss no longer takes the day's only card: TCS's 09:50 volume card (0.7x) expired and its 10:35 near-miss at R:R 1.40 was never offered (#166). |
+| **Enforced in** | `backend/review_queue.py:ReviewQueue.add, _open_for, progress, _roll` |
+| **How to check** | manual_reviews rows per session_date: an expired card followed by a later card for the same stock and side |
+| **Test** | `backend/tests/test_review_queue.py::test_one_card_per_stock_side_and_day_and_it_is_journaled; backend/tests/test_review_queue.py::test_a_later_closer_near_miss_replaces_an_expired_card; backend/tests/test_review_queue.py::test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss; backend/tests/test_review_queue.py::test_no_new_card_unless_the_last_one_expired_and_this_one_is_later_and_closer` |
+| **Source** | README §64, §105 |
+| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 
@@ -433,18 +438,20 @@ An approval overrides only the card's blocker and the confidence gate. At click 
 </details>
 
 <details>
-<summary><code>ENT-27</code> <b>Active</b> — Every unapproved card is replayed once a minute as if approved at the offer: bars that start after the offer, exit at the first of stop (assumed…</summary>
+<summary><code>ENT-27</code> <b>Active</b> · known gap #102 · known gap #166 — Every unapproved card, and every near-miss held back by the R:R floor, is replayed once a minute as if approved at the offer: bars that start after…</summary>
 
-Every unapproved card is replayed once a minute as if approved at the offer: bars that start after the offer, exit at the first of stop (assumed first on a both-touch bar), target or 15:08 square-off, with real slippage and charges. The result stays provisional until a completed bar settles it.
+Every unapproved card, and every near-miss held back by the R:R floor, is replayed once a minute as if approved at the offer: bars that start after the offer, exit at the first of stop (assumed first on a both-touch bar), target or 15:08 square-off, with real slippage and charges. The result stays provisional until a completed bar settles it.
 
 | | |
 | --- | --- |
-| **Why** | So the value of the queue accumulates as evidence instead of being assumed. |
+| **Why** | So the value of the queue, and what the R:R floor costs or saves, accumulates as evidence instead of being assumed. |
 | **Enforced in** | `backend/review_queue.py:shadow_outcome; backend/trading_engine.py:_update_review_shadows` |
 | **Setting** | `SQUARE_OFF_TIME = "15:08"` |
-| **How to check** | manual_reviews.shadow_json; 'If approved' column on Overview |
-| **Test** | `backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both` |
-| **Source** | README §68, issue #102 |
+| **How to check** | manual_reviews.shadow_json; 'If approved' column on Overview; the 'Held back today' list and its total |
+| **Test** | `backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both; backend/tests/test_review_queue.py::test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved` |
+| **Source** | README §68, §105, issue #102 |
+| **Known gap** | [#102](https://github.com/harshece16/intraday-trading-agent/issues/102) |
+| **Known gap** | [#166](https://github.com/harshece16/intraday-trading-agent/issues/166) |
 
 </details>
 

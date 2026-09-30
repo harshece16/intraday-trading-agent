@@ -948,7 +948,8 @@ class TradingEngine:
                 try:
                     blocker = {"key": "confidence", "label": f"Confidence at least {min_conf}",
                                "detail": f"{conf['score']}/100 (local setup {conf['local_setup']['score']} × "
-                                         f"{conf['system_evidence']['multiplier']:.2f} system evidence)"}
+                                         f"{conf['system_evidence']['multiplier']:.2f} system evidence)",
+                               "value": conf["score"], "need": min_conf}
                     self._offer_review(symbol, side, (analysis.get("checklist") or {}).get(side.lower()),
                                        blocker, ltp, candles, analysis, conf=conf)
                 except Exception:
@@ -1049,9 +1050,12 @@ class TradingEngine:
     def _offer_review(self, symbol, side, plan, blocker, ltp, bars, analysis, conf=None):
         """Put one card in front of the user, if it could actually be taken:
         the plan has a stop and a target the price hasn't passed, no other
-        rule would stop it, and it sizes to at least one share."""
+        rule would stop it, and it sizes to at least one share. A card blocked
+        on reward-to-risk must also clear the queue's R:R floor at this price;
+        one that doesn't is held back instead: journaled and replayed, not
+        offered (#166)."""
         q = self.review_queue
-        if not q.enabled() or not plan or q.seen(symbol, side):
+        if not q.enabled() or not plan:
             return None
         stop, target = plan.get("stop"), plan.get("target")
         if stop is None or target is None:
@@ -1059,9 +1063,17 @@ class TradingEngine:
         s = 1 if side == "LONG" else -1
         if (ltp - stop) * s <= 0 or (target - ltp) * s <= 0:
             return None
+        params = {**trader_brain.DEFAULTS, **self.strategy_params}
+        rrr = trader_brain._net_rrr(ltp, stop, target, params["cost_pct"])
+        held = review_queue.floor_reason(blocker, rrr)
+        # Cheap checks first: most ticks, this stock and side has nothing new to ask.
+        if held:
+            if q.held_back(symbol, side):
+                return None
+        elif not q.can_offer(symbol, side, review_queue.progress(blocker, rrr), analysis.get("bar_time")):
+            return None
         if self._entry_block_reason(symbol, side):
             return None
-        params = {**trader_brain.DEFAULTS, **self.strategy_params}
         atr_val = compute_atr(bars, config.RISK.get("atr_period", 14)) if config.RISK.get("use_atr_risk") and bars else None
         qty = self.risk.position_size(ltp, atr=atr_val, stop_price=stop,
                                       size_factor=self.size_multiplier * plan.get("size_factor", 1.0))
@@ -1077,11 +1089,17 @@ class TradingEngine:
                         "multiplier": conf["system_evidence"]["multiplier"]},
             mode="paper" if self.state.paper_mode else "live", bar_time=analysis.get("bar_time"))
         card["checklist"] = analysis.get("checklist")
+        if held:
+            if q.hold(card, held) is not None:
+                self.state.log("review", f"{card['setup']} ({side.lower()}) not offered for review: {held}. "
+                                         f"{card['money']} Its outcome is still replayed.",
+                               symbol=symbol, level="info")
+            return None
         if q.add(card) is None:
             return None
         mins = max(1, config.REVIEW_QUEUE["expiry_seconds"] // 60)
         self.state.log("review", f"{card['setup']} ({side.lower()}) is waiting for your decision: it failed only "
-                                 f"\"{blocker['label']}\" ({blocker['detail']}). {card['verdict']} "
+                                 f"\"{blocker['label']}\" ({blocker['detail']}). {card['money']} {card['verdict']} "
                                  f"Approve or reject it on the Overview page within {mins} min.",
                        symbol=symbol, level="warn")
         return card

@@ -8,15 +8,22 @@ A card is offered when, for one side of one stock:
   pattern or cost), and the plan still has a stop and a target; or
 - every checklist item passed and the **confidence gate** alone stopped it.
 
+When the failed item is reward-to-risk, the card is offered only if its R:R
+after costs at the offer is at least `config.REVIEW_QUEUE["min_net_rrr"]`
+(#166). Below that the target doesn't pay for the risk and the round trip, so
+the near-miss is held back: journaled and replayed like a card, never offered.
+
 Nothing here places an order. `TradingEngine.approve_review()` does, and
 only after the user clicks Approve. That approval overrides the one gate
 named on the card, plus the confidence gate. It **re-checks every risk
 limit**: daily loss, max positions, sector cap, one entry per stock per day,
 the entry window, the scanner/market filters, sizing and liquidity.
 
-The card is a numbers card, deterministic and free. Its one derived judgement
-is arithmetic: the win rate a trade at this R:R needs to break even, set
-against the win rate this checklist has actually measured.
+The card is a numbers card, deterministic and free. It states the money in
+rupees: what a hit target makes after charges and slippage, what a stop
+loses, and the win rate needed to break even, or that no win rate can. Its one
+derived judgement is arithmetic: that break-even rate set against the win rate
+this checklist has actually measured.
 """
 
 import threading
@@ -44,11 +51,66 @@ def now_ist():
     return datetime.now(IST)
 
 
+# A near-miss the R:R floor kept from being offered. Journaled and replayed
+# like a card, but never shown as one and never approvable.
+WITHHELD = "withheld"
+
+
 def single_blocker(plan):
     """The one required checklist item that failed, or None when none or
     several did."""
     failing = [i for i in (plan or {}).get("items", []) if i.get("required") and not i.get("ok")]
     return failing[0] if len(failing) == 1 else None
+
+
+def floor_reason(blocker, net_rrr, floor=None):
+    """Why a near-miss is held back instead of offered, or None if it may be
+    offered. Only a card blocked on reward-to-risk is held to the floor; a
+    card blocked on anything else is unaffected (#166). `net_rrr` is the R:R
+    after costs at the price the card would be offered at."""
+    floor = config.REVIEW_QUEUE.get("min_net_rrr") if floor is None else floor
+    if floor is None or (blocker or {}).get("key") != "rrr" or net_rrr >= floor:
+        return None
+    shown = f"{net_rrr:.2f}" if f"{net_rrr:.2f}" != f"{floor:.2f}" else f"{net_rrr:.3f}"
+    return f"reward-to-risk after costs is {shown} at the offer, under the queue's floor of {floor:g}"
+
+
+def progress(blocker, net_rrr=None):
+    """How much of the failed item's bar this near-miss reached, from 0 to 1.
+    A later near-miss may replace an expired card only if it came closer.
+
+    Reward-to-risk is measured at the offer (`net_rrr`), as the floor is. Volume
+    and the stop-to-cost floor use the value the checklist measured on the bar
+    (`value` over `need`); confidence is its score over the bar. An item that
+    only passes or fails (pattern, stop at a level, trend) has no measure and
+    counts as 0, so any measurable near-miss is closer than it."""
+    blocker = blocker or {}
+    value, need = blocker.get("value"), blocker.get("need")
+    if blocker.get("key") == "rrr" and net_rrr is not None:
+        value, need = net_rrr, need or trader_brain.DEFAULTS["min_rrr"]
+    if value is None or not need:
+        return 0.0
+    return round(min(1.0, max(0.0, value / need)), 3)
+
+
+def _rs(x):
+    return f"₹{abs(x):,.2f}"
+
+
+def money_line(rrr, target_net, stop_net, cost_rs, breakeven):
+    """The card's money, in words: what a hit target makes after charges and
+    slippage, what a stop loses, and the win rate needed to break even."""
+    if rrr > 0:
+        hit = f"If the target is hit it makes {_rs(target_net)} after {_rs(cost_rs)} of charges and slippage"
+    elif round(target_net, 2) == 0:
+        hit = f"If the target is hit it makes nothing: {_rs(cost_rs)} of charges and slippage take all of it"
+    else:
+        hit = (f"If the target is hit it still loses {_rs(target_net)}: the {_rs(cost_rs)} of charges and "
+               f"slippage are more than the target pays")
+    stop = f"if the stop is hit it loses {_rs(stop_net)}"
+    tail = ("It cannot break even at any win rate." if breakeven is None
+            else f"It breaks even only if {breakeven:.0%} of trades like this win.")
+    return f"{hit}; {stop}. {tail}"
 
 
 def build_card(symbol, side, plan, blocker, ltp, cost_pct, qty, setup=None, confidence=None,
@@ -67,13 +129,16 @@ def build_card(symbol, side, plan, blocker, ltp, cost_pct, qty, setup=None, conf
     p = BACKTEST_REFERENCE["win_rate"]
     # In units of (risk + cost): a win nets rrr, a loss costs 1.
     expected_r = p * rrr - (1 - p)
+    # The same round trip the net R:R deducts, in rupees, so the two money
+    # figures divide back to net_rrr and the break-even rate follows from them.
+    cost_rs = qty * ltp * cost_pct / 100
+    target_net, stop_net = qty * reward_ps - cost_rs, -(qty * risk_ps + cost_rs)
 
     if breakeven is None:
-        verdict = (f"The target doesn't cover the round trip's cost, so no win rate breaks even. At the "
-                   f"checklist's measured {p:.0%} win rate this averages {expected_r:+.2f}R.")
+        verdict = (f"The target doesn't cover the round trip's cost. At the checklist's measured {p:.0%} win rate "
+                   f"this averages {expected_r:+.2f}R.")
     else:
-        verdict = (f"Breaks even only if {breakeven:.0%} of trades like this win. The checklist wins {p:.0%}, "
-                   f"which averages {expected_r:+.2f}R per trade.")
+        verdict = f"The checklist wins {p:.0%}; at that rate a trade like this averages {expected_r:+.2f}R."
 
     return {
         "id": uuid.uuid4().hex[:12],
@@ -81,15 +146,20 @@ def build_card(symbol, side, plan, blocker, ltp, cost_pct, qty, setup=None, conf
         "session_date": now.date().isoformat(),
         "created_ts": created, "expires_ts": created + expiry,
         "status": "pending", "mode": mode, "bar_time": bar_time,
-        "blocker": {k: blocker.get(k) for k in ("key", "label", "detail")},
+        "blocker": {k: blocker.get(k) for k in ("key", "label", "detail", "value", "need")},
+        "progress": progress(blocker, rrr),
         "entry": round(ltp, 2), "stop": round(stop, 2), "target": round(target, 2),
         "net_rrr": round(rrr, 2), "stop_pct": round(stop_pct, 3),
         "target_pct": round(reward_ps / ltp * 100, 3), "cost_pct": cost_pct,
         "friction": round(cost_pct / stop_pct, 2) if stop_pct else None,
         "size_factor": plan.get("size_factor", 1.0),
         "qty": qty, "risk_rs": round(qty * risk_ps, 2), "reward_rs": round(qty * reward_ps, 2),
-        "cost_rs": round(qty * ltp * cost_pct / 100, 2),
+        "cost_rs": round(cost_rs, 2),
+        # After charges and slippage, both legs: a hit target, and a stop.
+        "target_net_rs": round(target_net, 2), "stop_net_rs": round(stop_net, 2),
         "breakeven_win_rate": round(breakeven, 3) if breakeven is not None else None,
+        "can_break_even": breakeven is not None,
+        "money": money_line(rrr, target_net, stop_net, cost_rs, breakeven),
         "reference_win_rate": p, "expected_r": round(expected_r, 2),
         "reference_source": BACKTEST_REFERENCE["source"],
         "confidence": confidence,
@@ -190,15 +260,46 @@ def shadow_outcome(card, bars, ltp=None, now=None, costs_cfg=None, square_off=No
     return result
 
 
+def _shadow_summary(shadows):
+    """The day's hypothetical total over replayed outcomes that have a P&L."""
+    shadows = [x for x in shadows if (x or {}).get("net_rs") is not None]
+    return {
+        "trades": len(shadows),
+        "open": sum(1 for x in shadows if x["status"] == "open"),
+        "provisional": sum(1 for x in shadows if x["status"] != "open" and not x.get("final")),
+        "net_rs": round(sum(x["net_rs"] for x in shadows), 2),
+        "r": round(sum(x["r"] or 0 for x in shadows), 2),
+        "basis": SHADOW_BASIS,
+    }
+
+
+# What the dashboard needs of a held-back near-miss; the full card stays in
+# the journal.
+_WITHHELD_FIELDS = ("id", "symbol", "side", "setup", "created_ts", "bar_time", "blocker", "entry", "stop",
+                    "target", "net_rrr", "qty", "target_net_rs", "stop_net_rs", "can_break_even",
+                    "withheld_reason", "shadow", "status")
+
+
 class ReviewQueue:
-    """Today's cards, in memory and in the `manual_reviews` table. One card
-    per stock, side and session: the same rule as max_entries_per_day, so a
-    setup that hovers near the bar all afternoon is asked about once."""
+    """Today's cards, in memory and in the `manual_reviews` table.
+
+    One question per stock, side and session at a time. While a card is
+    pending, or once the user has approved, rejected or tried it, that stock
+    and side is not asked about again that day, so a setup that hovers near
+    the bar all afternoon is asked about once. A card that EXPIRED unanswered
+    can be replaced by a later near-miss that came closer: read on a later
+    bar, and with more of its failed item's bar reached (`progress`). Before
+    #166 the first near-miss took the day's only card, however poor it was.
+
+    A near-miss the R:R floor holds back is kept here too, as status
+    "withheld", the first one per stock, side and session. It is never shown
+    as a card and can't be approved, and it doesn't take the stock's slot;
+    it is journaled and replayed like a card, so the floor is judged on the
+    same record as the cards it lets through."""
 
     def __init__(self):
         self._lock = threading.Lock()
         self.cards = {}
-        self._seen = set()
         self._day = None
 
     def enabled(self):
@@ -210,29 +311,71 @@ class ReviewQueue:
         if self._day == day:
             return
         self._day = day
-        self.cards, self._seen = {}, set()
+        self.cards = {}
         now = now_ist().timestamp()
         for card in database.reviews_on(day):
             if card.get("status") == "pending" and now > card.get("expires_ts", 0):
                 card["status"], card["decided_ts"] = "expired", card["expires_ts"]
                 database.update_review(card["id"], "expired", card["decided_ts"])
             self.cards[card["id"]] = card
-            self._seen.add((card["symbol"], card["side"]))
 
-    def seen(self, symbol, side, day=None):
+    def _slot(self, symbol, side, offered=True):
+        """Today's offered cards (or held-back near-misses) for one stock and
+        side. Call with the lock held."""
+        return [c for c in self.cards.values()
+                if c["symbol"] == symbol and c["side"] == side and (c["status"] != WITHHELD) == offered]
+
+    def _open_for(self, symbol, side, closeness, bar_time, now):
+        """Whether a near-miss may be offered for this stock and side: no card
+        yet today, or the latest one expired unanswered and this near-miss is
+        from a later bar and closer. Call with the lock held."""
+        offered = self._slot(symbol, side)
+        if not offered:
+            return True
+        last = max(offered, key=lambda c: c["created_ts"])
+        lapsed = last["status"] == "expired" or (last["status"] == "pending" and now > last["expires_ts"])
+        if not lapsed:
+            return False
+        if bar_time and last.get("bar_time") and bar_time <= last["bar_time"]:
+            return False
+        # A card journaled before #166 has no progress: anything measurable is closer.
+        return closeness > (last.get("progress") or 0.0)
+
+    def can_offer(self, symbol, side, closeness, bar_time=None, day=None):
+        """The cheap check before a card is built. `add()` checks again."""
         with self._lock:
             self._roll(day or now_ist().date().isoformat())
-            return (symbol, side) in self._seen
+            return self._open_for(symbol, side, closeness, bar_time, now_ist().timestamp())
+
+    def held_back(self, symbol, side, day=None):
+        """Whether a near-miss for this stock and side is already held back today."""
+        with self._lock:
+            self._roll(day or now_ist().date().isoformat())
+            return bool(self._slot(symbol, side, offered=False))
 
     def add(self, card):
-        """Offer a card. Returns it, or None if this stock and side were
-        already asked about today."""
+        """Offer a card. Returns it, or None if this stock and side already
+        has a card pending or decided today, or its expired card was as close
+        as this one or closer."""
+        self.expire_due()   # so a card past its time counts as expired, in the journal too
         with self._lock:
             self._roll(card["session_date"])
-            key = (card["symbol"], card["side"])
-            if key in self._seen:
+            if not self._open_for(card["symbol"], card["side"], card.get("progress") or 0.0,
+                                  card.get("bar_time"), now_ist().timestamp()):
                 return None
-            self._seen.add(key)
+            self.cards[card["id"]] = card
+        database.record_review(card)
+        return card
+
+    def hold(self, card, reason):
+        """Journal a near-miss the R:R floor keeps from being offered, so its
+        replay runs like a card's. The first one per stock, side and session.
+        Returns it, or None if one is already held for this stock and side."""
+        with self._lock:
+            self._roll(card["session_date"])
+            if self._slot(card["symbol"], card["side"], offered=False):
+                return None
+            card.update({"status": WITHHELD, "withheld_reason": reason, "expires_ts": card["created_ts"]})
             self.cards[card["id"]] = card
         database.record_review(card)
         return card
@@ -258,7 +401,9 @@ class ReviewQueue:
         """Today's cards that were NOT approved (an approved card is a real
         position) and whose hypothetical trade isn't settled yet: not computed,
         still open, or exited provisionally (#102). An outcome saved before the
-        `final` flag existed counts as provisional, so it is re-checked once."""
+        `final` flag existed counts as provisional, so it is re-checked once.
+        Held-back near-misses are included: their replay is the record the
+        R:R floor is judged on."""
         with self._lock:
             return [dict(c) for c in self.cards.values()
                     if c["status"] != "approved" and not (c.get("shadow") or {}).get("final", False)]
@@ -281,7 +426,8 @@ class ReviewQueue:
 
     def snapshot(self, limit=20):
         """For the dashboard: pending cards first, newest first, then today's
-        decided ones."""
+        decided ones. Held-back near-misses are listed apart: they were never
+        offered."""
         try:
             with self._lock:
                 self._roll(now_ist().date().isoformat())
@@ -291,24 +437,22 @@ class ReviewQueue:
         with self._lock:
             # The checklist copy is kept for the journal, not the dashboard.
             cards = [{k: v for k, v in c.items() if k != "checklist"} for c in self.cards.values()]
+        held = sorted((c for c in cards if c["status"] == WITHHELD), key=lambda c: -c["created_ts"])
+        cards = [c for c in cards if c["status"] != WITHHELD]
         pending = sorted((c for c in cards if c["status"] == "pending"), key=lambda c: -c["created_ts"])
         decided = sorted((c for c in cards if c["status"] != "pending"),
                          key=lambda c: -(c.get("decided_ts") or c["created_ts"]))
-        shadows = [c["shadow"] for c in cards
-                   if c["status"] != "approved" and (c.get("shadow") or {}).get("net_rs") is not None]
         return {
             "enabled": self.enabled(),
             "expiry_seconds": config.REVIEW_QUEUE["expiry_seconds"],
+            "min_net_rrr": config.REVIEW_QUEUE.get("min_net_rrr"),
             "server_ts": now_ist().timestamp(),
             "cards": (pending + decided)[:limit],
             # "If every card today that wasn't approved had been": the day's
             # hypothetical total, so the queue's value is visible, not assumed.
-            "shadow_summary": {
-                "trades": len(shadows),
-                "open": sum(1 for x in shadows if x["status"] == "open"),
-                "provisional": sum(1 for x in shadows if x["status"] != "open" and not x.get("final")),
-                "net_rs": round(sum(x["net_rs"] for x in shadows), 2),
-                "r": round(sum(x["r"] or 0 for x in shadows), 2),
-                "basis": SHADOW_BASIS,
-            },
+            "shadow_summary": _shadow_summary([c.get("shadow") for c in cards if c["status"] != "approved"]),
+            # The near-misses the R:R floor kept back, replayed the same way,
+            # so what the floor cost or saved is visible too.
+            "withheld": [{k: c.get(k) for k in _WITHHELD_FIELDS} for c in held],
+            "withheld_summary": {"count": len(held), **_shadow_summary([c.get("shadow") for c in held])},
         }

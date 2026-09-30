@@ -3884,6 +3884,39 @@ The owner asked, before going to sleep, for Kronos to be added if it passed, for
 
 Results: `results-kronos-feature-ic.md`, `results-tsfm-family.md`, `results-qlib-lgbm-alpha158.md`, `results-combo-search.md`.
 
+### 105. The review queue offers a reward-to-risk card only if it can pay, and every card says what it pays (#166)
+
+**What was wrong.** The review queue (§64) offers a card when exactly one required checklist item failed. When that item was reward-to-risk, nothing checked how far short it fell. Most of those cards had a target a few basis points away, less than the 16.63 bp round trip, so they lost money even when the target was hit. And the first near-miss in a stock and side took that stock's only card for the day, so a later, closer near-miss was never offered.
+
+**The evidence.** Every reward-to-risk card offered so far, from `manual_reviews`, as the queue's own replay scored it (§68: entered at the offer, out at the stop, the target or the square-off, with the same slippage and charges as a real fill). Read-only on 2026-09-30.
+
+| R:R cards with a final replay | n | Mean R | Net | Winners |
+| --- | --- | --- | --- | --- |
+| R:R after costs at or below 0, 09-24 to 09-28 (the issue) | 18 | −0.72 | −₹545 | 0 |
+| R:R between 0 and 1, 09-24 to 09-28 | 4 | −0.02 | +₹68 | 3 |
+| R:R at or below 0, 09-29 (after the issue was filed) | 13 | −0.94 | −₹606 | 0 |
+| R:R between 0 and 1, 09-29 | 4 | −1.26 | −₹217 | 1 |
+| **All** | **39** | **−0.78** (t −5.42) | **−₹1,300** | **4** |
+
+- The target was hit in 25 of the 39 replays. **21 of those 25 still lost money.**
+- No reward-to-risk card offered so far netted 1.0 at the offer. The best was 0.83 (JINDALSTEL, 09-25).
+- 09-29 came after the issue was written and points the same way: 17 cards, all under 1.0, −1.01R each (t −5.32).
+
+**The change.**
+
+1. **A floor.** A card blocked on reward-to-risk is offered only if its R:R after costs, at the price when it would be offered, is at least `config.REVIEW_QUEUE["min_net_rrr"]`, set to 1.0. The issue suggested 1.0 and the owner chose it. It is not fitted to the record: at 1.0 a hit target makes at least as much as a stop loses, after costs. Cards blocked on any other item are unchanged, and `None` switches the floor off.
+2. **Held back, still replayed.** A near-miss under the floor is not offered. The first one per stock, side and session is written to `manual_reviews` with status `withheld` and the reason, and replayed once a minute like a card, so the floor is judged on the same record as the cards it lets through. It can't be approved, and it doesn't take the stock's card. The Overview page lists these under "Held back today", with what they would have made. The activity log notes each one at info level, which sends no phone alert.
+3. **A closer near-miss can replace an expired card.** When a card expires unanswered, a later near-miss for the same stock, side and session can be offered if it is read on a later bar and came closer. "Closer" is the share of the failed item's bar it reached: R:R after costs over the 1.5 it needed, volume over its average, the stop over the round trip's cost, confidence over 60. Pattern, stop at a level and trend only pass or fail, so they count as 0. Each replacement must beat the card before it, so a setup hovering at the same distance is not asked about again. A pending card, or one approved, rejected or refused, still closes the stock and side for the day. To measure volume and cost, the checklist now stores each of those items' value and the bar it had to reach (`value`, `need`, also on R:R). Nothing else reads them.
+4. **Every card states the money.** What a hit target makes after charges and slippage, what a stop loses, and the win rate needed to break even. At or below 0 it says the trade cannot break even at any win rate (before, `breakeven_win_rate` was just empty). The two rupee figures use the same round trip the net R:R deducts, so they divide back to the card's R:R. The same sentence goes into the activity log and the phone alert.
+
+**What it changes.** Reward-to-risk cards become rare. None of the 43 offered so far would have been offered. The checklist journal from 09-24 to the morning of 09-30 holds 214 distinct R:R-only near-misses (one stock, side and bar): 173 netted 0 or less at the bar's close, 33 between 0 and 0.5, 7 between 0.5 and 1, and 1 cleared 1.0. That one is the issue's example, TCS short on the 10:35 bar of 09-28 at 1.40. TCS's card that day was a 09:50 volume miss at 0.7× volume, 70% of its bar, and it expired. At 93% of its bar the 10:35 near-miss is closer, so it now qualifies for a card. On this record the queue would have offered about 4 cards in four sessions instead of 46: the 3 volume cards and TCS's 10:35 near-miss. That count comes from the journal, not from replaying the engine.
+
+**What this does not show.** It doesn't make the queue profitable. It stops offering trades that lose by arithmetic. Whether cards at 1.0 or more pay is unknown: one such card has been replayed (TCS's 09:50 volume card, stopped, −1.39R). Four sessions are a small sample. The held-back replay keeps running, so the floor can be judged on it and changed in one place.
+
+**Checked.** 14 new tests (20 cases) in `backend/tests/test_review_queue.py`, all 53 in the file passing: the money sentence and figures, the floor at 0.985 and 1.003, the floor left alone for other blockers and read from config, a held-back near-miss journaled once, replayed, not approvable and not taking the stock's card, a closer near-miss replacing an expired card (the TCS case too), no replacement while a card is pending or decided, on the same bar, or when it isn't closer, and a restart remembering all of it. The replay of a held-back near-miss booked its target within ₹0.30 of what its card said it would make. The dashboard passes lint and builds, and the card and the held-back list were rendered from a sample snapshot. They are checked in the browser after the deploy: the dashboard can't be restarted during a session.
+
+Files: `backend/review_queue.py`, `backend/trading_engine.py`, `backend/trader_brain.py`, `backend/config.py`, `backend/tests/test_review_queue.py`, `frontend/src/components/ReviewQueue.jsx`, `docs/architecture/rules.json` (ENT-23, ENT-24, ENT-27), `docs/architecture/LLD.md`.
+
 ### 106. The day's list survives a restart
 
 **The bug (#198).** The day's list was held in memory only. A backend restart lost it, and the first scan after the restart chose it again from the data of that moment. The restart of 2026-09-29 at 18:08, after the close, put HINDALCO in place of TVSMOTOR, and the Screener then said the list was "fixed at the first scan of the session at 06:08 PM", which is not what happened that day. The watchdog restarts a backend that stops answering, so a restart inside a session is an expected event. The engine, the order-book sampler and Jev's 09:45 round would each have seen a different list part-way through the day.
