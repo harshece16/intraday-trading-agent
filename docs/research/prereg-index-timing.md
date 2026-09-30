@@ -181,3 +181,11 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
    - **The look-ahead proof** draws 240 pairs, 80 per window, at decision bars closing 09:45 to 15:15.
    - **The threshold C** is the computed 6.946 bp, which the text rounds to 6.95.
    - **§9.4's hand check** re-reads the two bars from the cache rather than from the loaded arrays.
+4. **2026-09-30, 20:35 IST, after the first stage-0 run halted at §9.1 and before any other check ran.** That run computed nothing beyond the session lists: no characteristic check, factor, predictor check, target, fit or forecast had run. The halt was in the check's definition, not the data:
+   - **The Muhurat session of 2024-11-01 ran 18:00 to 19:00 IST.** Both databases have it: 60 index minutes, and 12 stock bars from 18:00 to 18:55. None of it falls in the 09:15–15:25 window, so the index has no regular-hours bars that day, and the check, written for a 60-minute session inside the window, misfiled it. The 2025-10-21 session (13:45 to 14:45) fell as expected.
+   - **The stock cache has a session on 2026-01-01** (100 symbols, 75 bars each). The loader's pre-registered cut, before 2026-01-02 (`splits.HELD_OUT_START`, as L47), keeps it. The index database ends on 2025-12-31, so that session has no index bars and is dropped. It lies after the scoring sample, in the embargo before the held-out window, and nothing uses it. It is not held-out data by the project's definition, but it is a 2026 date; recorded here.
+   - **§9.1 now reads:**
+     - the dropped sessions are exactly 2024-11-01 (no regular-hours bars), 2025-10-21 (60 index minutes) and 2026-01-01 (no index bars);
+     - the stock cache's sessions up to 2025-12-31 equal the index database's, counting any minute of the day.
+   - Every other condition of §9.1 is unchanged.
+
