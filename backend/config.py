@@ -212,7 +212,10 @@ SCANNER = {
     # its price is within this many per cent of either band.
     "guards": True,
     "near_band_pct": 2.0,
-    "allow_shorts": True,            # rank each stock long AND short; keep the stronger side
+    # Score each stock as a long AND a short; the stronger is shown as score_side,
+    # for information only (README section 115). False scores longs only and
+    # refuses every short entry.
+    "allow_shorts": True,
     "counter_trend_active_count": 2, # max picks against the market bias (longs on risk-off, shorts on risk-on)
     # Raised alongside active_count — this is what selects which candidates
     # get the full Sahab's Dimaag + news read (final_score) BEFORE the top

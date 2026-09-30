@@ -150,7 +150,7 @@ today for X" and when trading resumes.
 | **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 · confirmed Bulkowski daily pattern +15 · Murphy reversal day/selling climax +10 to +18 |
 | **In play today** | Gap under 0.5%: not scored. With the trade: +10 if Bulkowski's classifier calls it a breakaway, −8 if exhaustion, otherwise +6 up to 3% and −10 above it. Against the trade: +6 if exhaustion, −8 at 3% or more · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
-| **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept, and an entry on the other side is blocked |
+| **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept as `score_side`, for information only: since §115 it blocks nothing, and the checklist picks the side at entry |
 | **Deep read** | The stocks on the day's list get a full Sahab's Dimaag analysis with per-stock news (in score mode, the top 25 by score, `SCANNER["deep_analysis"]`); the timing edge for their side adjusts the score by up to ±15 |
 | **Active watchlist** | The day's list: the 25 eligible stocks (`SCANNER["active_count"]`) with the highest 20-day average turnover, fixed before the open, or at the first scan if the engine starts later, and kept all day (§91, §100, §106). Plus pinned stocks and open positions. No score, side or trend chooses it. The old list is one setting away (`SCANNER["selection"] = "score"`): the best final scores of at least 20, daily trend agreeing with the side, at most 2 against the market bias, chosen again every scan |
 
@@ -4049,6 +4049,37 @@ Rules: ENT-26, SCN-20, FNO-08. Files: `backend/review_queue.py`, `backend/tradin
 
 Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
 
+### 113. The two paper books keep their record when a round is cut short or data is missing (#158, #159)
+
+Two fixes to the forward paper tests. Neither changes a rule. Both change what happens when something fails part-way, so the record says what the rule says rather than what the failure left behind.
+
+**Jev book (#158, §86).**
+
+- **A round cut short keeps its decisions.** If TypeSafe failed after Jev had already answered for some stocks, the day was marked "Jev unavailable". The 15:08 close skips such days, so positions opened at a live Kite price never closed and never counted. Now the day stays open with the decisions made so far, they close at 15:08 like any other round, and the stop is recorded beside them: the time, the error and the stocks not asked. The Jev Book page says so ("Today's round stopped after 3 of 15 stocks…"). An error on the first stock still records the day as "Jev unavailable".
+- **"Live prices" now means a Kite session that is still alive.** The gate checked that a token was stored and not yet rejected. Zerodha ends every session at 06:00 IST, so on a morning without a reconnect the gate passed, Jev was asked about each stock, and every fill failed. The gate now also checks the 06:00 expiry (`kite_live()`: the check the dashboard's Kite status uses). Such a morning is recorded as "no live prices" and Jev is not asked. The fills and the live mark use the same check.
+- **The round stops when Kite stops.** The gate is asked again before each stock. If Kite rejects the session part-way, the rest of the list is not asked, and the round is kept as above.
+
+Neither case has happened: the three recorded rounds (28 to 30 September) closed with 15 decisions each and none excluded. Pre-registration clarification 9 records the change.
+
+**Momentum book (#159, §83).**
+
+- **A failed download is fetched again.** The evening job used to start at the day after the newest bhavcopy it had, so a day that failed while a later one arrived was never fetched again. Each run now asks NSE for every day of the last 31 without a file. NSE answers 404 for a weekend, a holiday or a file not yet out; anything else is a failed download.
+- **The book waits for missing data.** If a past day's download failed, the book stops before that day rather than trade past it: processing the next session without it would fill orders a day late or rank a month turn at the wrong close. It keeps the sessions before it, and the next run tries again. The same happens at a month turn whose ranking comes out empty. That used to skip the month's rebalance and mark, and the next session was no longer a month turn. The job exits with code 4 in both cases, and the Momentum Book page shows the reason in red.
+- **A failed corporate-actions refresh is logged**, and the page's footer gives the date of the file in use, with "the last refresh failed" when it did. A split or bonus missing from the file would show as a price drop.
+
+**Checked.**
+
+| Check | Result |
+| --- | --- |
+| Old and new evening job on the real bhavcopy cache to 2026-09-30, on copies of the state: the live book, a book started 2025-12-20 (9 rebalances) and one started 2024-06-20 (27) | Identical holdings, trades, values and month points in all three |
+| The new download window against NSE, 1 October, into a scratch folder | 10 days asked (weekends, 14 September's holiday, 1 October not yet out): all 404, none failed, 5 seconds |
+| The research parity tests (`test_momentum_book.py`) | Pass unchanged |
+| The two pages, on the worktree's dashboard against a mock of the two endpoints | The interruption line, the new "no live prices" text, the red "stopped early" line and the corporate-actions date show as written |
+
+The Jev part goes live with the next backend restart. The momentum job runs from the main checkout's file, so its part goes live when `main` is pulled there; the first rebalance is on the evening of 1 October.
+
+Rules: JEV-06, JEV-07, JEV-08, MOM-11, MOM-13. Files: `backend/jev_book.py`, `backend/momentum_book.py`, `backend/tests/test_jev_book.py`, `backend/tests/test_momentum_book_data.py`, `frontend/src/pages/JevBook.jsx`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-jev-book.md`, `docs/research/prereg-3i-momentum-corrected-data.md`, `docs/architecture/` (rules, HLD, LLD).
+
 ### 114. LLM headline scoring waits for its switch, credential files are owner-only, and a year without a holiday list is loud
 
 Three defects found while the design was mapped (§89), fixed together. No trading rule changes.
@@ -4080,6 +4111,42 @@ The same issue's second part is fixed too: the results exclusion ended at the ne
 **Also corrected in place ([#176](https://github.com/harshece16/intraday-trading-agent/issues/176)):** the README and two code comments disagreed with the scanner in eight places. Item 5 (when the day's list is fixed) was already fixed by §100. The others are corrected where they stand: the rule count (§89), how the day's list is chosen and what the bias does (§2 and the scanner's docstring), what the live gate checks (§4, §14 and a comment in `trading_engine.py`), the gap points (§2), what volatility is worth against cost (§91), the two IC runs (§52, §91), and what has been backtested (Known limitations). Two more Known limitations bullets were out of date and are corrected too: the short side's guards (§100, §108 added them) and what a restart keeps (§98, §106).
 
 Rules: INT-07, INT-08, SEC-06, SEC-07, SEC-15 (new), OPS-13, SCN-05. Files: `backend/config.py`, `backend/llm_sentiment.py`, `backend/app.py`, `backend/trading_engine.py`, `backend/state.py`, `backend/holidays.py`, `backend/nse_feed.py`, `backend/scanner.py` (docstring), `.gitignore`, `backend/tests/test_llm_sentiment_default.py`, `backend/tests/test_secret_files.py`, `backend/tests/test_holiday_calendar.py`, `docs/architecture/` (HLD, LLD, rules).
+
+### 115. The scanner sets no side, and every scan is logged for a later test
+
+**What the scanner audit asked for** (`docs/research/scanner-audit-2026-09-28.md`, rule 3.8 and section 6; the owner approved its fixes on 2026-09-29). No stage of the intraday funnel has a measured edge after costs, and the old selection score's rank IC is nil (0.000 over 434 sessions, −0.0021 over 436; §37, §52). Since the move to the liquidity list (§91) that score chose nothing, but the side it produced still refused entries: a checklist long on a stock the score leaned short on was blocked with "scanner favours SHORT for this stock today". The audit's two remaining items were to stop that, and to log every candidate on every scan so that a later pre-registered test can read them.
+
+**1. The side.**
+
+- The scanner still scores each stock as a long and as a short. The stronger is kept as `score_side`, with `long_score` and `short_score`, and shown for information. The row's `side` is empty.
+- The engine no longer refuses an entry for disagreeing with the old score. The checklist's own reading picks the side (rules ENT-21, SCN-06).
+- Tradability stays. A stock with a fixed price band is still long-only, now refused explicitly ("this stock has a fixed price band, so it is long-only"), and `SCANNER.allow_shorts = False` still refuses every short. The market-bias gate (risk-off blocks new longs, risk-on blocks new shorts) is unchanged; the audit did not ask for it to change.
+- **The audit's replacement direction is not a gate.** Rule 3.8 takes the direction from the VWAP side (3.5), the stock against its industry (3.6) and the NIFTY against its VWAP (3.7), all agreeing. Rule 3.5 failed as a rule family (0 of 76), 3.6 and 3.7 were never tested, and the audit says nothing reaches the engine without a pre-registered test. So it runs in shadow: it is computed with every scan and journaled as `shadow_side`, and nothing that trades reads it. The NIFTY leg reads the index against its open, because an index has no traded volume and so no VWAP.
+- **The day's list does not change**: the 25 most-traded eligible stocks, as before (SCN-14). On 2026-09-30 a scan by this code after the close, on the delayed feed into a scratch journal, chose the same 25 stocks in the same order as the running engine's list for that session.
+- **The dashboard follows.** The Screener, the Overview's cards and the Stock page no longer show a Long or Short pill for the scanner. The chart cards and the Stock page show the checklist's side ("Long plan", "Waiting to buy"). The Stock page says the score is information and sets no side. The Pre-market note names the list without sides. The Day plan sizes each pick on the checklist's side; without that it would have gone empty, because it skipped rows without a side.
+- The research desk now flags a short lean on a long-only stock, and reads the market-bias flag from the checklist's side. Its flag "the engine refuses trades against the scanner's side" is gone, because that is no longer true. The Kronos shadow (§102) records `score_side` where it recorded the side, so its record keeps the same values.
+
+**What this changes in paper mode.** Automatic entries stay off: the confidence gate stops every one (§70). The review queue changes: a near-miss card can now be offered on either side of a listed stock, where before only the score's side could reach one.
+
+**2. The shadow log** (audit rule 5.3, and section 6: run passes 1 to 3 in shadow, log candidates, place no orders).
+
+- Every scan already wrote one `scan_rows` row per stock. Those rows now also carry the inputs of passes 1 to 3: the long-only flag, the price feed and the time of the price, VWAP, the opening range, the average change of the other NIFTY 100 stocks in the industry, the sector index's daily trend, turnover, ATR %, the old score's two readings and side, and `shadow_side`. Each scan's `scans` row adds the feed, the quote time, the NIFTY's open and daily trend, and the FII net.
+- **Why extend `scan_rows` rather than add a table.** The rows already exist for every stock of every scan (8,000 to 9,000 a session), with the symbol, session, status, price, change, gap and relative volume. A new table would write all of that a second time. The columns are added in place (SQLite `ADD COLUMN`: 0.01 s on a copy of the 855 MB live journal), and older rows leave them empty. The one thing a scan cannot know, the price at 15:08, gets its own small table.
+- `session_closes`: at the first tick of the square-off window, one Kite quote request for the 100 stocks and the NIFTY, written once a session. Kite only: without Kite nothing is written and the activity log says so once, rather than recording a price 15 minutes old.
+- The view `scan_candidates` joins them: every stock of every scan with its inputs, its distance from VWAP in bp, and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08). `database.scan_candidates(session)` reads one session. Rows from before this change read the old score's side from `side`.
+- **Limits, stated now.** Relative volume still compares with at most four earlier sessions; the audit wants 20. The industry comparison uses the other NIFTY 100 stocks in the industry, not the live sector index, which the scanner does not read. There is no pre-open data, so pass 2's 09:08 read does not exist. A delayed-feed row's price is about 15 minutes old; `feed` and `price_at` say so.
+
+**Checked.**
+
+- `backend/tests/test_scanner_side_shadow_log.py`: 18 tests. 15 of the first 17 fail on `main`: for example, a real scan on `main` refuses a short in FFF with "scanner favours LONG for this stock today".
+- A copy of the live journal migrates in 0.01 s. Its 7,700 rows for 2026-09-30 read through the view, with the old score's side.
+- A real scan after the close on 2026-09-30 (delayed feed, no Kite, news off, sector history not completed): 100 rows journaled, no row with a side, `score_side` 74 short and 26 long, `shadow_side` 41 short and 59 empty (the NIFTY closed below its open, so no stock could be long), and the list matched the engine's.
+- The dashboard from this branch, fed that scan by a read-only stub (no engine, no key): the Screener, Overview, Stock, Pre-market and Day plan pages, checked in the browser.
+- **Not checked live:** the 15:08 Kite read runs for the first time at the first session after this is deployed. Its test uses a fake Kite.
+
+**Running tests.** `prereg-jev-book.md` clarification 10: Jev's snapshot and the book's baseline keep the old score's side, read from `score_side`, so neither changes; only the engine no longer acts on it. `prereg-orderbook.md` amendment 7: no effect on L37, whose list is unchanged and which never read the side.
+
+Rules: ENT-21, SCN-06, SCN-07 and JEV-11 changed; SCN-26 new. Files: `backend/scanner.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/jev_book.py`, `backend/research_desk.py`, `backend/day_plan.py`, `backend/research/kronos_shadow.py`, `backend/config.py` (comment), `backend/tests/test_scanner_side_shadow_log.py`, `backend/tests/test_scanner_selection.py`, the dashboard pages named above, `docs/architecture/` (HLD, LLD, rules).
 
 ## Backtest results
 

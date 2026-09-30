@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiFetch } from "../api";
 import { joinWords, num, pct, safeUrl, signed, tone } from "../format";
-import { analysisFor, rowFor, scanRows, sentiment } from "../helpers";
-import { SidePill } from "../components/Pill";
+import { analysisFor, checklistSide, rowFor, scanRows, sentiment } from "../helpers";
 import RuleBook from "../components/RuleBook";
 import Chart from "../components/Chart";
 import SymLink from "../components/SymLink";
@@ -31,9 +30,9 @@ function PlanBox({ s, r, b, pos }) {
     );
   }
   if (r && r.excluded) return <div className="plan"><h3>No trade in this stock today</h3><p>{r.excluded}</p></div>;
-  const side = r ? r.side : b?.bias === "short" ? "SHORT" : "LONG";
+  if (!b) return <div className="plan wait"><h3>Watching for a setup</h3><p>A timing read appears once this stock is on the day's list or is tracked. The checklist then picks the side.</p></div>;
+  const side = checklistSide(r, b).toUpperCase();
   const verb = side === "SHORT" ? "short" : "buy";
-  if (!b) return <div className="plan wait"><h3>Watching for a chance to {verb}</h3><p>A timing read appears once this stock ranks in the top 15 or is tracked.</p></div>;
 
   const m = s.market || {};
   const paused = (side === "LONG" && m.bias === "risk-off") || (side === "SHORT" && m.bias === "risk-on");
@@ -87,7 +86,7 @@ function CaseBar({ title, value, thr, color, items, emptyText }) {
 
 function ChecklistView({ r, b }) {
   if (!b.checklist) return null;
-  const side = r && r.side ? r.side.toLowerCase() : b.bias === "short" ? "short" : "long";
+  const side = checklistSide(r, b);
   const cl = b.checklist[side] || b.checklist.long;
   if (!cl) return null;
   const failing = cl.items.filter((i) => i.required && !i.ok).length;
@@ -150,7 +149,11 @@ function ScanTab({ r, totalRows }) {
   const cat = r.catalyst ? sentiment(r.catalyst.score) : null;
   return (
     <>
-      <p className="lede">Ranked #{r.rank} of {totalRows}. As a long it scores {signed(r.long_score, 0)}, as a short {signed(r.short_score, 0)}; the stronger side is kept.</p>
+      <p className="lede">
+        Ranked #{r.rank} of {totalRows}. As a long it scores {signed(r.long_score, 0)}
+        {r.short_score != null ? `, as a short ${signed(r.short_score, 0)}` : " (long only)"}. This score is shown for
+        information: it was measured to predict nothing, so it no longer sets a side. The checklist picks the side at entry time.
+      </p>
       <ul className="evidence">
         {(r.reasons || []).length ? r.reasons.map((x, i) => (
           <li key={i}><span className={`pts ${x.points < 0 ? "penalty" : ""}`}>{signed(x.points, 0)}</span><span>{x.text}</span></li>
@@ -262,7 +265,7 @@ export default function Stock({ state: s }) {
   const ltp = (s.indicators[symbol] && s.indicators[symbol].ltp) || (r && r.ltp);
   const b = a && a.b;
 
-  const side = r && r.side ? r.side.toLowerCase() : b && b.bias === "short" ? "short" : "long";
+  const side = checklistSide(r, b);
   const cl = b && b.checklist ? b.checklist[side] || b.checklist.long : null;
   const plan = b ? { support: b.support, resistance: b.resistance, vwap: b.vwap, cl, side } : null;
 
@@ -271,7 +274,7 @@ export default function Stock({ state: s }) {
       <button className="backlink" onClick={() => navigate("/screener")}>← Screener</button>
       <div className="stock-head">
         <div>
-          <h1>{symbol} {r && !r.excluded && <SidePill side={r.side} suffix=" idea" />}</h1>
+          <h1>{symbol} {r && !r.excluded && r.long_only && <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span>}</h1>
           <p>{r ? `${r.name}, ${r.industry}` : "Pinned or held stock"}</p>
         </div>
         <div className="price">

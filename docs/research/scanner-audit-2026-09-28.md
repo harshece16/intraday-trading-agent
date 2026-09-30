@@ -18,6 +18,20 @@ quoted from the file named beside it.
 > from Kite when it is connected. Still to do: the side no longer set by the
 > old score, and the shadow log of section 6.
 
+> **Progress, 2026-09-30.** Both remaining items are done in README section
+> 115 (PR #219). **The side:** the old score's stronger side is kept as
+> `score_side`, for information. The scanner sets no side, and the checklist's
+> own reading picks it at entry. Rule 3.8's direction (3.5 to 3.7 together) is
+> run in shadow as section 6 says, not as a gate; its NIFTY leg reads the
+> index's open, because an index has no VWAP. **The shadow log:** every stock
+> of every scan is journaled with the inputs of passes 1 to 3, the 15:08
+> price is read from Kite once a session, and the view `scan_candidates`
+> gives each row's return to 15:08 (rule 5.3). The day's list is unchanged.
+> Both running tests have a dated note (Jev clarification 9, order-book
+> amendment 7). Not part of this: section 6's item 3 (the pre-registered look
+> at gap, time-of-day relative volume, VWAP distance and sector strength) and
+> item 4.
+
 ## Verdict
 
 1. Stock selection is not the weakest link. **No stage of the intraday

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch, apiJson, explainRefusal, openKiteLogin, sendTelegramTest, setEntriesPaused, setTelegramEnabled, setTradingMode, stopAndCloseAll } from "../api";
 import { clock, dateLabel, money, num, pct, tone } from "../format";
-import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
+import { analysisFor, checklistSide, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
 import { SidePill, StatusPill } from "../components/Pill";
 import SymLink from "../components/SymLink";
@@ -290,13 +290,11 @@ function heroCopy(s) {
   }[m.bias] || "Reading the market.";
   const n = m.nifty;
   const closed = s.market_status !== "open";
-  const sides = Object.values((sc && sc.active_sides) || {});
-  const shorts = sides.filter((x) => x === "SHORT").length;
-  const longs = sides.length - shorts;
+  const tracked = (sc && sc.active) || [];
   const held = heldSymbols(s).length;
   const sentences = [
     `NIFTY ${n.chg_pct >= 0 ? "rose" : "fell"} ${Math.abs(n.chg_pct).toFixed(2)}% ${closed ? `on ${dateLabel(m.session_date)}` : "today"} and ${m.breadth.dec} of ${m.breadth.adv + m.breadth.dec} stocks fell.`,
-    sides.length ? `Tracking ${sides.length} stocks, ${shorts} to short and ${longs} to buy.` : "No stock passes every filter yet.",
+    tracked.length ? `Tracking ${tracked.length} stocks; the checklist picks the side on each.` : "No stock passes every filter yet.",
     held ? `${held} open position${held > 1 ? "s" : ""}.` : "No open positions.",
   ];
   if (m.vix_high) sentences.push(`India VIX is high, so new positions are half size.`);
@@ -313,7 +311,7 @@ function PickCard({ s, r, held }) {
     <button className="pickcard" onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)}>
       <div className="row1">
         <span className="sym">{r.symbol}</span>
-        <SidePill side={r.side} />
+        {r.long_only ? <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span> : null}
         {held.has(r.symbol) ? <span className="pill solid">Holding</span> : ready ? <span className="pill solid">Ready</span> : null}
       </div>
       <div className="why">{why}</div>
@@ -328,7 +326,7 @@ function MiniChartCard({ s, r, held }) {
   const a = analysisFor(s, r.symbol);
   const b = a && a.b;
   const pos = s.positions[r.symbol];
-  const side = r && r.side ? r.side.toLowerCase() : b && b.bias === "short" ? "short" : "long";
+  const side = checklistSide(r, b);
   const cl = b && b.checklist ? b.checklist[side] || b.checklist.long : null;
   const plan = b ? { support: b.support, resistance: b.resistance, vwap: b.vwap, cl, side } : null;
 
@@ -351,7 +349,7 @@ function MiniChartCard({ s, r, held }) {
         <span className="sym">{r.symbol}</span>
         <span style={{ display: "flex", gap: 6 }}>
           {held.has(r.symbol) ? <span className="pill solid">Holding</span> : null}
-          <SidePill side={r.side} />
+          {b ? <SidePill side={side.toUpperCase()} suffix=" plan" /> : null}
         </span>
       </div>
       <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} className="mini-chart" compact />
