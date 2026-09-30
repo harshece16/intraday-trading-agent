@@ -3991,6 +3991,21 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 
 The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
+### 112. The order-book samples keep every level (#188)
+
+**The problem.** The order-book sampler (§71) kept the best bid and ask, the quantity at level 1 and the summed quantity of five levels. It dropped the price and quantity of levels 2 to 5. So the cost of an order bigger than level 1 could only be modelled: in the first slippage measurement (#66, PR #185), 7,581 of 34,534 sampled legs (22%) needed a ladder that puts the rest of the quantity one tick apart, which is a floor, not a measurement.
+
+**The change.** Each `depth_samples` row with a book now also stores the book itself, in two new columns, `bid_levels_json` and `ask_levels_json`: each non-empty level, best first, as `[price, quantity, orders]` (Kite gives the number of orders at each level). It is the same quote call per tick; the levels were already in Kite's answer and were being thrown away.
+
+- **Every existing column keeps its meaning and its values.** They are computed from the same levels as before, because the pre-registered order-book test (L37, due after 15 full sessions) reads them. Checked: the new code and the old gave identical values on 20,000 random books. `prereg-orderbook.md` amendment 6 records the change before any sample has been joined to a return.
+- **The migration rewrites nothing.** The columns are added to the live journal at the next backend start, with `ALTER TABLE ... ADD COLUMN`, which changes the table's definition only. On a copy of the journal taken on 2026-09-30 (44,452 rows) it took 2 ms, the file size did not change, and every old row hashed the same before and after. Old rows read NULL in the new columns; they cannot be repaired.
+- **`research/measure_real_slippage.py` uses the real levels when a row has them.** An order past level 1 is walked on the recorded levels (counted as "walked recorded levels") and, on a row from before this change, on the modelled ladder as before ("modelled ladder"). The output says how many book samples carry levels: on the copy of 2026-09-30, 0 of 44,243, since every sample so far predates this.
+- `GET /api/journal/depth-samples` also reports `rows_with_levels`.
+
+**What this does not do.** It does not measure slippage yet. It starts recording what that measurement needs, from the first session after the next backend restart. A row grows by about 180 bytes, about 2.5 MB a session at 25 stocks.
+
+Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
 ### 113. The two paper books keep their record when a round is cut short or data is missing (#158, #159)
 
 Two fixes to the forward paper tests. Neither changes a rule. Both change what happens when something fails part-way, so the record says what the rule says rather than what the failure left behind.
