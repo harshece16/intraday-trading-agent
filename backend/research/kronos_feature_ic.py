@@ -436,26 +436,56 @@ def stage0_regression(stage0, skip_reason=None):
         halt(stage0, 1, "upstream regression test failed; our inference path is not the authors'")
 
 
+WEIGHT_SUFFIXES = (".safetensors", ".bin", ".ckpt", ".pth")
+
+
+def with_weights(commits, list_files):
+    """Only the revisions whose file list holds model weights: a README-only first
+    commit is not a model (#204)."""
+    return [c for c in commits if any(f.endswith(WEIGHT_SUFFIXES) for f in list_files(c[0]))]
+
+
+def choose_revisions(commits_by_repo, sessions, cutoff=REVISION_CUTOFF):
+    """Per repository, the latest revision with weights dated before the cutoff, else
+    the earliest with weights. When any chosen revision is on or after the cutoff, the
+    window starts after the latest such date, and the revision loaded is the one that
+    date belongs to (#204: the old code started the window at the earliest revision
+    and then loaded the latest). Returns (kept sessions, {repo: sha}, info)."""
+    chosen, info = {}, {}
+    for repo, commits in commits_by_repo.items():
+        if not commits:
+            raise ValueError("%s has no revision that holds weights" % repo)
+        before = pick_revision(commits, cutoff)
+        pick = before or min(commits, key=lambda c: c[1])
+        chosen[repo] = pick
+        info[repo] = {"picked": pick, "before_cutoff": bool(before)}
+    late = [p[1][:10] for p in chosen.values() if p[1][:10] >= cutoff]
+    if not late:
+        return sessions, {r: p[0] for r, p in chosen.items()}, {"repos": info, "moved_window": None}
+    start = max(late)
+    kept = [s for s in sessions if s > start]
+    moved = {"start": start, "sessions": len(kept), "void": len(kept) < MIN_SESSIONS_IF_MOVED}
+    return kept, {r: p[0] for r, p in chosen.items()}, {"repos": info, "moved_window": moved}
+
+
 def stage0_revisions(stage0, sessions):
     from huggingface_hub import HfApi
     api = HfApi()
-    picks = {}
+    commits_by_repo, all_commits = {}, {}
     for repo in (MODEL_REPO, TOKENIZER_REPO):
         commits = [(c.commit_id, c.created_at.isoformat()) for c in api.list_repo_commits(repo)]
-        pick = pick_revision(commits)
-        picks[repo] = {"commits": commits, "picked": pick}
-    stage0["revisions"] = picks
-    if all(v["picked"] for v in picks.values()):
-        return sessions, {r: v["picked"][0] for r, v in picks.items()}
-    all_commits = [c for v in picks.values() for c in v["commits"]]
-    moved = moved_window(all_commits, sessions)
-    stage0["revisions"]["moved_window"] = moved
-    if moved["void"]:
-        halt(stage0, 2, "no revision predates %s and only %d sessions remain after the earliest one; the look is VOID"
-             % (REVISION_CUTOFF, moved["sessions"]))
-    kept = [s for s in sessions if s > moved["start"]]
-    latest = {r: max(v["commits"], key=lambda c: c[1])[0] for r, v in picks.items()}
-    return kept, latest
+        all_commits[repo] = commits
+        commits_by_repo[repo] = with_weights(commits, lambda sha, repo=repo: api.list_repo_files(repo, revision=sha))
+    kept, revs, info = choose_revisions(commits_by_repo, sessions)
+    stage0["revisions"] = {r: {"commits": all_commits[r], "with_weights": [c[0] for c in commits_by_repo[r]],
+                               "picked": info["repos"][r]["picked"]} for r in commits_by_repo}
+    moved = info["moved_window"]
+    if moved:
+        stage0["revisions"]["moved_window"] = moved
+        if moved["void"]:
+            halt(stage0, 2, "no usable revision predates %s and only %d sessions remain after %s; the look is VOID"
+                 % (REVISION_CUTOFF, moved["sessions"], moved["start"]))
+    return kept, revs
 
 
 def stage0_lookahead(stage0, fc, flat_by_sym, samples, n=20):
