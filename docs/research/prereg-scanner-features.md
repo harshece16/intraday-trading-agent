@@ -172,3 +172,31 @@ Listed for the reviewer, so each can be challenged before any number exists:
    - **Check 6's hand path** computes `F` from the SQLite rows and the bhavcopy zip in the same way.
 
    Nothing in the features' other definitions, the sample, the targets, the statistics, the family or the gate changes. Stage 0 is run again as **run 2**, whose record is `data/l49_stage0.json`.
+
+3. **2026-09-30, after the independent review of this text, the code (`985bb62`) and stage 0 run 2 (`8103c21`), which was NOT APPROVED on one blocking finding; before the measurement pass, which has not run.** **What had been seen when this was written:** the definitions above, and stage 0's records, whose only statistics about the features are feature-only ones (coverage, distributions, look-ahead and hand checks). No feature has been compared with any return, no target in the selection sample has been read, and no `l49_result.json` exists. To check two of the review's facts, membership and corporate-action rows were read again (no price). This amendment changes no code, no feature, no sample, no statistic and no threshold. Stage 0 is not rerun. It changes how one outcome of the gate is read, and it discloses the review's other notes.
+
+   **B1 — F5's partial IC given `m60` tests a hypothesis this text did not register.**
+   - **The identity.** At 09:45, `m60 = c₀ / P₁₅:₀₀ − 1`, where `P₁₅:₀₀` is the close of the previous session's 14:55 bar (§4, Control). F5 is `−(c₀ / pc − 1)`. Since `c₀ / pc = (c₀ / P₁₅:₀₀) × (P₁₅:₀₀ / pc)`, to second order **F5 = −m60 + (pc / P₁₅:₀₀ − 1)**. The only part of F5 that `m60` does not already hold is the previous official close against the previous session's 15:00 price.
+   - **That part is small.** Its size has not been measured. The nearest measured quantity is from amendment 2's diagnosis: NSE's CLOSE against its LAST, a median of 9.5 bp and a p95 of 36 bp. It is of that order, against F5's standard deviation of 86.3 bp (stage 0 check 9).
+   - **So the partial IC asks something other than F5's hypothesis.** It asks whether the price gap between 15:00 and the official close ranks the next hour. §4 called the condition severe but did not draw this conclusion. It is recorded now, before any result.
+   - **How F5's verdict is reported and read.** F5's result is reported condition by condition, as `gate` returns it: spread above 33.26 bp, t > 2, at least 60 sessions, both halves positive, BH, and partial IC.
+     - **If F5 clears every condition except the partial IC**, the reading is: *a 09:45 reversal ranks the next 60 minutes past cost, but it cannot be told apart from `m60`'s own reversal*. **No trial is earned.** The gate is unchanged, and `gate` still returns "fails".
+     - **If F5 fails any other condition**, §8's reading stands.
+   - **§8's last paragraph is qualified accordingly.** In the case above, the sentence "the cross-sectional gap reversal does not rank the next 15 to 60 minutes ... past cost" is **not** made. The results note states the reading above instead.
+   - **§1's table, row F5, is corrected.** F5 is **the sweep's form**, previous official close → 09:45 close, ranked at 09:45 against the next 60 minutes. It is **not the source repository's H2**, which ranks the close-to-open return and holds from 10:00 to 15:20 (`predictive_tools_C.md`, candidate 1). **This look does not close H2 as its source defined it.**
+
+   **Notes from the review, disclosed (not blocking):**
+   - **N3 — the universe is today's 100 cached names.** Point-in-time members missing from the cache:
+     - on every selection session: BAJAJHFL, HAVELLS, ICICIGI, JSWENERGY, LICI and NAUKRI;
+     - also, on sessions before 2025-09-30: DABUR, HEROMOTOCO, ICICIPRULI, INDUSINDBK and SWIGGY — 11 in all.
+
+     They are not in the sample (as in L40), and they are not available as F4 peers either. This is the survivorship caveat L40 already carries, now affecting F4's sectors as well.
+   - **N4 — pooling decision times mixes times inside the quintiles.** For `vwap_dist` and `sector`, the top and bottom quintiles of a session hold different mixes of decision times. The review's median per-session dissimilarity is 0.29 and 0.28, from features only. Part of those two spreads can therefore be the market's move between times of day, not the stock's ranking. That component should be mostly noise, since L32 found no market-level intraday momentum. It is disclosed, not corrected; the pooling is L40's.
+   - **N5 — F4 is not free of the stock's own move.** §4's "the stock itself is left out" is inexact. Within one industry of `n` members, F4 is `(Σ chg − chg(s)) / (n − 1)`. So among the stocks of the same industry, F4 ranks them by **minus their own move**. By the review's measure that is about 1.6% of F4's rank variance. The rest ranks industries against each other.
+   - **N6 — BH uses two-sided p-values on a family of signed hypotheses.** This is inherited unchanged from the harness (`kronos_feature_ic.gate`). A two-sided p-value is twice the one-sided p-value of an effect with the registered sign. A strongly wrong-signed test cannot pass, because the spread condition is signed, but it can loosen BH's step for the others. Disclosed, not changed.
+   - **N7 — TVSMOTOR's 102 `rvol` exclusions come from the "Scheme of Arrangement — Bonus NCRPS 4:1"** (ex-date 2025-08-25). That is a bonus of preference shares, which does not change the count of equity shares. The exclusion is conservative (it drops stock-times it did not need to) and reads nothing later than `t`.
+   - **N8 — F4 is the audit's "sector strength"** (its §2 row, the scanner's sector rank). It is not **rule 3.6**, the stock's change minus its sector index's change, which now runs as a live shadow under #219. L49 is not to be described as covering rule 3.6.
+
+   **How the pass will be run:**
+   - **By hand, outside 08:30–15:45 IST.** The refusals have no market-hours guard (review N1).
+   - **`--owner-approved-rerun` will not be used.** It would overwrite the first result (review N2), which §10 forbids.
