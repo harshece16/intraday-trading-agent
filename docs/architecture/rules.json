@@ -371,13 +371,13 @@
    "id": "ENT-21",
    "area": "entry",
    "status": "active",
-   "rule": "An entry is blocked if the latest scan marks the stock excluded or favours the opposite side for it today.",
-   "why": "Selection and timing must agree.",
+   "rule": "An entry is blocked if the latest scan marks the stock excluded. A short is also blocked on a long-only stock (a fixed price band, SCN-18) and when SCANNER.allow_shorts is off. The scanner sets no side (SCN-06), so an entry is never refused for disagreeing with the old score: the checklist's own reading picks the side.",
+   "why": "Tradability must hold. The old score's side was measured to carry no information (README §37, §52), so it no longer decides the direction (scanner audit rule 3.8, README §115). Until §115 an entry against the scan's side was refused ('scanner favours SHORT for this stock today').",
    "enforced_in": "backend/trading_engine.py:_entry_block_reason",
    "config": null,
-   "verify": "blocked reason 'scanner favours SHORT for this stock today' or the exclusion text",
-   "source": "README §2",
-   "test": null
+   "verify": "blocked reason is the exclusion text, 'this stock has a fixed price band, so it is long-only …' or 'shorts are switched off in the scanner settings'; no 'scanner favours …' after README §115",
+   "source": "README §2, §115; docs/research/scanner-audit-2026-09-28.md",
+   "test": "backend/tests/test_scanner_side_shadow_log.py::test_a_real_scan_leaves_both_sides_open_on_every_listed_stock, backend/tests/test_scanner_side_shadow_log.py::test_a_long_only_stock_is_never_shorted, backend/tests/test_scanner_side_shadow_log.py::test_shorts_switched_off_are_refused"
   },
   {
    "id": "ENT-22",
@@ -986,19 +986,19 @@
    "id": "SCN-06",
    "area": "scanner",
    "status": "active",
-   "rule": "Every stock is scored once as a long and once as a mirrored short (when allow_shorts), and the stronger side is kept as the row's side.",
-   "why": "Leaders to buy on strong days, laggards to short on weak ones.",
-   "enforced_in": "backend/scanner.py:Scanner.run",
+   "rule": "Every stock is scored once as a long and once as a mirrored short (as a long only when it is long-only or SCANNER.allow_shorts is off). The stronger is kept as the row's score_side, with long_score and short_score, for information only. The row's side is empty: the scanner sets no side, and nothing that gates or sizes an entry reads score_side. The Jev book reads it as its registered baseline (JEV-11), and the old 'score' selection mode still ranks by it (SCN-08).",
+   "why": "The old score's rank IC was 0.000 over 434 sessions and −0.0021 over 436 (README §37, §52). The scanner audit found no stage of the funnel with a measured edge and said the old score should no longer set the side (rule 3.8). It is kept visible so the page still says what it reads.",
+   "enforced_in": "backend/scanner.py:Scanner.run; backend/trading_engine.py:_entry_block_reason",
    "config": "SCANNER.allow_shorts = True",
-   "verify": "/api/scanner rows: side, long_score, short_score",
-   "source": "README §2",
-   "test": null
+   "verify": "/api/scanner rows: side null, score_side, long_score, short_score; Screener rows carry no Long/Short pill",
+   "source": "README §2, §115",
+   "test": "backend/tests/test_scanner_side_shadow_log.py::test_the_scan_sets_no_side_and_keeps_the_old_scores_lean_for_information, backend/tests/test_scanner_side_shadow_log.py::test_a_long_only_stock_has_no_short_score"
   },
   {
    "id": "SCN-07",
    "area": "scanner",
    "status": "active",
-   "rule": "The stocks on the day's list get a full Sahab's Dimaag read with per-stock news and fundamentals on finished bars. That read adjusts the score by 2 × the side-signed bull-bear edge, clamped to ±15, to give final_score. In 'liquidity' mode final_score is shown but does not choose the list.",
+   "rule": "The stocks on the day's list get a full Sahab's Dimaag read with per-stock news and fundamentals on finished bars. That read adjusts the score by 2 × the bull-bear edge signed by score_side, clamped to ±15, to give final_score. In 'liquidity' mode final_score is shown but does not choose the list.",
    "why": "Rank shortlisted names on the same evidence the entry logic uses.",
    "enforced_in": "backend/scanner.py:Scanner.run",
    "config": "SCANNER.deep_analysis = 25",
@@ -1168,6 +1168,18 @@
    "issues": [
     197
    ]
+  },
+  {
+   "id": "SCN-26",
+   "area": "scanner",
+   "status": "active",
+   "rule": "Every scan journals every stock it read, with the inputs of the scanner audit's passes 1 to 3. In scan_rows: the list status, exclusion, long-only flag, price feed and the time of the price, last price, change, gap, relative volume, VWAP, opening range, the average change of the other stocks in its industry, its sector index's daily trend, turnover, ATR %, the old score (score, long_score, short_score, score_side) and the shadow direction of audit rule 3.8. In scans: the feed, the quote time, the NIFTY's price, open, change and daily trend, VIX and FII net. The shadow direction is LONG when the stock is above its VWAP, ahead of its industry and the NIFTY is above its open (an index has no VWAP), SHORT when all three are down, and empty otherwise; nothing that trades reads it. At the first tick of the 15:08 square-off window, Kite's last traded price of every universe stock and the NIFTY is written once a session to session_closes, never a delayed price; without Kite nothing is written and the log says so once. The view scan_candidates joins them: every stock of every scan with its inputs and its return in bp from the scan's price to the 15:08 price, empty for a scan after 15:08 or a session without a close.",
+   "why": "The audit's rule 5.3: without a log of every stock at each stage and its return to 15:08, nobody can say whether a pass helped. Its section 6 runs passes 1 to 3 in shadow, placing no orders, so a later pre-registered look at gap, time-of-day relative volume, VWAP distance and sector strength can read the inputs without reconstructing them. The columns extend the rows already written for every stock of every scan, so nothing is stored twice.",
+   "enforced_in": "backend/database.py:record_scan, record_session_closes, scan_candidates, _migrate; backend/scanner.py:shadow_side; backend/scanner.py:Scanner.run; backend/trading_engine.py:_record_session_closes",
+   "config": null,
+   "verify": "sqlite: SELECT * FROM scan_candidates WHERE session_date = '<date>'; activity 'Shadow log: recorded the 15:08 price of N stocks and indices'",
+   "source": "README §115; docs/research/scanner-audit-2026-09-28.md (rules 3.8, 5.3, section 6)",
+   "test": "backend/tests/test_scanner_side_shadow_log.py::test_every_stock_of_every_scan_is_journaled_with_its_inputs_and_scored_at_1508, backend/tests/test_scanner_side_shadow_log.py::test_the_1508_prices_are_read_from_kite_once_a_session, backend/tests/test_scanner_side_shadow_log.py::test_the_shadow_direction_needs_all_three_legs_to_agree, backend/tests/test_scanner_side_shadow_log.py::test_a_journal_from_before_gains_the_columns_and_its_rows_read_the_old_side"
   },
   {
    "id": "SCN-09",
@@ -1823,13 +1835,13 @@
    "id": "JEV-11",
    "area": "jev",
    "status": "active",
-   "rule": "Scoring: net_bp = sign x move_bp - the engine's intraday round trip at Rs 1,00,000 (14.27 bp) for buy or short, and 0 for skip. The scanner's own side is scored the same way on the same prices.",
+   "rule": "Scoring: net_bp = sign x move_bp - the engine's intraday round trip at Rs 1,00,000 (14.27 bp) for buy or short, and 0 for skip. The scanner's side as the test was registered, the old score's stronger side (score_side, SCN-06), is scored the same way on the same prices, and is the side Jev's snapshot shows. The engine no longer acts on it (README §115); the book keeps it so the pass rule does not change mid-test (prereg-jev-book.md clarification 9).",
    "why": "Jev must beat costs and the scanner, not just the market.",
-   "enforced_in": "backend/jev_book.py:close_round and round_trip_bp",
+   "enforced_in": "backend/jev_book.py:close_round and round_trip_bp; backend/jev_book.py:scanner_side",
    "config": "JEV_BOOK.notional = 100000.0; COSTS.slippage_pct = 0.03",
    "verify": "Jev Book page 'after about N bp of costs'; summary.round_trip_bp",
    "source": "docs/research/prereg-jev-book.md (Clarification 1)",
-   "test": "backend/tests/test_jev_book.py::test_skip_costs_nothing"
+   "test": "backend/tests/test_jev_book.py::test_skip_costs_nothing, backend/tests/test_scanner_side_shadow_log.py::test_the_jev_book_keeps_the_old_scores_side_in_its_snapshot_and_baseline"
   },
   {
    "id": "JEV-12",

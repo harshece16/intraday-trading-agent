@@ -11,7 +11,9 @@ request to TypeSafe's official System One API (https://api.typesafe.ai). A buy o
 short "fills" at the live price when the answer returns and closes at the
 live price at the 15:08 square-off, net of the engine's intraday round-trip
 cost. The scanner's own side on the same stock-day is scored the same way,
-so the book always shows whether Jev beats what the engine would do anyway.
+so the book always shows whether Jev beats it. That side is the old score's
+stronger side (scanner_side); since README section 115 the engine no longer
+acts on it, and the book keeps it as registered (clarification 9).
 
 Paper only: nothing here places an order, and Jev never sees keys, account
 data or positions. The TypeSafe key comes from TYPESAFE_API_KEY or
@@ -101,8 +103,19 @@ BRAIN_FIELDS = ("setup", "regime", "structure", "htf_trend", "bias", "rsi", "adx
                 "patterns", "news_headlines", "fundamentals_label")
 
 
+def scanner_side(row):
+    """The scanner's side as this test was registered with it: the stronger of
+    the old score's long and short readings. Since README section 115 the
+    scanner row carries it as `score_side` and leaves `side` empty, because the
+    engine no longer acts on it; rows from before carry it as `side`. Jev's
+    snapshot and the baseline keep reading it, so neither changes mid-test
+    (prereg-jev-book.md, clarification 9)."""
+    return row.get("score_side") or row.get("side")
+
+
 def build_state(row, market, now):
     stock = {k: row.get(k) for k in ROW_FIELDS}
+    stock["side"] = scanner_side(row)
     stock["scanner_reasons"] = [r.get("text") for r in (row.get("reasons") or [])][:10]
     brain = row.get("brain") or {}
     stock["chart"] = {k: brain.get(k) for k in BRAIN_FIELDS}
@@ -246,7 +259,7 @@ def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.s
             logger.warning(f"Jev book: Jev unavailable ({err[:120]})")
             return state
         d = {"symbol": sym, "asked_at": datetime.datetime.now().isoformat(timespec="seconds"),
-             **parse_answers(resp), "scanner_side": row.get("side"), "state": snap}
+             **parse_answers(resp), "scanner_side": scanner_side(row), "state": snap}
         try:
             d["entry"] = float(get_ltp(sym))
         except Exception as exc:

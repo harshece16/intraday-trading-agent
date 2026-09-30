@@ -205,7 +205,7 @@ function ShadowDay({ day }) {
           <table className="datatable">
             <thead>
               <tr>
-                <th>Stock</th><th>Scanner side</th><th>Scanner score</th><th>Forecast 15 min</th><th>Forecast 30 min</th><th>Forecast 60 min</th>
+                <th>Stock</th><th title="The stronger side of the old selection score. Since README section 115 it is information only: the engine no longer acts on it">Score's side</th><th>Scanner score</th><th>Forecast 15 min</th><th>Forecast 30 min</th><th>Forecast 60 min</th>
                 <th>Bars</th><th>Realised 15 / 30 / 60</th>
               </tr>
             </thead>

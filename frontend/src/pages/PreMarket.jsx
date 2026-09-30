@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, apiJson } from "../api";
 import { pct, tone } from "../format";
-import { SidePill, BiasPill } from "../components/Pill";
+import { BiasPill } from "../components/Pill";
 import { GuardNotes } from "../components/ListNotes";
 
 const TABS = [
@@ -16,7 +16,7 @@ function Row({ r, expanded, onToggle, navigate }) {
         <span className="opp-score" title="Pre-market score (daily data only)">{r.excluded ? "—" : r.score?.toFixed(0)}</span>
         <span>
           <span className="opp-name">
-            {r.symbol} {r.excluded ? <span className="pill neutral">Avoid</span> : <SidePill side={r.side} />}
+            {r.symbol} {r.excluded ? <span className="pill neutral">Avoid</span> : null}
             {r.status === "WATCHLIST" && <span className="pill solid">On today's list</span>}
           </span>
           <div className="opp-why">{r.excluded || (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ")}</div>

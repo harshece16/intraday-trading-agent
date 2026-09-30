@@ -21,6 +21,11 @@ Tables:
                     snapshot, every agent's validated output, the rating, tokens, cost
   day_lists         one row per session: the day's list, written once when it is
                     fixed, so a restart keeps it (#198)
+  session_closes    one row per (session, stock): Kite's last traded price at the
+                    15:08 square-off, the outcome of the shadow log (README §115)
+  scan_candidates   a view, not a table: the shadow log of the scanner audit's
+                    passes 1 to 3. Every stock of every scan with its inputs (from
+                    scan_rows and scans) and its return to 15:08 (session_closes)
 
 Single-writer (the trading engine's background thread) so no connection
 pooling is needed; SQLite's own locking covers the occasional API-thread read.
@@ -57,14 +62,23 @@ CREATE TABLE IF NOT EXISTS scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL, session_date TEXT, bias TEXT,
     nifty_ltp REAL, nifty_chg_pct REAL, vix REAL, adv INTEGER, dec INTEGER,
-    scanned INTEGER, excluded_count INTEGER, active_json TEXT, reasons_json TEXT
+    scanned INTEGER, excluded_count INTEGER, active_json TEXT, reasons_json TEXT,
+    feed TEXT, quotes_at TEXT, nifty_open REAL, nifty_trend TEXT, fii_net_cr REAL
 );
 CREATE TABLE IF NOT EXISTS scan_rows (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     scan_id INTEGER NOT NULL, session_date TEXT, symbol TEXT NOT NULL, side TEXT,
     score REAL, final_score REAL, excluded TEXT, status TEXT,
     ltp REAL, chg_pct REAL, daily_trend TEXT, rs10 REAL, rvol REAL, gap_pct REAL,
-    catalyst_score REAL, swing_pattern TEXT, reasons_json TEXT
+    catalyst_score REAL, swing_pattern TEXT, reasons_json TEXT,
+    score_side TEXT, long_score REAL, short_score REAL, long_only INTEGER, feed TEXT, price_at TEXT,
+    vwap REAL, or_high REAL, or_low REAL, sector_chg_pct REAL, sector_trend TEXT,
+    turnover_cr REAL, atr_pct REAL, shadow_side TEXT
+);
+CREATE TABLE IF NOT EXISTS session_closes (
+    session_date TEXT NOT NULL, symbol TEXT NOT NULL, price REAL NOT NULL, ts REAL NOT NULL,
+    last_trade TEXT, source TEXT,
+    PRIMARY KEY (session_date, symbol)
 );
 CREATE INDEX IF NOT EXISTS idx_scan_rows_symbol_date ON scan_rows(symbol, session_date);
 CREATE TABLE IF NOT EXISTS checklist_evals (
@@ -178,6 +192,46 @@ def _migrate(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(manual_reviews)")}
     if "shadow_json" not in cols:
         conn.execute("ALTER TABLE manual_reviews ADD COLUMN shadow_json TEXT")
+    # The shadow log of the scanner audit's passes 1 to 3 (README §115): the
+    # inputs a later pre-registered test reads, on the rows already written
+    # for every stock of every scan. Rows from before this have NULL here.
+    for table, new in (("scans", _SCANS_SHADOW_COLS), ("scan_rows", _SCAN_ROWS_SHADOW_COLS)):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for col, kind in new:
+            if col not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
+    # Created here, after the columns it reads exist; replaced when its definition changes.
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'view' AND name = 'scan_candidates'").fetchone()
+    if not row or row[0] != SCAN_CANDIDATES_VIEW:
+        conn.execute("DROP VIEW IF EXISTS scan_candidates")
+        conn.execute(SCAN_CANDIDATES_VIEW)
+
+
+_SCANS_SHADOW_COLS = (("feed", "TEXT"), ("quotes_at", "TEXT"), ("nifty_open", "REAL"), ("nifty_trend", "TEXT"),
+                      ("fii_net_cr", "REAL"))
+_SCAN_ROWS_SHADOW_COLS = (
+    ("score_side", "TEXT"), ("long_score", "REAL"), ("short_score", "REAL"), ("long_only", "INTEGER"),
+    ("feed", "TEXT"), ("price_at", "TEXT"), ("vwap", "REAL"), ("or_high", "REAL"), ("or_low", "REAL"),
+    ("sector_chg_pct", "REAL"), ("sector_trend", "TEXT"), ("turnover_cr", "REAL"), ("atr_pct", "REAL"),
+    ("shadow_side", "TEXT"))
+
+# Every stock of every scan, with the inputs of the audit's passes 1 to 3 and
+# the return from the scan's price to the 15:08 price (NULL for a scan after
+# 15:08, or a session with no close recorded). score_side reads `side` on rows
+# from before README §115, when the old score's lean was written there.
+SCAN_CANDIDATES_VIEW = (
+    "CREATE VIEW scan_candidates AS SELECT "
+    "r.id AS row_id, r.scan_id, s.ts AS scan_ts, r.session_date, r.symbol, r.status, r.excluded, r.long_only, "
+    "r.feed, r.price_at, r.ltp, r.chg_pct, r.gap_pct, r.rvol, r.vwap, "
+    "CASE WHEN r.vwap > 0 AND r.ltp > 0 THEN (r.ltp / r.vwap - 1) * 10000 END AS vwap_dist_bp, "
+    "r.or_high, r.or_low, r.sector_chg_pct, r.sector_trend, r.turnover_cr, r.atr_pct, r.daily_trend, r.rs10, "
+    "r.catalyst_score, r.score, r.final_score, r.long_score, r.short_score, "
+    "COALESCE(r.score_side, r.side) AS score_side, r.shadow_side, "
+    "s.feed AS scan_feed, s.quotes_at, s.bias, s.nifty_ltp, s.nifty_open, s.nifty_chg_pct, s.nifty_trend, "
+    "s.vix, s.fii_net_cr, c.price AS close_price, c.ts AS close_ts, "
+    "CASE WHEN c.price > 0 AND r.ltp > 0 AND s.ts < c.ts THEN (c.price / r.ltp - 1) * 10000 END AS ret_to_close_bp "
+    "FROM scan_rows r JOIN scans s ON s.id = r.scan_id "
+    "LEFT JOIN session_closes c ON c.session_date = r.session_date AND c.symbol = r.symbol")
 
 
 def _restate_realized_net_of_charges(conn):
@@ -241,16 +295,23 @@ def _j(obj):
 # ---- writes ---------------------------------------------------------------
 
 def record_scan(result):
+    """One `scans` row and one `scan_rows` row per stock. Together with
+    session_closes they are the shadow log of README §115 (the view
+    scan_candidates reads them)."""
     m = result.get("market") or {}
+    feed = result.get("feed") or {}
     with _conn() as c:
         cur = c.execute(
             "INSERT INTO scans (ts, session_date, bias, nifty_ltp, nifty_chg_pct, vix, adv, dec, "
-            "scanned, excluded_count, active_json, reasons_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "scanned, excluded_count, active_json, reasons_json, feed, quotes_at, nifty_open, nifty_trend, "
+            "fii_net_cr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (result.get("ts", time.time()), result.get("session_date"), m.get("bias"),
              (m.get("nifty") or {}).get("ltp"), (m.get("nifty") or {}).get("chg_pct"), m.get("vix"),
              (m.get("breadth") or {}).get("adv"), (m.get("breadth") or {}).get("dec"),
              result.get("scanned"), result.get("excluded_count"),
-             _j(result.get("active")), _j(m.get("reasons"))),
+             _j(result.get("active")), _j(m.get("reasons")),
+             feed.get("prices"), feed.get("quotes_at"), m.get("nifty_open"), (m.get("nifty") or {}).get("trend"),
+             (m.get("fii_dii") or {}).get("fii_net_cr")),
         )
         scan_id = cur.lastrowid
         session_date = result.get("session_date")
@@ -259,15 +320,51 @@ def record_scan(result):
              r.get("excluded"), r.get("status"), r.get("ltp"), r.get("chg_pct"), r.get("daily_trend"),
              r.get("rs10"), r.get("rvol"), r.get("gap_pct"),
              (r.get("catalyst") or {}).get("score") if r.get("catalyst") else None,
-             _j(r.get("swing_patterns")), _j(r.get("reasons")))
+             _j(r.get("swing_patterns")), _j(r.get("reasons")),
+             r.get("score_side"), r.get("long_score"), r.get("short_score"),
+             None if r.get("long_only") is None else int(bool(r["long_only"])), r.get("feed"), r.get("price_at"),
+             r.get("vwap"), r.get("or_high"), r.get("or_low"), r.get("sector_chg_pct"), r.get("sector_trend"),
+             r.get("turnover_cr"), r.get("atr_pct"), r.get("shadow_side"))
             for r in result.get("rows", [])
         ]
         c.executemany(
             "INSERT INTO scan_rows (scan_id, session_date, symbol, side, score, final_score, excluded, "
             "status, ltp, chg_pct, daily_trend, rs10, rvol, gap_pct, catalyst_score, swing_pattern, "
-            "reasons_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "reasons_json, score_side, long_score, short_score, long_only, feed, price_at, vwap, or_high, "
+            "or_low, sector_chg_pct, sector_trend, turnover_cr, atr_pct, shadow_side) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             rows,
         )
+
+
+def record_session_closes(session_date, quotes, ts=None, source="kite"):
+    """Each stock's last traded price at the 15:08 square-off (README §115):
+    the outcome every scan of the session is scored against in
+    scan_candidates. `quotes` is {name: {"ltp", "last_trade", "at"}} as
+    data_provider.kite_quotes returns it. A name whose price is not from this
+    session is left out. The first write for a session and name stands.
+    Returns the number of rows written."""
+    ts = ts or time.time()
+    rows = [(session_date, name, float(q["ltp"]), ts, q.get("last_trade") or q.get("at"), source)
+            for name, q in (quotes or {}).items()
+            if (q.get("ltp") or 0) > 0 and (q.get("last_trade") or q.get("at") or "")[:10] == session_date]
+    with _conn() as c:
+        before = c.total_changes
+        c.executemany("INSERT OR IGNORE INTO session_closes (session_date, symbol, price, ts, last_trade, source) "
+                      "VALUES (?,?,?,?,?,?)", rows)
+        return c.total_changes - before
+
+
+def session_closes_recorded(session_date):
+    return bool(_conn().execute("SELECT 1 FROM session_closes WHERE session_date = ? LIMIT 1",
+                                (session_date,)).fetchone())
+
+
+def scan_candidates(session_date):
+    """The shadow log for one session, in scan order: every stock of every
+    scan, its inputs and its return to 15:08 (the scan_candidates view)."""
+    return [dict(r) for r in _conn().execute(
+        "SELECT * FROM scan_candidates WHERE session_date = ? ORDER BY scan_id, symbol", (session_date,))]
 
 
 def record_checklist_eval(symbol, ltp, analysis):
