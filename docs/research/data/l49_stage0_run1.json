@@ -1,0 +1,256 @@
+{
+ "stage0": {
+  "look": "L49",
+  "prereg": "docs/research/prereg-scanner-features.md",
+  "prereg_commit": "dc06a10",
+  "started": "2026-09-30T20:30:08.606091+05:30",
+  "argv": [
+   "--stage0"
+  ],
+  "environment": {
+   "python": "3.9.6",
+   "platform": "macOS-26.6.2-arm64-arm-64bit",
+   "machine": "arm64",
+   "niceness": 15,
+   "head": "973255ecad1cc1fd43abab18a495f14fd60384de",
+   "module_dirty": false,
+   "candle_db": "/Users/harshgupta/Projects/webapp/backend/data/kite_history.db",
+   "data_dir": "/Users/harshgupta/Projects/webapp/backend/data"
+  },
+  "1_features": {
+   "features": [
+    "gap",
+    "rvol",
+    "vwap_dist",
+    "sector",
+    "gap_reversal"
+   ],
+   "tests": {
+    "gap_f15": [
+     "gap",
+     "f15"
+    ],
+    "gap_f30": [
+     "gap",
+     "f30"
+    ],
+    "gap_f60": [
+     "gap",
+     "f60"
+    ],
+    "rvol_f15": [
+     "rvol",
+     "f15"
+    ],
+    "rvol_f30": [
+     "rvol",
+     "f30"
+    ],
+    "rvol_f60": [
+     "rvol",
+     "f60"
+    ],
+    "vwap_dist_f15": [
+     "vwap_dist",
+     "f15"
+    ],
+    "vwap_dist_f30": [
+     "vwap_dist",
+     "f30"
+    ],
+    "vwap_dist_f60": [
+     "vwap_dist",
+     "f60"
+    ],
+    "sector_f15": [
+     "sector",
+     "f15"
+    ],
+    "sector_f30": [
+     "sector",
+     "f30"
+    ],
+    "sector_f60": [
+     "sector",
+     "f60"
+    ],
+    "gap_reversal_f60": [
+     "gap_reversal",
+     "f60"
+    ]
+   },
+   "n_tests": 13,
+   "passes": true
+  },
+  "2_data": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "latest_bar_read": "2026-01-01T15:25:00",
+   "symbols_loaded": 100,
+   "bhav_files": {
+    "count": 103,
+    "first": "2025-08-01",
+    "last": "2025-12-31",
+    "date_mismatches": []
+   },
+   "corporate_actions_file": "ca_2025.csv",
+   "industries_file": "/Users/harshgupta/Projects/webapp/.claude/worktrees/l49/backend/research/data/l49_industries.csv",
+   "passes": true
+  },
+  "3_l40_sample": {
+   "got": {
+    "sessions": 79,
+    "sessions_with_data": 78,
+    "stock_times": 43362,
+    "halves": [
+     39,
+     40
+    ]
+   },
+   "expected": {
+    "sessions": 79,
+    "sessions_with_data": 78,
+    "stock_times": 43362,
+    "halves": [
+     39,
+     40
+    ]
+   },
+   "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+   "l40_record": {
+    "coverage": {
+     "sessions": 79,
+     "first_half": 39,
+     "second_half": 40,
+     "stock_times": 43362,
+     "sessions_below_min_stocks": []
+    },
+    "dropped": {},
+    "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23"
+   },
+   "dropped": {},
+   "passes": true
+  },
+  "4_alignment": {
+   "pairs": 7292,
+   "share_within_tol": 0.7275095995611629,
+   "tol_bp": 5.0,
+   "min_share": 0.95,
+   "median_bp": 0.6032982258430408,
+   "p95_bp": 20.33420992690438,
+   "max_bp": 278.6905364494263,
+   "worst": [
+    {
+     "symbol": "ULTRACEMCO",
+     "from": "2025-12-01",
+     "to": "2025-12-02",
+     "move_bp": 278.6905364494263
+    },
+    {
+     "symbol": "ULTRACEMCO",
+     "from": "2025-11-28",
+     "to": "2025-12-01",
+     "move_bp": 271.3364582303235
+    },
+    {
+     "symbol": "TATACONSUM",
+     "from": "2025-08-28",
+     "to": "2025-08-29",
+     "move_bp": 91.58878504672896
+    },
+    {
+     "symbol": "PIDILITIND",
+     "from": "2025-11-26",
+     "to": "2025-11-27",
+     "move_bp": 76.87565478647241
+    },
+    {
+     "symbol": "ASIANPAINT",
+     "from": "2025-10-27",
+     "to": "2025-10-28",
+     "move_bp": 70.36622421237925
+    },
+    {
+     "symbol": "ASIANPAINT",
+     "from": "2025-10-28",
+     "to": "2025-10-29",
+     "move_bp": 69.87454343338251
+    },
+    {
+     "symbol": "GODREJCP",
+     "from": "2025-10-16",
+     "to": "2025-10-17",
+     "move_bp": 65.37348589115143
+    },
+    {
+     "symbol": "DLF",
+     "from": "2025-09-09",
+     "to": "2025-09-10",
+     "move_bp": 65.32462338354917
+    },
+    {
+     "symbol": "DLF",
+     "from": "2025-09-10",
+     "to": "2025-09-11",
+     "move_bp": 64.90066225165569
+    },
+    {
+     "symbol": "BRITANNIA",
+     "from": "2025-10-20",
+     "to": "2025-10-21",
+     "move_bp": 63.66189855894433
+    },
+    {
+     "symbol": "ULTRACEMCO",
+     "from": "2025-09-23",
+     "to": "2025-09-24",
+     "move_bp": 62.416022070199695
+    },
+    {
+     "symbol": "GODREJCP",
+     "from": "2025-08-29",
+     "to": "2025-09-01",
+     "move_bp": 62.10178240180664
+    },
+    {
+     "symbol": "GODREJCP",
+     "from": "2025-08-28",
+     "to": "2025-08-29",
+     "move_bp": 61.7184995190756
+    },
+    {
+     "symbol": "HYUNDAI",
+     "from": "2025-11-25",
+     "to": "2025-11-26",
+     "move_bp": 60.93818500657599
+    },
+    {
+     "symbol": "HYUNDAI",
+     "from": "2025-11-24",
+     "to": "2025-11-25",
+     "move_bp": 60.5690879776899
+    }
+   ],
+   "skipped": {
+    "ex_date": 29
+   },
+   "open_vs_last_information": {
+    "n": 7227,
+    "median_bp": 0.0,
+    "p95_bp": 14.118975903614217,
+    "share_within_tol": 0.8471011484710115
+   },
+   "passes": false
+  },
+  "halted_at": {
+   "step": 4,
+   "why": "only 72.75% of consecutive stock-days keep K_last / LAST within 5 bp"
+  },
+  "finished": "2026-09-30T20:30:18.998485+05:30"
+ },
+ "status": "HALTED"
+}
