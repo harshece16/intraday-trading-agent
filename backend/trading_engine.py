@@ -35,6 +35,7 @@ import fno_risk
 import fundamentals
 import holidays
 import liquidity
+import llm_sentiment
 import news_sentiment
 import nse_feed
 import options_pricing
@@ -203,6 +204,12 @@ class TradingEngine:
             telegram_alerts.enabled = bool(database.get_control("telegram_enabled", True))
         except Exception:
             logger.exception("Couldn't read the Telegram alert setting — leaving it on")
+        try:
+            # The dashboard's LLM headline-scoring switch, if it was ever used
+            # (#160). Never used: config's default, which is off.
+            llm_sentiment.restore_saved_choice()
+        except Exception:
+            logger.exception("Couldn't read the LLM news sentiment setting — leaving config's default")
         self.stop_watcher = None
         self._restore_day_list()
 
@@ -448,11 +455,13 @@ class TradingEngine:
     # open, exactly like a trader building a morning watchlist off last
     # night's homework. It never buys anything by itself — _try_enter/
     # trader_brain_signal still require live intraday confirmation (the
-    # checklist: candlestick pattern, volume, VWAP side, opening range) for
-    # every entry, same as a symbol the live scanner finds mid-session. The
-    # only thing pre-market analysis changes is the reaction time — the
-    # engine is already watching a real, computed shortlist instead of only
-    # pinned/held symbols for the gap before the first live scan completes.
+    # checklist's required items: candlestick pattern, stop at support or
+    # resistance, stop of at least 1x the round trip's cost, volume, trend,
+    # reward-to-risk) for every entry, same as a symbol the live scanner
+    # finds mid-session. The only thing pre-market analysis changes is the
+    # reaction time — the engine is already watching a real, computed
+    # shortlist instead of only pinned/held symbols for the gap before the
+    # first live scan completes.
 
     def request_premarket_scan(self, fix_list_for=None) -> bool:
         if self._premarket_thread and self._premarket_thread.is_alive():
@@ -505,6 +514,7 @@ class TradingEngine:
                                     f"It is not chosen again.")
 
     def _run_premarket_scan(self, fix_list_for=None):
+        self._warn_if_no_holiday_calendar("on the pre-market read")
         with self.state.lock:
             self.state.premarket["running"] = True
         try:
@@ -2027,6 +2037,31 @@ class TradingEngine:
                        f"Reconnect in the header now, or the engine runs on delayed data and live orders will fail.",
                        level="error")
 
+    def _holiday_calendar_state(self, now):
+        """#162: without a holiday list for the year, every weekday counts as
+        a session. The dashboard state says so on every tick."""
+        year = holidays.calendar_missing(now)
+        self.state.holiday_calendar_missing = (
+            {"year": year, "message": holidays.missing_calendar_message(year)} if year else None)
+        return year
+
+    def _warn_if_no_holiday_calendar(self, when, now=None):
+        """Log an error, in the backend log and on the dashboard, when today's
+        year has no NSE holiday list (#162). Called at start-up and on every
+        pre-market read, so it is repeated each day until the list is added.
+        A failure here is logged and never stops the start-up or the read."""
+        try:
+            now = now or datetime.now(IST)
+            year = self._holiday_calendar_state(now)
+            if year:
+                message = holidays.missing_calendar_message(year)
+                logger.error(f"{message} (checked {when})")
+                self.state.log("system", message, level="error")
+            return year
+        except Exception:
+            logger.exception("The holiday-list check failed")
+            return None
+
     def _tick_impl(self):
         now = datetime.now(IST)
         self._sync_capital()
@@ -2041,6 +2076,7 @@ class TradingEngine:
         holiday = holidays.holiday_name(now)
         self.state.holiday = {"name": holiday, "next_trading_day": holidays.next_trading_day(now).isoformat()} \
             if holiday else None
+        self._holiday_calendar_state(now)
         self._check_preopen_kite(now, holiday)
         if holiday and self._last_holiday_logged != now.date():
             self._last_holiday_logged = now.date()
@@ -2226,6 +2262,7 @@ class TradingEngine:
         self.state.log("system", f"Trader Sahab started in {'paper' if self.state.paper_mode else 'live'} mode "
                                  f"with {config.STRATEGY_DISPLAY_NAMES.get(config.STRATEGY, config.STRATEGY)} "
                                  f"calling the shots.")
+        self._warn_if_no_holiday_calendar("at start-up")
         while self.state.running:
             try:
                 await asyncio.get_event_loop().run_in_executor(None, self.tick)

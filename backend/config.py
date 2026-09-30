@@ -36,6 +36,60 @@ _KEY_FILE = Path(__file__).parent / ".dashboard_key.json"
 
 DASHBOARD_API_KEY_IS_NEW = False  # set True below only when a key is freshly generated this run
 
+# Every file in backend/ that holds a credential. Each is owner-read/write only
+# (0600): the backend writes its own with write_secret_file(), and start-up
+# tightens any of them that is readable by other accounts (#161). The Telegram
+# file is written by hand, so start-up is the only place it gets tightened.
+SECRET_FILES = (
+    _KEY_FILE,
+    SESSION_FILE,
+    Path(__file__).parent / ".typesafe_key.json",
+    Path(__file__).parent / ".telegram.json",
+)
+
+
+def write_secret_file(path, text: str) -> None:
+    """Write a credential file readable by its owner only. The text goes to a
+    0600 temporary file next to it, which then replaces the file, so the
+    secret is never on disk under a wider mode, even for a moment, and an
+    existing file with a wider mode ends up 0600 too."""
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        os.fchmod(fd, 0o600)      # O_CREAT's mode only applies to a new file
+        with os.fdopen(fd, "w") as fh:
+            fh.write(text)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    os.replace(tmp, path)
+
+
+def tighten_secret_files(paths=SECRET_FILES) -> list:
+    """Set every existing credential file that other accounts can read to 0600.
+    Returns the names changed, for the start-up log. Never reads a file."""
+    changed = []
+    for path in paths:
+        try:
+            mode = os.stat(path).st_mode & 0o777
+        except OSError:          # missing (the usual case) or unreadable
+            continue
+        if mode & 0o077:
+            try:
+                os.chmod(path, 0o600)
+                changed.append(f"{Path(path).name} ({oct(mode)[2:]} -> 600)")
+            except OSError:
+                pass
+    return changed
+
+
+# Tightened before anything reads them; app.py logs what changed.
+SECRET_FILES_TIGHTENED = tighten_secret_files()
+
 
 def _load_or_create_dashboard_key() -> str:
     global DASHBOARD_API_KEY_IS_NEW
@@ -45,7 +99,7 @@ def _load_or_create_dashboard_key() -> str:
         except (json.JSONDecodeError, KeyError, OSError):
             pass
     key = secrets.token_urlsafe(32)
-    _KEY_FILE.write_text(json.dumps({"key": key}))
+    write_secret_file(_KEY_FILE, json.dumps({"key": key}))
     DASHBOARD_API_KEY_IS_NEW = True
     return key
 
@@ -204,10 +258,13 @@ NEWS = {
     "alphavantage_daily_limit": 20,
     # Optional: reads each headline's actual text via Claude Haiku instead of the
     # keyword lexicon — see llm_sentiment.py's docstring for exactly what this
-    # does and doesn't claim. Off by default even with a key present; flip
-    # "use_llm_sentiment" on once you've set ANTHROPIC_API_KEY.
+    # does and doesn't claim. Off by default even with a key present (#160):
+    # setting ANTHROPIC_API_KEY for another feature must not start paying for
+    # headline scoring. Switch it on from the Technical Analysis page (or
+    # POST /api/llm-sentiment/enable); the choice is kept in the journal's
+    # control table, so it survives a restart. Setting this True here also works.
     "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY", ""),
-    "use_llm_sentiment": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    "use_llm_sentiment": False,
     "llm_daily_limit": 500,
 }
 
@@ -538,13 +595,14 @@ def save_kite_session(access_token: str) -> None:
     'Connect Kite' flow (app.py)."""
     global KITE_ACCESS_TOKEN, KITE_SESSION_GENERATED_AT
     KITE_SESSION_GENERATED_AT = datetime.now(timezone.utc).isoformat()
-    SESSION_FILE.write_text(json.dumps({
+    # A live credential: written 0600 from the first byte (#161). It used to be
+    # written with the default mode and chmod-ed afterwards.
+    write_secret_file(SESSION_FILE, json.dumps({
         "api_key": KITE_API_KEY,
         "api_secret": KITE_API_SECRET,
         "access_token": access_token,
         "generated_at": KITE_SESSION_GENERATED_AT,
     }, indent=2))
-    SESSION_FILE.chmod(0o600)  # contains a live credential — owner-read/write only
     KITE_ACCESS_TOKEN = access_token
 
 # SEBI's retail algo framework (mandatory from 2026-04-01) requires MARKET

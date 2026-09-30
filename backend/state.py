@@ -53,6 +53,9 @@ class AppState:
         self.running = False
         self.market_status = "unknown"  # "open" | "closed" | "unknown"
         self.holiday = None  # {"name": str, "next_trading_day": "YYYY-MM-DD"} on an NSE holiday, else None
+        # {"year": int, "message": str} when today's year has no NSE holiday
+        # list, so every weekday counts as a session (#162); else None.
+        self.holiday_calendar_missing = None
         self.next_open = None  # ISO datetime (IST) of the next session open, for the dashboard countdown
 
         self.watchlist = []
@@ -302,6 +305,7 @@ class AppState:
                 "market_status": self.market_status,
                 "square_off_time": config.SQUARE_OFF_TIME,
                 "holiday": self.holiday,
+                "holiday_calendar_missing": self.holiday_calendar_missing,
                 "next_open": self.next_open,
                 "market_open": config.MARKET_OPEN,
                 "market_close": config.MARKET_CLOSE,

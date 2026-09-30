@@ -137,8 +137,32 @@ def stats():
     }
 
 
+# The journal's control-table key that keeps the dashboard switch across a
+# restart (#160). Absent until the switch is first used; then it wins over
+# config.NEWS["use_llm_sentiment"].
+CONTROL_KEY = "llm_sentiment_enabled"
+
+
 def set_enabled(enabled: bool):
     """Runtime on/off toggle — separate from whether a key is even configured,
-    same pattern as config.FNO['enabled'] (app.py's POST /api/fno/enable)."""
+    same pattern as config.FNO['enabled'] (app.py's POST /api/fno/enable).
+    Off by default even with a key set (#160): only this switch, or setting
+    config.NEWS["use_llm_sentiment"] by hand, turns it on. The choice is saved
+    in the journal, so a restart keeps it."""
+    import database
     config.NEWS["use_llm_sentiment"] = bool(enabled)
+    try:
+        database.set_control(CONTROL_KEY, config.NEWS["use_llm_sentiment"])
+    except Exception:
+        logger.exception("Couldn't save the LLM news sentiment switch; it holds until the next restart")
+    return config.NEWS["use_llm_sentiment"]
+
+
+def restore_saved_choice():
+    """At start-up: the dashboard switch's last position, if it was ever used.
+    Never used, config's default stands, and that is off."""
+    import database
+    saved = database.get_control(CONTROL_KEY)
+    if saved is not None:
+        config.NEWS["use_llm_sentiment"] = bool(saved)
     return config.NEWS["use_llm_sentiment"]

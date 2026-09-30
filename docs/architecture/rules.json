@@ -1014,11 +1014,11 @@
    "area": "scanner",
    "status": "active",
    "rule": "The scanner runs every 5 minutes while the market phase is open or in the square-off window, and every 60 minutes otherwise. That includes nights, weekends and NSE holidays. The first tick after start always scans, and only one scan thread runs at a time; POST /api/scan triggers one manually.",
-   "why": "The dashboard shows a plan even while the market is closed. README §2 claims no scanning on holidays; the code does scan hourly then.",
+   "why": "The dashboard shows a plan even while the market is closed.",
    "enforced_in": "backend/scanner.py:Scanner.due; backend/trading_engine.py:_tick_impl, request_scan",
    "config": "SCANNER.interval_minutes_open = 5; SCANNER.interval_minutes_closed = 60",
    "verify": "scans table ts spacing; activity 'Scanning the NIFTY 100 universe…'",
-   "source": "README §2 (contradicted on holidays)",
+   "source": "README §2",
    "test": null
   },
   {
@@ -1037,13 +1037,13 @@
    "id": "SCN-05",
    "area": "scanner",
    "status": "active",
-   "rule": "A stock with results due today or on the next weekday (NSE event calendar), or with an ex-date today (NSE corporate actions), is excluded from new trades.",
+   "rule": "A stock with results due today or on the next trading day (NSE event calendar; the next day that is not a weekend or an NSE holiday), or with an ex-date today (NSE corporate actions), is excluded from new trades.",
    "why": "Event risk; an ex-date gap is mechanical, not a signal.",
-   "enforced_in": "backend/scanner.py:Scanner.run; backend/nse_feed.py:results_calendar, corporate_actions_on",
+   "enforced_in": "backend/scanner.py:Scanner.run; backend/nse_feed.py:results_calendar, corporate_actions_on; backend/holidays.py:next_trading_day",
    "config": null,
    "verify": "/api/scanner rows with excluded '... — event risk, no new trades' or 'Ex-date today'",
-   "source": "README §2, §20",
-   "test": null
+   "source": "README §2, §20, §114",
+   "test": "backend/tests/test_holiday_calendar.py::test_results_after_a_holiday_are_excluded_on_the_day_before_it"
   },
   {
    "id": "SCN-06",
@@ -1524,16 +1524,13 @@
    "id": "INT-07",
    "area": "integration",
    "status": "active",
-   "rule": "LLM headline scoring (Claude Haiku 4.5) falls back to the keyword lexicon on any error, missing key, disabled toggle or spent budget, and caches each headline's score permanently. It is enabled automatically whenever ANTHROPIC_API_KEY is set (README §12 says off by default; the code disagrees). It can be toggled at runtime.",
+   "rule": "LLM headline scoring (Claude Haiku 4.5) falls back to the keyword lexicon on any error, missing key, disabled toggle or spent budget, and caches each headline's score permanently. It is off by default, even with ANTHROPIC_API_KEY set: only the dashboard switch (POST /api/llm-sentiment/enable) or NEWS.use_llm_sentiment set by hand turns it on. The switch's position is saved in the journal's control table and read back at start-up.",
    "why": "LLM reading must never block a scan or checklist read.",
-   "enforced_in": "backend/llm_sentiment.py:score_headline; backend/config.py NEWS.use_llm_sentiment",
-   "config": "NEWS.use_llm_sentiment = bool(ANTHROPIC_API_KEY), so it is on whenever the key is set",
-   "verify": "GET /api/llm-sentiment/status enabled/configured; /api/news/{sym} headlines[].llm_scored",
-   "source": "README §12",
-   "test": null,
-   "issues": [
-    160
-   ]
+   "enforced_in": "backend/llm_sentiment.py:score_headline; backend/llm_sentiment.py:set_enabled; backend/llm_sentiment.py:restore_saved_choice; backend/config.py NEWS.use_llm_sentiment",
+   "config": "NEWS.use_llm_sentiment = False; control key llm_sentiment_enabled once the switch is used; NEWS.llm_daily_limit = 500",
+   "verify": "GET /api/llm-sentiment/status enabled/configured; /api/news/{sym} headlines[].llm_scored; control table row llm_sentiment_enabled",
+   "source": "README §12, §114",
+   "test": "backend/tests/test_llm_sentiment_default.py::test_a_key_alone_does_not_turn_headline_scoring_on; backend/tests/test_llm_sentiment_default.py::test_the_switch_is_saved_and_a_restart_keeps_it"
   },
   {
    "id": "INT-08",
@@ -1545,10 +1542,7 @@
    "config": "CHAYWANAPRASH.enabled = True; llm_backend = 'auto'; daily_limit = 12; lookback_hours = 24",
    "verify": "GET /api/chaywanaprash/status lists the backends a run would use; POST /api/chaywanaprash/analyze saves one report",
    "source": "README §29, §92",
-   "test": "backend/tests/test_chaywanaprash.py::test_cli_is_used_when_there_is_no_api_key",
-   "issues": [
-    160
-   ]
+   "test": "backend/tests/test_chaywanaprash.py::test_cli_is_used_when_there_is_no_api_key; backend/tests/test_llm_sentiment_default.py::test_chaywanaprash_does_not_follow_the_key"
   },
   {
    "id": "INT-09",
@@ -2750,28 +2744,25 @@
    "id": "SEC-06",
    "area": "security",
    "status": "active",
-   "rule": "The dashboard key is the DASHBOARD_API_KEY env var, otherwise backend/.dashboard_key.json, otherwise newly generated with secrets.token_urlsafe(32) and saved. It is printed in full only on the run that generated it; later startups print first6...last4.",
+   "rule": "The dashboard key is the DASHBOARD_API_KEY env var, otherwise backend/.dashboard_key.json, otherwise newly generated with secrets.token_urlsafe(32) and saved with mode 0600. It is printed in full only on the run that generated it; later startups print first6...last4.",
    "why": "Avoid writing a trading-control credential to stdout on every restart.",
-   "enforced_in": "backend/config.py:_load_or_create_dashboard_key; backend/app.py",
+   "enforced_in": "backend/config.py:_load_or_create_dashboard_key; backend/config.py:write_secret_file; backend/app.py",
    "config": "DASHBOARD_API_KEY_IS_NEW = False unless generated this run",
-   "verify": "Startup log line 'Dashboard API key: xxxxxx...xxxx (unchanged ...)'. NOTE: the file is written without chmod and is 0644 on disk",
-   "source": "README Setup; issue #87",
-   "test": null,
-   "issues": [
-    161
-   ]
+   "verify": "Startup log line 'Dashboard API key: xxxxxx...xxxx (unchanged ...)'; stat -f %Sp backend/.dashboard_key.json -> -rw-------",
+   "source": "README Setup; issue #87; README §114",
+   "test": "backend/tests/test_secret_files.py::test_the_dashboard_key_file_is_created_0600"
   },
   {
    "id": "SEC-07",
    "area": "security",
    "status": "active",
-   "rule": "The Kite session (api_key, api_secret, access_token, generated_at) is written to backend/.kite_session.json with mode 0600, and the in-process config globals are updated so no restart is needed.",
+   "rule": "The Kite session (api_key, api_secret, access_token, generated_at) is written to backend/.kite_session.json with mode 0600 from the first byte, through a 0600 temporary file that replaces it, and the in-process config globals are updated so no restart is needed.",
    "why": "It is a live broker credential.",
-   "enforced_in": "backend/config.py:save_kite_session (line 474, chmod at 487)",
+   "enforced_in": "backend/config.py:save_kite_session; backend/config.py:write_secret_file",
    "config": null,
    "verify": "stat -f %Sp backend/.kite_session.json -> -rw-------",
    "source": "CLAUDE.md Rules",
-   "test": null
+   "test": "backend/tests/test_secret_files.py::test_the_kite_session_file_is_written_0600"
   },
   {
    "id": "SEC-08",
@@ -2856,6 +2847,18 @@
    "verify": "grep 'mode=ro' backend/research/journal_summary.py.",
    "source": "docs/research/reviewer-inbox.md Entry 5; header standing rules",
    "test": "backend/tests/test_research_splits.py::test_no_live_module_imports_research"
+  },
+  {
+   "id": "SEC-15",
+   "area": "security",
+   "status": "active",
+   "rule": "At start-up every credential file in backend/ (the dashboard key, the Kite session, the TypeSafe key, the Telegram config) that other accounts can read is set to 0600, and the start-up log names the files and their old modes, never their contents.",
+   "why": "A file written before the 0600 rule, or by hand, would otherwise stay readable by every local account (#161).",
+   "enforced_in": "backend/config.py:tighten_secret_files; backend/config.py:SECRET_FILES; backend/app.py",
+   "config": null,
+   "verify": "Startup log line 'Credential files other accounts could read were set to owner-only (0600): ...' when one was changed; stat -f %Sp backend/.*.json -> -rw-------",
+   "source": "README §114",
+   "test": "backend/tests/test_secret_files.py::test_start_up_tightens_readable_files_and_names_only_those"
   },
   {
    "id": "OPS-01",
@@ -3005,13 +3008,13 @@
    "id": "OPS-13",
    "area": "ops",
    "status": "active",
-   "rule": "On weekends and on the dates in holidays.NSE_HOLIDAYS_2026, the market phase is 'closed', so there are no entries, exits or square-off. One 'Markets are closed today for X. Trading resumes ...' line is logged per day, and next_open skips holidays. Only 2026 is listed: from 2027 every weekday would count as a session.",
-   "why": "An NSE holiday is not an ordinary closed day.",
-   "enforced_in": "backend/trading_engine.py:market_phase, _tick_impl; backend/holidays.py:is_holiday / next_trading_day",
+   "rule": "On weekends and on the dates in holidays.NSE_HOLIDAYS (held per year; 2026 only so far), the market phase is 'closed', so there are no entries, exits or square-off. One 'Markets are closed today for X. Trading resumes ...' line is logged per day, and next_open skips holidays. In a year with no list every weekday counts as a session and weekends stay closed; the engine then logs an error at start-up and on every pre-market read, and /api/state carries holiday_calendar_missing {year, message}.",
+   "why": "An NSE holiday is not an ordinary closed day, and a missing year would turn every holiday into a session without a word (#162).",
+   "enforced_in": "backend/trading_engine.py:market_phase, _tick_impl, _warn_if_no_holiday_calendar; backend/holidays.py:is_holiday / next_trading_day / calendar_missing",
    "config": null,
-   "verify": "/api/state holiday {name, next_trading_day}; activity kind 'system' on a holiday",
-   "source": "README 'Read this first' (NSE holidays hardcoded for 2026), §2",
-   "test": "backend/tests/test_preopen_kite.py::test_before_0845_after_the_close_weekends_holidays_and_no_kite_setup_are_silent (indirect)",
+   "verify": "/api/state holiday {name, next_trading_day} and holiday_calendar_missing; activity kind 'system' on a holiday; an error-level 'There is no NSE holiday list for <year>' line in a year without one",
+   "source": "README 'Read this first' (NSE holidays hardcoded for 2026), §2, §114",
+   "test": "backend/tests/test_holiday_calendar.py::test_a_year_without_a_list_logs_one_error_and_sets_the_state; backend/tests/test_holiday_calendar.py::test_the_pre_market_read_warns; backend/tests/test_holiday_calendar.py::test_start_up_warns",
    "issues": [
     162
    ]

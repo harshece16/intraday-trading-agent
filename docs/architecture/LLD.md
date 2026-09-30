@@ -75,12 +75,12 @@ duration apart.
 
 1. `_sync_capital()`: at most every 300 s, or at once after a mode change. In live mode it also runs position reconciliation.
 2. Day rollover on the first tick of a new date: daily P&L and the open-position count reset.
-3. Set the phase, `market_status`, `next_open` and `holiday`.
+3. Set the phase, `market_status`, `next_open`, `holiday` and `holiday_calendar_missing` (set when the year has no NSE holiday list, [#162](https://github.com/harshece16/intraday-trading-agent/issues/162)).
 4. `_check_preopen_kite()`: once per trading day between 08:45 and the close.
 5. Holiday notice, once per date.
 6. Session summary, once, on a trading day at or after 15:30.
 7. If closed: `momentum_book.maybe_start_evening_job`.
-8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails.
+8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails. Each read first logs an error if the year has no NSE holiday list; start-up logs the same.
 9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
 11. If open: `jev_book.maybe_decide`. If in the square-off window: `jev_book.maybe_close`.
@@ -127,7 +127,7 @@ the API and the WebSocket read it through `snapshot()`.
 | Field | Holds |
 | --- | --- |
 | `paper_mode`, `entries_paused`, `running` | Mode and control |
-| `market_status`, `holiday`, `next_open` | Market clock |
+| `market_status`, `holiday`, `next_open`, `holiday_calendar_missing` | Market clock; the last is `{year, message}` when the year has no NSE holiday list |
 | `watchlist`, `candles` | Watched symbols; last 200 candles each |
 | `strategy_state`, `indicators` | Per-symbol checklist state, including `entries_today` |
 | `positions` | `{quantity, avg_price, entry_atr, stop_price, target_price, initial_risk, position_id, charges}` per symbol |
@@ -957,7 +957,7 @@ migration that also rewrote rows, on purpose, is `trades.realized_gross`
 | `market_breadth_daily` | One row per session | `scanner.run` | `mcclellan_oscillator` |
 | `research_briefs` | Research desk briefs | `research_desk` | Stock page |
 | `chaywanaprash_reports` | Self-review reports | `chaywanaprash` | Reports route |
-| `control` | `entries_paused`, `telegram_enabled` | Control routes | Engine at startup |
+| `control` | `entries_paused`, `telegram_enabled`, `llm_sentiment_enabled` | Control routes | Engine at startup |
 | `day_lists` | One row per session: the day's list, when and how it was fixed. Written once; a second write for the session is ignored | `Scanner._keep` (`record_day_list`) | `Scanner.__init__` (`latest_day_list`) |
 
 Tests never touch this file. `conftest.py` points every test at a temporary
@@ -974,13 +974,17 @@ RES-32).
 
 ## 15. Files on disk
 
-All gitignored unless marked.
+All gitignored unless marked. The backend writes a credential file through
+`config.write_secret_file` (a 0600 temporary file that replaces it), and
+start-up sets any credential file other accounts can read to 0600
+(`config.tighten_secret_files`, [#161](https://github.com/harshece16/intraday-trading-agent/issues/161)).
 
 | Path | Holds | Mode |
 | --- | --- | --- |
-| `backend/.dashboard_key.json` | The dashboard key | Default ([#161](https://github.com/harshece16/intraday-trading-agent/issues/161)) |
+| `backend/.dashboard_key.json` | The dashboard key | 0600 |
 | `backend/.kite_session.json` | Kite key, secret and the day's access token | 0600 |
 | `backend/.typesafe_key.json` | The TypeSafe key | 0600 |
+| `backend/.telegram.json` | The Telegram bot token and chat id, written by hand | 0600 from start-up |
 | `backend/data/sahab_journal.db` | The journal | |
 | `backend/data/momentum_book_state.json`, `jev_book_state.json` | Book state, written atomically | |
 | `backend/data/kronos.db` | The Kronos store: the shadow's forecasts and L40's records, ingested from the files below | |
