@@ -286,6 +286,12 @@ writing this.
 **The change**, from the first backend restart after it is merged (the date is
 added below once it is live). README §106, #198.
 
+**Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at
+15:40 IST, after the close, with no position open. That restart was the last one without it: its first
+scan chose the list for 2026-09-30 again, found the same 25 stocks the session had used since 09:15, and
+wrote them to the journal with the time 15:41:34. For 2026-09-30, read the list from a scan before the
+close; the journal's row has the right stocks but not the time they were fixed.
+
 The day's list is written to the journal when it is fixed and read back when
 the backend starts. A restart before 09:45 no longer gives the round a list
 chosen again: the first scan after the restart returns the list fixed before
