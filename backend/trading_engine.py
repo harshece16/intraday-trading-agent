@@ -186,6 +186,7 @@ class TradingEngine:
         except Exception:
             logger.exception("Couldn't read the Telegram alert setting — leaving it on")
         self.stop_watcher = None
+        self._restore_day_list()
 
     def _ensure_kite(self):
         if self.kite_executor is None:
@@ -447,15 +448,34 @@ class TradingEngine:
 
     def _fix_day_list(self, session, result):
         """The pre-market read's shortlist becomes the day's list, and the
-        engine watches it from the open."""
+        engine watches it from the open. The scanner writes it to the journal,
+        so a restart keeps it (#198)."""
         if not self.scanner.fix_day_list(session, result["watchlist"]):
             return
-        held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
-        self.state.set_watchlist(list(dict.fromkeys(
-            list(config.SCANNER.get("pinned", [])) + result["watchlist"] + held)))
+        symbols = self.scanner.day_list["symbols"]
+        self._watch_day_list(symbols)
         self.state.log("watchlist", f"The day's list is fixed before the open, from daily data: "
-                                    f"{', '.join(result['watchlist']) or 'nothing qualifies'}. "
+                                    f"{', '.join(symbols) or 'nothing qualifies'}. "
                                     f"It does not change during the session.")
+
+    def _watch_day_list(self, symbols):
+        held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
+        self.state.set_watchlist(list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + list(symbols) + held)))
+
+    def _restore_day_list(self):
+        """After a restart, the list already fixed for today, read back from
+        the journal, is watched from the first tick (#198). Without this the
+        watchlist held only the pinned stocks until the first scan, and the
+        ordinary pre-market read could seed it with a list chosen again."""
+        today = datetime.now(IST).date().isoformat()
+        if not self.scanner or not self.scanner.list_fixed_for(today):
+            return
+        dl = self.scanner.day_list
+        self._watch_day_list(dl["symbols"])
+        at = datetime.fromtimestamp(dl["fixed_ts"], IST).strftime("%H:%M")
+        self.state.log("watchlist", f"The day's list, fixed {dl.get('when') or 'earlier'} at {at}, was read back "
+                                    f"from the journal after a restart: {', '.join(dl['symbols']) or 'nothing'}. "
+                                    f"It is not chosen again.")
 
     def _run_premarket_scan(self, fix_list_for=None):
         with self.state.lock:
@@ -484,6 +504,8 @@ class TradingEngine:
         today = datetime.now(IST).date()
         if self._last_premarket_seed_date == today:
             return
+        if self.scanner and self.scanner.list_fixed_for(today.isoformat()):
+            return          # the watchlist already follows the day's fixed list (#198)
         live_scan_done_today = self.state.scanner and self.state.scanner.get("session_date") == today.isoformat()
         if live_scan_done_today:
             return

@@ -743,16 +743,41 @@ class Scanner:
         self.last_run = 0.0
         self.result = None
         self.intraday = {}
-        # The session's fixed list in "liquidity" mode: {"session", "symbols", "fixed_ts"}.
-        self.day_list = None
+        # The session's fixed list in "liquidity" mode: {"session", "symbols", "fixed_ts", "when"}.
+        # It is written to the journal when it is fixed and read back here, so a
+        # restart keeps the list the session started with, and the time it was
+        # fixed (#198). A list for an earlier session is read back too, as a
+        # running scanner would still hold it; day_list_for() chooses again
+        # when a scan reads a later session.
+        self.day_list = self._stored_list()
+
+    def _stored_list(self):
+        if selection_mode(self.cfg) != "liquidity":
+            return None
+        try:
+            return database.latest_day_list(mode="liquidity")
+        except Exception:
+            logger.exception("Could not read the day's list back from the journal")
+            return None
+
+    def _keep(self, session, symbols, when, now):
+        """Fix the list for a session, in memory and in the journal. If the
+        journal already holds a list for the session, that one stands."""
+        dl = {"session": session, "symbols": list(symbols), "fixed_ts": now or time.time(), "when": when,
+              "mode": "liquidity"}
+        try:
+            dl = database.record_day_list(session, dl["symbols"], dl["fixed_ts"], when) or dl
+        except Exception:
+            logger.exception("Could not write the day's list to the journal; it is kept in memory only")
+        self.day_list = dl
+        return dl
 
     def fix_day_list(self, session, symbols, now=None):
         """Fix the day's list before the open, from the pre-market read. It
         is not moved once fixed."""
         if self.list_fixed_for(session):
             return False
-        self.day_list = {"session": session, "symbols": list(symbols), "fixed_ts": now or time.time(),
-                         "when": "before the open"}
+        self._keep(session, symbols, "before the open", now)
         return True
 
     def list_fixed_for(self, session):
@@ -772,9 +797,8 @@ class Scanner:
             return [s for s in dl["symbols"] if s in eligible_syms], True
         chosen = select_liquid(eligible, self.cfg)
         if n_universe and n_rows >= self.cfg.get("freeze_min_coverage", 0.9) * n_universe:
-            self.day_list = {"session": session, "symbols": chosen, "fixed_ts": now or time.time(),
-                             "when": "at the first scan of the session"}
-            return chosen, True
+            kept = self._keep(session, chosen, "at the first scan of the session", now)["symbols"]
+            return [s for s in kept if s in eligible_syms], True
         return chosen, False
 
     def due(self, market_open):

@@ -152,6 +152,14 @@ A restart always comes back in Paper. A restored live position keeps
 `live: True`, so its exit is a real order, and `_verify_live_position()`
 checks it against Kite's positions before any order is sent.
 
+The day's list is read back too (#198). `Scanner.__init__` loads the latest
+row of `day_lists`, so the scanner holds what it held before the restart, with
+the time and the way the list was fixed. If that row is for today,
+`_restore_day_list()` makes the watchlist pinned + list + held at once, so the
+order-book sampler follows the list from the first tick, and
+`_maybe_seed_watchlist_from_premarket()` does not replace it with the ordinary
+pre-market read, which chooses again from newer data.
+
 ### 2.5 Engine lock (`engine_lock.py`)
 
 `acquire(db_path)` writes `<db>.enginelock` holding `{pid, db_path,
@@ -420,7 +428,7 @@ and open positions are not restored after a restart
 8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
 9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
 10. **Selection** (`SCANNER["selection"]`, README §91).
-    - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. The list is fixed before the open by `Scanner.fix_day_list()`, from the pre-market read, and kept all day. If no read ran before the open, `day_list_for()` fixes it at the first scan that covers at least 90% of the universe. A stock that stops being eligible is dropped, not replaced.
+    - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. The list is fixed before the open by `Scanner.fix_day_list()`, from the pre-market read, and kept all day. If no read ran before the open, `day_list_for()` fixes it at the first scan that covers at least 90% of the universe. A stock that stops being eligible is dropped, not replaced. Either way `_keep()` writes the list to the journal (`day_lists`, one row per session, first write stands) and a restarted scanner reads it back, so a restart does not choose again (#198). A list for an earlier session is replaced when a scan reads a later one.
     - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
 11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`. The watchlist becomes pinned + active + held.
 
@@ -900,6 +908,7 @@ changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
 | `research_briefs` | Research desk briefs | `research_desk` | Stock page |
 | `chaywanaprash_reports` | Self-review reports | `chaywanaprash` | Reports route |
 | `control` | `entries_paused`, `telegram_enabled` | Control routes | Engine at startup |
+| `day_lists` | One row per session: the day's list, when and how it was fixed. Written once; a second write for the session is ignored | `Scanner._keep` (`record_day_list`) | `Scanner.__init__` (`latest_day_list`) |
 
 Tests never touch this file. `conftest.py` points every test at a temporary
 database.

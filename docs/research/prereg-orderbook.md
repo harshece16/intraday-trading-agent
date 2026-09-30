@@ -170,3 +170,25 @@ close, not the last scan of the day.
 
 **Unchanged:** everything in the test.
 
+
+---
+
+# Amendment 5 — 2026-09-30, before any `depth_samples` row has been joined to a return, written before the change is deployed
+
+**What had been seen:** row counts only, as in amendment 2. Writing this read
+the day's list and the scans' `active` in a copy of the journal, and no sample.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §106, #198.
+
+The day's list is written to the journal when it is fixed and read back when
+the backend starts. A restart inside a session keeps the list, and the sampler
+follows it from the first tick after the restart. Until now a restart chose
+the list again from the data of that moment, and the list could change by a
+name part-way through a session (as it did after the close of 2026-09-29).
+
+**Effect on this test:** none on a session without a restart. A session with a
+restart in it now keeps one membership all day, which amendment 3 already
+described as the rule.
+
+**Unchanged:** everything in the test, including the rule that chooses the list.
