@@ -150,3 +150,12 @@ Listed for the reviewer, so each can be challenged before any number exists:
 5. **`sector` is leave-one-out** over the universe's own members by NSE's current industry label.
 6. **Exclusions by corporate action** (§3, §4), from dates announced in advance.
 7. **F5 keeps the partial IC given `m60`** although the two overlap almost completely at 09:45 (§4).
+
+## Amendments
+
+1. **2026-09-30, about 21:40 IST, while writing the code and its tests on synthetic data; before the code was committed, before stage 0, and before any L49 feature was computed on project data.** Three things the text above left open or got wrong:
+   - **Check 8's positive control.** The target used as its own feature has a partial IC given `m60` of exactly 1 in every session, up to rounding. The harness's t across sessions is then either undefined (zero spread, where `tstat` returns no t) or a number of order 10¹⁷ made of rounding error, so whether `gate` passes it is floating-point luck: two synthetic runs gave one of each. The control is therefore **the target plus seeded Gaussian noise of 5 bp standard deviation** (seed 123), its negation, and a seeded random number, each through `gate` unchanged. Five basis points is small against the targets' spread (tens of basis points at every horizon), so the control still stands for near-perfect foresight.
+   - **Check 6** picks five seeded stock-times from the sample and five more from its 09:45 stock-times, so F5 is hand-checked on at least five.
+   - **Check 5's reasons.** A stock whose industry has peers, none of which has a defined move, counts as **missing data** unless every one of those peers is on a corporate-action ex-date. It then counts against the 1% halt instead of escaping it.
+
+   Nothing in the features, the sample, the targets, the statistics, the family or the gate changes.
