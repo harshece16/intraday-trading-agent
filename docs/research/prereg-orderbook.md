@@ -241,3 +241,41 @@ to this one.
 requirement, the session and coverage rules of amendment 1, the list rules of
 amendments 2, 3 and 5, the 33.26 bp hurdle and the Benjamini–Hochberg family
 of 15.
+
+---
+
+# Amendment 7 — 2026-09-30, before any `depth_samples` row has been joined to a return, written before the change is deployed
+
+**What had been seen:** row counts only, as in amendment 2. Writing this read
+no sample. Amendment 6 was already taken by the depth-levels change (#188).
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §115, the scanner audit's rule 3.8 and
+section 6.
+
+1. The scanner no longer sets a side. The engine no longer refuses an entry
+   for disagreeing with the old selection score; the checklist picks the side.
+2. Every scan journals every stock with the inputs of the audit's passes 1 to
+   3 (new columns on `scan_rows` and `scans`). At the first tick at or after
+   15:08, Kite's last traded price of every universe stock and the NIFTY is
+   read once and written to `session_closes`.
+
+**Effect on this test (L37): none.**
+
+- **The list is unchanged.** It is still the 25 eligible stocks with the
+  highest 20-day average turnover, fixed before the open (SCN-14, SCN-15).
+  No score, side or trend enters it, before or after this change. Checked on
+  2026-09-30: the scanner with this change, run after the close on the delayed
+  feed into a scratch journal, chose the same 25 stocks in the same order as
+  the running engine's list for that session.
+- **The side never entered this test.** The five features are order-book
+  readings and the targets are signed returns; no feature, target or gate
+  reads the scanner's side.
+- **Which stocks are sampled** does not depend on the side: the sampler takes
+  the engine's watchlist, which is the list plus pinned and held stocks.
+- **One more Kite request a session**: one quote request for the 100 stocks
+  and the NIFTY at the first tick of the square-off window. Stock samples are
+  taken only in the open phase, which ends at 15:08, so the request comes
+  after the day's last sample.
+
+**Unchanged:** everything in the test.

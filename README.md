@@ -4006,6 +4006,42 @@ The one new input left untested is the order book being recorded since §71. Bre
 
 Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
 
+### 115. The scanner sets no side, and every scan is logged for a later test
+
+**What the scanner audit asked for** (`docs/research/scanner-audit-2026-09-28.md`, rule 3.8 and section 6; the owner approved its fixes on 2026-09-29). No stage of the intraday funnel has a measured edge after costs, and the old selection score's rank IC is nil (0.000 over 434 sessions, −0.0021 over 436; §37, §52). Since the move to the liquidity list (§91) that score chose nothing, but the side it produced still refused entries: a checklist long on a stock the score leaned short on was blocked with "scanner favours SHORT for this stock today". The audit's two remaining items were to stop that, and to log every candidate on every scan so that a later pre-registered test can read them.
+
+**1. The side.**
+
+- The scanner still scores each stock as a long and as a short. The stronger is kept as `score_side`, with `long_score` and `short_score`, and shown for information. The row's `side` is empty.
+- The engine no longer refuses an entry for disagreeing with the old score. The checklist's own reading picks the side (rules ENT-21, SCN-06).
+- Tradability stays. A stock with a fixed price band is still long-only, now refused explicitly ("this stock has a fixed price band, so it is long-only"), and `SCANNER.allow_shorts = False` still refuses every short. The market-bias gate (risk-off blocks new longs, risk-on blocks new shorts) is unchanged; the audit did not ask for it to change.
+- **The audit's replacement direction is not a gate.** Rule 3.8 takes the direction from the VWAP side (3.5), the stock against its industry (3.6) and the NIFTY against its VWAP (3.7), all agreeing. Rule 3.5 failed as a rule family (0 of 76), 3.6 and 3.7 were never tested, and the audit says nothing reaches the engine without a pre-registered test. So it runs in shadow: it is computed with every scan and journaled as `shadow_side`, and nothing that trades reads it. The NIFTY leg reads the index against its open, because an index has no traded volume and so no VWAP.
+- **The day's list does not change**: the 25 most-traded eligible stocks, as before (SCN-14). On 2026-09-30 a scan by this code after the close, on the delayed feed into a scratch journal, chose the same 25 stocks in the same order as the running engine's list for that session.
+- **The dashboard follows.** The Screener, the Overview's cards and the Stock page no longer show a Long or Short pill for the scanner. The chart cards and the Stock page show the checklist's side ("Long plan", "Waiting to buy"). The Stock page says the score is information and sets no side. The Pre-market note names the list without sides. The Day plan sizes each pick on the checklist's side; without that it would have gone empty, because it skipped rows without a side.
+- The research desk now flags a short lean on a long-only stock, and reads the market-bias flag from the checklist's side. Its flag "the engine refuses trades against the scanner's side" is gone, because that is no longer true. The Kronos shadow (§102) records `score_side` where it recorded the side, so its record keeps the same values.
+
+**What this changes in paper mode.** Automatic entries stay off: the confidence gate stops every one (§70). The review queue changes: a near-miss card can now be offered on either side of a listed stock, where before only the score's side could reach one.
+
+**2. The shadow log** (audit rule 5.3, and section 6: run passes 1 to 3 in shadow, log candidates, place no orders).
+
+- Every scan already wrote one `scan_rows` row per stock. Those rows now also carry the inputs of passes 1 to 3: the long-only flag, the price feed and the time of the price, VWAP, the opening range, the average change of the other NIFTY 100 stocks in the industry, the sector index's daily trend, turnover, ATR %, the old score's two readings and side, and `shadow_side`. Each scan's `scans` row adds the feed, the quote time, the NIFTY's open and daily trend, and the FII net.
+- **Why extend `scan_rows` rather than add a table.** The rows already exist for every stock of every scan (8,000 to 9,000 a session), with the symbol, session, status, price, change, gap and relative volume. A new table would write all of that a second time. The columns are added in place (SQLite `ADD COLUMN`: 0.01 s on a copy of the 855 MB live journal), and older rows leave them empty. The one thing a scan cannot know, the price at 15:08, gets its own small table.
+- `session_closes`: at the first tick of the square-off window, one Kite quote request for the 100 stocks and the NIFTY, written once a session. Kite only: without Kite nothing is written and the activity log says so once, rather than recording a price 15 minutes old.
+- The view `scan_candidates` joins them: every stock of every scan with its inputs, its distance from VWAP in bp, and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08). `database.scan_candidates(session)` reads one session. Rows from before this change read the old score's side from `side`.
+- **Limits, stated now.** Relative volume still compares with at most four earlier sessions; the audit wants 20. The industry comparison uses the other NIFTY 100 stocks in the industry, not the live sector index, which the scanner does not read. There is no pre-open data, so pass 2's 09:08 read does not exist. A delayed-feed row's price is about 15 minutes old; `feed` and `price_at` say so.
+
+**Checked.**
+
+- `backend/tests/test_scanner_side_shadow_log.py`: 18 tests. 15 of the first 17 fail on `main`: for example, a real scan on `main` refuses a short in FFF with "scanner favours LONG for this stock today".
+- A copy of the live journal migrates in 0.01 s. Its 7,700 rows for 2026-09-30 read through the view, with the old score's side.
+- A real scan after the close on 2026-09-30 (delayed feed, no Kite, news off, sector history not completed): 100 rows journaled, no row with a side, `score_side` 74 short and 26 long, `shadow_side` 41 short and 59 empty (the NIFTY closed below its open, so no stock could be long), and the list matched the engine's.
+- The dashboard from this branch, fed that scan by a read-only stub (no engine, no key): the Screener, Overview, Stock, Pre-market and Day plan pages, checked in the browser.
+- **Not checked live:** the 15:08 Kite read runs for the first time at the first session after this is deployed. Its test uses a fake Kite.
+
+**Running tests.** `prereg-jev-book.md` clarification 9: Jev's snapshot and the book's baseline keep the old score's side, read from `score_side`, so neither changes; only the engine no longer acts on it. `prereg-orderbook.md` amendment 7: no effect on L37, whose list is unchanged and which never read the side.
+
+Rules: ENT-21, SCN-06, SCN-07 and JEV-11 changed; SCN-26 new. Files: `backend/scanner.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/jev_book.py`, `backend/research_desk.py`, `backend/day_plan.py`, `backend/research/kronos_shadow.py`, `backend/config.py` (comment), `backend/tests/test_scanner_side_shadow_log.py`, `backend/tests/test_scanner_selection.py`, the dashboard pages named above, `docs/architecture/` (HLD, LLD, rules).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
