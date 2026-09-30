@@ -341,6 +341,8 @@ decision was priced live at both ends (clarification 3).
 only, the cost, the comparison with the scanner's side, the pass rule and the
 kill rule.
 
+**Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at 21:05 IST, after the close, with no position open. The restart read the day's list for 2026-09-30 back from the journal (#207) instead of choosing it again; the session of 2026-10-01 fixes its own before the open.
+
 ---
 
 # Clarification 10 — 2026-09-30, written before the change is deployed
@@ -387,3 +389,5 @@ protocol already reports as 0.
 shown the same snapshot fields and scored against the same baseline. The change
 was not made to move Jev's score; it follows from the audit's finding that the
 old score carries no information.
+
+**Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at 21:05 IST, after the close, with no position open. The restart read the day's list for 2026-09-30 back from the journal (#207) instead of choosing it again; the session of 2026-10-01 fixes its own before the open.

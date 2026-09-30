@@ -385,13 +385,9 @@ affects today's paper operation with automatic entries off.
 
 | Issue | Gap | Matters when |
 | --- | --- | --- |
-| [#186](https://github.com/harshece16/intraday-trading-agent/issues/186) | Live F&O orders are booked at the quoted premium, not Kite's executed price | Before enabling F&O live |
-| [#187](https://github.com/harshece16/intraday-trading-agent/issues/187) | Open F&O positions are not restored after a restart | Before enabling F&O |
-| [#189](https://github.com/harshece16/intraday-trading-agent/issues/189) | Paper index options probably never reprice | Before enabling F&O |
-| [#188](https://github.com/harshece16/intraday-trading-agent/issues/188) | The order-book sampler drops levels 2 to 5 | Before slippage ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66)) can be measured |
-| [#157](https://github.com/harshece16/intraday-trading-agent/issues/157) | F&O entries skip several cash entry rules | Before enabling F&O |
-| [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) | Jev book: interrupted rounds and the live-price gate | Now, for the test's record |
-| [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) | Momentum book: silent data gaps and a skippable rebalance | Before 1 Oct |
 | [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only. A year without a list is now loud (an error at start-up and on each pre-market read, `holiday_calendar_missing` in the state); NSE's 2027 list is not published yet | Before 2027 |
+| [#220](https://github.com/harshece16/intraday-trading-agent/issues/220) | Momentum book: a failed symbol-change refresh is silent | Before a rename in a ranked or held stock |
+| [#222](https://github.com/harshece16/intraday-trading-agent/issues/222) | A redacted request line is dropped from the log, with a traceback | Reading the log after a Kite login |
+| [#223](https://github.com/harshece16/intraday-trading-agent/issues/223) | An F&O index underlying needs pinning, and is then also traded as cash | Before enabling index options |
 | [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) | One slippage figure for every stock, never measured | Every intraday test's hurdle |
 | [#163](https://github.com/harshece16/intraday-trading-agent/issues/163) | Stale comments and UI text | Readers |
