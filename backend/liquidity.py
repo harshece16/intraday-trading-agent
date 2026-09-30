@@ -28,6 +28,12 @@ symbol instead of assuming 3 bp for all of them.
 When there is no depth to read (no live Kite session, or a data error), a
 paper-mode entry goes ahead and the check is recorded as "unchecked"; a live
 entry is refused. Never place a real order on a book nobody looked at.
+
+An option buy (check_option, #157) is judged on its own contract's NFO book.
+The option tariff models no slippage, so "twice the modelled slippage" would
+refuse every option; the cap is config.FNO["max_spread_pct_of_premium"] of
+the mid premium instead, the walk may cost at most half of it, and the depth
+rule is the same multiple of the order as for cash.
 """
 
 import logging
@@ -108,6 +114,47 @@ def assess(depth, side, qty, costs_cfg=None):
     return out
 
 
+def assess_option(depth, qty, max_spread_pct, min_depth_multiple):
+    """The option buy's version of assess(): the spread as a % of the mid
+    premium, at most `max_spread_pct`; walking the asks for `qty` moves the
+    fill at most half that from the mid; both sides hold `min_depth_multiple`
+    times `qty` across five levels. A buy enters into the asks and exits into
+    the bids. The bp fields are filled too, so the journal row reads like a
+    cash one."""
+    bids = [lv for lv in (depth or {}).get("buy", []) if lv.get("price") and lv.get("quantity")]
+    asks = [lv for lv in (depth or {}).get("sell", []) if lv.get("price") and lv.get("quantity")]
+    out = {"ok": False, "reason": None, "spread_bp": None, "impact_bp": None, "entry_depth": None,
+           "exit_depth": None, "max_spread_bp": max_spread_pct * 100, "qty": qty}
+    if not bids or not asks:
+        out["reason"] = "the option's order book is empty on one side"
+        return out
+    bid, ask = bids[0]["price"], asks[0]["price"]
+    mid = (bid + ask) / 2
+    spread_pct = (ask - bid) / mid * 100
+    out["spread_bp"] = round(spread_pct * 100, 2)
+    out["entry_depth"] = sum(lv["quantity"] for lv in asks)
+    out["exit_depth"] = sum(lv["quantity"] for lv in bids)
+    vwap, filled = _walk(asks, qty)
+    impact_pct = abs(vwap - mid) / mid * 100 if vwap is not None else None
+    if impact_pct is not None:
+        out["impact_bp"] = round(impact_pct * 100, 2)
+    if spread_pct > max_spread_pct:
+        out["reason"] = (f"the option's spread is {spread_pct:.2f}% of the premium ({bid:.2f} / {ask:.2f}), "
+                         f"over the {max_spread_pct:g}% cap")
+    elif not filled:
+        out["reason"] = f"five levels of the option's book hold only {out['entry_depth']} against an order for {qty}"
+    elif impact_pct > max_spread_pct / 2:
+        out["reason"] = (f"buying {qty} walks the option's book {impact_pct:.2f}% from the mid, over half "
+                         f"the {max_spread_pct:g}% spread cap")
+    elif min(out["entry_depth"], out["exit_depth"]) < min_depth_multiple * qty:
+        thin = "entry" if out["entry_depth"] <= out["exit_depth"] else "exit"
+        out["reason"] = (f"the option's {thin} side holds {min(out['entry_depth'], out['exit_depth'])} across "
+                         f"five levels, under {min_depth_multiple:g}× the {qty} we'd trade")
+    else:
+        out["ok"] = True
+    return out
+
+
 def _fetch_depth(symbol):
     import data_provider
     if not data_provider.kite_data_active():
@@ -116,9 +163,27 @@ def _fetch_depth(symbol):
     return q.get("depth")
 
 
-def check(symbol, side, qty, ltp, paper_mode, fetch=_fetch_depth):
+def _fetch_option_depth(tradingsymbol):
+    import data_provider
+    if not data_provider.kite_data_active():
+        return None
+    q = data_provider._get_kite().quote([f"NFO:{tradingsymbol}"]).get(f"NFO:{tradingsymbol}") or {}
+    return q.get("depth")
+
+
+def check_option(tradingsymbol, qty, premium, paper_mode, fetch=None):
+    """check() for an option buy (#157): the contract's own book, judged by
+    assess_option(). Same rule when there is no book to read: paper goes
+    ahead, recorded as unchecked, and live is refused."""
+    return check(tradingsymbol, "LONG", qty, premium, paper_mode, fetch=fetch or _fetch_option_depth,
+                 judge=lambda depth: assess_option(depth, qty, config.FNO["max_spread_pct_of_premium"],
+                                                   _cfg().get("min_depth_multiple", 3.0)))
+
+
+def check(symbol, side, qty, ltp, paper_mode, fetch=_fetch_depth, judge=None):
     """The entry-time gate. Returns (ok, reason, result). Records every
-    reading, including the ones it could not take."""
+    reading, including the ones it could not take. `judge` replaces
+    assess() for a book that isn't a cash stock's (check_option)."""
     if not _cfg().get("enabled", True):
         return True, None, {"status": "disabled"}
     try:
@@ -130,7 +195,7 @@ def check(symbol, side, qty, ltp, paper_mode, fetch=_fetch_depth):
         result = {"status": "unchecked", "ok": paper_mode, "qty": qty,
                   "reason": None if paper_mode else "no market depth available — a live order needs a checked book"}
     else:
-        result = {**assess(depth, side, qty), "status": "checked"}
+        result = {**(judge(depth) if judge else assess(depth, side, qty)), "status": "checked"}
     try:
         database.record_liquidity_check(symbol, side, qty, ltp, "paper" if paper_mode else "live", result)
     except Exception as exc:

@@ -203,9 +203,9 @@
    "id": "ENT-07",
    "area": "entry",
    "status": "active",
-   "rule": "At most one entry per stock per day. A blocked entry gives the count back, the count is rebuilt from today's journal after a restart, and review approvals honour it.",
+   "rule": "At most one entry per stock per day. A blocked entry gives the count back, the count is rebuilt from today's journal after a restart, and review approvals honour it. An option buy counts on its underlying, in the same count as cash (FNO-09).",
    "why": "No revenge trades; cut losses in every backtest variant.",
-   "enforced_in": "backend/trader_brain.py:trader_brain_signal; backend/trading_engine.py:_process_symbol; backend/state.py:_rehydrate_entry_counts",
+   "enforced_in": "backend/trader_brain.py:trader_brain_signal; backend/trading_engine.py:_process_symbol; backend/trading_engine.py:_fno_entry_block_reason; backend/state.py:_rehydrate_entry_counts",
    "config": "STRATEGY_PARAMS.sahab_dimaag.max_entries_per_day = 1",
    "verify": "blocker 'Already took 1 entry today in this stock'; review refusal 'already traded today'",
    "source": "README §67, issue #22",
@@ -549,13 +549,16 @@
    "id": "RSK-08",
    "area": "risk",
    "status": "active",
-   "rule": "At most 1 open cash position per industry. The industry comes from the scan row, falling back to the static NIFTY 100 universe list.",
+   "rule": "At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together. The industry comes from the scan row, falling back to the static NIFTY 100 universe list.",
    "why": "Sector-momentum ranking makes correlated picks likely; the 2% cap assumes some independence.",
    "enforced_in": "backend/trading_engine.py:_entry_block_reason; _industry_for",
    "config": "RISK.max_positions_per_sector = 1",
    "verify": "blocked reason 'already at the max of 1 open position(s) in <industry>'",
    "source": "README §19",
-   "test": null
+   "test": "backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too",
+   "issues": [
+    157
+   ]
   },
   {
    "id": "RSK-09",
@@ -573,9 +576,9 @@
    "id": "RSK-10",
    "area": "risk",
    "status": "active",
-   "rule": "In live mode, any Kite position the engine isn't tracking blocks new entries in that symbol and blocks switching to live, until it disappears from Kite. The engine never auto-adopts it.",
+   "rule": "In live mode, any Kite position the engine isn't tracking blocks new entries in that symbol and blocks switching to live, until it disappears from Kite. The engine never auto-adopts it. An option the engine holds is tracked; an untracked contract blocks option buys on its underlying.",
    "why": "Avoid silently doubling real exposure after a restart; never fabricate a stop.",
-   "enforced_in": "backend/trading_engine.py:_check_position_reconciliation, _entry_block_reason, live_readiness",
+   "enforced_in": "backend/trading_engine.py:_check_position_reconciliation, _entry_block_reason, live_readiness, _fno_entry_block_reason",
    "config": null,
    "verify": "error activity 'Kite shows an open position in X that this app isn't tracking'",
    "source": "README §19, §24",
@@ -755,7 +758,7 @@
    "id": "EXT-07",
    "area": "exit",
    "status": "active",
-   "rule": "Kill switch: pause entries, close every cash and F&O position at market, then switch to PAPER only if every close succeeded (otherwise stay live and name the open symbols). The next open-phase tick closes any entry that was mid-flight.",
+   "rule": "Kill switch: pause entries, close every cash and F&O position at market, then switch to PAPER only if every close succeeded (otherwise stay live and name the open symbols; an option Kite sold only part of counts as not closed). The next open-phase tick closes any entry that was mid-flight.",
    "why": "Stopping must not orphan positions or strand a live one.",
    "enforced_in": "backend/trading_engine.py:stop_and_flatten, _tick_impl",
    "config": null,
@@ -845,13 +848,13 @@
    "id": "FNO-03",
    "area": "fno",
    "status": "off-by-default",
-   "rule": "At most one open option contract per underlying, and an F&O entry needs confidence >= 60 (so it is blocked today by the evidence gate). Every evaluation, executed or not, is journaled.",
-   "why": "Same confidence gate as cash; one position per underlying.",
-   "enforced_in": "backend/trading_engine.py:_try_enter_fno",
+   "rule": "At most one open option contract per underlying (an option order Kite hasn't confirmed counts as one). An option buy acts on the edge-triggered entry signal, like a cash entry, and needs confidence >= 60 (so it is blocked today by the evidence gate). Every evaluation, executed or not, is journaled.",
+   "why": "Same confidence gate and signal as cash; one position per underlying. It used to read the level-triggered long_ok/short_ok on every tick (#157).",
+   "enforced_in": "backend/trading_engine.py:_try_enter_fno, _process_fno, _process_symbol",
    "config": "FNO.min_confidence_to_trade = 60",
    "verify": "fno_evaluations table; GET /api/fno/journal",
-   "source": "README §7, §8",
-   "test": null,
+   "source": "README §7, §8, §110",
+   "test": "backend/tests/test_fno_entry_rules.py::test_a_standing_long_ok_without_a_signal_buys_nothing, backend/tests/test_fno_entry_rules.py::test_the_signal_is_taken_once",
    "issues": [
     157
    ]
@@ -884,13 +887,13 @@
    "id": "FNO-06",
    "area": "fno",
    "status": "off-by-default",
-   "rule": "Premium exits: close if the premium falls 40% or rises 80% from entry, checked each open-phase tick. In paper mode the premium is a model price, Black-Scholes at the entry volatility on the underlying's live price; if that price can't be read, nothing fires on that tick.",
-   "why": "An option buyer's P&L is realized in premium terms.",
-   "enforced_in": "backend/trading_engine.py:_check_fno_stop_take; backend/trading_engine.py:_paper_fno_premium; backend/fno_risk.py:stop_and_target_premium",
+   "rule": "Premium exits: close if the premium falls 40% or rises 80% from the premium paid, checked each open-phase tick whether or not F&O is switched on. A live position reads Kite's quote; a paper one is a model price, Black-Scholes at the entry volatility on the underlying's live price, read for an index under its quote name (NIFTY as NSE:NIFTY 50 / ^NSEI, BANKNIFTY as NSE:NIFTY BANK / ^NSEBANK). If that price can't be read, nothing fires on that tick.",
+   "why": "An option buyer's P&L is realized in premium terms. The switch is in memory, so a restart turns it off with a restored position still open (#187); NSE:NIFTY is not a Kite instrument, so a paper index option never repriced (#189).",
+   "enforced_in": "backend/trading_engine.py:_check_fno_stop_take; backend/trading_engine.py:_paper_fno_premium; backend/trading_engine.py:_process_fno; backend/data_provider.py:kite_quote_key; backend/fno_risk.py:stop_and_target_premium",
    "config": "FNO.stop_loss_pct_of_premium = 40.0, target_pct_of_premium = 80.0",
    "verify": "trades reason 'fno_stop_loss' / 'fno_take_profit'",
-   "source": "README §7",
-   "test": "backend/tests/test_paper_fno_stops.py",
+   "source": "README §7, §98, §110",
+   "test": "backend/tests/test_paper_fno_stops.py, backend/tests/test_fno_index_quote.py::test_a_paper_nifty_option_reprices_from_the_index, backend/tests/test_fno_restart.py::test_the_restored_option_is_watched_with_fno_switched_off",
    "issues": [
     189
    ]
@@ -918,6 +921,66 @@
    "verify": "activity 'F&O entry signal skipped — In NSE's F&O ban for …' or '… ban status is unknown …'; fno_evaluations block_reason",
    "source": "README §108; NSE fo_secban.csv",
    "test": "backend/tests/test_fno_mwpl.py::test_the_engine_refuses_a_banned_underlying_and_journals_why, backend/tests/test_fno_mwpl.py::test_the_engine_refuses_stock_options_when_the_list_is_unknown"
+  },
+  {
+   "id": "FNO-09",
+   "area": "fno",
+   "status": "off-by-default",
+   "rule": "An option buy passes the cash entry rules on its underlying, a call counting as a LONG and a put as a SHORT: one entry per stock per day, shared with cash; the pause; an untracked Kite position in the stock; the scanner's exclusion and side; the market bias; the daily loss limit; the open-position cap; and the sector cap, which counts cash and option positions together. An untracked Kite position in any contract on the underlying also blocks it. Not applied: the checklist's re-check of its stop and target at the live price (an option's exits are on the premium) and cash sizing (FNO-05 sizes it).",
+   "why": "With F&O on, the engine could re-enter one underlying all session, stack a sector, and buy calls in a risk-off market (#157).",
+   "enforced_in": "backend/trading_engine.py:_fno_entry_block_reason, _entry_block_reason, _spend_entry; backend/fno_risk.py:contract_on; backend/state.py:_rehydrate_entry_counts",
+   "config": "STRATEGY_PARAMS.sahab_dimaag.max_entries_per_day = 1; RISK.max_positions_per_sector = 1",
+   "verify": "activity 'F&O entry signal skipped — …'; fno_evaluations block_reason",
+   "source": "README §110",
+   "test": "backend/tests/test_fno_entry_rules.py::test_one_entry_per_stock_per_day_counts_a_cash_entry_too, backend/tests/test_fno_entry_rules.py::test_market_bias_blocks_calls_in_risk_off_and_puts_in_risk_on, backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too, backend/tests/test_fno_entry_rules.py::test_an_untracked_kite_position_in_any_contract_on_the_stock_blocks",
+   "issues": [
+    157
+   ]
+  },
+  {
+   "id": "FNO-10",
+   "area": "fno",
+   "status": "off-by-default",
+   "rule": "Liquidity gate on the contract's own NFO book, the last check before an option buy: refuse if the spread is over 2% of the mid premium, five levels can't fill the order, filling it moves the price over 1% from the mid, or either side holds under 3x the order. With no book to read, paper goes ahead (journaled as unchecked) and live is refused.",
+   "why": "The option tariff models no slippage, so the cash cap (2x modelled slippage) would refuse every option. A round trip pays about one spread, and 2% of the premium is a twentieth of the 40% premium stop (#157).",
+   "enforced_in": "backend/liquidity.py:assess_option, check_option, check; backend/trading_engine.py:_try_enter_fno",
+   "config": "FNO.max_spread_pct_of_premium = 2.0; LIQUIDITY.min_depth_multiple = 3.0",
+   "verify": "liquidity_checks rows whose symbol is an NFO contract; blocked reason 'liquidity: the option's …'",
+   "source": "README §110",
+   "test": "backend/tests/test_fno_entry_rules.py::test_assess_option_rules, backend/tests/test_fno_entry_rules.py::test_paper_goes_ahead_without_a_book_and_live_does_not",
+   "issues": [
+    157
+   ]
+  },
+  {
+   "id": "FNO-11",
+   "area": "fno",
+   "status": "off-by-default",
+   "rule": "A live option order is booked only from Kite's report of it, as EXE-07 does for cash: the executed premium and quantity, and the premium stop, target and maximum loss worked out from the premium paid. A rejected buy books nothing and doesn't spend the day's entry; a rejected sale leaves the position open and watched. A part fill books what filled. An unconfirmed order books nothing, blocks further option orders on the underlying, and is booked when Kite answers. Closing takes a claim, so two threads can't both sell.",
+   "why": "Live option P&L would have been the quote's, and a rejected order would have been booked as a position (#186).",
+   "enforced_in": "backend/trading_engine.py:_live_fno_fill, _book_fno_entry, _book_fno_exit, _close_fno, _claim_fno_exit, _resolve_unconfirmed_orders; backend/kite_broker.py:KiteExecutor.wait_for_fill",
+   "config": "KITE_FILL_DEADLINE_S = 5; KITE_FILL_POLL_S = 0.25",
+   "verify": "A live NFO row in trades has order_id and signal_price, and its note gives the slippage in bp against the quoted premium",
+   "source": "README §110",
+   "test": "backend/tests/test_fno_live_fills.py::test_a_live_buy_is_booked_at_kites_premium_and_quantity, backend/tests/test_fno_live_fills.py::test_a_rejected_exit_leaves_the_position_open_and_watched, backend/tests/test_fno_live_fills.py::test_an_unconfirmed_buy_books_nothing_blocks_a_second_and_is_booked_when_kite_answers",
+   "issues": [
+    186
+   ]
+  },
+  {
+   "id": "FNO-12",
+   "area": "fno",
+   "status": "off-by-default",
+   "rule": "On restart, today's open option positions are rebuilt from fno_trades and their legs in trades (the quantity still open, entry charges, premium stop and target), kept out of the cash restore, and counted against their underlying's entry for the day. Paper legs in Paper, live legs always. A live one keeps its real-money flag, so its closing order is real in either mode, and sends no order until Kite's day book confirms it is still open (flat in Kite: dropped, no order). An option the engine holds is not an untracked Kite position.",
+   "why": "Open option positions lived in memory only, and their entry leg came back as a cash position in the option's tradingsymbol (#187).",
+   "enforced_in": "backend/state.py:_rehydrate_fno_positions, _rehydrate_today; backend/database.py:fno_trades_since; backend/trading_engine.py:_verify_live_fno, _check_position_reconciliation, TradingEngine.__init__",
+   "config": null,
+   "verify": "activity 'Restored N open F&O position(s) from today's journal after a restart'; 'A LIVE option position is open' at error level",
+   "source": "README §110",
+   "test": "backend/tests/test_fno_restart.py::test_an_open_paper_option_is_restored_as_an_option_not_as_cash, backend/tests/test_fno_restart.py::test_kite_flat_drops_it_and_sends_nothing, backend/tests/test_fno_restart.py::test_reconciliation_verifies_it_and_does_not_call_it_untracked",
+   "issues": [
+    187
+   ]
   },
   {
    "id": "SCN-01",
@@ -2798,9 +2861,9 @@
    "id": "OPS-03",
    "area": "ops",
    "status": "active",
-   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L, the daily-loss counter, per-stock entry counts, and single-leg open positions (stop and target parsed from the entry note, entry charges carried): paper legs when in Paper, live legs always. Seed max_open_positions from the restored count.",
+   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L, the daily-loss counter, per-stock entry counts, single-leg open cash positions (stop and target parsed from the entry note, entry charges carried) and open option positions (FNO-12): paper legs when in Paper, live legs always. Seed max_open_positions from the restored count.",
    "why": "A restart orphaned two open positions (GRASIM, HYUNDAI) and could erase today's losses from the loss limit.",
-   "enforced_in": "backend/state.py:_rehydrate_today, _rehydrate_open_positions; backend/trading_engine.py:TradingEngine.__init__",
+   "enforced_in": "backend/state.py:_rehydrate_today, _rehydrate_open_positions, _rehydrate_fno_positions; backend/trading_engine.py:TradingEngine.__init__",
    "config": null,
    "verify": "activity 'Restored N open position(s) from today's journal after a restart'",
    "source": "README §67, issue #118",

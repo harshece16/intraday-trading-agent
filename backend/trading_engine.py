@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 import traceback
-from datetime import datetime, time as dtime
+from datetime import date, datetime, time as dtime
 from zoneinfo import ZoneInfo
 
 import config
@@ -118,7 +118,8 @@ class TradingEngine:
         # Open positions restored from today's journal (state._rehydrate_open_positions)
         # count against max_open_positions and get their stops watched again.
         restored = getattr(state, "restored_positions", []) or []
-        self.risk.open_positions_count = len(restored)
+        restored_fno = getattr(state, "restored_fno_positions", []) or []
+        self.risk.open_positions_count = len(restored) + len(restored_fno)
         if restored:
             state.log("risk", f"Restored {len(restored)} open position(s) from today's journal after a restart: "
                               f"{', '.join(restored)} — stops, targets and the square-off are watching them again.",
@@ -132,6 +133,18 @@ class TradingEngine:
                                f"restarted in {'Paper' if state.paper_mode else 'Live'}. It is still watched: its "
                                f"stop, target and the square-off will close it with a real order, once Kite "
                                f"confirms it is still open. Check Kite.", level="error")
+        # Open option positions come back the same way (#187), keyed by underlying.
+        if restored_fno:
+            state.log("risk", f"Restored {len(restored_fno)} open F&O position(s) from today's journal after a "
+                              f"restart: {', '.join(state.fno_positions[u]['tradingsymbol'] for u in restored_fno)} "
+                              f"— premium stops, targets and the square-off are watching them again.", level="warn")
+        self._unverified_live_fno = {u for u in restored_fno if state.fno_positions[u].get("live")}
+        if self._unverified_live_fno:
+            names = ", ".join(sorted(state.fno_positions[u]["tradingsymbol"] for u in self._unverified_live_fno))
+            state.log("error", f"A LIVE option position is open ({names}) and the engine restarted in "
+                               f"{'Paper' if state.paper_mode else 'Live'}. It is still watched: its premium stop, "
+                               f"target and the square-off will close it with a real order, once Kite confirms "
+                               f"it is still open. Check Kite.", level="error")
         self.strategy_fn = STRATEGY_FUNCTIONS[config.STRATEGY]
         self.strategy_params = config.STRATEGY_PARAMS[config.STRATEGY]
         self.kite_executor = None
@@ -170,6 +183,9 @@ class TradingEngine:
         # confirmed, with everything needed to book it once it does. While a
         # symbol is here the engine sends no other order in it. See _live_fill().
         self._unconfirmed_orders = {}
+        # underlying -> "LONG"/"SHORT": this tick's edge-triggered entry signals,
+        # left by _process_symbol() for _process_fno() (#157).
+        self._fno_signals = {}
         self.review_queue = review_queue.ReviewQueue()
         state.review_queue = self.review_queue
         self._last_shadow_update = 0.0
@@ -270,7 +286,8 @@ class TradingEngine:
 
     def _holds_live(self):
         with self.state.lock:
-            return any(p["quantity"] and p.get("live") for p in self.state.positions.values())
+            return (any(p["quantity"] and p.get("live") for p in self.state.positions.values())
+                    or any(p.get("live") for p in self.state.fno_positions.values()))
 
     def _verify_live_position(self, symbol, kite_positions=None):
         """Bring a restored live position in line with what Kite holds, before
@@ -334,8 +351,16 @@ class TradingEngine:
                 self._verify_live_position(sym, kite_positions)
             except Exception:
                 logger.exception(f"Couldn't verify the restored live position in {sym}")
+        for underlying in list(self._unverified_live_fno):
+            try:
+                self._verify_live_fno(underlying, kite_positions)
+            except Exception:
+                logger.exception(f"Couldn't verify the restored live option position on {underlying}")
         with self.state.lock:
+            # Kite's day book lists NFO contracts too: an option the engine
+            # holds is tracked, not an unknown position (#187).
             tracked = {sym for sym, pos in self.state.positions.items() if pos["quantity"] != 0}
+            tracked |= {pos["tradingsymbol"] for pos in self.state.fno_positions.values()}
         untracked = set(kite_positions) - tracked
 
         resolved = self._untracked_kite_positions - untracked
@@ -606,6 +631,13 @@ class TradingEngine:
                     confirmed = self._confirmed_fill(symbol, pending["side"], pending["qty"],
                                                      pending["order_id"], result)
                 except OrderNotFilled:
+                    if pending.get("fno", {}).get("kind") == "entry":
+                        self._journal_fno_eval(pending["fno"], False, f"Kite {result['status'].lower()} the order")
+                    continue
+                if pending.get("fno"):
+                    self._book_fno_fill(pending["fno"], *confirmed)
+                    self.state.log("risk", f"Kite confirmed order {pending['order_id']}; it is now booked.",
+                                   symbol=pending["fno"]["underlying"], level="warn")
                     continue
                 with self.state.lock:
                     was_flat = self.state.positions.get(symbol, {}).get("quantity", 0) == 0
@@ -730,8 +762,11 @@ class TradingEngine:
                 failed.append({"symbol": symbol, "error": str(exc)})
         for underlying in list(self.state.fno_positions.keys()):
             try:
-                self._close_fno(underlying, "kill_switch")
-                closed.append(underlying)
+                done = self._close_fno(underlying, "kill_switch")
+                if done:
+                    closed.append(underlying)
+                elif done is False:
+                    failed.append({"symbol": underlying, "error": "Kite sold only part of the option position"})
             except Exception as exc:
                 logger.exception(f"Kill switch couldn't close F&O {underlying}")
                 failed.append({"symbol": underlying, "error": str(exc)})
@@ -910,13 +945,14 @@ class TradingEngine:
         # sector-momentum ranking makes the *likely* outcome on a strong-trend day,
         # undermining the 2% daily-loss cap's implicit assumption that positions are
         # roughly independent. Cap same-industry concurrent positions too.
+        # An open option counts in its underlying's industry (#157).
         max_per_sector = config.RISK.get("max_positions_per_sector")
         industry = self._industry_for(symbol, row)
         if industry and max_per_sector:
             same_sector = sum(
                 1 for sym, pos in self.state.positions.items()
                 if pos["quantity"] != 0 and self._industry_for(sym, self._scan_row(sym)) == industry
-            )
+            ) + sum(1 for u in list(self.state.fno_positions) if self._industry_for(u, self._scan_row(u)) == industry)
             if same_sector >= max_per_sector:
                 return (f"already at the max of {max_per_sector} open position(s) in "
                         f"{industry} — avoids concentrating risk in one sector")
@@ -1237,20 +1273,30 @@ class TradingEngine:
             return explicit
         return list((self.state.scanner or {}).get("active", []))
 
+    def _fno_live(self, pos):
+        """Whether an option position is real money: its own flag, set by the
+        order that opened it, else the engine's mode (#187, as #156 for cash)."""
+        live = pos.get("live")
+        return (not self.state.paper_mode) if live is None else bool(live)
+
     def _record_fno_trade(self, symbol, side, quantity, price, reason, note, realized, position_id,
-                          initial_risk, checklist_snapshot=None, charges=0.0, realized_gross=None):
+                          initial_risk, checklist_snapshot=None, charges=0.0, realized_gross=None,
+                          live=None, signal_price=None, order_id=None):
         """One F&O leg. Same convention as the equity path (#21, #35): each row
         carries its own leg's charges; on the exit row `realized` is NET of both
         legs' charges and `realized_gross` is before them, so the daily loss
-        limit, the journal and the F&O confidence IC all see net figures."""
+        limit, the journal and the F&O confidence IC all see net figures. A live
+        leg carries the quoted premium it was sent at and Kite's order id (#186)."""
         r_multiple = (realized / (initial_risk * quantity)) if realized is not None and initial_risk and quantity else None
-        mode = "paper" if self.state.paper_mode else "live"
+        if live is None:
+            live = not self.state.paper_mode
         trade = {
             "id": database.new_position_id(), "position_id": position_id, "ts": time.time(),
-            "symbol": symbol, "side": side, "quantity": quantity, "price": price, "mode": mode,
+            "symbol": symbol, "side": side, "quantity": quantity, "price": price, "mode": "live" if live else "paper",
             "reason": reason, "note": note, "realized": realized,
             "realized_gross": realized_gross if realized_gross is not None else realized,
             "charges": charges, "initial_risk": initial_risk, "r_multiple": r_multiple,
+            "signal_price": signal_price, "order_id": order_id,
         }
         database.record_trade(trade, checklist_snapshot=checklist_snapshot)
         with self.state.lock:
@@ -1263,10 +1309,12 @@ class TradingEngine:
                        + (f" — {note}" if note else ""), symbol=symbol, level="trade")
         return r_multiple
 
-    def _fno_ltp(self, tradingsymbol):
-        if self.state.paper_mode:
-            # No paper data feed for options premium; an open paper position is
-            # repriced by _paper_fno_premium(). Live always reads a real quote below.
+    def _fno_ltp(self, tradingsymbol, live=None):
+        """Kite's premium for a live position. None for a paper one: there is
+        no paper data feed for premiums, so it is repriced by _paper_fno_premium()."""
+        if live is None:
+            live = not self.state.paper_mode
+        if not live:
             return None
         return self._ensure_kite().get_fno_ltp(tradingsymbol)
 
@@ -1274,7 +1322,8 @@ class TradingEngine:
         """Paper premium for an open position, or None when it can't be priced
         this tick. A MODEL price, not a market price: Black-Scholes at the entry
         IV on the live underlying spot. It ignores changes in implied volatility
-        and the bid-ask spread (#154)."""
+        and the bid-ask spread (#154). An index's spot is read under its quote
+        name (data_provider.kite_quote_key, #189)."""
         try:
             expiry = datetime.strptime(pos["expiry"], "%Y-%m-%d").date()
             t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
@@ -1294,79 +1343,367 @@ class TradingEngine:
         pos["reprice_failure_logged"] = False
         return round(premium, 2)
 
-    def _close_fno(self, underlying, reason, note=None):
-        pos = self.state.fno_positions.get(underlying)
-        if not pos:
+    # -- live NFO orders (#186) --
+
+    def _fno_order_pending(self, underlying):
+        return any((p.get("fno") or {}).get("underlying") == underlying for p in self._unconfirmed_orders.values())
+
+    def _live_fno_fill(self, underlying, tradingsymbol, side, lots, lot_size, context):
+        """_live_fill() for an NFO order: send it, wait for Kite's answer, and
+        return what Kite executed as (filled quantity, average premium, order
+        id). Before #186 the engine ignored the order id and booked the premium
+        quoted before the order, so a rejected option order became a position.
+
+        Raises OrderNotFilled when Kite confirms nothing traded, and
+        OrderUnconfirmed when the outcome can't be read. An unconfirmed order
+        is kept in _unconfirmed_orders under the contract, with `context` to
+        book it later, and the underlying takes no other option order until
+        _resolve_unconfirmed_orders() has settled it."""
+        if self._fno_order_pending(underlying):
+            raise OrderUnconfirmed(f"an option order on {underlying} is still unconfirmed, so no new order is sent")
+        qty = lots * lot_size
+        executor = self._ensure_kite()
+        order_id = executor.place_fno_order(tradingsymbol, side, lots, lot_size)
+        result = executor.wait_for_fill(order_id)
+        if result["status"] == ORDER_UNKNOWN:
+            self._unconfirmed_orders[tradingsymbol] = {"order_id": order_id, "side": side, "qty": qty,
+                                                       "price": context.get("signal_price"), "fno": context}
+            self.state.log("error", f"[F&O] Kite hasn't confirmed what happened to the {side} {qty} {tradingsymbol} "
+                                    f"order ({order_id}). Nothing is booked and no other option order is sent on "
+                                    f"{underlying} until it does. Check Kite.", symbol=underlying, level="error")
+            raise OrderUnconfirmed(f"order {order_id} is unconfirmed: {result['message'] or 'Kite did not answer'}")
+        return self._confirmed_fill(tradingsymbol, side, qty, order_id, result)
+
+    def _book_fno_fill(self, ctx, filled, premium, order_id):
+        """Book an option order Kite confirmed after the fact."""
+        if ctx["kind"] == "entry":
+            # today's entry on the underlying was spent when the order went out
+            booked = self._book_fno_entry(ctx, filled, premium, order_id)
+            self._journal_fno_eval(ctx, booked, None if booked else f"Kite filled {filled}, less than one lot")
             return
-        if self.state.paper_mode:
-            ltp = self._paper_fno_premium(pos)
-            if ltp is None:
-                ltp = pos.get("ltp") or pos["entry_premium"]
-                note = ((note + "; ") if note else "") + (
-                    f"no fresh underlying price at exit, booked at the last repriced premium {ltp:.2f}")
+        pos = self.state.fno_positions.get(ctx["underlying"])
+        if not pos or pos.get("position_id") != ctx["position_id"]:
+            self.state.log("error", f"[F&O] Kite confirmed a sale of {filled} (order {order_id}) for a position the "
+                                    f"engine no longer holds. Nothing is booked. Check Kite.",
+                           symbol=ctx["underlying"], level="error")
+            return
+        self._book_fno_exit(ctx["underlying"], filled, premium, ctx["reason"], ctx.get("note"),
+                            signal_price=ctx.get("signal_price"), order_id=order_id)
+
+    def _verify_live_fno(self, underlying, kite_positions=None):
+        """_verify_live_position() for a restored live option position (#187):
+        before any order is sent for it, bring it in line with Kite's day
+        book. Kite flat: dropped, no order. Kite smaller: cut to Kite's lots.
+        Anything else: left alone and reported. Raises if Kite can't be read."""
+        if kite_positions is None:
+            kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions()}
+        with self.state.lock:
+            pos = self.state.fno_positions.get(underlying)
+            self._unverified_live_fno.discard(underlying)
+            if pos is None:
+                return 0
+            ts, lot = pos["tradingsymbol"], pos["lot_size"]
+            ours = pos["lots"] * lot
+            held = int((kite_positions.get(ts) or {}).get("quantity") or 0)
+            if held == 0:
+                self.state.fno_positions.pop(underlying, None)
+                self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+            elif lot <= held < ours:
+                pos["entry_charges"] = (pos.get("entry_charges") or 0.0) * (held // lot * lot) / ours
+                pos["lots"] = held // lot
+        if held == 0:
+            self.state.log("error", f"Kite shows no open position in {ts}, but today's journal has an open live "
+                                    f"option leg of {ours}. It was closed outside the engine. The engine has stopped "
+                                    f"watching it and sent no order; its exit is not in the journal.",
+                           symbol=underlying, level="error")
+        elif held != ours:
+            self.state.log("error", f"Kite holds {held:+d} of {ts}; today's journal says {ours:+d}. "
+                                    + (f"The engine now watches {held // lot * lot}." if lot <= held < ours
+                                       else "The engine keeps watching its own figure. Check Kite."),
+                           symbol=underlying, level="error")
         else:
-            ltp = self._fno_ltp(pos["tradingsymbol"]) or pos.get("ltp") or pos["entry_premium"]
-        if not self.state.paper_mode:
-            self._ensure_kite().place_fno_order(pos["tradingsymbol"], "SELL", pos["lots"], pos["lot_size"])
-        qty = pos["lots"] * pos["lot_size"]
-        gross = (ltp - pos["entry_premium"]) * qty
+            self.state.log("risk", f"Kite confirms the restored live option position {ts} ({held:+d}).",
+                           symbol=underlying)
+        return held
+
+    # -- booking --
+
+    def _journal_fno_eval(self, ctx, executed, block_reason=None):
+        try:
+            database.record_fno_evaluation(ctx["underlying"], ctx["side"], ctx.get("conf") or {}, executed,
+                                           block_reason)
+        except Exception:
+            logger.exception(f"Failed to journal F&O evaluation for {ctx['underlying']}")
+
+    def _book_fno_entry(self, ctx, filled, premium, order_id=None):
+        """Open the position at the premium actually paid: Kite's average for a
+        live buy, the quoted or model premium for a paper one. The premium stop
+        and target, the max loss and the entry Greeks are all worked out from
+        it, since they are defined on the premium paid."""
+        cfg = config.FNO
+        contract, underlying, side, is_call = ctx["contract"], ctx["underlying"], ctx["side"], ctx["is_call"]
+        lot_size, live, quoted = contract["lot_size"], ctx["live"], ctx.get("signal_price")
+        lots = filled // lot_size
+        if filled % lot_size:
+            self.state.log("error", f"[F&O] Kite filled {filled} of {contract['tradingsymbol']}, not a whole number "
+                                    f"of lots of {lot_size}. The engine watches {lots * lot_size}. Check Kite.",
+                           symbol=underlying, level="error")
+        if lots <= 0:
+            return False
+        qty = lots * lot_size
+        expiry = date.fromisoformat(ctx["expiry"])
+        t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
+        exits = fno_risk.stop_and_target_premium(premium, cfg["stop_loss_pct_of_premium"], cfg["target_pct_of_premium"])
+        max_loss = fno_risk.max_loss(premium, lots, lot_size)
+        entry_greeks = options_pricing.analyze(premium, ctx["spot"], contract["strike"], t_years,
+                                               cfg["risk_free_rate_pct"] / 100, is_call)
+        conf = ctx["conf"]
+        note = (f"{'Call' if is_call else 'Put'} bought on a {side.lower()} signal, confidence {conf['score']}/100 "
+                f"({conf['label']}). Max loss capped at ₹{max_loss:,.0f} (the premium paid) — "
+                f"stop {exits['stop_premium']:.2f}, target {exits['target_premium']:.2f}.")
+        if live and quoted:
+            note += (f" Kite filled at {premium:.2f}, {(premium - quoted) / quoted * 1e4:+.1f} bp against the "
+                     f"quoted premium {quoted:.2f}.")
+        entry_charges = costs.leg_cost("BUY", premium, qty, costs.FNO_OPTION_COSTS)
+        position_id = ctx["position_id"]
+        self._record_fno_trade(contract["tradingsymbol"], "BUY", qty, premium, f"fno_{side.lower()}", note, None,
+                               position_id, None, checklist_snapshot=ctx.get("checklist"), charges=entry_charges,
+                               live=live, signal_price=quoted if live else None, order_id=order_id)
+        pos = {
+            "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
+            "strike": contract["strike"], "expiry": ctx["expiry"],
+            "lots": lots, "lot_size": lot_size, "entry_lots": lots, "entry_premium": premium,
+            "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
+            "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "entry_greeks": entry_greeks,
+            "entry_charges": entry_charges, "realized_so_far": 0.0, "live": live,
+            # the vol the paper premium was priced at; _paper_fno_premium reprices with it
+            "entry_iv": (entry_greeks.get("iv_pct") or 0) / 100 or None if live else fno_risk.PAPER_VOL,
+            "max_loss": max_loss, "position_id": position_id,
+        }
+        with self.state.lock:
+            self.state.fno_positions[underlying] = pos
+        self.risk.open_positions_count += 1
+        try:
+            database.record_fno_entry(position_id, pos)
+        except Exception:
+            logger.exception(f"Failed to journal F&O entry for {underlying}")
+        return True
+
+    def _book_fno_exit(self, underlying, filled, premium, reason, note=None, signal_price=None, order_id=None):
+        """Book a sale of `filled` units at `premium`. Net of both legs'
+        charges: the entry charges are released in proportion to what was
+        sold. A part-filled live exit leaves the rest open and watched; the
+        fno_trades row gets its exit once nothing is left, with the realized
+        figure of every exit leg. Returns True when the position is closed."""
+        with self.state.lock:
+            pos = self.state.fno_positions.get(underlying)
+        if not pos:
+            return True
+        lot_size = pos["lot_size"]
+        held = pos["lots"] * lot_size
+        qty = min(filled, held)
+        live = self._fno_live(pos)
+        gross = (premium - pos["entry_premium"]) * qty
         entry_charges = pos.get("entry_charges")
         if entry_charges is None:
-            entry_charges = costs.leg_cost("BUY", pos["entry_premium"], qty, costs.FNO_OPTION_COSTS)
-        exit_charges = costs.leg_cost("SELL", ltp, qty, costs.FNO_OPTION_COSTS)
-        realized = gross - entry_charges - exit_charges
-        r_multiple = self._record_fno_trade(pos["tradingsymbol"], "SELL", qty, ltp,
-                                            reason, note, realized, pos["position_id"], pos["entry_premium"],
-                                            charges=exit_charges, realized_gross=gross)
+            entry_charges = costs.leg_cost("BUY", pos["entry_premium"], held, costs.FNO_OPTION_COSTS)
+        entry_share = entry_charges * qty / held if held else 0.0
+        exit_charges = costs.leg_cost("SELL", premium, qty, costs.FNO_OPTION_COSTS)
+        realized = gross - entry_share - exit_charges
+        if live and signal_price:
+            note = ((note + "; ") if note else "") + (
+                f"Kite filled at {premium:.2f}, {(signal_price - premium) / signal_price * 1e4:+.1f} bp against the "
+                f"quoted premium {signal_price:.2f}")
+        self._record_fno_trade(pos["tradingsymbol"], "SELL", qty, premium, reason, note, realized,
+                               pos["position_id"], pos["entry_premium"], charges=exit_charges,
+                               realized_gross=gross, live=live, signal_price=signal_price if live else None,
+                               order_id=order_id)
+        left = held - qty
+        if left >= lot_size:
+            with self.state.lock:
+                pos["lots"] = left // lot_size
+                pos["entry_charges"] = entry_charges - entry_share
+                pos["realized_so_far"] = pos.get("realized_so_far", 0.0) + realized
+            self.state.log("risk", f"[F&O] Kite sold {qty} of {held} {pos['tradingsymbol']}; the other {left} are "
+                                   f"still open and watched.", symbol=underlying, level="warn")
+            return False
+        if left > 0:
+            self.state.log("error", f"[F&O] Kite left {left} of {pos['tradingsymbol']} unsold, less than one lot of "
+                                    f"{lot_size}. The engine has stopped watching it. Check Kite.",
+                           symbol=underlying, level="error")
+        total = pos.get("realized_so_far", 0.0) + realized
+        entry_qty = (pos.get("entry_lots") or pos["lots"]) * lot_size
+        r_total = total / (pos["entry_premium"] * entry_qty) if pos["entry_premium"] and entry_qty else None
         try:
-            database.record_fno_exit(pos["position_id"], ltp, reason, realized, r_multiple)
+            database.record_fno_exit(pos["position_id"], premium, reason, total, r_total)
         except Exception:
             logger.exception(f"Failed to journal F&O exit for {underlying}")
         with self.state.lock:
             self.state.fno_positions.pop(underlying, None)
         self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+        self._last_errors.pop(f"F&O:{underlying}", None)
+        return True
+
+    # -- exits --
+
+    def _claim_fno_exit(self, underlying):
+        """_claim_exit() for an option: the kill switch runs on the API thread
+        and the square-off on the engine's, and two closing orders would sell
+        the position twice."""
+        key = f"F&O:{underlying}"
+        with self.state.lock:
+            if key in self._exiting or underlying not in self.state.fno_positions:
+                return None
+            self._exiting.add(key)
+            return key
+
+    def _close_fno(self, underlying, reason, note=None):
+        """Close an option position: a real SELL for a live one, booked at
+        Kite's executed premium (#186); a model premium for a paper one.
+        Returns True when it is closed, False when Kite sold only part of it,
+        None when there was nothing to do. A live sale Kite rejects or never
+        confirms raises OrderNotFilled / OrderUnconfirmed, and the position
+        stays open and watched."""
+        key = self._claim_fno_exit(underlying)
+        if key is None:
+            return None
+        try:
+            pos = self.state.fno_positions[underlying]
+            qty = pos["lots"] * pos["lot_size"]
+            if not self._fno_live(pos):
+                ltp = self._paper_fno_premium(pos)
+                if ltp is None:
+                    ltp = pos.get("ltp") or pos["entry_premium"]
+                    note = ((note + "; ") if note else "") + (
+                        f"no fresh underlying price at exit, booked at the last repriced premium {ltp:.2f}")
+                return self._book_fno_exit(underlying, qty, ltp, reason, note)
+            if underlying in self._unverified_live_fno:
+                try:
+                    self._verify_live_fno(underlying)
+                except Exception as exc:
+                    raise OrderUnconfirmed(f"Kite couldn't confirm the restored option position on {underlying} is "
+                                           f"still open, so no order is sent: {exc}")
+                pos = self.state.fno_positions.get(underlying)
+                if pos is None:
+                    return True     # Kite holds none: nothing to sell
+                qty = pos["lots"] * pos["lot_size"]
+            try:
+                quoted = self._fno_ltp(pos["tradingsymbol"], live=True)
+            except Exception as exc:
+                logger.warning(f"[F&O] no quote for {pos['tradingsymbol']} before its exit: {exc}")
+                quoted = None
+            quoted = quoted or pos.get("ltp") or pos["entry_premium"]
+            ctx = {"kind": "exit", "underlying": underlying, "reason": reason, "note": note,
+                   "signal_price": quoted, "position_id": pos["position_id"]}
+            filled, premium, order_id = self._live_fno_fill(underlying, pos["tradingsymbol"], "SELL", pos["lots"],
+                                                            pos["lot_size"], ctx)
+            return self._book_fno_exit(underlying, filled, premium, reason, note, signal_price=quoted,
+                                       order_id=order_id)
+        finally:
+            with self.state.lock:
+                self._exiting.discard(key)
 
     def _check_fno_stop_take(self, underlying):
         pos = self.state.fno_positions.get(underlying)
         if not pos:
             return False
-        ltp = self._paper_fno_premium(pos) if self.state.paper_mode else self._fno_ltp(pos["tradingsymbol"])
+        live = self._fno_live(pos)
+        ltp = self._fno_ltp(pos["tradingsymbol"], live=True) if live else self._paper_fno_premium(pos)
         if ltp is None:
             return False
         with self.state.lock:
             pos["ltp"] = ltp
             pos["unrealized_pnl"] = (ltp - pos["entry_premium"]) * pos["lots"] * pos["lot_size"]
-        if ltp <= pos["stop_premium"]:
-            self._close_fno(underlying, "fno_stop_loss", f"premium fell to {ltp:.2f} (stop {pos['stop_premium']:.2f})")
-            return True
-        if ltp >= pos["target_premium"]:
-            self._close_fno(underlying, "fno_take_profit", f"premium rose to {ltp:.2f} (target {pos['target_premium']:.2f})")
-            return True
+        try:
+            if ltp <= pos["stop_premium"]:
+                self._close_fno(underlying, "fno_stop_loss",
+                                f"premium fell to {ltp:.2f} (stop {pos['stop_premium']:.2f})")
+                return True
+            if ltp >= pos["target_premium"]:
+                self._close_fno(underlying, "fno_take_profit",
+                                f"premium rose to {ltp:.2f} (target {pos['target_premium']:.2f})")
+                return True
+        except (OrderNotFilled, OrderUnconfirmed) as exc:
+            self._fno_error(underlying, f"[F&O] couldn't close {pos['tradingsymbol']}: {exc}. It is still open "
+                                        f"and watched.")
+            return False
         return False
 
+    def _fno_error(self, underlying, message):
+        """An F&O order failure for the live log, once per distinct message,
+        as _process_symbol() does for a cash symbol: the square-off retries
+        every tick for 20 minutes."""
+        key = f"F&O:{underlying}"
+        if self._last_errors.get(key) != message:
+            self._last_errors[key] = message
+            self.state.log("error", message, symbol=underlying, level="error")
+
+    # -- entries --
+
+    def _entries_today(self, symbol):
+        today = datetime.now(IST).date().isoformat()
+        st = self.state.strategy_state.get(symbol) or {}
+        return st.get("entries_today", 0) if st.get("entry_day") in (None, today) else 0
+
+    def _spend_entry(self, symbol):
+        """Count an option entry against its underlying's one-entry-per-day cap
+        (ENT-07), the same counter a cash entry and a review approval use."""
+        today = datetime.now(IST).date().isoformat()
+        with self.state.lock:
+            st = self.state.strategy_state.get(symbol)
+            if not isinstance(st, dict):
+                st = {}
+                self.state.strategy_state[symbol] = st
+            taken = st.get("entries_today", 0) if st.get("entry_day") in (None, today) else 0
+            st["entries_today"], st["entry_day"] = taken + 1, today
+
+    def _fno_entry_block_reason(self, underlying, side):
+        """The cash entry rules an option buy must also pass (#157), or None.
+        A call is a LONG and a put a SHORT for every rule. Applies the
+        one-entry-per-stock-per-day cap on the underlying (shared with cash),
+        then all of _entry_block_reason() on the underlying: the pause, an
+        untracked Kite position in the stock, the scanner's exclusion and
+        side, the market bias, the daily loss limit, the open-position cap and
+        the sector cap (which counts cash and option positions together).
+        Then an untracked Kite position in any contract on the underlying."""
+        params = {**trader_brain.DEFAULTS, **self.strategy_params}
+        taken = self._entries_today(underlying)
+        if taken >= params["max_entries_per_day"]:
+            return f"{underlying} was already traded today (one entry per stock per day, cash and F&O together)"
+        why = self._entry_block_reason(underlying, side)
+        if why:
+            return why
+        untracked = sorted(s for s in self._untracked_kite_positions if fno_risk.contract_on(s, underlying))
+        if untracked:
+            return (f"Kite shows an untracked open position in {', '.join(untracked)} (see the reconciliation "
+                    f"alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
+        return None
+
     def _try_enter_fno(self, underlying, side, analysis):
+        """Buy a call on a LONG signal or a put on a SHORT one. Returns True
+        when an order was placed (or a paper position opened)."""
         cfg = config.FNO
-        if underlying in self.state.fno_positions:
-            return  # one open contract per underlying at a time
-        if self.state.entries_paused:
-            return
-        if self.risk.daily_loss_limit_hit() or self.risk.open_positions_count >= config.RISK["max_open_positions"]:
-            return
-        scorecard = database.journal_summary().get("scorecard", [])
-        conf = confidence.score_trade(analysis, side, scorecard)
+        if underlying in self.state.fno_positions or self._fno_order_pending(underlying):
+            return False  # one open contract per underlying at a time; an unconfirmed order counts as one
+        conf = {}
 
         def log_eval(executed, block_reason=None):
-            try:
-                database.record_fno_evaluation(underlying, side, conf, executed, block_reason)
-            except Exception:
-                logger.exception(f"Failed to journal F&O evaluation for {underlying}")
+            self._journal_fno_eval({"underlying": underlying, "side": side, "conf": conf}, executed, block_reason)
 
+        why = self._fno_entry_block_reason(underlying, side)
+        if why:
+            self._blocked(underlying, "F&O entry", why)
+            log_eval(False, why)
+            return False
+
+        scorecard = database.journal_summary().get("scorecard", [])
+        conf = confidence.score_trade(analysis, side, scorecard)
         if conf["score"] < cfg["min_confidence_to_trade"]:
             reason = f"confidence {conf['score']}/100 below the {cfg['min_confidence_to_trade']} bar"
             self.state.log("blocked", f"F&O {side} skipped — {reason} ({conf['explanation']})",
                            symbol=underlying, level="warn")
             log_eval(False, reason)
-            return
+            return False
 
         # NSE's MWPL ban (FNO-08), read from the same list as the scanner's ban
         # guard. Checked before any contract lookup, quote or order.
@@ -1374,94 +1711,108 @@ class TradingEngine:
                                           datetime.now(IST).date().isoformat(), cfg["index_underlyings"])
         if mwpl:
             self._blocked(underlying, "F&O entry", mwpl)
-            return log_eval(False, mwpl)
+            log_eval(False, mwpl)
+            return False
 
         is_call = side == "LONG"
+        live = not self.state.paper_mode
         expiry = fno_instruments.nearest_expiry(
             underlying, cfg["min_days_to_expiry"], cfg["max_days_to_expiry"],
             prefer_weekly=cfg["prefer_weekly_for_index"] and underlying in cfg["index_underlyings"])
         if not expiry:
             self._blocked(underlying, "F&O entry", "no listed expiry in the configured day-range")
-            return log_eval(False, "no listed expiry in range")
+            log_eval(False, "no listed expiry in range")
+            return False
         spot = analysis.get("ltp") or self.state.indicators.get(underlying, {}).get("ltp")
         if not spot:
-            return log_eval(False, "no live spot price")
+            log_eval(False, "no live spot price")
+            return False
 
         def delta_at_strike(spot_, strike_, t_years_, is_call_):
-            return options_pricing.greeks(spot_, strike_, t_years_, 0.20, cfg["risk_free_rate_pct"] / 100, is_call_)["delta"]
+            return options_pricing.greeks(spot_, strike_, t_years_, fno_risk.PAPER_VOL,
+                                          cfg["risk_free_rate_pct"] / 100, is_call_)["delta"]
 
         contract = fno_instruments.find_contract(underlying, spot, expiry, is_call, cfg["target_delta"], delta_at_strike)
         if not contract:
             self._blocked(underlying, "F&O entry", "no matching strike found for this expiry")
-            return log_eval(False, "no matching strike")
+            log_eval(False, "no matching strike")
+            return False
 
         t_years = max((expiry - datetime.now(IST).date()).days, 1) / 365
-        premium = self._fno_ltp(contract["tradingsymbol"])
+        premium = self._fno_ltp(contract["tradingsymbol"], live=live)
         if premium is None:
-            if self.state.paper_mode:
-                premium = options_pricing.price(spot, contract["strike"], t_years, 0.20,
+            if not live:
+                premium = options_pricing.price(spot, contract["strike"], t_years, fno_risk.PAPER_VOL,
                                                 cfg["risk_free_rate_pct"] / 100, is_call)
             else:
                 self._blocked(underlying, "F&O entry", "could not fetch a live premium quote")
-                return log_eval(False, "no live premium quote")
+                log_eval(False, "no live premium quote")
+                return False
         if not premium or premium <= 0:
-            return log_eval(False, "non-positive premium")
+            log_eval(False, "non-positive premium")
+            return False
 
         lots = fno_risk.lots_to_buy(cfg["capital"], cfg["max_premium_risk_pct"], premium, contract["lot_size"])
         if lots <= 0:
             reason = (f"premium {premium:.2f} x lot {contract['lot_size']} too large for the "
-                     f"{cfg['max_premium_risk_pct']}% of ₹{cfg['capital']:,.0f} F&O allocation")
+                      f"{cfg['max_premium_risk_pct']}% of ₹{cfg['capital']:,.0f} F&O allocation")
             self._blocked(underlying, "F&O entry", reason)
-            return log_eval(False, reason)
+            log_eval(False, reason)
+            return False
 
-        exits = fno_risk.stop_and_target_premium(premium, cfg["stop_loss_pct_of_premium"], cfg["target_pct_of_premium"])
-        max_loss = fno_risk.max_loss(premium, lots, contract["lot_size"])
-        entry_greeks = options_pricing.analyze(premium, spot, contract["strike"], t_years,
-                                               cfg["risk_free_rate_pct"] / 100, is_call)
-        if not self.state.paper_mode:
-            self._ensure_kite().place_fno_order(contract["tradingsymbol"], "BUY", lots, contract["lot_size"])
-        position_id = database.new_position_id()
-        note = (f"{'Call' if is_call else 'Put'} bought on a {side.lower()} signal, confidence {conf['score']}/100 "
-                f"({conf['label']}). Max loss capped at ₹{max_loss:,.0f} (the premium paid) — "
-                f"stop {exits['stop_premium']:.2f}, target {exits['target_premium']:.2f}.")
-        entry_charges = costs.leg_cost("BUY", premium, lots * contract["lot_size"], costs.FNO_OPTION_COSTS)
-        self._record_fno_trade(contract["tradingsymbol"], "BUY", lots * contract["lot_size"], premium,
-                               f"fno_{side.lower()}", note, None, position_id, None,
-                               checklist_snapshot=analysis.get("checklist"), charges=entry_charges)
-        pos = {
-            "tradingsymbol": contract["tradingsymbol"], "underlying": underlying, "is_call": is_call,
-            "strike": contract["strike"], "expiry": expiry.isoformat(),
-            "lots": lots, "lot_size": contract["lot_size"], "entry_premium": premium,
-            "stop_premium": exits["stop_premium"], "target_premium": exits["target_premium"],
-            "ltp": premium, "unrealized_pnl": 0.0, "confidence": conf, "entry_greeks": entry_greeks,
-            "entry_charges": entry_charges,
-            # the vol the paper premium was priced at; _paper_fno_premium reprices with it
-            "entry_iv": 0.20 if self.state.paper_mode else (entry_greeks.get("iv_pct") or 0) / 100 or None,
-            "max_loss": max_loss, "position_id": position_id,
-        }
-        with self.state.lock:
-            self.state.fno_positions[underlying] = pos
-        self.risk.open_positions_count += 1
-        log_eval(True)
-        try:
-            database.record_fno_entry(position_id, pos)
-        except Exception:
-            logger.exception(f"Failed to journal F&O entry for {underlying}")
+        # Last gate before the order, as for cash: can the contract be bought
+        # and sold at this size without paying away the premium stop? (#157)
+        qty = lots * contract["lot_size"]
+        liq_ok, liq_reason, _ = liquidity.check_option(contract["tradingsymbol"], qty, premium, not live)
+        if not liq_ok:
+            reason = f"liquidity: {liq_reason}"
+            self._blocked(underlying, "F&O entry", reason)
+            log_eval(False, reason)
+            return False
+
+        ctx = {"kind": "entry", "underlying": underlying, "side": side, "contract": contract,
+               "expiry": expiry.isoformat(), "is_call": is_call, "spot": spot, "conf": conf,
+               "checklist": analysis.get("checklist"), "signal_price": premium, "live": live,
+               "position_id": database.new_position_id()}
+        if live:
+            try:
+                filled, premium, order_id = self._live_fno_fill(underlying, contract["tradingsymbol"], "BUY", lots,
+                                                                contract["lot_size"], ctx)
+            except OrderNotFilled as exc:
+                self._blocked(underlying, "F&O entry", str(exc))
+                log_eval(False, str(exc))
+                return False
+            except OrderUnconfirmed:
+                # An order did go out, so today's entry in this stock stays
+                # spent; the evaluation is journaled when Kite answers.
+                self._spend_entry(underlying)
+                return True
+        else:
+            filled, order_id = qty, None
+        self._spend_entry(underlying)
+        booked = self._book_fno_entry(ctx, filled, premium, order_id)
+        log_eval(booked, None if booked else f"Kite filled {filled}, less than one lot")
+        return True
 
     def _process_fno(self):
-        if not self._fno_active():
-            return
+        """Open option positions are watched whether or not F&O is switched
+        on: the switch is in memory, so a restart turns it off with a
+        restored position still open (#187). New entries need it on, and
+        act only on this tick's edge-triggered signals (#157)."""
+        signals, self._fno_signals = self._fno_signals, {}
         for underlying in list(self.state.fno_positions.keys()):
             try:
                 self._check_fno_stop_take(underlying)
             except Exception:
                 logger.exception(f"F&O stop/target check failed for {underlying}")
-        for underlying in self._fno_underlyings():
+        if not self._fno_active():
+            return
+        allowed = set(self._fno_underlyings())
+        for underlying, side in signals.items():
+            if underlying not in allowed:
+                continue
             analysis = self.state.strategy_state.get(underlying)
             if not analysis or "bull_score" not in analysis:
-                continue
-            side = "LONG" if analysis.get("long_ok") else "SHORT" if analysis.get("short_ok") else None
-            if not side:
                 continue
             try:
                 self._try_enter_fno(underlying, side, analysis)
@@ -1527,6 +1878,11 @@ class TradingEngine:
         self._note_forming_setup(symbol, prev, analysis)
         if signal:
             self.state.record_signal(symbol, signal, analysis)
+        if signal in ("BUY", "SHORT"):
+            # An option buy acts on the same edge-triggered signal as a cash
+            # entry, taken by _process_fno() later this tick (#157). Before, it
+            # read the level-triggered long_ok/short_ok on every tick.
+            self._fno_signals[symbol] = "LONG" if signal == "BUY" else "SHORT"
 
         a = analysis or {}
         qty = self.state.positions[symbol]["quantity"]
@@ -1725,7 +2081,13 @@ class TradingEngine:
                 self.state.log("risk", "Square-off time — closing all open positions", level="warn")
                 self._square_off_all()
             for underlying in list(self.state.fno_positions.keys()):
-                self._close_fno(underlying, "fno_auto_square_off")
+                try:
+                    self._close_fno(underlying, "fno_auto_square_off")
+                except Exception as exc:
+                    if not isinstance(exc, (OrderNotFilled, OrderUnconfirmed)):
+                        logger.exception(f"F&O square-off of {underlying} failed")
+                    self._fno_error(underlying, f"[F&O] square-off of {underlying} failed: {exc}. "
+                                                f"The next tick tries again.")
         elif phase == "open":
             watchlist = list(self.state.watchlist)
             # Order-book snapshot for every watched stock, once per tick, before
