@@ -579,9 +579,10 @@ trial 126 month by month.
 | `lock()`, `why_not()` | Whether a row closed locked at a price band, and why an order cannot fill today |
 | `rebalance()` | The month-turn decision: drop open orders, sell what can be sold, count vacancies, fix each buy's amount, buy |
 | `work_orders()` | Try the open orders of one book. A buy is cancelled after five sessions |
-| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band |
+| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band. With `strict` (the evening job), a month turn with nothing to rank raises `IncompleteData` before the state changes; without it the month is skipped, as the research simulator skips months before its panel can rank |
 | `band_threshold(n, mean, sd)` | `n × mean − 2 × sd × √n` |
-| `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out |
+| `update_bhavcopies()`, `download_bhavcopy()` | Ask NSE for every day of the last 31 without a file (#159). Each answer is fetched, no file (404: no session, or not out yet) or failed |
+| `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out, 4 when the data is incomplete: it stops before a past day whose download failed, or before a month turn with an empty ranking, and keeps what it processed before it. Logs a failed corporate-actions refresh. Writes `data` to the state |
 | `maybe_start_evening_job()` | The engine hook. Never raises |
 
 ```mermaid
@@ -593,8 +594,13 @@ sequenceDiagram
 
     E->>E: weekday, not a holiday, 19:30 to 23:30,<br/>30 min since the last try
     E->>C: spawn momentum_book.py daily
-    C->>N: corporate actions, missing bhavcopies
-    N-->>C: files, or not yet published
+    C->>N: corporate actions, every day of the last 31 without a bhavcopy
+    N-->>C: files, 404 (no session), or a failed download
+    opt a past day failed, or a month-end ranking is empty
+        C->>C: process only the sessions before it
+        C->>F: save, with data.problem
+        C-->>E: exit 4, retried in 30 minutes
+    end
     alt today's bhavcopy is not out
         C-->>E: exit 3, retried in 30 minutes
     else published
@@ -628,6 +634,8 @@ month_points [{date, book, bench}]
 trades       [{date, side, symbol, value, cost, ordered?, series?, reason?}]
 fills        {waited_buy_locked, waited_sell_locked, buys_cancelled, ...}
 excess_months, cumulative_excess, band_floor     (after the first month turn)
+data         {corporate_actions_refreshed, corporate_actions_as_of,
+              failed_downloads, problem}      (the evening job's data checks)
 ```
 
 `status` is `waiting_for_month_end`, `active` or `switched_off`. Once
@@ -640,8 +648,9 @@ switched off, nothing turns the book back on.
 | `build_state(row, market, now)` | The JSON Jev sees: scanner row fields, scanner reasons, chart fields with headlines, the market summary, the time, the exit rule and the cost. No keys, account data or positions |
 | `questions()` | Three typed questions: `action` (buy, short, skip), `p_up` (a probability), `size` (none, half, normal, double) |
 | `system_one()` | One POST to TypeSafe. Up to 4 attempts. Retries 429, 529, 5xx and connection errors. Fails at once on 401, 403 and 422 |
-| `live_ltp(symbol)` | Kite's last traded price, or an exception. Never the delayed feed |
-| `decide_round()`, `close_round()` | The morning round and the 15:08 close |
+| `kite_live()` | `kite_data_active()` and `kite_session_live()`: a stored token Kite has not rejected, before its 06:00 expiry (#158) |
+| `live_ltp(symbol)` | Kite's last traded price, or an exception. Never the delayed feed. Refuses without a call when `kite_live()` is false |
+| `decide_round()`, `close_round()` | The morning round and the 15:08 close. A round stopped part-way stays open with its decisions and records `interrupted` |
 | `_apply_kill_rule()` | After 100 traded decisions, t below −2 switches the book off |
 | `summary()` | The scored read model. Counts a trade only after its 15:08 close |
 | `live_marks()` | While today's round is open: each position at Kite's last traded price, and the mean after costs. One batched Kite call, cached 30 s. Display only: it writes nothing and feeds no score |
@@ -656,14 +665,17 @@ sequenceDiagram
     participant F as State file
 
     E->>J: first open tick from 09:45 with a same-day shortlist
-    J->>K: is Kite data active?
-    alt not active
+    J->>K: is the Kite session live? (kite_live, with the 06:00 expiry)
+    alt not live
         J->>F: day = no_live_prices
-    else active
+    else live
         loop up to 15 shortlisted stocks
+            J->>J: still live? if not, stop (as for an error)
             J->>T: snapshot and three questions
-            alt TypeSafe error
+            alt TypeSafe error, no decision yet
                 J->>F: day = jev_unavailable
+            else TypeSafe error after some decisions
+                J->>F: day = open, interrupted = time, error, stocks not asked
             else answered
                 T-->>J: action, probability, size
                 J->>K: last traded price
