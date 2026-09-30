@@ -298,3 +298,45 @@ chosen again: the first scan after the restart returns the list fixed before
 the open, and the round reads that scan as before.
 
 **Unchanged:** everything else in the protocol.
+
+---
+
+# Clarification 9 — 2026-09-30, written before the change is deployed
+
+**What had been seen:** the status of each recorded day and how many decisions
+it holds: three closed rounds, 2026-09-28 to 2026-09-30, 15 decisions each,
+every one with a live entry price and none excluded. No fill, score or verdict
+was read in writing this. Neither case below has happened yet.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §113, #158.
+
+1. **A round interrupted part-way keeps its decisions.** If TypeSafe fails
+   after Jev has already answered for some stocks, the day was recorded as
+   "Jev unavailable", and the square-off closes only open rounds. Those
+   positions, opened at a live Kite price, never closed and never counted.
+   Now the day stays open with the decisions made so far, they close at 15:08
+   like any other round, and the stop is recorded beside them (the time, the
+   error, and the stocks not asked). An error on the first stock still records
+   the day as "Jev unavailable", as before.
+2. **"Live prices" means a Kite session that is still alive.** The gate
+   checked only that a token was stored and had not been rejected. Zerodha
+   ends every session at 06:00 IST, so on a morning without a reconnect the
+   gate passed, Jev was asked, and every fill failed. Such a day is now
+   recorded as "no live prices" and Jev is not asked, as clarification 3
+   intended. The live mark and the fills use the same check.
+3. **The round stops when Kite stops.** The gate is asked again before each
+   stock. If Kite rejects the session part-way, the remaining stocks are not
+   asked, and the round is recorded as in 1 (reason "no live prices"). Until
+   now each of them was asked and then excluded for want of an entry price.
+
+**How the record is read:** a decision made before a stop counts like any
+other. The stop comes from an outage at TypeSafe or Kite, not from any price,
+and the stocks are asked in the list's fixed order, so the decisions kept do
+not depend on how they turned out. Dropping them would make the sample depend
+on a later outage. A session still counts toward the 60 only if at least one
+decision was priced live at both ends (clarification 3).
+
+**Unchanged:** the list, the snapshot, the three questions, fills from Kite
+only, the cost, the comparison with the scanner's side, the pass rule and the
+kill rule.

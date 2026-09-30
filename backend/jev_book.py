@@ -199,14 +199,29 @@ def round_trip_bp():
     return costs.round_trip_pct(DEFAULTS["notional"], config.COSTS) * 100.0
 
 
+NO_LIVE_SESSION = "Kite is not connected, or its session ended at the 06:00 IST cutoff, so there is no live price"
+
+
+def kite_live():
+    """Whether Kite should give a live price right now (#158).
+
+    data_provider.kite_data_active() alone is true whenever a token is stored
+    and Kite has not yet rejected it. Zerodha ends every session at 06:00 IST,
+    so on a morning without a reconnect it stayed true until the first price
+    call failed. data_provider.kite_session_live() adds that expiry, the same
+    clock the dashboard's Kite status and the pre-open reminder use."""
+    import data_provider
+    return bool(data_provider.kite_data_active() and data_provider.kite_session_live())
+
+
 def live_ltp(symbol):
     """Kite's last traded price, or an exception. Never the ~15-minute-delayed
     yfinance fallback that data_provider.get_ltp uses when Kite isn't connected:
     the pre-registration fills at the live price, and a delayed fill against
     live headlines would leak information in Jev's favour (#151)."""
     import data_provider
-    if not data_provider.kite_data_active():
-        raise RuntimeError("Kite is not connected, so there is no live price")
+    if not kite_live():
+        raise RuntimeError(NO_LIVE_SESSION)
     key = f"NSE:{symbol}"
     try:
         return float(data_provider._get_kite().ltp([key])[key]["last_price"])
@@ -215,35 +230,60 @@ def live_ltp(symbol):
         raise
 
 
+NO_LIVE_AT_DECISION = ("Kite had no live session when the round was due (not connected, or past the 06:00 IST "
+                       "cutoff without a reconnect), so there were no live prices to fill at")
+NO_LIVE_MID_ROUND = "Kite stopped giving live prices during the round (its session was rejected or ended)"
+
+
+def _stop_round(state, day, state_path, status, error, remaining):
+    """End today's round early. With no decision yet the day is recorded as
+    `status` ("jev_unavailable" or "no_live_prices") and does not count. With
+    decisions already made, the day stays open: they close at the 15:08
+    square-off like any other round, and the interruption is recorded beside
+    them (#158). Until then an interrupted day was marked "Jev unavailable",
+    which the close skips, so its paper positions never closed."""
+    if not day["decisions"]:
+        day["status"] = status
+        day["error"] = error
+    else:
+        day["status"] = "open"
+        day["interrupted"] = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "reason": status,
+                              "error": error, "asked": len(day["decisions"]), "not_asked": list(remaining)}
+    save_state(state, state_path)
+
+
 def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.sleep, live=None):
     """Ask Jev about each shortlisted stock and open paper positions. Runs in a
     background thread from the engine; also callable directly in tests. `live`
     says whether live prices exist; without them the day is recorded as "no
-    live prices", Jev is not asked, and the day does not count (#151)."""
+    live prices", Jev is not asked, and the day does not count (#151). It is
+    asked again before each stock, so a Kite session that dies mid-round stops
+    the round instead of spending a Jev call on each stock it can't fill (#158)."""
     conf = cfg()
     today = now.date().isoformat()
     state = load_state(state_path)
     day = state["days"].setdefault(today, {"status": "deciding", "decisions": []})
     if live is not None and not day["decisions"] and not live():
-        day["status"] = "no_live_prices"
-        day["error"] = "Kite was not connected when the round was due, so there were no live prices to fill at"
-        save_state(state, state_path)
+        _stop_round(state, day, state_path, "no_live_prices", NO_LIVE_AT_DECISION, [])
         logger.warning("Jev book: no live Kite prices at the decision time; today's round is skipped (#151)")
         return state
     rows = {r["symbol"]: r for r in (scanner or {}).get("rows") or []}
     names = [s for s in ((scanner or {}).get("active") or []) if s in rows][:conf["max_names"]]
     done = {d["symbol"] for d in day["decisions"]}
-    for sym in names:
-        if sym in done:
-            continue
+    todo = [s for s in names if s not in done]
+    for n, sym in enumerate(todo):
+        if live is not None and not live():
+            _stop_round(state, day, state_path, "no_live_prices", NO_LIVE_MID_ROUND, todo[n:])
+            logger.warning(f"Jev book: Kite stopped giving live prices after {len(day['decisions'])} stocks; "
+                           "the round stops and the decisions made so far close at the square-off (#158)")
+            return state
         row = rows[sym]
         snap = build_state(row, (scanner or {}).get("market"), now)
         resp, err = system_one(snap, questions(), conf, post=post, sleep=sleep)
         if err:
-            day["status"] = "jev_unavailable"
-            day["error"] = err
-            save_state(state, state_path)
-            logger.warning(f"Jev book: Jev unavailable ({err[:120]})")
+            _stop_round(state, day, state_path, "jev_unavailable", err, todo[n:])
+            logger.warning(f"Jev book: Jev unavailable after {len(day['decisions'])} stocks ({err[:120]})"
+                           + ("; the decisions made so far close at the square-off (#158)" if day["decisions"] else ""))
             return state
         d = {"symbol": sym, "asked_at": datetime.datetime.now().isoformat(timespec="seconds"),
              **parse_answers(resp), "scanner_side": row.get("side"), "state": snap}
@@ -337,8 +377,7 @@ def maybe_decide(scanner, now, holiday=None):
 
         def work():
             try:
-                import data_provider
-                decide_round(scanner, now, live_ltp, live=data_provider.kite_data_active)
+                decide_round(scanner, now, live_ltp, live=kite_live)
             except Exception:
                 logger.exception("Jev book: decision round failed")
             finally:
@@ -356,7 +395,8 @@ def maybe_close(now):
     try:
         state = load_state()
         day = state["days"].get(now.date().isoformat())
-        # A skipped day ("Jev unavailable", "no live prices") has nothing to close.
+        # A skipped day ("Jev unavailable", "no live prices") has nothing to close. A round
+        # interrupted after some decisions stays "open", so those close here (#158).
         if not day or day.get("closed") or _running["decide"] or day.get("status") not in ("open", "deciding"):
             return False
         close_round(now, live_ltp)
@@ -377,8 +417,8 @@ def _kite_quotes(keys):
     """Kite's last traded prices for `keys` ("NSE:SYMBOL"), or an exception.
     Never the delayed feed, for the same reason the fills don't use it (#151)."""
     import data_provider
-    if not data_provider.kite_data_active():
-        raise RuntimeError("Kite is not connected, so there is no live price")
+    if not kite_live():
+        raise RuntimeError(NO_LIVE_SESSION)
     try:
         return data_provider._get_kite().ltp(keys)
     except Exception as exc:

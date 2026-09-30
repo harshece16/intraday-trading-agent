@@ -290,9 +290,9 @@ stateDiagram-v2
     }
     state "Jev book, one day" as JB {
         [*] --> deciding: morning round starts
-        deciding --> no_live_prices: Kite not connected
-        deciding --> jev_unavailable: TypeSafe error or no key
-        deciding --> open: answers recorded
+        deciding --> no_live_prices: no live Kite session (06:00 expiry included)
+        deciding --> jev_unavailable: TypeSafe error or no key, before any answer
+        deciding --> open: answers recorded, or stopped part-way (interrupted)
         open --> closed: square-off, scored after costs
     }
 ```

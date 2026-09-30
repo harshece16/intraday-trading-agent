@@ -4076,6 +4076,37 @@ Rules: ENT-26, SCN-20, FNO-08. Files: `backend/review_queue.py`, `backend/tradin
 
 Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
 
+### 113. The two paper books keep their record when a round is cut short or data is missing (#158, #159)
+
+Two fixes to the forward paper tests. Neither changes a rule. Both change what happens when something fails part-way, so the record says what the rule says rather than what the failure left behind.
+
+**Jev book (#158, §86).**
+
+- **A round cut short keeps its decisions.** If TypeSafe failed after Jev had already answered for some stocks, the day was marked "Jev unavailable". The 15:08 close skips such days, so positions opened at a live Kite price never closed and never counted. Now the day stays open with the decisions made so far, they close at 15:08 like any other round, and the stop is recorded beside them: the time, the error and the stocks not asked. The Jev Book page says so ("Today's round stopped after 3 of 15 stocks…"). An error on the first stock still records the day as "Jev unavailable".
+- **"Live prices" now means a Kite session that is still alive.** The gate checked that a token was stored and not yet rejected. Zerodha ends every session at 06:00 IST, so on a morning without a reconnect the gate passed, Jev was asked about each stock, and every fill failed. The gate now also checks the 06:00 expiry (`kite_live()`: the check the dashboard's Kite status uses). Such a morning is recorded as "no live prices" and Jev is not asked. The fills and the live mark use the same check.
+- **The round stops when Kite stops.** The gate is asked again before each stock. If Kite rejects the session part-way, the rest of the list is not asked, and the round is kept as above.
+
+Neither case has happened: the three recorded rounds (28 to 30 September) closed with 15 decisions each and none excluded. Pre-registration clarification 9 records the change.
+
+**Momentum book (#159, §83).**
+
+- **A failed download is fetched again.** The evening job used to start at the day after the newest bhavcopy it had, so a day that failed while a later one arrived was never fetched again. Each run now asks NSE for every day of the last 31 without a file. NSE answers 404 for a weekend, a holiday or a file not yet out; anything else is a failed download.
+- **The book waits for missing data.** If a past day's download failed, the book stops before that day rather than trade past it: processing the next session without it would fill orders a day late or rank a month turn at the wrong close. It keeps the sessions before it, and the next run tries again. The same happens at a month turn whose ranking comes out empty. That used to skip the month's rebalance and mark, and the next session was no longer a month turn. The job exits with code 4 in both cases, and the Momentum Book page shows the reason in red.
+- **A failed corporate-actions refresh is logged**, and the page's footer gives the date of the file in use, with "the last refresh failed" when it did. A split or bonus missing from the file would show as a price drop.
+
+**Checked.**
+
+| Check | Result |
+| --- | --- |
+| Old and new evening job on the real bhavcopy cache to 2026-09-30, on copies of the state: the live book, a book started 2025-12-20 (9 rebalances) and one started 2024-06-20 (27) | Identical holdings, trades, values and month points in all three |
+| The new download window against NSE, 1 October, into a scratch folder | 10 days asked (weekends, 14 September's holiday, 1 October not yet out): all 404, none failed, 5 seconds |
+| The research parity tests (`test_momentum_book.py`) | Pass unchanged |
+| The two pages, on the worktree's dashboard against a mock of the two endpoints | The interruption line, the new "no live prices" text, the red "stopped early" line and the corporate-actions date show as written |
+
+The Jev part goes live with the next backend restart. The momentum job runs from the main checkout's file, so its part goes live when `main` is pulled there; the first rebalance is on the evening of 1 October.
+
+Rules: JEV-06, JEV-07, JEV-08, MOM-11, MOM-13. Files: `backend/jev_book.py`, `backend/momentum_book.py`, `backend/tests/test_jev_book.py`, `backend/tests/test_momentum_book_data.py`, `frontend/src/pages/JevBook.jsx`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-jev-book.md`, `docs/research/prereg-3i-momentum-corrected-data.md`, `docs/architecture/` (rules, HLD, LLD).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
