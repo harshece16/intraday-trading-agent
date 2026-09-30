@@ -1,0 +1,205 @@
+{
+ "look": "L51",
+ "prereg": "docs/research/prereg-index-timing.md",
+ "prereg_commit": "769c21c",
+ "mode": "stage0",
+ "started": "2026-09-30T20:29:49.559127",
+ "argv": [
+  "--stage0"
+ ],
+ "environment": {
+  "python": "3.9.6",
+  "numpy": "2.0.2",
+  "pandas": "2.3.3",
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "git_head": "d0b5de89b66502ac423ec541845e94f88b6efc01",
+  "data_dir": "/Users/harshgupta/Projects/webapp/backend/data",
+  "kite_db": "/Users/harshgupta/Projects/webapp/backend/data/kite_history.db",
+  "index_db": "/Users/harshgupta/Projects/webapp/backend/data/overnight_1m.db"
+ },
+ "cost": {
+  "round_trip_bp": 6.945965138461537,
+  "charges_bp": 5.9459651384615375,
+  "slippage_bp_per_leg": 0.5,
+  "notional": 1625000.0,
+  "tariff": {
+   "brokerage_per_order": 20.0,
+   "brokerage_pct": 0.03,
+   "stt_pct_sell": 0.05,
+   "exchange_txn_pct": 0.00183,
+   "sebi_charges_pct": 0.0001,
+   "ipft_pct": 1e-07,
+   "stamp_duty_pct_buy": 0.002,
+   "gst_pct": 18.0,
+   "slippage_pct": 0.005
+  },
+  "source": "zerodha.com/charges, equity futures, read 2026-09-30",
+  "round_trip_bp_2025_tariff": 3.922365138461539,
+  "tariff_2025": {
+   "brokerage_per_order": 20.0,
+   "brokerage_pct": 0.03,
+   "stt_pct_sell": 0.02,
+   "exchange_txn_pct": 0.00173,
+   "sebi_charges_pct": 0.0001,
+   "ipft_pct": 1e-07,
+   "stamp_duty_pct_buy": 0.002,
+   "gst_pct": 18.0,
+   "slippage_pct": 0.005
+  }
+ },
+ "factors": null,
+ "status": "HALTED",
+ "data": {
+  "stock_cache": {
+   "rows": 2323788,
+   "off_grid_rows": 1164,
+   "symbols": 100,
+   "first": "2024-09-20",
+   "last": "2026-01-01",
+   "max_ts_ist": "2026-01-01T15:25:00+05:30"
+  },
+  "index_db": {
+   "rows": 118620,
+   "first": "2024-09-20 09:15",
+   "last": "2025-12-31 15:29"
+  },
+  "symbols_without_sector": [],
+  "panel": {
+   "sessions": 4215,
+   "first": "2009-01-01",
+   "last": "2025-12-31",
+   "symbols": 215,
+   "missing_symbols": [],
+   "fund_units_excluded": 322
+  },
+  "load_seconds": 4.6,
+  "sessions": {
+   "cached": 319,
+   "index": 317,
+   "used": 316,
+   "dropped": [
+    [
+     "2024-11-01",
+     "no index bars"
+    ],
+    [
+     "2025-10-21",
+     "index has 60 minutes"
+    ],
+    [
+     "2026-01-01",
+     "no index bars"
+    ]
+   ],
+   "index_only_dates": [],
+   "first": "2024-09-20",
+   "last": "2025-12-31"
+  }
+ },
+ "predictors": {
+  "count": 92,
+  "factors": [
+   "LIQ",
+   "TURN",
+   "ILLIQ",
+   "MOM",
+   "REV21",
+   "REV5",
+   "REV1",
+   "VOL",
+   "IVOL",
+   "BETA",
+   "HIGH52",
+   "RANGE",
+   "FIN",
+   "CAPG",
+   "AUTO",
+   "HLTH",
+   "FMCG",
+   "METAL",
+   "POWER",
+   "OILGAS",
+   "IT",
+   "MKT",
+   "EWX"
+  ],
+  "lags": [
+   "last5",
+   "last30",
+   "sofar",
+   "prev"
+  ]
+ },
+ "grid": {
+  "h30": [
+   "09:45",
+   "10:15",
+   "10:45",
+   "11:15",
+   "11:45",
+   "12:15",
+   "12:45",
+   "13:15",
+   "13:45",
+   "14:15",
+   "14:45"
+  ],
+  "h60": [
+   "09:45",
+   "10:45",
+   "11:45",
+   "12:45",
+   "13:45"
+  ]
+ },
+ "training_bars": {
+  "h30": [
+   "09:45",
+   "14:45",
+   61
+  ],
+  "h60": [
+   "09:45",
+   "14:15",
+   55
+  ]
+ },
+ "coverage": {
+  "index_short_sessions": [
+   "2025-10-21"
+  ],
+  "other_dropped": [
+   [
+    "2024-11-01",
+    "no index bars"
+   ],
+   [
+    "2026-01-01",
+    "no index bars"
+   ]
+  ],
+  "cache_equals_index_dates": false,
+  "selection_sessions": 79,
+  "scoring_sessions": 78,
+  "scoring_first_last": [
+   "2025-09-01",
+   "2025-12-23"
+  ],
+  "scoring_halves": [
+   39,
+   39
+  ],
+  "members_with_all_bars": {
+   "min": 85,
+   "median": 89.0,
+   "max": 94
+  },
+  "held_out_read": {
+   "stock_max_ts_ist": "2026-01-01T15:25:00+05:30",
+   "index_last": "2025-12-31 15:29",
+   "panel_last": "2025-12-31"
+  }
+ },
+ "halted_at": "coverage: {\"index_short_sessions\": [\"2025-10-21\"], \"other_dropped\": [[\"2024-11-01\", \"no index bars\"], [\"2026-01-01\", \"no index bars\"]], \"cache_equals_index_dates\": false, \"scoring_sessions\": 78, \"scoring_halves\": [39, 39]}",
+ "finished": "2026-09-30T20:29:55.377114"
+}

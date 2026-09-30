@@ -247,7 +247,9 @@ def load_index_bars(path=INDEX_DB, start=FIRST_SESSION, end=HELD_OUT_START):
     if not rows:
         raise RuntimeError("no index bars read")
     assert max(r[0] for r in rows) < end, "an index bar on or after %s was read" % end
-    return aggregate_index_minutes(rows), {"rows": len(rows), "first": rows[0][0], "last": rows[-1][0]}
+    any_minute = sorted({r[0][:10] for r in rows})
+    return aggregate_index_minutes(rows), {"rows": len(rows), "first": rows[0][0], "last": rows[-1][0],
+                                           "dates_any_minute": any_minute}
 
 
 def load_fetch_spans(path=KITE_DB):
@@ -882,12 +884,19 @@ class Halt(Exception):
     pass
 
 
+EXPECTED_DROPPED = {  # amendment 4
+    "2024-11-01": "no index bars",       # Muhurat, 18:00-19:00 IST: no regular-hours bar in either database
+    "2025-10-21": "index has 60 minutes",  # Muhurat, 13:45-14:45 IST
+    "2026-01-01": "no index bars",       # in the stock cache (before HELD_OUT_START); the index database ends 2025-12-31
+}
+
+
 def check_coverage(ds, st0):
     np = _np()
     ses = st0["data"]["sessions"]
-    muhurat = {"2024-11-01", "2025-10-21"}
-    short = [d for d, why in ses["dropped"] if why.startswith("index has")]
-    other = [(d, why) for d, why in ses["dropped"] if not why.startswith("index has")]
+    dropped = {d: why for d, why in ses["dropped"]}
+    index_dates = set(ds.info["index_db"]["dates_any_minute"])
+    stock_dates = {d for d in ds.all_dates if d <= "2025-12-31"}
     selection = k.selection_sessions(ds.all_dates)
     scoring = [d for d in selection if d in set(ds.sessions)]
     first, second = splits.halves(scoring)
@@ -895,8 +904,10 @@ def check_coverage(ds, st0):
     for d, s in zip(ds.sessions, ds.srow):
         full = (~np.isnan(ds.O_all[s]).any(0)) & (~np.isnan(ds.C_all[s]).any(0))
         members_full.append(int((full & ds.members_on(d)).sum()))
-    cov = {"index_short_sessions": short, "other_dropped": other,
-           "cache_equals_index_dates": set(ds.all_dates) == set(ds.index_bars),
+    cov = {"dropped": dropped, "expected_dropped": EXPECTED_DROPPED,
+           "cache_equals_index_dates_to_2025_12_31": stock_dates == index_dates,
+           "dates_only_in_cache": sorted(stock_dates - index_dates),
+           "dates_only_in_index": sorted(index_dates - stock_dates),
            "selection_sessions": len(selection), "scoring_sessions": len(scoring),
            "scoring_first_last": [scoring[0], scoring[-1]] if scoring else None,
            "scoring_halves": [len(first), len(second)],
@@ -905,14 +916,14 @@ def check_coverage(ds, st0):
            "held_out_read": {"stock_max_ts_ist": ds.info["stock_cache"]["max_ts_ist"],
                              "index_last": ds.info["index_db"]["last"], "panel_last": ds.info["panel"]["last"]}}
     st0["coverage"] = cov
-    ok = (set(short) == muhurat and not other and cov["cache_equals_index_dates"] and len(scoring) == 78
+    ok = (dropped == EXPECTED_DROPPED and cov["cache_equals_index_dates_to_2025_12_31"] and len(scoring) == 78
           and min(len(first), len(second)) >= 30
           and ds.info["stock_cache"]["max_ts_ist"] < HELD_OUT_START
           and ds.info["index_db"]["last"] < HELD_OUT_START and ds.info["panel"]["last"] < HELD_OUT_START)
     if not ok:
-        raise Halt("coverage: %s" % json.dumps({k_: cov[k_] for k_ in ("index_short_sessions", "other_dropped",
-                                                                       "cache_equals_index_dates", "scoring_sessions",
-                                                                       "scoring_halves")}))
+        raise Halt("coverage: %s" % json.dumps({k_: cov[k_] for k_ in ("dropped", "cache_equals_index_dates_to_2025_12_31",
+                                                                       "dates_only_in_cache", "dates_only_in_index",
+                                                                       "scoring_sessions", "scoring_halves")}))
     return scoring
 
 
