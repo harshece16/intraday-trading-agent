@@ -153,6 +153,8 @@ class TradingEngine:
         self._last_premarket_run_date = None
         self._last_premarket_seed_date = None
         self._list_fix_attempt_ts = 0.0
+        self._closes_recorded_for = None       # the session whose 15:08 prices are in session_closes
+        self._closes_missing_logged = None
         self._tick_started_at = None
         self._stall_reported_for = None
         # Symbols whose exit one thread has claimed. Until the tick stream
@@ -894,8 +896,13 @@ class TradingEngine:
         reasons_txt = "; ".join(mkt.get("reasons", [])[:2])
         if row and row.get("excluded"):
             return row["excluded"]
-        if row and row.get("side") and row["side"] != side:
-            return f"scanner favours {row['side']} for this stock today"
+        # The scanner sets no side (README §115, audit rule 3.8): its old score
+        # was measured to carry no information, so the checklist's own reading
+        # picks the side. What remains is tradability.
+        if side == "SHORT" and row and row.get("long_only"):
+            return "this stock has a fixed price band, so it is long-only: a short caught at the band cannot be covered"
+        if side == "SHORT" and not config.SCANNER.get("allow_shorts", True):
+            return "shorts are switched off in the scanner settings"
         if side == "LONG" and mkt.get("bias") == "risk-off" and config.MARKET_FILTER["block_new_longs_when_risk_off"]:
             return f"no new longs — market is risk-off ({reasons_txt})"
         if side == "SHORT" and mkt.get("bias") == "risk-on" and config.MARKET_FILTER.get("block_new_shorts_when_risk_on", True):
@@ -1742,6 +1749,10 @@ class TradingEngine:
                 self._square_off_all()
             for underlying in list(self.state.fno_positions.keys()):
                 self._close_fno(underlying, "fno_auto_square_off")
+            try:
+                self._record_session_closes(now)
+            except Exception:
+                logger.exception("Shadow log: couldn't record the 15:08 prices")
         elif phase == "open":
             watchlist = list(self.state.watchlist)
             # Order-book snapshot for every watched stock, once per tick, before
@@ -1796,6 +1807,32 @@ class TradingEngine:
 
         with self.state.lock:
             self.state.last_update_ts = now.timestamp()
+
+    def _record_session_closes(self, now):
+        """Once a session, at the first tick of the square-off window: Kite's
+        last traded price for every universe stock and the NIFTY, the outcome
+        the shadow log scores each scan against (README §115, scanner audit
+        rule 5.3). Kite only, never the delayed feed: a session without Kite
+        has no outcome recorded, and says so once. Tried again each tick in the
+        window until it succeeds; the row keeps the time it was read."""
+        today = now.date().isoformat()
+        if self._closes_recorded_for == today:
+            return
+        if database.session_closes_recorded(today):
+            self._closes_recorded_for = today
+            return
+        quotes = data_provider.kite_quotes([u["symbol"] for u in universe.load()], indices=("NIFTY 50",)) \
+            if data_provider.kite_data_active() else {}
+        written = database.record_session_closes(today, quotes) if quotes else 0
+        if written:
+            self._closes_recorded_for = today
+            self.state.log("system", f"Shadow log: recorded the {now.strftime('%H:%M')} price of {written} "
+                                     f"stocks and indices, the outcome of today's scans (README section 115)")
+        elif self._closes_missing_logged != today:
+            self._closes_missing_logged = today
+            self.state.log("system", "Shadow log: no live Kite price at the square-off yet, so today's scans have "
+                                     "no 15:08 outcome recorded. Trying again each tick until the close.",
+                           level="warn")
 
     def _update_review_shadows(self, now, min_interval=60):
         """Once a minute: replay every card of the day that wasn't approved as

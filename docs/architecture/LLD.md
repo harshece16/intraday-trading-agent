@@ -109,6 +109,10 @@ duration apart.
 **Phase `square_off_window`:** `_square_off_all()` exits each cash position
 at the live price, or at the average price if that read fails. Then every
 options position is closed. This repeats every tick until the book is flat.
+Then `_record_session_closes()`: once a session, Kite's last traded price of
+every universe stock and the NIFTY goes to `session_closes`, the 15:08
+outcome of the shadow log (README §115). Without Kite nothing is written; it
+is tried again each tick of the window and said once.
 
 **Failure handling.** `tick()` wraps `_tick_impl()` and catches everything.
 `_process_symbol` catches its own errors and logs each distinct message
@@ -220,7 +224,7 @@ reach `_try_enter`, where the confidence gate stops every one.
 | 1 | Already positioned, or another thread is entering this symbol | `_try_enter` |
 | 2 | Entries paused | `_entry_block_reason` |
 | 3 | Kite holds a position in this symbol that the engine doesn't track | `_entry_block_reason` |
-| 4 | The scan excluded the stock, or favours the other side | `_entry_block_reason` |
+| 4 | The scan excluded the stock; or a short on a long-only stock (fixed price band), or with `SCANNER["allow_shorts"]` off. The scan sets no side, so disagreeing with the old score blocks nothing (README §115) | `_entry_block_reason` |
 | 5 | Risk-off and long, or risk-on and short | `_entry_block_reason` |
 | 6 | Daily loss limit reached | `_entry_block_reason` |
 | 7 | Three positions already open | `_entry_block_reason` |
@@ -427,12 +431,13 @@ and open positions are not restored after a restart
 5. **Market bias.** See the table below.
 6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index's daily trend (`sectoral_indices.sector_trend()`, which needs 51 daily bars). An index the delayed feed serves short of that is completed by `complete_sector_history()` from NSE's index closing files for the last 60 sessions (`nse_feed.index_history()`: each file downloaded once into `backend/data/nse_indices/`, one pass a day, at most 60 downloads 0.5 s apart, NSE's bar kept where both have one; #197). Industries whose trend still cannot be worked out are listed in the result's `sector_trends_unavailable` and on the Screener.
 7. **Exclusions.** See the table below.
-8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
-9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
+8. **Scoring.** Each stock is scored as a long and as a short (a long only when it is long-only). The stronger is kept as `score_side`, with `long_score` and `short_score`, for information. The row's `side` is empty: the scanner sets no side, and the checklist's own reading picks it at entry (README §115, scanner audit rule 3.8). Nothing that gates or sizes an entry reads `score_side`; the Jev book reads it as its registered baseline, and `score` mode ranks by it.
+    - **Shadow inputs** (audit passes 1 to 3, README §115). Each row also carries the time of its price (`price_at`), the average change of the other stocks in its industry (`sector_chg_pct`, empty when it is alone), its sector index's daily trend, and `shadow_side()`: LONG when the stock is above its VWAP, ahead of its industry and the NIFTY is above its open, SHORT when all three are down, empty otherwise. The NIFTY leg reads the open because an index has no traded volume, so no VWAP. `market_context()` returns the NIFTY's open as `nifty_open`, outside `nifty` (which Jev's snapshot copies).
+9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`, the edge signed by `score_side`. It is shown, and in `liquidity` mode it does not choose the list.
 10. **Selection** (`SCANNER["selection"]`, README §91).
     - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. The list is fixed before the open by `Scanner.fix_day_list()`, from the pre-market read, and kept all day. If no read ran before the open, `day_list_for()` fixes it at the first scan that covers at least 90% of the universe. A stock that stops being eligible is dropped, not replaced. Either way `_keep()` writes the list to the journal (`day_lists`, one row per session, first write stands) and a restarted scanner reads it back, so a restart does not choose again (#198). A list for an earlier session is replaced when a scan reads a later one.
-    - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
-11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`. The watchlist becomes pinned + active + held.
+    - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their `score_side`, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
+11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`, every stock with the shadow inputs above; with `session_closes` they form the view `scan_candidates` (section 14). The result no longer carries `active_sides`. The watchlist becomes pinned + active + held.
 
 | Market bias input | Score |
 | --- | --- |
@@ -456,7 +461,7 @@ Risk-on at +2 or more. Risk-off at −2 or less.
 | Results | Due today or the next weekday |
 | Corporate action | Ex-date today |
 
-The pre-market read (`run_premarket`) uses daily bars only, and chooses its watchlist by the same rule as the live scan. It runs once a
+The pre-market read (`run_premarket`) uses daily bars only, and chooses its watchlist by the same rule as the live scan. Its rows also carry `score_side` and no `side`, and its narrative names the list without a side. It runs once a
 day on the first tick and seeds the watchlist only until the day's first
 live scan.
 
@@ -645,7 +650,8 @@ switched off, nothing turns the book back on.
 
 | Function | Behaviour |
 | --- | --- |
-| `build_state(row, market, now)` | The JSON Jev sees: scanner row fields, scanner reasons, chart fields with headlines, the market summary, the time, the exit rule and the cost. No keys, account data or positions |
+| `build_state(row, market, now)` | The JSON Jev sees: scanner row fields, scanner reasons, chart fields with headlines, the market summary, the time, the exit rule and the cost. No keys, account data or positions. Its `side` is `scanner_side(row)` |
+| `scanner_side(row)` | The side the test was registered with: the old score's stronger side, `score_side` on a row since README §115 (`side` before). The snapshot and the baseline both read it, so neither changed when the scanner stopped setting a side (clarification 9) |
 | `questions()` | Three typed questions: `action` (buy, short, skip), `p_up` (a probability), `size` (none, half, normal, double) |
 | `system_one()` | One POST to TypeSafe. Up to 4 attempts. Retries 429, 529, 5xx and connection errors. Fails at once on 401, 403 and 422 |
 | `kite_live()` | `kite_data_active()` and `kite_session_live()`: a stored token Kite has not rejected, before its 06:00 expiry (#158) |
@@ -921,8 +927,10 @@ migration that also rewrote rows, on purpose, is `trades.realized_gross`
 
 | Table | Holds | Written by | Read by |
 | --- | --- | --- | --- |
-| `scans` | One row per scan: bias, NIFTY, VIX, breadth | `record_scan` | `journal_summary` |
-| `scan_rows` | One row per stock per scan: side, scores, status | `record_scan` | `factor_ic`, `dimag_ki_batti` |
+| `scans` | One row per scan: bias, NIFTY price, open, change and trend, VIX, FII net, breadth, feed and quote time | `record_scan` | `journal_summary`, `scan_candidates` |
+| `scan_rows` | One row per stock per scan: status, exclusion, long-only, scores (`score_side`, `long_score`, `short_score`; `side` is empty from README §115 and held the old score's side before), feed and price time, price, change, gap, relative volume, VWAP, opening range, industry change, sector trend, turnover, ATR %, `shadow_side`. Columns added in `_migrate`; older rows have them empty | `record_scan` | `factor_ic`, `dimag_ki_batti`, `scan_candidates` |
+| `session_closes` | One row per session and stock (and `NIFTY 50`): Kite's last traded price at the 15:08 square-off, read once a session. First write stands | `record_session_closes` (from `_record_session_closes`) | `scan_candidates` |
+| `scan_candidates` (view) | The shadow log: `scan_rows` joined to `scans` and `session_closes`. Every stock of every scan with its inputs, `vwap_dist_bp`, `score_side` (from `side` on older rows) and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08 or without a close). Recreated when its definition changes | `_migrate` | `database.scan_candidates()`, research |
 | `checklist_evals` | Every checklist read, every tick | `record_checklist_eval` | `checklist_blocker_stats`, `session_summary` |
 | `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` |
 | `signals` | Every signal | `record_signal` | Research only |

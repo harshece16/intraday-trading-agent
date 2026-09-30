@@ -84,7 +84,8 @@ export default function JevBook() {
         Every trading day at 09:45, Jev (an LLM judge) is shown each stock on the scanner's shortlist and asked:
         buy, short or skip; how likely it is to close higher; and how large a position. Each buy or short is a
         paper position closed at the 15:08 square-off, after about {num(data.round_trip_bp, 1)} bp of costs, and
-        compared with what the scanner alone would have done on the same stock. <strong>Paper only.</strong> The
+        compared with the side the scanner's old score favours on the same stock, the baseline this test was registered
+        with (the engine itself no longer acts on that side). <strong>Paper only.</strong> The
         research found no LLM trader with an edge after costs; this test checks, rather than assumes.
       </p>
       {data.status_reason && <p className="muted">{data.status_reason}</p>}

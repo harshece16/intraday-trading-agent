@@ -212,7 +212,10 @@ def cycle(fc, hhmm, rows, date, out_json, latest_txt):
         rows.append({"date": date, "hhmm": hhmm, "symbol": s, "computed_at": computed, "c0": c0, "pred_close": pc,
                      "features": k.forecast_features(pc, c0), "m60": k.m60_bp(w, len(w) - 1), "bars_delayed": delayed,
                      "kite_active": live,
-                     "scanner": {kk: row.get(kk) for kk in ("side", "score", "final_score", "ltp", "gap_pct", "rvol", "feed")},
+                     # "side" is the old score's stronger side; since README section 115 the
+                     # scanner row carries it as score_side and leaves its own side empty.
+                     "scanner": {**{kk: row.get(kk) for kk in ("score", "final_score", "ltp", "gap_pct", "rvol", "feed")},
+                                 "side": row.get("score_side") or row.get("side")},
                      "targets": None})
     filled = realise(rows, candles, date)
     stats = running_stats(rows)

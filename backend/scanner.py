@@ -1,6 +1,6 @@
 """
-Market scanner — decides WHAT to trade (and which side); Sahab's Dimaag then
-decides WHEN.
+Market scanner — decides WHAT to trade; Sahab's Dimaag then decides WHEN, and
+on which side.
 
 Professional intraday traders don't stare at a fixed list; before and during
 the session they narrow a liquid universe down to the handful of stocks that
@@ -20,9 +20,14 @@ weak ones. This encodes that routine over the NIFTY 100:
   Catalysts        NSE filings + market news mentioning the company.
   Event risk       results due today/next session → no new trades.
 
-Every stock is scored as a long AND as a short; the stronger side is kept.
-The top candidates get a full Sahab's Dimaag read (with per-stock news); the
-best of those become the engine's active watchlist.
+Every stock is scored as a long AND as a short. The stronger of the two is
+kept as `score_side`, for information only: that score was measured to carry
+no information (README sections 37, 52), so it no longer sets a side
+(README section 115, audit rule 3.8). The row's `side` is empty and the
+checklist's own reading picks the side at entry time. The day's list gets a
+full Sahab's Dimaag read (with per-stock news) and becomes the engine's
+watchlist. Every scan is journaled with the inputs of the audit's passes 1
+to 3 (scan_rows, and the `scan_candidates` view in database.py).
 """
 
 import bisect
@@ -399,6 +404,7 @@ def intraday_metrics(candles, prof):
         "or_low": min(c["low"] for c in opening),
         "bars_today": n,
         "feed": "delayed",
+        "price_at": today[-1]["time"],      # the start of the bar the price is from
     }
 
 
@@ -491,6 +497,7 @@ def live_metrics(q, session, minutes, delayed_candles):
         "or_high": or_high, "or_low": or_low,
         "bars_today": int(minutes // BAR_MINUTES),
         "feed": "live",
+        "price_at": q["last_trade"],
     }
 
 
@@ -676,6 +683,8 @@ def market_context(daily, nifty_5m, rows, session, filter_cfg, fii_dii=None, rea
     return {
         "bias": bias, "score": score, "reasons": reasons, "session_date": session,
         "nifty": {"ltp": _r(ltp), "chg_pct": _r(chg), "trend": trend, "above_open": above_open},
+        # Kept outside "nifty", which Jev's snapshot copies whole (jev_book.build_state).
+        "nifty_open": _r(today[0]["open"]),
         "vix": _r(vix), "vix_high": vix_high,
         "breadth": {"adv": adv, "dec": dec, "pct_adv": _r(pct_adv, 0)},
         "fii_dii": fii_dii,
@@ -733,17 +742,40 @@ def _trend_agrees(daily_trend, side):
     return daily_trend != ("down" if side == "LONG" else "up")
 
 
+def _sign(x):
+    return 1 if x > 0 else -1 if x < 0 else 0
+
+
+def shadow_side(ltp, vwap, chg_pct, sector_chg_pct, nifty_ltp, nifty_open):
+    """The direction of the audit's rule 3.8 (docs/research/scanner-audit-2026-09-28.md
+    section 5), run in shadow as its section 6 says: journaled with every scan,
+    read by nothing that trades.
+
+    LONG when all three agree up: the stock is above its VWAP (3.5), its day's
+    change is above its industry's (3.6), and the NIFTY is above its open (3.7).
+    SHORT when all three agree down. None when they disagree, one is level, or
+    one is unknown. The NIFTY leg reads the open because an index has no traded
+    volume and so no VWAP. 3.5 failed as a rule family (0 of 76); 3.6 and 3.7
+    have never been tested."""
+    if not (ltp and vwap and nifty_ltp and nifty_open) or chg_pct is None or sector_chg_pct is None:
+        return None
+    legs = {_sign(ltp - vwap), _sign(chg_pct - sector_chg_pct), _sign(nifty_ltp - nifty_open)}
+    return "LONG" if legs == {1} else "SHORT" if legs == {-1} else None
+
+
 def select_active(eligible, bias, cfg):
-    """Best final scores first; the side against the market bias gets at most
-    counter_trend_active_count slots (longs on risk-off days, shorts on risk-on days)."""
+    """Best final scores first; the score's side against the market bias gets at most
+    counter_trend_active_count slots (longs on risk-off days, shorts on risk-on days).
+    The old "score" mode only: the score's side still shapes this list, but it no
+    longer gates an entry (README section 115)."""
     against = "LONG" if bias == "risk-off" else "SHORT" if bias == "risk-on" else None
     active, n_against = [], 0
     for r in eligible:
         if len(active) >= cfg["active_count"]:
             break
-        if not _trend_agrees(r["daily_trend"], r["side"]) or r["final_score"] < cfg["min_score"]:
+        if not _trend_agrees(r["daily_trend"], r["score_side"]) or r["final_score"] < cfg["min_score"]:
             continue
-        if r["side"] == against:
+        if r["score_side"] == against:
             if n_against >= cfg["counter_trend_active_count"]:
                 continue
             n_against += 1
@@ -917,6 +949,13 @@ class Scanner:
             key=lambda s: -s["chg_pct"],
         )
         sector_rank = {s["industry"]: i for i, s in enumerate(sectors)}
+
+        def sector_change(r):
+            """The average day's change of the other NIFTY 100 stocks in the row's
+            industry (audit rule 3.6), or None when it is alone in it. Same sign
+            as the stock against its industry's average including itself."""
+            peers = by_sector[r["industry"]]
+            return (sum(peers) - r["chg_pct"]) / (len(peers) - 1) if len(peers) > 1 else None
         sector_from_nse = complete_sector_history(daily, session, by_sector)
         sector_trends = {
             industry: sectoral_indices.sector_trend(daily, industry, nifty_dates, nifty_closes, session)
@@ -929,7 +968,9 @@ class Scanner:
         self.sector_trends_unavailable = trends_unavailable
 
         def score(r):
-            """Both sides scored from the row's profile and today's metrics; the stronger is kept."""
+            """Both sides scored from the row's profile and today's metrics. The
+            stronger is kept as score_side, for information: the scanner sets no
+            side (README section 115), so `side` stays empty."""
             prof, m, sym = r["_prof"], r["_m"], r["symbol"]
             scored, rs_today = {}, None
             for side in (("long",) if r["long_only"] else sides):
@@ -941,7 +982,8 @@ class Scanner:
             best = max(scored, key=lambda k: scored[k][0])
             total, items = scored[best]
             r.update({
-                "side": best.upper(),
+                "side": None,
+                "score_side": best.upper(),
                 "long_score": _r(scored["long"][0], 1),
                 "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
                 "score": _r(total, 1), "final_score": _r(total, 1),
@@ -960,8 +1002,14 @@ class Scanner:
             guarded, long_only = guard_check(sym, guards, session, cfg, ltp=m["ltp"], prev_close=prof["close"],
                                              limits=(q["lower_limit"], q["upper_limit"]) if q else None)
             excluded = excluded or guarded
+            sector_chg = sector_change(r)
             r.update({
-                "long_only": long_only, "excluded": excluded, "feed": m["feed"],
+                "long_only": long_only, "excluded": excluded, "feed": m["feed"], "price_at": m.get("price_at"),
+                # Audit passes 2 and 3, journaled for the shadow log (README section 115); nothing trades on them.
+                "sector_chg_pct": _r(sector_chg),
+                "sector_trend": (sector_trends.get(r["industry"]) or {}).get("trend"),
+                "shadow_side": shadow_side(m["ltp"], m["vwap"], m["chg_pct"], sector_chg,
+                                           ctx["nifty"]["ltp"], ctx.get("nifty_open")),
                 "ltp": _r(m["ltp"]), "gap_pct": _r(m["gap_pct"]), "rvol": _r(m["rvol"]),
                 "vwap": _r(m["vwap"]), "atr_pct": _r(prof["atr_pct"]),
                 "daily_trend": prof["trend"], "rs10": _r(prof["rs10"]),
@@ -1017,7 +1065,7 @@ class Scanner:
             if brain and "bull_score" in brain:
                 r["brain"] = brain
                 edge = brain["bull_score"] - brain["bear_score"]
-                if r["side"] == "SHORT":
+                if r["score_side"] == "SHORT":
                     edge = -edge
                 r["final_score"] = _r(r["score"] + max(-15.0, min(15.0, edge * 2)), 1)
 
@@ -1032,10 +1080,11 @@ class Scanner:
         for i, r in enumerate(ranked, 1):
             r["rank"] = i
             r["status"] = "AVOID" if r["excluded"] else "ACTIVE" if r["symbol"] in active else "WATCH"
+            # The opening range can have come from the live bars read above.
+            r["or_high"], r["or_low"] = _r(r["_m"]["or_high"]), _r(r["_m"]["or_low"])
             for k in ("_prof", "_m", "_candles", "_q", "_live_candles"):
                 r.pop(k, None)
 
-        active_sides = {r["symbol"]: r["side"] for r in ranked if r["symbol"] in active}
         self.result = {
             "ts": time.time(),
             "session_date": session,
@@ -1043,7 +1092,6 @@ class Scanner:
             "scanned": len(rows),
             "excluded_count": len(excluded_rows),
             "active": active,
-            "active_sides": active_sides,
             "selection": {
                 "mode": mode,
                 "rule": (LIQUIDITY_RULE if mode == "liquidity" else SCORE_RULE).format(n=cfg["active_count"]),
@@ -1108,29 +1156,13 @@ def _premarket_narrative(bias, mkt_reasons, vix, vix_high, top_picks, events, ex
         lead += f" VIX at {vix:.1f} is {'hot enough to trim size on' if vix_high else 'quiet, so no reason to size down for volatility'}."
     paras.append(lead)
 
-    longs = [r for r in top_picks if r["side"] == "LONG"]
-    shorts = [r for r in top_picks if r["side"] == "SHORT"]
-
-    def _name_with_reason(r):
-        top_reason = r["reasons"][0]["text"] if r["reasons"] else "screens strongest on setup"
-        return f"{r['symbol']} ({top_reason})"
-
-    if bias == "risk-off" and longs and not shorts:
-        pick_line = "Even on a weak tape the cleanest names are still longs — worth noting, since that's relative strength, not just a lagging short."
-    elif bias == "risk-on" and shorts and not longs:
-        pick_line = "Even on a strong tape a couple of names still screen as shorts — real relative weakness, not just noise."
-    else:
-        pick_line = None
-
-    watch_bits = []
-    if longs:
-        watch_bits.append("On the long side, watching " + ", ".join(_name_with_reason(r) for r in longs[:3]) + ".")
-    if shorts:
-        watch_bits.append("On the short side, watching " + ", ".join(_name_with_reason(r) for r in shorts[:3]) + ".")
-    if watch_bits:
-        if pick_line:
-            watch_bits.append(pick_line)
-        paras.append(" ".join(watch_bits))
+    # The list carries no side (README section 115): the old score's lean is
+    # shown per stock for information, and the checklist picks the side.
+    names = [r["symbol"] for r in top_picks]
+    if names:
+        more = f" and {len(names) - 6} more" if len(names) > 6 else ""
+        paras.append(f"Today's list: {', '.join(names[:6])}{more}. The list sets no side: the checklist picks long "
+                     f"or short on each stock at entry time, and the market bias can still rule one side out.")
     else:
         paras.append("Nothing cleanly qualifies yet — no forced trade today if the shortlist stays this thin.")
 
@@ -1234,7 +1266,7 @@ def run_premarket(cfg):
         best = max(scored, key=lambda k: scored[k][0])
         score, items = scored[best]
         r.update({
-            "side": best.upper(), "score": _r(score, 1),
+            "side": None, "score_side": best.upper(), "score": _r(score, 1),
             "long_score": _r(scored["long"][0], 1),
             "short_score": _r(scored["short"][0], 1) if "short" in scored else None,
             "long_only": long_only,
