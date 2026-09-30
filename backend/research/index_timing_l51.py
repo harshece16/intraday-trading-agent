@@ -105,7 +105,8 @@ NOTIONAL = 65 * 25000.0
 MIN_TRADES, MIN_TRADE_SESSIONS, T_BAR, DSR_BAR, N_CONFIGS = 100, 40, 2.0, 0.95, 2
 
 CONTROL_SEED = 51
-PLANTED_NOISE_MULT = math.sqrt(3.0)             # amendment 1: correlation 0.5 (was 3.18, 0.3)
+PLANTED_NOISE_MULT = math.sqrt(1 / 0.49 - 1)    # amendment 5: correlation 0.7, the halt
+POWER_NOISE_MULT = math.sqrt(3.0)               # amendment 1's correlation 0.5, kept as power information
 LOOKAHEAD_CHECKS = 240
 HAND_CHECKS = 5
 
@@ -1295,25 +1296,29 @@ def check_controls(ds, st0, Y):
     np = _np()
     sample = pseudo_sessions(ds)
     window, _j = first_window(ds.sessions)
-    out = {"sample": [sample[0], sample[-1], len(sample)], "positive": {}, "negative": {}}
-    rng = np.random.default_rng(CONTROL_SEED)
-    for h, kb in HORIZONS.items():
-        Yh = Y[h]
-        tr = [(s, i) for s in window for i in train_bars(kb)]
-        sd = float(np.nanstd(np.array([Yh[s, i] for s, i in tr])))
-        noise = rng.standard_normal(Yh.shape) * PLANTED_NOISE_MULT * sd
-        planted = np.nan_to_num(Yh + noise, nan=0.0)
-        Xp = np.concatenate([ds.X, planted[:, :, None]], axis=2)
-        alpha, curve, dec, facts = run_pipeline(ds, h, Yh, Xp)
-        trades, decisions, targets = score_decisions(ds, dec, Yh, sample)
-        res = judge(trades, sample)
-        f = [x[2] for x in decisions]
-        r = [targets[(x[0], x[1])] for x in decisions]
-        res["alpha"] = alpha
-        res["corr_planted_target_first_window"] = float(np.corrcoef([planted[s, i] for s, i in tr],
-                                                                    [Yh[s, i] for s, i in tr])[0, 1])
-        res["forecast_stats"] = forecast_stats(f, r)
-        out["positive"][h] = res
+    out = {"sample": [sample[0], sample[-1], len(sample)], "positive": {}, "negative": {},
+           "power_information_corr_0_5": {}}
+    for label, mult in (("positive", PLANTED_NOISE_MULT), ("power_information_corr_0_5", POWER_NOISE_MULT)):
+        rng = np.random.default_rng(CONTROL_SEED)
+        out[label]["noise_mult"] = mult
+        for h, kb in HORIZONS.items():
+            Yh = Y[h]
+            tr = [(s, i) for s in window for i in train_bars(kb)]
+            sd = float(np.nanstd(np.array([Yh[s, i] for s, i in tr])))
+            noise = rng.standard_normal(Yh.shape) * mult * sd
+            planted = np.nan_to_num(Yh + noise, nan=0.0)
+            Xp = np.concatenate([ds.X, planted[:, :, None]], axis=2)
+            alpha, curve, dec, facts = run_pipeline(ds, h, Yh, Xp)
+            trades, decisions, targets = score_decisions(ds, dec, Yh, sample)
+            res = judge(trades, sample)
+            f = [x[2] for x in decisions]
+            r = [targets[(x[0], x[1])] for x in decisions]
+            res["alpha"] = alpha
+            res["target_sd_first_window_bp"] = sd
+            res["corr_planted_target_first_window"] = float(np.corrcoef([planted[s, i] for s, i in tr],
+                                                                        [Yh[s, i] for s, i in tr])[0, 1])
+            res["forecast_stats"] = forecast_stats(f, r)
+            out[label][h] = res
     last_idx = max(n for n, d in enumerate(ds.sessions) if d <= PSEUDO_OOS_END)
     pool = list(range(1, last_idx + 1))     # the first session has no previous session, so no predictors
     rng2 = np.random.default_rng(CONTROL_SEED)
@@ -1354,6 +1359,15 @@ def feasibility(ds, st0, Y, alphas):
                   "expected_trades_in_78_sessions": share * 78 * len(GRID[h]),
                   "refits": facts}
     st0["feasibility_information"] = out
+    vol = {}
+    window, _j = first_window(ds.sessions)
+    pseudo = [n for n, d in enumerate(ds.sessions) if FIRST_MONTH <= d[:7] and d <= PSEUDO_OOS_END]
+    for h, kb in HORIZONS.items():
+        a = np.array([Y[h][s, i] for s in window for i in train_bars(kb)])
+        b = np.array([Y[h][s, i] for s in pseudo for i in GRID[h]])
+        vol[h] = {"first_window_sd_bp": float(a.std()), "pseudo_oos_grid_sd_bp": float(b.std()),
+                  "pseudo_oos_share_abs_target_above_cost": float((np.abs(b) > COST_BP).mean())}
+    st0["target_volatility_information"] = vol
 
 
 # ---- run records ---------------------------------------------------------------------------------
