@@ -169,7 +169,8 @@ def get_methods():
             "rules": [
                 {"name": "Real NSE sectoral indices (Nifty Bank, IT, Auto, Pharma, FMCG, Metal, Energy, Realty) "
                          "as a confluence check alongside the scanner's own same-universe sector rank",
-                 "source": "Live index data via yfinance; verified tickers only — see sectoral_indices.py"},
+                 "source": "Daily index data via yfinance, completed from NSE's own index closing files when the "
+                           "feed is short (#197); verified tickers only — see sectoral_indices.py"},
                 {"name": "Daily FII/DII net flow (₹ cr) as a modest market-context input — real relationship, "
                          "honestly-unvalidated ₹1,000cr threshold",
                  "source": "NSE api/fiidiiTradeReact; SJCC Management Research Review study on FII flows vs NIFTY returns"},

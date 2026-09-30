@@ -3935,6 +3935,28 @@ Files: `backend/review_queue.py`, `backend/trading_engine.py`, `backend/trader_b
 
 Rule: SCN-24. Files: `backend/database.py`, `backend/scanner.py`, `backend/trading_engine.py`, `backend/tests/test_day_list_restart.py`, `backend/tests/test_scanner_live_feed.py`, `backend/tests/test_scanner_guards.py`.
 
+### 107. The sector trend reads its history from NSE's own files
+
+**The problem (#197).** The scanner scores each stock with its sector index's daily trend (EMA20 against EMA50, from the real Nifty Auto, Nifty FMCG and so on): 6 points for a trade that agrees with it and minus 6 for one that fights it. That needs 51 daily bars. Since 16 September the delayed feed has served one bar, today's, for six of the eight indices, so the check was skipped without a word for seven of the nine industries it covers: Financial Services, Automobile, FMCG, Metals and Mining, Power, Oil and Gas, and Realty. That is 61 of the 100 stocks. It did not change which 25 stocks are traded, which is chosen by turnover, but it changed the side and the score shown for them.
+
+**The change.** When a sector index has fewer than 51 daily bars from the feed, its history is built from NSE's index closing file for each of the last 60 sessions (`ind_close_all_DDMMYYYY.csv`, the file the scanner already reads for the last session, §100). NSE's bar is used for every session its files have; the feed's only for a session they lack, so no session is counted twice.
+
+- **Downloads.** Each file is downloaded once and kept in `backend/data/nse_indices/`. The first pass downloads up to 60 files, half a second apart, in about 40 seconds (the scan that makes it takes that much longer); after that a new session costs one file. There is one pass a day, and NSE is asked only when an index is short. A pass that could not read every session is tried again an hour later, within the same limit of 60 files a day. A download that gets no answer, or two sessions in a row without a file, stops the pass.
+- **Holidays.** A session NSE has no file for, older than one it has, is taken for a holiday the calendar does not list, and the window reaches one session further back.
+- **When it still fails**, the check is off for that industry, as before, but now it is said: the scan result lists the industries in `sector_trends_unavailable`, the log warns once when the list changes, and the Screener shows "Sector trend unavailable for …, so N stocks are scored without that check."
+
+**Checked on the real data**, on 2026-09-30, into a scratch folder:
+
+| Check | Result |
+| --- | --- |
+| The delayed feed today | Still one bar for Financial Services, Auto, Energy, FMCG, Metal and Realty; 247 for IT and 246 for Pharma |
+| NSE's files for the 60 sessions before 30 September (7 July to 29 September) | All 60 read (2 already on disk, 58 downloaded, all HTTP 200), 65 seconds at one second apart. All eight indices in every file |
+| NSE's closes against the feed's, for IT and Pharma, same 60 sessions | The same to 0.0002% |
+| Sector trends the scanner could work out | Before: 2 of 9 industries. After: 9 of 9 |
+| The trend on 60 bars against the trend on a year, IT and Pharma, each day from April to September | The same label on 265 of 275 days (96%). The other 10 are "sideways" on one and up or down on the other: EMA50 has not settled fully on 60 bars |
+
+The trend from 60 bars is therefore close to, but not exactly, what a year of bars gives. IT and Pharma still use the feed's year.
+
 ### 108. F&O entries respect NSE's ban list (Market Wide Position Limit)
 
 When market-wide open interest in a stock's derivatives passes 95% of its limit, NSE puts the stock in a **ban period**. A trade that increases a position in its derivatives is then penalised, from ₹5,000 to ₹1,00,000 (NISM Series VIII). The dashboard's methods page listed this as a gap on the F&O side: nothing there checked it.

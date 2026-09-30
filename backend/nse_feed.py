@@ -422,25 +422,37 @@ def parse_index_bars(text, date_iso):
     return out
 
 
-def _cached_file(path, url, binary):
-    """The file at `path`, downloaded once from NSE's archives. None if it
-    is not published yet or cannot be fetched."""
-    if os.path.exists(path) and os.path.getsize(path) > 500:
+def _on_disk(path):
+    return os.path.exists(path) and os.path.getsize(path) > 500
+
+
+def _archive_file(path, url, binary):
+    """(content, how) for the file at `path`, downloaded once from NSE's
+    archives. `how` is "disk", "fetched", "absent" (NSE answered that it has
+    no such file, or not yet) or "error" (no answer, or a refusal); content
+    is None for the last two."""
+    if _on_disk(path):
         with open(path, "rb" if binary else "r") as fh:
-            return fh.read()
+            return fh.read(), "disk"
     try:
         resp = requests.get(url, headers=HEADERS, timeout=30)
     except requests.RequestException as exc:
         logger.warning(f"NSE daily file unavailable ({exc})")
-        return None
+        return None, "error"
     if resp.status_code != 200 or len(resp.content) < 500:
-        return None
+        return None, "absent" if resp.status_code in (200, 404) else "error"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "wb") as fh:
         fh.write(resp.content)
     os.replace(tmp, path)
-    return resp.content if binary else resp.text
+    return (resp.content if binary else resp.text), "fetched"
+
+
+def _cached_file(path, url, binary):
+    """The file at `path`, downloaded once from NSE's archives. None if it
+    is not published yet or cannot be fetched."""
+    return _archive_file(path, url, binary)[0]
 
 
 def last_session(today, data_dir=None):
@@ -473,3 +485,96 @@ def last_session(today, data_dir=None):
     out = {"date": iso, "stocks": stocks, "indices": indices}
     _last_session_cache[iso] = out
     return out
+
+
+# ---- index history, from the same closing files ---------------------------------
+# Since 16 Sep 2026 the delayed feed has served one daily bar for six of the
+# eight sector indices (#197), and the sector trend needs 51. Each session's
+# index closing file carries every index, so the last 60 of them give the
+# history without the feed. A file is downloaded once and kept in
+# data/nse_indices/, so once the folder holds the window a new session costs
+# one download.
+
+INDEX_HISTORY_SESSIONS = 60
+INDEX_HISTORY_MAX_DOWNLOADS = 60    # files downloaded, per session date over all passes
+INDEX_HISTORY_SPACING_S = 0.5       # between two downloads
+INDEX_HISTORY_RETRY_S = 3600        # a pass that could not read every session is tried again after this
+_index_history = {}
+_index_history_absent = set()       # sessions NSE has no file for (a holiday the calendar lacks)
+_index_history_lock = threading.Lock()
+
+
+def index_history_from_files(files):
+    """[(date_iso, text), ...] -> {ticker: [daily bar, ...]}, oldest first,
+    one bar per session. A file gives only the rows dated its own session."""
+    out, seen = {}, set()
+    for iso, text in sorted(files, key=lambda f: f[0]):
+        if iso in seen or not text:
+            continue
+        seen.add(iso)
+        for ticker, bar in parse_index_bars(text, iso).items():
+            out.setdefault(ticker, []).append(bar)
+    return out
+
+
+def index_history(before, sessions=INDEX_HISTORY_SESSIONS, data_dir=None, now=None):
+    """Daily bars for the indices in INDEX_NAMES over the `sessions` trading
+    days before `before` (a date), from NSE's index closing files:
+    {"bars": {ticker: [bar, ...] oldest first}, "sessions": [dates read],
+    "missing": [dates not read]}.
+
+    Files already in data/nse_indices/ are read from disk. The rest are
+    downloaded newest first, INDEX_HISTORY_SPACING_S apart, and at most
+    INDEX_HISTORY_MAX_DOWNLOADS for one `before` date. The answer is kept
+    for that date: one pass a day. A download with no answer, or a second
+    session without a file, stops the pass; a pass that missed a session is
+    tried again after INDEX_HISTORY_RETRY_S, within the same cap. A session
+    NSE says it has no file for, older than one it has, is taken for a
+    holiday the calendar lacks and replaced by the session before it."""
+    data_dir = data_dir or _DATA
+    now = time.time() if now is None else now
+    key = (before.isoformat(), data_dir, sessions)
+    with _index_history_lock:
+        hit = _index_history.get(key)
+        if hit and (not hit["result"]["missing"] or now - hit["at"] < INDEX_HISTORY_RETRY_S
+                    or hit["downloads"] >= INDEX_HISTORY_MAX_DOWNLOADS):
+            return hit["result"]
+        downloads = hit["downloads"] if hit else 0
+        files, missing, asked, stopped = [], [], 0, False
+        day = before
+        for _ in range(sessions + 10):
+            if len(files) + len(missing) >= sessions:
+                break
+            day = previous_trading_day(day)
+            iso, tag = day.isoformat(), day.strftime("%d%m%Y")
+            if iso in _index_history_absent:
+                continue
+            path = os.path.join(data_dir, "nse_indices", f"ind_close_all_{tag}.csv")
+            if not _on_disk(path):
+                if stopped or downloads >= INDEX_HISTORY_MAX_DOWNLOADS:
+                    missing.append(iso)
+                    continue
+                if asked:
+                    time.sleep(INDEX_HISTORY_SPACING_S)
+                asked += 1
+            try:
+                text, how = _archive_file(path, INDEX_CLOSE_URL.format(tag=tag), binary=False)
+            except Exception:
+                logger.exception("Could not read the index closing file for %s", iso)
+                text, how = None, "error"
+            downloads += how == "fetched"
+            if text:
+                files.append((iso, text))
+            elif how == "absent" and files:
+                _index_history_absent.add(iso)
+            else:
+                stopped = stopped or how == "error" or bool(missing)
+                missing.append(iso)
+        result = {"bars": index_history_from_files(files), "sessions": sorted(iso for iso, _ in files),
+                  "missing": sorted(missing)}
+        _index_history.clear()
+        _index_history[key] = {"at": now, "downloads": downloads, "result": result}
+        if missing:
+            logger.warning(f"NSE index history before {key[0]}: {len(files)} sessions read, "
+                           f"{len(missing)} missing, the newest {result['missing'][-1]}")
+        return result

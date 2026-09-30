@@ -425,7 +425,7 @@ and open positions are not restored after a restart
 3. **Side feeds.** Results calendar, corporate actions, market catalysts, FII and DII flows, large deals, market breadth, and two guard files: the F&O ban list and the price-band list.
 4. **Profile.** `daily_profile()` uses only bars strictly before the session and needs at least 60.
 5. **Market bias.** See the table below.
-6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index.
+6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index's daily trend (`sectoral_indices.sector_trend()`, which needs 51 daily bars). An index the delayed feed serves short of that is completed by `complete_sector_history()` from NSE's index closing files for the last 60 sessions (`nse_feed.index_history()`: each file downloaded once into `backend/data/nse_indices/`, one pass a day, at most 60 downloads 0.5 s apart, NSE's bar kept where both have one; #197). Industries whose trend still cannot be worked out are listed in the result's `sector_trends_unavailable` and on the Screener.
 7. **Exclusions.** See the table below.
 8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
 9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
