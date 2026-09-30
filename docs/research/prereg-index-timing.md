@@ -250,3 +250,14 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
    - **N10: L48 is also index timing.** L48 (breadth and intermarket, 2026-09-25) asked whether breadth or overnight moves predict the NIFTY 100's 09:20→15:10 session. It belongs to the family "intraday index timing", so a follow-up trial in this family counts at least L48 and L51.
    - **Stage 0 additionally records** the module's SHA-256, every pseudo-out-of-sample forecast (session, bar, forecast), and the intercept figures above, as information.
 
+**Stage 0, run 4, the run of record (2026-09-30, 21:02 IST, head 1ac6e2e, after amendment 6): STAGE0_DONE.** Every halt passed, with the same figures as run 3:
+- the 30-minute and 60-minute α are 100 and 31.6;
+- the 0.7 control passes both horizons (t 4.47 and 4.68), and the negative control makes no trade;
+- the 0.5 power information is unchanged (+2.10 bp a trade, t 1.24 at 30 minutes; t 2.87 at 60).
+
+Two things changed:
+- the stock rows read are now 2,316,288, the 7,500 bars of 2026-01-01 no longer read (index minutes 118,620, unchanged);
+- the record now holds the module's SHA-256, the 1,342 and 610 pseudo-out-of-sample forecasts, and the intercept figures of amendment 6 (89% and 63% of forecast variance; 99.4% and 93.0% negative).
+
+Runs 1 to 3 are kept as `l51_stage0_run1.json` to `_run3.json`. Amendment 6 was committed at 20:55 IST; its heading's "21:00" should read "20:55". The scoring pass waits for the second review and the main session's go-ahead.
+
