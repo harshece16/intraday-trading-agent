@@ -193,6 +193,24 @@ def complete_daily(daily, today_iso):
     return added, last["date"]
 
 
+def complete_sector_history(daily, session, industries):
+    """Complete the real sector indices of `industries` that the delayed feed
+    served short of history (#197) from NSE's own index closing files.
+    Returns the tickers that now have enough. NSE is not asked when none of
+    them is short."""
+    tickers = {sectoral_indices.SECTOR_INDEX_TICKERS[i] for i in industries
+               if i in sectoral_indices.SECTOR_INDEX_TICKERS}
+    short = [t for t in sectoral_indices.short_of_history(daily, session) if t in tickers]
+    if not short:
+        return []
+    try:
+        history = nse_feed.index_history(datetime.fromisoformat(session).date())
+    except Exception:
+        logger.exception("Could not read the sector indices' history from NSE's files")
+        return []
+    return sectoral_indices.complete_from_nse(daily, session, history, tickers=short)
+
+
 def load_guards(cfg):
     """The day's tradability guards from NSE. Either file may be missing, in
     which case its guard is unknown and excludes nothing."""
@@ -749,6 +767,7 @@ class Scanner:
         # fixed (#198). A list for an earlier session is read back too, as a
         # running scanner would still hold it; day_list_for() chooses again
         # when a scan reads a later session.
+        self.sector_trends_unavailable = None
         self.day_list = self._stored_list()
 
     def _stored_list(self):
@@ -884,10 +903,16 @@ class Scanner:
             key=lambda s: -s["chg_pct"],
         )
         sector_rank = {s["industry"]: i for i, s in enumerate(sectors)}
+        sector_from_nse = complete_sector_history(daily, session, by_sector)
         sector_trends = {
             industry: sectoral_indices.sector_trend(daily, industry, nifty_dates, nifty_closes, session)
             for industry in by_sector
         }
+        trends_unavailable = sectoral_indices.unavailable(sector_trends)
+        if trends_unavailable and trends_unavailable != self.sector_trends_unavailable:
+            logger.warning(f"Sector trend unavailable for {', '.join(trends_unavailable)}: "
+                           f"too little daily history for their index, so that check is skipped")
+        self.sector_trends_unavailable = trends_unavailable
 
         def score(r):
             """Both sides scored from the row's profile and today's metrics; the stronger is kept."""
@@ -1017,6 +1042,8 @@ class Scanner:
                      "quotes_at": nifty_q["at"] if nifty_q else None,
                      "why_delayed": None if feed == "live" else _why_delayed(cfg)},
             "daily_completed_from_nse": completed,
+            "sector_history_from_nse": sector_from_nse,
+            "sector_trends_unavailable": trends_unavailable,
             "market": ctx,
             "sectors": sectors,
             "rows": ranked,

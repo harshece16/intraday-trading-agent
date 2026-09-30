@@ -43,3 +43,17 @@ export function GuardNotes({ guards, feed }) {
     </p>
   );
 }
+
+// The industries whose real sector index had too little daily history for
+// its trend (#197). Their stocks are scored without that check, and the
+// page says so rather than leaving the gap unseen.
+export function SectorTrendNote({ scanner }) {
+  const gone = scanner?.sector_trends_unavailable;
+  if (!gone || !gone.length) return null;
+  const n = (scanner.rows || []).filter((r) => gone.includes(r.industry)).length;
+  return (
+    <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
+      Sector trend unavailable for {joinWords(gone)}: too little daily history for {gone.length === 1 ? "its index" : "their indices"}, so {n} {n === 1 ? "stock is" : "stocks are"} scored without that check.
+    </p>
+  );
+}

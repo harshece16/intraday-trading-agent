@@ -5,7 +5,7 @@ import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../hel
 import { SidePill } from "../components/Pill";
 import { RuleTag } from "../components/RuleBook";
 import RuleBook from "../components/RuleBook";
-import { fixedText, GuardNotes } from "../components/ListNotes";
+import { fixedText, GuardNotes, SectorTrendNote } from "../components/ListNotes";
 
 const TABS = [
   ["trading", "Trading"], ["watch", "Watching"], ["skipped", "Skipped"],
@@ -107,6 +107,7 @@ export default function Screener({ state: s }) {
       <h2 className="h">Screener</h2>
       <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} Click a row to expand its rule book inline.</p>
       <GuardNotes guards={s.scanner?.guards} feed={s.scanner?.feed} />
+      <SectorTrendNote scanner={s.scanner} />
       <div className="tabs">
         {TABS.map(([key, label]) => (
           <button key={key} className="tab" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>

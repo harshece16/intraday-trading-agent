@@ -25,6 +25,13 @@ Healthcare category also includes hospital/diagnostics names Nifty Pharma
 doesn't track. "Power" and "Oil Gas & Consumable Fuels" both map to Nifty
 Energy, which genuinely spans both in NSE's own index construction, not an
 approximation.
+
+Since 16 Sep 2026 yfinance has served one daily bar, today's, for six of
+the eight (all but ^CNXIT and ^CNXPHARMA), and the trend was silently
+skipped for 61 of the 100 stocks (#197). A series short of MIN_BARS is now
+completed from NSE's own index closing files for the last 60 sessions
+(nse_feed.index_history), and the scanner result names every industry whose
+trend still could not be worked out.
 """
 
 import bisect
@@ -44,10 +51,44 @@ SECTOR_INDEX_TICKERS = {
 }
 
 TICKERS = sorted(set(SECTOR_INDEX_TICKERS.values()))
+MIN_BARS = 51    # EMA50 plus one; also covers the 10-session relative strength
 
 
 def _date(bar):
     return bar["time"][:10]
+
+
+def _before(bars, session):
+    return [b for b in bars if _date(b) < session]
+
+
+def short_of_history(daily_batch, session):
+    """The sector index tickers with fewer than MIN_BARS daily bars before `session`."""
+    return [t for t in TICKERS if len(_before(daily_batch.get(t) or [], session)) < MIN_BARS]
+
+
+def complete_from_nse(daily_batch, session, history, tickers=None):
+    """Complete each sector index series that is short of history with NSE's
+    own daily bars (nse_feed.index_history). NSE's bar is kept for every
+    session its files have, and the feed's only for a session they lack, so
+    no session appears twice. Changes `daily_batch` in place and returns the
+    tickers (of `tickers`, or all) that now have MIN_BARS bars before `session`."""
+    nse = (history or {}).get("bars") or {}
+    done = []
+    for t in short_of_history(daily_batch, session):
+        if (tickers is not None and t not in tickers) or not nse.get(t):
+            continue
+        by_date = {_date(b): b for b in daily_batch.get(t) or []}
+        by_date.update({_date(b): dict(b) for b in nse[t]})
+        daily_batch[t] = [by_date[d] for d in sorted(by_date)]
+        if len(_before(daily_batch[t], session)) >= MIN_BARS:
+            done.append(t)
+    return done
+
+
+def unavailable(sector_trends):
+    """The industries with a real index whose trend could not be worked out."""
+    return sorted(i for i, tr in sector_trends.items() if tr is None and i in SECTOR_INDEX_TICKERS)
 
 
 def _close_on_or_before(dates, closes, d):
@@ -59,13 +100,13 @@ def sector_trend(daily_batch, industry, nifty_dates, nifty_closes, session):
     """Real index-level daily trend + 10-day relative strength vs NIFTY for
     one industry, computed the same way daily_profile() computes it for a
     single stock. Returns None when this industry has no verified real
-    ticker, or too little history came back for it this run (a transient
-    yfinance gap, not assumed permanent)."""
+    ticker, or fewer than MIN_BARS sessions are known for it even after
+    complete_from_nse()."""
     ticker = SECTOR_INDEX_TICKERS.get(industry)
     if not ticker:
         return None
-    bars = [b for b in daily_batch.get(ticker, []) if _date(b) < session]
-    if len(bars) < 51:
+    bars = _before(daily_batch.get(ticker, []), session)
+    if len(bars) < MIN_BARS:
         return None
     closes = [b["close"] for b in bars]
     close = closes[-1]

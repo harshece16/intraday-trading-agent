@@ -911,7 +911,7 @@
    "id": "SCN-01",
    "area": "scanner",
    "status": "active",
-   "rule": "When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21).",
+   "rule": "When Kite is connected the scanner's prices are live: one Kite quote request gives every stock's last price, NSE's opening price, the day's volume and its average traded price. When Kite is not connected, or its quotes cannot be read, the scanner uses the delayed feed (yfinance) and the page says so. Daily bars and the bars of earlier sessions always come from yfinance, completed from NSE's files (SCN-21, SCN-25).",
    "why": "How late the delayed feed runs is not known exactly, and its first bar is not NSE's opening price. On the live session of 2026-09-29 the running scanner's gap was off by 0.3 points or more on 23 of 100 stocks (#193, #196); its last price was not late.",
    "enforced_in": "backend/scanner.py:Scanner.run, fetch_live_quotes, live_day, live_metrics; backend/data_provider.py:kite_quotes",
    "config": "SCANNER.live_feed = True",
@@ -1141,6 +1141,21 @@
    "verify": "After a restart in a session: the Screener still reads 'Fixed before the open at HH:MM' with the first time; the activity log says the list was read back from the journal; the journal's day_lists table has one row for the session",
    "source": "README §106",
    "test": "backend/tests/test_day_list_restart.py::test_a_restarted_scanner_keeps_the_list_and_the_time_it_was_fixed; backend/tests/test_day_list_restart.py::test_the_engines_pre_open_fix_is_written_and_a_restarted_engine_watches_it; backend/tests/test_scanner_live_feed.py::test_after_a_restart_the_scan_keeps_the_list_and_the_time_it_was_fixed"
+  },
+  {
+   "id": "SCN-25",
+   "area": "scanner",
+   "status": "active",
+   "rule": "A stock's score gets +6 when its industry's real NSE sector index is in a daily uptrend or downtrend (close, EMA20 and EMA50 in order) on the side of the trade, and −6 against it. The trend needs 51 daily bars before the session. When the delayed feed gives an index fewer, its history is built from NSE's index closing files for the last 60 sessions, NSE's bar kept where both have one. Each file is downloaded once and kept; NSE is asked once a day, at most 60 files a day, half a second apart, and a pass that missed a session is tried again after an hour. An industry whose trend still cannot be worked out is listed in the scan result as sector_trends_unavailable and named on the Screener.",
+   "why": "Since 2026-09-16 the delayed feed has served one daily bar for six of the eight sector indices, and the check was skipped without a word for 61 of the 100 stocks (#197). On 60 bars EMA50 has not fully settled: for IT and Pharma, April to September 2026, the label matched the one from a year of bars on 265 of 275 days.",
+   "enforced_in": "backend/scanner.py:intraday_score, complete_sector_history; backend/sectoral_indices.py:sector_trend, complete_from_nse; backend/nse_feed.py:index_history",
+   "config": "nse_feed.INDEX_HISTORY_SESSIONS = 60, INDEX_HISTORY_MAX_DOWNLOADS = 60",
+   "verify": "/api/scanner sector_trends_unavailable is empty and sector_history_from_nse names the indices built from NSE's files; the Screener shows no 'Sector trend unavailable' line",
+   "source": "README §107",
+   "test": "backend/tests/test_sector_index_history.py::test_a_scan_takes_the_trend_from_nses_history_and_names_what_it_could_not_work_out",
+   "issues": [
+    197
+   ]
   },
   {
    "id": "SCN-09",
