@@ -8,7 +8,8 @@ are actually "in play" — leaders to buy on strong days, laggards to short on
 weak ones. This encodes that routine over the NIFTY 100:
 
   Market context   NIFTY trend and day change, breadth (advancers/decliners),
-                   India VIX. The bias decides which side gets the slots.
+                   India VIX. The bias blocks entries against it (the engine's
+                   market filter); only score mode also caps picks against it.
   Tradability      price, turnover and daily ATR% floors — a stock that
                    doesn't move 1.2%+ a day can't pay for intraday costs.
   Daily setup      daily trend (EMA20/50), 10-day relative strength vs NIFTY,
@@ -24,10 +25,19 @@ Every stock is scored as a long AND as a short. The stronger of the two is
 kept as `score_side`, for information only: that score was measured to carry
 no information (README sections 37, 52), so it no longer sets a side
 (README section 115, audit rule 3.8). The row's `side` is empty and the
-checklist's own reading picks the side at entry time. The day's list gets a
-full Sahab's Dimaag read (with per-stock news) and becomes the engine's
-watchlist. Every scan is journaled with the inputs of the audit's passes 1
-to 3 (scan_rows, and the `scan_candidates` view in database.py).
+checklist's own reading picks the side at entry time.
+
+Which stocks are watched depends on SCANNER["selection"] (README section 91):
+  "liquidity"      The default. The day's list is the active_count eligible
+                   stocks with the highest 20-day average turnover, fixed
+                   before the open and kept all day. No score chooses it; the
+                   list gets the Sahab's Dimaag read (with per-stock news).
+  "score"          The old list. The top candidates get the Dimaag read and
+                   the best final scores become the active watchlist, chosen
+                   again every scan (select_active).
+
+Every scan is journaled with the inputs of the audit's passes 1 to 3
+(scan_rows, and the `scan_candidates` view in database.py).
 """
 
 import bisect
