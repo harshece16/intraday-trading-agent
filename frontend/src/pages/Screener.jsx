@@ -5,6 +5,7 @@ import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../hel
 import { SidePill } from "../components/Pill";
 import { RuleTag } from "../components/RuleBook";
 import RuleBook from "../components/RuleBook";
+import { fixedText, GuardNotes } from "../components/ListNotes";
 
 const TABS = [
   ["trading", "Trading"], ["watch", "Watching"], ["skipped", "Skipped"],
@@ -38,6 +39,7 @@ function OppRow({ s, r, held, expanded, onToggle }) {
         <span>
           <span className="opp-name">
             {r.symbol} {r.excluded ? <span className="pill neutral">Skipped</span> : <SidePill side={r.side} />} {flag}
+            {r.long_only && !r.excluded ? <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span> : null}
             <RuleTag text={rule} />
           </span>
           <div className="opp-why">{why}</div>
@@ -82,9 +84,14 @@ export default function Screener({ state: s }) {
   }
 
   const list = groups[tab];
+  const byLiquidity = s.scanner?.selection?.mode === "liquidity";
   const intro = {
-    trading: "Trader Sahab checks these for entries every 30 seconds.",
-    watch: "Ranked candidates that didn't make the active list.",
+    trading: byLiquidity
+      ? `${s.scanner.selection.rule} ${fixedText(s.scanner.selection)} Trader Sahab checks these for entries every 30 seconds.`
+      : "Trader Sahab checks these for entries every 30 seconds.",
+    watch: byLiquidity
+      ? "Eligible stocks outside today's list. They are scored and shown, but not watched for entries."
+      : "Ranked candidates that didn't make the active list.",
     skipped: "Filtered out today, with the reason.",
   }[tab];
   let shown = sortRows(list, sort);
@@ -99,6 +106,7 @@ export default function Screener({ state: s }) {
     <>
       <h2 className="h">Screener</h2>
       <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} Click a row to expand its rule book inline.</p>
+      <GuardNotes guards={s.scanner?.guards} feed={s.scanner?.feed} />
       <div className="tabs">
         {TABS.map(([key, label]) => (
           <button key={key} className="tab" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>

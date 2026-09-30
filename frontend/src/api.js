@@ -106,7 +106,31 @@ export async function downloadWithKey(path, filename) {
 
 export async function apiJson(path, options) {
   const res = await apiFetch(path, options);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const d = body.detail;
+    throw new Error((typeof d === "string" && d) || d?.message || `the backend answered ${res.status}`);
+  }
   return res.json();
+}
+
+/** GET `path` (again every `intervalMs`, if given). A failed load is shown, not swallowed:
+ *  pages used to `.catch(() => {})` and sit on "Loading…" forever. Null path = don't fetch. */
+export function useApi(path, intervalMs) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!path) return undefined;
+    let alive = true;
+    const load = () => apiJson(path)
+      .then((d) => { if (alive) { setData(d); setError(null); } })
+      .catch((e) => { if (alive) setError(e.message === "Failed to fetch" ? "the backend isn't reachable" : e.message); });
+    load();
+    const t = intervalMs ? setInterval(load, intervalMs) : null;
+    return () => { alive = false; if (t) clearInterval(t); };
+  }, [path, intervalMs, tick]);
+  return { data, error, reload: () => setTick((n) => n + 1) };
 }
 
 async function postJson(path, body) {

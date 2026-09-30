@@ -11,6 +11,7 @@ calendar 6 h) and any failure returns the last good data or nothing.
 """
 
 import logging
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -250,13 +251,16 @@ def results_calendar():
 
 
 # ---- F&O ban list (Market Wide Position Limit) -----------------------------
-# NISM Series VIII: once market-wide open interest in a stock's derivatives
-# crosses 95% of its MWPL, the stock enters the "ban period" and any trade
-# that INCREASES a position is penalised. NSE publishes the list for each
-# trade date as a small CSV. Index derivatives are never in it.
+# Once market-wide open interest in a stock's derivatives crosses 95% of its
+# limit, the stock enters the "ban period". NSE publishes the list for each
+# trade date as a small CSV. Index derivatives are never in it. (The parser
+# and the fetch were first written for PR #124, which is not merged.)
 
-FNO_BAN_URL = "https://nsearchives.nseindia.com/content/fo/fo_secban.csv"
+ARCHIVES = "https://nsearchives.nseindia.com"
+FNO_BAN_URL = ARCHIVES + "/content/fo/fo_secban.csv"
+PRICE_BANDS_URL = ARCHIVES + "/content/equities/sec_list.csv"
 _ban_cache = {"at": 0.0, "value": None}
+_bands_cache = {"at": 0.0, "value": None}
 
 
 def parse_fno_ban(text):
@@ -281,17 +285,190 @@ def parse_fno_ban(text):
     return {"trade_date": trade_date, "symbols": symbols}
 
 
-def fno_ban_list(ttl=1800):
-    """Today's F&O ban list, cached for `ttl` seconds, or None when it
-    cannot be fetched or parsed. Callers must treat None as UNKNOWN."""
-    if _ban_cache["value"] is not None and time.time() - _ban_cache["at"] < ttl:
-        return _ban_cache["value"]
+def _archive(url, parse, cache, ttl, what):
+    """A small static file from NSE's archives, parsed and cached. None when
+    it cannot be fetched or parsed: callers must treat that as UNKNOWN."""
+    if cache["value"] is not None and time.time() - cache["at"] < ttl:
+        return cache["value"]
     try:
-        resp = requests.get(FNO_BAN_URL, headers=HEADERS, timeout=15)
-        parsed = parse_fno_ban(resp.text) if resp.status_code == 200 else None
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        parsed = parse(resp.text) if resp.status_code == 200 else None
     except requests.RequestException as exc:
-        logger.warning(f"NSE F&O ban list unavailable ({exc})")
+        logger.warning(f"NSE {what} unavailable ({exc})")
         parsed = None
     if parsed is not None:
-        _ban_cache.update(at=time.time(), value=parsed)
+        cache.update(at=time.time(), value=parsed)
     return parsed
+
+
+def fno_ban_list(ttl=1800):
+    """The F&O ban list for the current trade date, cached for `ttl` seconds."""
+    return _archive(FNO_BAN_URL, parse_fno_ban, _ban_cache, ttl, "F&O ban list")
+
+
+# ---- price bands ------------------------------------------------------------
+# NSE's list of every security with its price band for the day: 2, 5, 10 or
+# 20 (per cent either way), or "No Band" for stocks with derivatives. The
+# same file carries the series (EQ, or BE/BZ for trade-for-trade) and any
+# graded-surveillance remark.
+
+def parse_price_bands(text):
+    """sec_list.csv -> {symbol: {"series", "band" (per cent, or None for no
+    band), "remarks"}}. None if the header is not the one expected."""
+    lines = (text or "").lstrip("\ufeff").splitlines()
+    if not lines:
+        return None
+    header = [h.strip().lower() for h in lines[0].split(",")]
+    if header[:2] != ["symbol", "series"] or "band" not in header:
+        return None
+    import csv
+    out = {}
+    for r in csv.DictReader(lines):
+        r = {(k or "").strip().lower(): (v or "").strip() for k, v in r.items()}
+        sym, band = r.get("symbol", "").upper(), r.get("band", "")
+        if not sym:
+            continue
+        try:
+            pct = None if band.lower() == "no band" else float(band)
+        except ValueError:
+            continue
+        remarks = r.get("remarks", "")
+        row = {"series": r.get("series", "").upper(), "band": pct, "remarks": "" if remarks == "-" else remarks}
+        # a symbol can be listed in more than one series; the EQ row is the one that trades intraday
+        if sym not in out or row["series"] == "EQ":
+            out[sym] = row
+    return out or None
+
+
+def price_bands(ttl=6 * 3600):
+    """Today's price band, series and surveillance remark for every security."""
+    return _archive(PRICE_BANDS_URL, parse_price_bands, _bands_cache, ttl, "price-band list")
+
+
+# ---- the last completed session, from NSE's own daily files -------------------
+# yfinance's daily bars can end a session early for hours after the close: at
+# 01:00 on 29 Sep 2026 they still ended on the 25th, so a read made before the
+# open ranked on data one session old. NSE publishes each session's prices in
+# the evening: the equity bhavcopy and the closing values of every index.
+
+BHAVCOPY_URL = ARCHIVES + "/content/cm/BhavCopy_NSE_CM_0_0_0_{tag}_F_0000.csv.zip"
+INDEX_CLOSE_URL = ARCHIVES + "/content/indices/ind_close_all_{tag}.csv"
+INDEX_NAMES = {
+    "^NSEI": "Nifty 50", "^INDIAVIX": "India VIX", "NIFTY_FIN_SERVICE.NS": "Nifty Financial Services",
+    "^CNXAUTO": "Nifty Auto", "^CNXPHARMA": "Nifty Pharma", "^CNXFMCG": "Nifty FMCG", "^CNXMETAL": "Nifty Metal",
+    "^CNXENERGY": "Nifty Energy", "^CNXIT": "Nifty IT", "^CNXREALTY": "Nifty Realty",
+}
+_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_last_session_cache = {}
+
+
+def previous_trading_day(day):
+    """The last weekday before `day` that was not an NSE holiday."""
+    import holidays
+    d = day - timedelta(days=1)
+    while d.weekday() >= 5 or holidays.is_holiday(d):
+        d -= timedelta(days=1)
+    return d
+
+
+def _num(x):
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_bhavcopy_bars(zip_bytes, date_iso):
+    """{symbol: daily bar} for the EQ series of one equity bhavcopy."""
+    import csv
+    import io
+    import zipfile
+    out = {}
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z, z.open(z.namelist()[0]) as fh:
+        for r in csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8", errors="ignore")):
+            if (r.get("SctySrs") or "").strip() != "EQ" or (r.get("TradDt") or "").strip() != date_iso:
+                continue
+            o, h, low, c = (_num(r.get(k)) for k in ("OpnPric", "HghPric", "LwPric", "ClsPric"))
+            if not (o and h and low and c):
+                continue
+            out[r["TckrSymb"].strip()] = {"time": f"{date_iso}T00:00:00+05:30", "open": o, "high": h, "low": low,
+                                          "close": c, "volume": int(_num(r.get("TtlTradgVol")) or 0)}
+    return out
+
+
+def parse_index_bars(text, date_iso):
+    """{yfinance ticker: daily bar} for the indices the scanner reads."""
+    import csv
+    by_name = {}
+    for r in csv.DictReader((text or "").lstrip("\ufeff").splitlines()):
+        r = {(k or "").strip(): (v or "").strip() for k, v in r.items()}
+        try:
+            when = datetime.strptime(r.get("Index Date", ""), "%d-%m-%Y").date().isoformat()
+        except ValueError:
+            continue
+        if when == date_iso:
+            by_name[r.get("Index Name", "").lower()] = r
+    out = {}
+    for ticker, name in INDEX_NAMES.items():
+        r = by_name.get(name.lower())
+        if not r:
+            continue
+        o, h, low, c = (_num(r.get(k)) for k in ("Open Index Value", "High Index Value", "Low Index Value",
+                                                  "Closing Index Value"))
+        if o and h and low and c:
+            out[ticker] = {"time": f"{date_iso}T00:00:00+05:30", "open": o, "high": h, "low": low, "close": c,
+                           "volume": int(_num(r.get("Volume")) or 0)}
+    return out
+
+
+def _cached_file(path, url, binary):
+    """The file at `path`, downloaded once from NSE's archives. None if it
+    is not published yet or cannot be fetched."""
+    if os.path.exists(path) and os.path.getsize(path) > 500:
+        with open(path, "rb" if binary else "r") as fh:
+            return fh.read()
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=30)
+    except requests.RequestException as exc:
+        logger.warning(f"NSE daily file unavailable ({exc})")
+        return None
+    if resp.status_code != 200 or len(resp.content) < 500:
+        return None
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as fh:
+        fh.write(resp.content)
+    os.replace(tmp, path)
+    return resp.content if binary else resp.text
+
+
+def last_session(today, data_dir=None):
+    """The last completed session's daily bars from NSE's own files:
+    {"date", "stocks": {symbol: bar}, "indices": {ticker: bar}}. Either part
+    may be empty. `today` is a date; the session is the trading day before it."""
+    data_dir = data_dir or _DATA
+    day = previous_trading_day(today)
+    iso = day.isoformat()
+    hit = _last_session_cache.get(iso)
+    if hit and hit["stocks"] and hit["indices"]:
+        return hit
+    stocks, indices = {}, {}
+    tag = day.strftime("%Y%m%d")
+    path = next((p for p in (os.path.join(data_dir, d, f"{tag}.zip")
+                             for d in ("bhav_live", "bhav_daily_2026_heldout", "bhav_daily")) if os.path.exists(p)),
+                os.path.join(data_dir, "bhav_live", f"{tag}.zip"))
+    try:
+        raw = _cached_file(path, BHAVCOPY_URL.format(tag=tag), binary=True)
+        stocks = parse_bhavcopy_bars(raw, iso) if raw else {}
+    except Exception:
+        logger.exception("Could not read the equity bhavcopy for %s", iso)
+    try:
+        tag = day.strftime("%d%m%Y")
+        text = _cached_file(os.path.join(data_dir, "nse_indices", f"ind_close_all_{tag}.csv"),
+                            INDEX_CLOSE_URL.format(tag=tag), binary=False)
+        indices = parse_index_bars(text, iso) if text else {}
+    except Exception:
+        logger.exception("Could not read the index closing file for %s", iso)
+    out = {"date": iso, "stocks": stocks, "indices": indices}
+    _last_session_cache[iso] = out
+    return out

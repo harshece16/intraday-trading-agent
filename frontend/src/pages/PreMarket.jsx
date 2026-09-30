@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch, apiJson } from "../api";
 import { pct, tone } from "../format";
 import { SidePill, BiasPill } from "../components/Pill";
+import { GuardNotes } from "../components/ListNotes";
 
 const TABS = [
   ["watchlist", "Watchlist"], ["all", "All ranked"], ["avoid", "Avoid"],
@@ -16,7 +17,7 @@ function Row({ r, expanded, onToggle, navigate }) {
         <span>
           <span className="opp-name">
             {r.symbol} {r.excluded ? <span className="pill neutral">Avoid</span> : <SidePill side={r.side} />}
-            {r.status === "WATCHLIST" && <span className="pill solid">Ranked in top picks</span>}
+            {r.status === "WATCHLIST" && <span className="pill solid">On today's list</span>}
           </span>
           <div className="opp-why">{r.excluded || (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ")}</div>
         </span>
@@ -115,9 +116,13 @@ export default function PreMarket({ state: s }) {
     <>
       <h2 className="h">Pre-Market Analysis</h2>
       <p className="sub">
-        {r.as_of_note} Ranked purely on daily-chart facts (trend, relative strength, patterns) — no invented
-        gap or SGX-Nifty-style pre-open number, since this codebase doesn't have an honest source for one.
+        {r.as_of_note}{" "}
+        {r.selection?.mode === "liquidity"
+          ? `${r.selection.rule} Scores below come from daily-chart facts (trend, relative strength, patterns) and are shown for reading, not used to choose the list.`
+          : "Ranked purely on daily-chart facts (trend, relative strength, patterns)."}{" "}
+        No invented gap or SGX-Nifty-style pre-open number, since this codebase doesn't have an honest source for one.
       </p>
+      <GuardNotes guards={r.guards} />
       <button className="btn" disabled={refreshing || data.running} onClick={refresh} style={{ marginBottom: 16 }}>
         {(refreshing || data.running) && <span className="spinner" />}
         {refreshing || data.running ? "Refreshing…" : "Refresh"}

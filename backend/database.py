@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS trades (
     id TEXT PRIMARY KEY, position_id TEXT, ts REAL NOT NULL, symbol TEXT NOT NULL,
     side TEXT, quantity INTEGER, price REAL, mode TEXT, reason TEXT, note TEXT,
     realized REAL, charges REAL, initial_risk REAL, r_multiple REAL, checklist_json TEXT,
-    realized_gross REAL
+    realized_gross REAL, signal_price REAL, order_id TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_trades_position ON trades(position_id);
 CREATE TABLE IF NOT EXISTS signals (
@@ -156,6 +156,12 @@ def _migrate(conn):
     if "realized_gross" not in cols:
         conn.execute("ALTER TABLE trades ADD COLUMN realized_gross REAL")
         _restate_realized_net_of_charges(conn)
+    # The price the engine asked for, beside the price it got, and Kite's
+    # order id on a live leg (#155). The gap between the two is the slippage
+    # #66 needs measured. Rows from before this have neither.
+    for col, kind in (("signal_price", "REAL"), ("order_id", "TEXT")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE trades ADD COLUMN {col} {kind}")
     # The bar a checklist read was judged on (#82): the entry window is a rule
     # about the bar's time, and the row's ts is when the read ran, which can be
     # minutes later (closed bars, or delayed yfinance data).
@@ -360,12 +366,12 @@ def record_trade(trade, checklist_snapshot=None):
     with _conn() as c:
         c.execute(
             "INSERT INTO trades (id, position_id, ts, symbol, side, quantity, price, mode, reason, note, "
-            "realized, charges, initial_risk, r_multiple, checklist_json, realized_gross) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "realized, charges, initial_risk, r_multiple, checklist_json, realized_gross, signal_price, order_id) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (trade["id"], trade.get("position_id"), trade["ts"], trade["symbol"], trade["side"],
              trade["quantity"], trade["price"], trade["mode"], trade.get("reason"), trade.get("note"),
              trade.get("realized"), trade.get("charges"), trade.get("initial_risk"), trade.get("r_multiple"),
-             _j(checklist_snapshot), trade.get("realized_gross")),
+             _j(checklist_snapshot), trade.get("realized_gross"), trade.get("signal_price"), trade.get("order_id")),
         )
 
 

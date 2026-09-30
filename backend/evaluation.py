@@ -69,7 +69,14 @@ def deflated_sharpe_ratio(r_values, n_trials, sharpe_std=None):
     if sr is None:
         return {"dsr": None, "note": "All trades had the same result; no variance to measure."}
     skew, kurt = _moments(r_values)
-    sharpe_std = sharpe_std if sharpe_std is not None else abs(sr) / 2 or 0.5
+    # The luck baseline needs the dispersion of Sharpe estimates across the
+    # N trials (Bailey & López de Prado 2014, V[{SR_n}]). When the caller
+    # doesn't supply it, use the null-consistent value: the sampling standard
+    # deviation of a Sharpe estimate whose true value is zero, 1/sqrt(n-1).
+    # The old default, |SR|/2, made the baseline proportional to the
+    # candidate's own Sharpe — above it for every strategy once N >= ~21, so
+    # DSR could never pass at the project's trial count (#132).
+    sharpe_std = sharpe_std if sharpe_std is not None else 1 / math.sqrt(n - 1)
     sr0 = expected_max_sharpe(max(n_trials, 1), sharpe_std)
     denom = math.sqrt(max(1e-9, 1 - skew * sr + (kurt - 1) / 4 * sr ** 2))
     z = (sr - sr0) * math.sqrt(n - 1) / denom
@@ -82,15 +89,35 @@ def deflated_sharpe_ratio(r_values, n_trials, sharpe_std=None):
     }
 
 
-def trial_count() -> int:
-    """How many backtester.py runs have been logged, without adding one — for
-    read-only callers like the dashboard scorecard."""
-    if not TRIAL_LOG_PATH.exists():
-        return 0
+TRIALS_LEDGER_PATH = Path(__file__).parent.parent / "docs" / "research" / "trials.md"
+
+
+def trials_of_record() -> int:
+    """The highest strategy-trial number in docs/research/trials.md — the
+    project's count of record (research scripts log there, not in
+    backtest_trials.json). 0 if the ledger isn't present."""
+    import re
     try:
-        return len(json.loads(TRIAL_LOG_PATH.read_text()))
-    except (json.JSONDecodeError, OSError):
+        text = TRIALS_LEDGER_PATH.read_text()
+    except OSError:
         return 0
+    nums = [int(m) for m in re.findall(r"^\|\s*(\d+)\s*\|", text, flags=re.M)]
+    return max(nums) if nums else 0
+
+
+def trial_count() -> int:
+    """How many strategy configurations have been tried, without adding one —
+    for read-only callers like the dashboard scorecard. The larger of the
+    backtester.py run log and the research ledger's count of record: the log
+    alone said 34 while the ledger said 119, so the Scorecard's DSR deflated
+    for far fewer tries than were made (#136)."""
+    logged = 0
+    if TRIAL_LOG_PATH.exists():
+        try:
+            logged = len(json.loads(TRIAL_LOG_PATH.read_text()))
+        except (json.JSONDecodeError, OSError):
+            logged = 0
+    return max(logged, trials_of_record())
 
 
 IC_MIN_T_STAT = 2.0

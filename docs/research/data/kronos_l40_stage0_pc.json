@@ -1,0 +1,245 @@
+{
+ "stage0": {
+  "started": "2026-09-29T22:53:46.528460",
+  "argv": [
+   "--device",
+   "cuda",
+   "--stage0-only"
+  ],
+  "prereg": "docs/research/prereg-kronos-feature-ic.md",
+  "selection": "selection: 79 sessions, 2025-09-01 to 2025-12-23",
+  "regression": {
+   "result": "PASS",
+   "seconds": 24,
+   "tail": "vironment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.\n  To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development\n    warnings.warn(message)\n\ntests/test_kronos_regression.py::test_kronos_predictor_regression[512]\n  C:\\Users\\harsh\\intraday-trading-agent\\backend\\research\\.kvenv\\Lib\\site-packages\\huggingface_hub\\file_download.py:143: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\\Users\\harsh\\.cache\\huggingface\\hub\\models--NeoQuasar--Kronos-small. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.\n  To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development\n    warnings.warn(message)\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n4 passed, 3 warnings in 23.58s\n",
+   "expected_mse": [
+    0.008979,
+    0.003741
+   ]
+  },
+  "revisions": {
+   "NeoQuasar/Kronos-small": {
+    "commits": [
+     [
+      "901c26c1332695a2a8f243eb2f37243a37bea320",
+      "2025-09-09T14:10:26+00:00"
+     ],
+     [
+      "12b79908b3a9bef41ad5db0e01746f9a2fd2d882",
+      "2025-08-17T12:06:18+00:00"
+     ],
+     [
+      "ce3ddfa7c115a12c1a2d6bd8b0200564379aab66",
+      "2025-08-07T01:37:08+00:00"
+     ],
+     [
+      "23958ab79d4c35c9225b35cc2fea57a66d7b26f9",
+      "2025-08-07T01:36:48+00:00"
+     ],
+     [
+      "ac5c409a313c4eadd1ca78201322f5cadb9c34ab",
+      "2025-06-30T16:44:37+00:00"
+     ],
+     [
+      "075072271c064bbc40ccd2b3424b76dc402be1d0",
+      "2025-06-30T15:50:21+00:00"
+     ],
+     [
+      "99b39fe3fe07e6745ea8c9083bfd091aae754f01",
+      "2025-06-30T15:32:30+00:00"
+     ]
+    ],
+    "picked": [
+     "12b79908b3a9bef41ad5db0e01746f9a2fd2d882",
+     "2025-08-17T12:06:18+00:00"
+    ]
+   },
+   "NeoQuasar/Kronos-Tokenizer-base": {
+    "commits": [
+     [
+      "0e0117387f39004a9016484a186a908917e22426",
+      "2025-09-09T14:10:02+00:00"
+     ],
+     [
+      "f6c7de7b0490e422fde7a44bc73369e07115c445",
+      "2025-08-17T12:06:41+00:00"
+     ],
+     [
+      "e80b0e3c6c169428a3474e08265f5ecfcebdee8c",
+      "2025-08-07T01:36:26+00:00"
+     ],
+     [
+      "a802774e1736fc9c405e199e276d13c0ccabe6fa",
+      "2025-08-07T01:36:04+00:00"
+     ],
+     [
+      "9ef143b98ee3c2488eebd85404e0c215c112b46a",
+      "2025-06-30T17:04:10+00:00"
+     ],
+     [
+      "479c63806309e715eb4b524f37571b41c183b310",
+      "2025-06-30T17:01:00+00:00"
+     ],
+     [
+      "b70f767092a9a60b1e04aa5647092a6d5d285e4c",
+      "2025-06-30T16:55:43+00:00"
+     ]
+    ],
+    "picked": [
+     "f6c7de7b0490e422fde7a44bc73369e07115c445",
+     "2025-08-17T12:06:41+00:00"
+    ]
+   }
+  },
+  "adjustment": {
+   "fetch_runs": [
+    {
+     "date": "2026-09-20",
+     "spans": 1302
+    }
+   ],
+   "boundaries": {},
+   "dropped_stock_sessions": {},
+   "dropped_count": 0
+  },
+  "lookahead": [
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19412,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 21890,
+    "identical": true
+   },
+   {
+    "symbol": "BAJAJHLDNG",
+    "idx": 18701,
+    "identical": true
+   },
+   {
+    "symbol": "M&M",
+    "idx": 20804,
+    "identical": true
+   },
+   {
+    "symbol": "HDFCBANK",
+    "idx": 20972,
+    "identical": true
+   },
+   {
+    "symbol": "BEL",
+    "idx": 17960,
+    "identical": true
+   },
+   {
+    "symbol": "ADANIPOWER",
+    "idx": 19478,
+    "identical": true
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "idx": 21179,
+    "identical": true
+   },
+   {
+    "symbol": "SOLARINDS",
+    "idx": 20003,
+    "identical": true
+   },
+   {
+    "symbol": "TATASTEEL",
+    "idx": 18017,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 17810,
+    "identical": true
+   },
+   {
+    "symbol": "IRFC",
+    "idx": 19010,
+    "identical": true
+   },
+   {
+    "symbol": "APOLLOHOSP",
+    "idx": 19037,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 19562,
+    "identical": true
+   },
+   {
+    "symbol": "BPCL",
+    "idx": 22838,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 21938,
+    "identical": true
+   },
+   {
+    "symbol": "TATAPOWER",
+    "idx": 22763,
+    "identical": true
+   },
+   {
+    "symbol": "IOC",
+    "idx": 19112,
+    "identical": true
+   },
+   {
+    "symbol": "GRASIM",
+    "idx": 20999,
+    "identical": true
+   },
+   {
+    "symbol": "CHOLAFIN",
+    "idx": 22949,
+    "identical": true
+   }
+  ],
+  "timing": {
+   "forecasts": 200,
+   "seconds_per_forecast_at_sample_count": 3,
+   "seconds_per": 0.15393167614936829,
+   "total_forecasts": 43362,
+   "est_hours_at_sample_count_3": 1.854107039219141,
+   "sample_count_chosen": 3
+  },
+  "coverage": {
+   "sessions": 79,
+   "first_half": 39,
+   "second_half": 40,
+   "stock_times": 43362,
+   "sessions_below_min_stocks": []
+  }
+ },
+ "status": "STAGE0_DONE",
+ "harness": {
+  "python": "3.11.9",
+  "machine": "AMD64",
+  "device": "cuda",
+  "threads": 4,
+  "nice": 10,
+  "candle_db": "C:\\Users\\harsh\\intraday-trading-agent\\backend\\data\\kite_history.db",
+  "pause_window_ist": [
+   "08:30",
+   "15:45"
+  ],
+  "torch": "2.14.0+cu126",
+  "numpy": "2.4.6",
+  "pandas": "2.2.2",
+  "einops": "0.8.1",
+  "huggingface_hub": "0.33.1",
+  "safetensors": "0.6.2",
+  "vendor_commit": "67b630e67f6a18c9e9be918d9b4337c960db1e9a",
+  "look_commit": "73a53a6d5fa4bb11f68ad31f541287a76782f1d4",
+  "look_script_dirty": false
+ }
+}

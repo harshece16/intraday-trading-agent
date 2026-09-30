@@ -1,0 +1,41 @@
+{
+ "prereg": "prereg-universe-width.md",
+ "part": "T5",
+ "ledger": "look L45",
+ "label": "T5, ranks 801-1,000",
+ "ranks": [
+  801,
+  1000
+ ],
+ "list": "ewide",
+ "run_at": "2026-09-28T23:11:25",
+ "meta": {
+  "files": 4215,
+  "bad_files": 0,
+  "sessions": 4215,
+  "chains": 3088,
+  "fund_units_excluded": 322,
+  "actions_applied": {
+   "split": 586,
+   "bonus": 594,
+   "rights": 278,
+   "demerger": 179,
+   "dividend": 20303,
+   "unparsed": 34,
+   "unparsed_rights": 28,
+   "rejected": 43,
+   "no_chain": 158,
+   "no_session": 1171,
+   "consolidation": 1
+  },
+  "built_seconds": 84.2,
+  "rows_by_series": {
+   "EQ": 6455077,
+   "BE": 561612,
+   "BZ": 62113
+  }
+ },
+ "start_month": "2023-05",
+ "testable": false,
+ "months_available": 30
+}

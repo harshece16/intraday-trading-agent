@@ -1,0 +1,158 @@
+{
+ "look": "L47",
+ "prereg": "docs/research/prereg-qlib-lgbm-alpha158.md",
+ "qlib_commit": "be725493eb1a6bbb42bf11b37aa7669f59610ff1",
+ "trained": "2026-09-30T02:34:53.294518+05:30",
+ "files": {
+  "lgbm_f15.txt": "d73827856f75e51606d3c765717954641b641d4afcffd98e360ec9be3c9a5597",
+  "lgbm_f30.txt": "708c1622d236833ccf44759722e9b37fd230ea6b9e86311e0f025ae3c38c9889",
+  "lgbm_f60.txt": "dcab4cb7df8aa2e9347ddcd28fa8f3c43974605dd25964de2ca63225ad07c415",
+  "normaliser.json": "2a04cb28836191a9580efcec827cffa10391c5e5c685e4dcecb7287dbec5a418"
+ },
+ "models_dir": "backend/research/l47_models",
+ "feature_fingerprint": "dd238050586d39d820058983f31d11f44c30ed5d786e5636c08837180faa7b31",
+ "lgb_params": {
+  "objective": "mse",
+  "verbosity": -1,
+  "colsample_bytree": 0.8879,
+  "learning_rate": 0.2,
+  "subsample": 0.8789,
+  "lambda_l1": 205.6999,
+  "lambda_l2": 580.9768,
+  "max_depth": 8,
+  "num_leaves": 210,
+  "num_threads": 16,
+  "device_type": "cpu",
+  "deterministic": true,
+  "seed": 123,
+  "force_col_wise": true
+ },
+ "num_boost_round": 1000,
+ "early_stopping_rounds": 50,
+ "horizons": {
+  "f15": {
+   "best_iteration": 12,
+   "rounds_run": 62,
+   "best_valid_l2": 0.9966723585247221,
+   "train_rows": 720406,
+   "validation_rows": 163760,
+   "validation_rank_ic_all_times": {
+    "timestamps": 1840,
+    "mean": 0.029782715802792917,
+    "t": 10.244131324148663,
+    "se": 0.0029072953928836916
+   },
+   "validation_rank_ic_l40_times": {
+    "timestamps": 240,
+    "mean": 0.028869679033802133,
+    "t": 3.433275497366901,
+    "se": 0.008408786028369497
+   },
+   "seconds": 8
+  },
+  "f30": {
+   "best_iteration": 4,
+   "rounds_run": 54,
+   "best_valid_l2": 0.9970990145272584,
+   "train_rows": 720406,
+   "validation_rows": 163760,
+   "validation_rank_ic_all_times": {
+    "timestamps": 1840,
+    "mean": 0.019634289884013587,
+    "t": 6.897610175921826,
+    "se": 0.0028465351597503955
+   },
+   "validation_rank_ic_l40_times": {
+    "timestamps": 240,
+    "mean": 0.01297202819474293,
+    "t": 1.6213087421948427,
+    "se": 0.008000961110702505
+   },
+   "seconds": 7
+  },
+  "f60": {
+   "best_iteration": 5,
+   "rounds_run": 55,
+   "best_valid_l2": 0.9968048272528668,
+   "train_rows": 720406,
+   "validation_rows": 163760,
+   "validation_rank_ic_all_times": {
+    "timestamps": 1840,
+    "mean": 0.024061337250056918,
+    "t": 8.532242287262035,
+    "se": 0.0028200485218262726
+   },
+   "validation_rank_ic_l40_times": {
+    "timestamps": 240,
+    "mean": 0.013749501084966921,
+    "t": 1.9247108616099207,
+    "se": 0.007143670958175078
+   },
+   "seconds": 7
+  }
+ },
+ "data": {
+  "max_ts_read": 1755165300,
+  "max_time_read_ist": "2025-08-14T15:25:00",
+  "symbols_with_bars": 98,
+  "sessions": {
+   "window": [
+    "2024-09-20",
+    "2025-08-14",
+    225
+   ],
+   "train": [
+    "2024-09-20",
+    "2025-06-12",
+    180
+   ],
+   "purge": [
+    "2025-06-13",
+    "2025-06-16",
+    "2025-06-17",
+    "2025-06-18",
+    "2025-06-19"
+   ],
+   "validation": [
+    "2025-06-20",
+    "2025-08-14",
+    40
+   ]
+  },
+  "rows": {
+   "train": 720406,
+   "validation": 163760,
+   "train_by_horizon": {
+    "f15": 720406,
+    "f30": 720406,
+    "f60": 720406
+   },
+   "validation_by_horizon": {
+    "f15": 163760,
+    "f30": 163760,
+    "f60": 163760
+   }
+  },
+  "members_per_date": [
+   100,
+   100
+  ]
+ },
+ "stage0_sha256": "4f556ecae34fb668137982a5b25c5527d82123b4569c76fa609edd1a19ddbd1e",
+ "train_started": "2026-09-30T02:34:30.981532+05:30",
+ "environment": {
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "machine": "AMD64",
+  "cpu_count": 16,
+  "numpy": "2.4.6",
+  "pandas": "3.0.6",
+  "lightgbm": "4.7.0",
+  "scipy": "1.17.1",
+  "git_head": "4e867d6ec6990560f311542337a6609609533c8e",
+  "module_dirty": false,
+  "module_sha256": "dfd1df76ab293b5f32ae4dc164ac7c5b08e58cb70403411f91bd31e7b1f60075"
+ },
+ "seconds": 94,
+ "note": "validation IC is information only; it is not a gate and cannot change the design (prereg \u00a77)"
+}

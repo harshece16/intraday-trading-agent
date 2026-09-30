@@ -1,0 +1,302 @@
+{
+ "meta": {
+  "files": 4215,
+  "bad_files": 0,
+  "sessions": 4215,
+  "chains": 2883,
+  "fund_units_excluded": 322,
+  "actions_applied": {
+   "split": 561,
+   "bonus": 582,
+   "rights": 276,
+   "demerger": 168,
+   "dividend": 19258,
+   "unparsed": 14,
+   "unparsed_rights": 29,
+   "rejected": 53,
+   "no_chain": 166,
+   "no_session": 1029
+  },
+  "built_seconds": 71.9
+ },
+ "files_per_year": {
+  "2009": 243,
+  "2010": 253,
+  "2011": 247,
+  "2012": 252,
+  "2013": 250,
+  "2014": 244,
+  "2015": 248,
+  "2016": 247,
+  "2017": 248,
+  "2018": 246,
+  "2019": 245,
+  "2020": 252,
+  "2021": 248,
+  "2022": 248,
+  "2023": 246,
+  "2024": 249,
+  "2025": 249
+ },
+ "month_ends_late": [],
+ "months_short_of_400": {},
+ "splits_bonuses_checked": 382,
+ "inconsistent": [
+  {
+   "symbol": "SHREEASHTA",
+   "ex_date": "2010-02-01",
+   "kind": "bonus",
+   "factor": 0.2,
+   "adjusted_return": 0.2006,
+   "purpose": "Bonus 4:1"
+  },
+  {
+   "symbol": "RESURGERE",
+   "ex_date": "2010-09-15",
+   "kind": "split",
+   "factor": 0.1,
+   "adjusted_return": 0.2165,
+   "purpose": "Annual General Meeting/Bonus 2:1/Face Value Split From Rs.10/- To Re.1/-"
+  },
+  {
+   "symbol": "RESURGERE",
+   "ex_date": "2010-09-15",
+   "kind": "bonus",
+   "factor": 0.3333333333333333,
+   "adjusted_return": 0.2165,
+   "purpose": "Annual General Meeting/Bonus 2:1/Face Value Split From Rs.10/- To Re.1/-"
+  },
+  {
+   "symbol": "EASEMYTRIP",
+   "ex_date": "2022-11-21",
+   "kind": "split",
+   "factor": 0.5,
+   "adjusted_return": 0.2002,
+   "purpose": "Face Value Split (Sub-Division) - From Rs 2/- Per Share To Re 1/- Per Share"
+  },
+  {
+   "symbol": "EASEMYTRIP",
+   "ex_date": "2022-11-21",
+   "kind": "bonus",
+   "factor": 0.25,
+   "adjusted_return": 0.2002,
+   "purpose": "Bonus 3:1"
+  }
+ ],
+ "consistent_share": 0.9869109947643979,
+ "residual_phantoms": [
+  {
+   "symbol": "KRBL",
+   "date": "2010-02-10",
+   "adjusted_return": -0.8821,
+   "raw_return": -0.8821
+  },
+  {
+   "symbol": "STLTECH",
+   "date": "2010-03-09",
+   "adjusted_return": -0.7958,
+   "raw_return": -0.7958
+  },
+  {
+   "symbol": "ZEEMEDIA",
+   "date": "2010-04-15",
+   "adjusted_return": -0.5283,
+   "raw_return": -0.7565
+  },
+  {
+   "symbol": "ENGINERSIN",
+   "date": "2010-05-06",
+   "adjusted_return": -0.8,
+   "raw_return": -0.8
+  },
+  {
+   "symbol": "TRIVENI",
+   "date": "2011-05-03",
+   "adjusted_return": -0.4292,
+   "raw_return": -0.5996
+  },
+  {
+   "symbol": "GTL",
+   "date": "2011-06-20",
+   "adjusted_return": -0.6218,
+   "raw_return": -0.6218
+  },
+  {
+   "symbol": "IGL",
+   "date": "2012-04-10",
+   "adjusted_return": -0.339,
+   "raw_return": -0.339
+  },
+  {
+   "symbol": "COREEDUTEC",
+   "date": "2013-02-25",
+   "adjusted_return": -0.624,
+   "raw_return": -0.624
+  },
+  {
+   "symbol": "COREEDUTEC",
+   "date": "2013-02-27",
+   "adjusted_return": -0.4581,
+   "raw_return": -0.4581
+  },
+  {
+   "symbol": "SUZLON",
+   "date": "2013-02-28",
+   "adjusted_return": -0.3402,
+   "raw_return": -0.3402
+  },
+  {
+   "symbol": "OPTOCIRCUI",
+   "date": "2013-05-31",
+   "adjusted_return": -0.377,
+   "raw_return": -0.377
+  },
+  {
+   "symbol": "63MOONS",
+   "date": "2013-08-01",
+   "adjusted_return": -0.645,
+   "raw_return": -0.645
+  },
+  {
+   "symbol": "RANBAXY",
+   "date": "2013-09-16",
+   "adjusted_return": -0.3034,
+   "raw_return": -0.3034
+  },
+  {
+   "symbol": "STAR",
+   "date": "2013-12-19",
+   "adjusted_return": -0.5764,
+   "raw_return": -0.5764
+  },
+  {
+   "symbol": "ADANIENT",
+   "date": "2015-06-03",
+   "adjusted_return": -0.8086,
+   "raw_return": -0.8277
+  },
+  {
+   "symbol": "AMTEKAUTO",
+   "date": "2015-08-19",
+   "adjusted_return": -0.306,
+   "raw_return": -0.306
+  },
+  {
+   "symbol": "AMTEKAUTO",
+   "date": "2015-09-03",
+   "adjusted_return": -0.3498,
+   "raw_return": -0.3498
+  },
+  {
+   "symbol": "ICIL",
+   "date": "2016-11-11",
+   "adjusted_return": -0.8124,
+   "raw_return": -0.8124
+  },
+  {
+   "symbol": "KARURVYSYA",
+   "date": "2016-11-17",
+   "adjusted_return": -0.8003,
+   "raw_return": -0.8003
+  },
+  {
+   "symbol": "ALANKIT",
+   "date": "2016-12-15",
+   "adjusted_return": -0.439,
+   "raw_return": -0.439
+  },
+  {
+   "symbol": "JSWSTEEL",
+   "date": "2017-01-04",
+   "adjusted_return": -0.9009,
+   "raw_return": -0.9009
+  },
+  {
+   "symbol": "SINTEX",
+   "date": "2017-05-25",
+   "adjusted_return": -0.7517,
+   "raw_return": -0.7517
+  },
+  {
+   "symbol": "DHFL",
+   "date": "2018-09-21",
+   "adjusted_return": -0.4258,
+   "raw_return": -0.4258
+  },
+  {
+   "symbol": "CCAVENUE",
+   "date": "2018-09-28",
+   "adjusted_return": -0.7083,
+   "raw_return": -0.7083
+  },
+  {
+   "symbol": "DISHTV",
+   "date": "2019-01-25",
+   "adjusted_return": -0.3323,
+   "raw_return": -0.3323
+  },
+  {
+   "symbol": "RPOWER",
+   "date": "2019-02-04",
+   "adjusted_return": -0.3485,
+   "raw_return": -0.3485
+  },
+  {
+   "symbol": "RPOWER",
+   "date": "2019-02-05",
+   "adjusted_return": -0.3023,
+   "raw_return": -0.3023
+  },
+  {
+   "symbol": "RELINFRA",
+   "date": "2019-02-06",
+   "adjusted_return": -0.321,
+   "raw_return": -0.321
+  },
+  {
+   "symbol": "IDEA",
+   "date": "2019-03-29",
+   "adjusted_return": -0.3707,
+   "raw_return": -0.3707
+  },
+  {
+   "symbol": "JETAIRWAYS",
+   "date": "2019-04-18",
+   "adjusted_return": -0.3146,
+   "raw_return": -0.3146
+  },
+  {
+   "symbol": "JETAIRWAYS",
+   "date": "2019-06-18",
+   "adjusted_return": -0.4079,
+   "raw_return": -0.4079
+  },
+  {
+   "symbol": "SAMMAANCAP",
+   "date": "2019-09-30",
+   "adjusted_return": -0.344,
+   "raw_return": -0.344
+  },
+  {
+   "symbol": "YESBANK",
+   "date": "2020-03-06",
+   "adjusted_return": -0.5611,
+   "raw_return": -0.5611
+  },
+  {
+   "symbol": "SAMMAANCAP",
+   "date": "2020-03-19",
+   "adjusted_return": -0.3374,
+   "raw_return": -0.3374
+  },
+  {
+   "symbol": "ZEEL",
+   "date": "2024-01-23",
+   "adjusted_return": -0.3261,
+   "raw_return": -0.3261
+  }
+ ],
+ "gate1_coverage": true,
+ "gate2_consistency": true,
+ "gate3_note": "35 residual one-day drops below -30% on liquid days among top-400 names; each must be explained in the results file; gate: <= 10 unexplained"
+}

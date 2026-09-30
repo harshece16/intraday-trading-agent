@@ -1,0 +1,618 @@
+{
+ "A": {
+  "ledger": "trial 126",
+  "actions_on_a_held_name": [
+   {
+    "chain": "ATGL",
+    "ex_date": "2021-06-24",
+    "kind": "dividend",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2021-05",
+     "2021-06"
+    ],
+    "difference_on_the_name": 3.732116139953945e-05,
+    "points_on_the_book": 0.00024880774266359634,
+    "default": [
+     {
+      "factor": 0.9998476399427126,
+      "previous_close": 1640.85,
+      "applied_on": "2021-09-13"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.9998103258601723,
+      "previous_close": 1318.05,
+      "previous_row_series": "BE",
+      "row_series": "BE",
+      "applied_on": "2021-06-24"
+     }
+    ]
+   },
+   {
+    "chain": "BOMDYEING",
+    "ex_date": "2018-07-19",
+    "kind": "dividend",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2018-06"
+    ],
+    "difference_on_the_name": -2.1443489970351948e-06,
+    "points_on_the_book": -1.4295659980234632e-05,
+    "default": [
+     {
+      "factor": 0.9953789279112755,
+      "previous_close": 216.4,
+      "applied_on": "2018-10-30"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.9953810623556582,
+      "previous_close": 216.5,
+      "previous_row_series": "BE",
+      "row_series": "BE",
+      "applied_on": "2018-07-19"
+     }
+    ]
+   },
+   {
+    "chain": "FRETAIL",
+    "ex_date": "2017-11-29",
+    "kind": "demerger",
+    "cause": "not applied in the repaired panel: refused on the price of the ex-date itself",
+    "held_after_the_rebalance_of": [
+     "2017-10"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [
+     {
+      "factor": 0.9450432938681745,
+      "previous_close": 565.9,
+      "applied_on": "2017-12-13"
+     }
+    ],
+    "repaired": []
+   }
+  ],
+  "actions_on_a_held_name_beyond_a_tenth_of_a_point": [
+   {
+    "chain": "FRETAIL",
+    "ex_date": "2017-11-29",
+    "kind": "demerger",
+    "cause": "not applied in the repaired panel: refused on the price of the ex-date itself",
+    "held_after_the_rebalance_of": [
+     "2017-10"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [
+     {
+      "factor": 0.9450432938681745,
+      "previous_close": 565.9,
+      "applied_on": "2017-12-13"
+     }
+    ],
+    "repaired": []
+   }
+  ],
+  "demerger_residuals": [
+   {
+    "symbol": "ZEEMEDIA",
+    "date": "2010-04-15",
+    "adjusted_return": -0.5283,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "KESARENT",
+    "date": "2010-05-13",
+    "adjusted_return": -0.3217,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SURANAT&P",
+    "date": "2010-08-17",
+    "adjusted_return": -0.5646,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TEXINFRA",
+    "date": "2010-11-01",
+    "adjusted_return": -0.3051,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TRIVENI",
+    "date": "2011-05-03",
+    "adjusted_return": -0.4292,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ORIENTCER",
+    "date": "2011-11-11",
+    "adjusted_return": -0.472,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "PIRPHYTO",
+    "date": "2011-12-23",
+    "adjusted_return": 0.51,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ADANIENT",
+    "date": "2015-06-03",
+    "adjusted_return": -0.8086,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SINTEX",
+    "date": "2017-05-25",
+    "adjusted_return": 0.4441,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": [
+     "2017-08",
+     "2017-09"
+    ]
+   }
+  ],
+  "consolidations_on_a_held_name": []
+ },
+ "B": {
+  "ledger": "look L42",
+  "actions_on_a_held_name": [
+   {
+    "chain": "AARTIIND",
+    "ex_date": "2019-07-03",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2019-06"
+    ],
+    "difference_on_the_name": -0.0348945049849293,
+    "points_on_the_book": -0.232630033232862,
+    "default": [
+     {
+      "factor": 0.9243580846634282,
+      "previous_close": 1801.25,
+      "applied_on": "2019-07-17"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.9577793199167245,
+      "previous_close": 1801.25,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2019-07-03"
+     }
+    ]
+   },
+   {
+    "chain": "AURUM",
+    "ex_date": "2020-12-23",
+    "kind": "dividend",
+    "cause": "the repaired panel's reading or bounds (amendments 1 and 3)",
+    "held_after_the_rebalance_of": [
+     "2020-11"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [],
+    "repaired": [
+     {
+      "factor": 0.011819611423933396,
+      "previous_close": 985.65,
+      "previous_row_series": "EQ",
+      "row_series": "EQ",
+      "applied_on": "2020-12-23"
+     }
+    ]
+   },
+   {
+    "chain": "NEULANDLAB",
+    "ex_date": "2021-06-29",
+    "kind": "dividend",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2021-05"
+    ],
+    "difference_on_the_name": 0.00011011875172384222,
+    "points_on_the_book": 0.0007341250114922815,
+    "default": [
+     {
+      "factor": 0.9985988837774094,
+      "previous_close": 2141.15,
+      "applied_on": "2021-09-13"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.998488931422671,
+      "previous_close": 1985.35,
+      "previous_row_series": "BE",
+      "row_series": "BE",
+      "applied_on": "2021-06-29"
+     }
+    ]
+   },
+   {
+    "chain": "STAR",
+    "ex_date": "2024-12-06",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2024-11"
+    ],
+    "difference_on_the_name": 0.09676178755480369,
+    "points_on_the_book": 0.6450785836986912,
+    "default": [
+     {
+      "factor": 0.4800848456280934,
+      "previous_close": 1485.05,
+      "applied_on": "2024-12-20"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.4377293693815023,
+      "previous_close": 1485.05,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2024-12-06"
+     }
+    ]
+   }
+  ],
+  "actions_on_a_held_name_beyond_a_tenth_of_a_point": [
+   {
+    "chain": "AARTIIND",
+    "ex_date": "2019-07-03",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2019-06"
+    ],
+    "difference_on_the_name": -0.0348945049849293,
+    "points_on_the_book": -0.232630033232862,
+    "default": [
+     {
+      "factor": 0.9243580846634282,
+      "previous_close": 1801.25,
+      "applied_on": "2019-07-17"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.9577793199167245,
+      "previous_close": 1801.25,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2019-07-03"
+     }
+    ]
+   },
+   {
+    "chain": "AURUM",
+    "ex_date": "2020-12-23",
+    "kind": "dividend",
+    "cause": "the repaired panel's reading or bounds (amendments 1 and 3)",
+    "held_after_the_rebalance_of": [
+     "2020-11"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [],
+    "repaired": [
+     {
+      "factor": 0.011819611423933396,
+      "previous_close": 985.65,
+      "previous_row_series": "EQ",
+      "row_series": "EQ",
+      "applied_on": "2020-12-23"
+     }
+    ]
+   },
+   {
+    "chain": "STAR",
+    "ex_date": "2024-12-06",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2024-11"
+    ],
+    "difference_on_the_name": 0.09676178755480369,
+    "points_on_the_book": 0.6450785836986912,
+    "default": [
+     {
+      "factor": 0.4800848456280934,
+      "previous_close": 1485.05,
+      "applied_on": "2024-12-20"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.4377293693815023,
+      "previous_close": 1485.05,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2024-12-06"
+     }
+    ]
+   }
+  ],
+  "demerger_residuals": [
+   {
+    "symbol": "ZEEMEDIA",
+    "date": "2010-04-15",
+    "adjusted_return": -0.5283,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "KESARENT",
+    "date": "2010-05-13",
+    "adjusted_return": -0.3217,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SURANAT&P",
+    "date": "2010-08-17",
+    "adjusted_return": -0.5646,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TEXINFRA",
+    "date": "2010-11-01",
+    "adjusted_return": -0.3051,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TRIVENI",
+    "date": "2011-05-03",
+    "adjusted_return": -0.4292,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ORIENTCER",
+    "date": "2011-11-11",
+    "adjusted_return": -0.472,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "PIRPHYTO",
+    "date": "2011-12-23",
+    "adjusted_return": 0.51,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ADANIENT",
+    "date": "2015-06-03",
+    "adjusted_return": -0.8086,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SINTEX",
+    "date": "2017-05-25",
+    "adjusted_return": 0.4441,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   }
+  ],
+  "consolidations_on_a_held_name": []
+ },
+ "W": {
+  "ledger": "trial 127",
+  "actions_on_a_held_name": [
+   {
+    "chain": "ATGL",
+    "ex_date": "2021-06-24",
+    "kind": "dividend",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2021-05",
+     "2021-06"
+    ],
+    "difference_on_the_name": 3.732116139953945e-05,
+    "points_on_the_book": 0.00024880774266359634,
+    "default": [
+     {
+      "factor": 0.9998476399427126,
+      "previous_close": 1640.85,
+      "applied_on": "2021-09-13"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.9998103258601723,
+      "previous_close": 1318.05,
+      "previous_row_series": "BE",
+      "row_series": "BE",
+      "applied_on": "2021-06-24"
+     }
+    ]
+   },
+   {
+    "chain": "AURUM",
+    "ex_date": "2020-12-23",
+    "kind": "dividend",
+    "cause": "the repaired panel's reading or bounds (amendments 1 and 3)",
+    "held_after_the_rebalance_of": [
+     "2020-11"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [],
+    "repaired": [
+     {
+      "factor": 0.011819611423933396,
+      "previous_close": 985.65,
+      "previous_row_series": "EQ",
+      "row_series": "EQ",
+      "applied_on": "2020-12-23"
+     }
+    ]
+   },
+   {
+    "chain": "STAR",
+    "ex_date": "2024-12-06",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2024-11"
+    ],
+    "difference_on_the_name": 0.09676178755480369,
+    "points_on_the_book": 0.6450785836986912,
+    "default": [
+     {
+      "factor": 0.4800848456280934,
+      "previous_close": 1485.05,
+      "applied_on": "2024-12-20"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.4377293693815023,
+      "previous_close": 1485.05,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2024-12-06"
+     }
+    ]
+   }
+  ],
+  "actions_on_a_held_name_beyond_a_tenth_of_a_point": [
+   {
+    "chain": "AURUM",
+    "ex_date": "2020-12-23",
+    "kind": "dividend",
+    "cause": "the repaired panel's reading or bounds (amendments 1 and 3)",
+    "held_after_the_rebalance_of": [
+     "2020-11"
+    ],
+    "difference_on_the_name": null,
+    "points_on_the_book": null,
+    "default": [],
+    "repaired": [
+     {
+      "factor": 0.011819611423933396,
+      "previous_close": 985.65,
+      "previous_row_series": "EQ",
+      "row_series": "EQ",
+      "applied_on": "2020-12-23"
+     }
+    ]
+   },
+   {
+    "chain": "STAR",
+    "ex_date": "2024-12-06",
+    "kind": "demerger",
+    "cause": "applied on the ex-date, not at the next EQ row: the stock was in trade-for-trade",
+    "held_after_the_rebalance_of": [
+     "2024-11"
+    ],
+    "difference_on_the_name": 0.09676178755480369,
+    "points_on_the_book": 0.6450785836986912,
+    "default": [
+     {
+      "factor": 0.4800848456280934,
+      "previous_close": 1485.05,
+      "applied_on": "2024-12-20"
+     }
+    ],
+    "repaired": [
+     {
+      "factor": 0.4377293693815023,
+      "previous_close": 1485.05,
+      "previous_row_series": "EQ",
+      "row_series": "BE",
+      "applied_on": "2024-12-06"
+     }
+    ]
+   }
+  ],
+  "demerger_residuals": [
+   {
+    "symbol": "ZEEMEDIA",
+    "date": "2010-04-15",
+    "adjusted_return": -0.5283,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "KESARENT",
+    "date": "2010-05-13",
+    "adjusted_return": -0.3217,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SURANAT&P",
+    "date": "2010-08-17",
+    "adjusted_return": -0.5646,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TEXINFRA",
+    "date": "2010-11-01",
+    "adjusted_return": -0.3051,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "TRIVENI",
+    "date": "2011-05-03",
+    "adjusted_return": -0.4292,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ORIENTCER",
+    "date": "2011-11-11",
+    "adjusted_return": -0.472,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "PIRPHYTO",
+    "date": "2011-12-23",
+    "adjusted_return": 0.51,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "ADANIENT",
+    "date": "2015-06-03",
+    "adjusted_return": -0.8086,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   },
+   {
+    "symbol": "SINTEX",
+    "date": "2017-05-25",
+    "adjusted_return": 0.4441,
+    "held_on_the_day": false,
+    "in_the_book_within_12_months_after": []
+   }
+  ],
+  "consolidations_on_a_held_name": []
+ }
+}

@@ -1,0 +1,556 @@
+<title>Trader Sahab Rulebook</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+  :root {
+    --surface: #fffdf9; --paper: #f7f4ee; --sunken: #efeae1;
+    --ink: #231f1a; --ink-2: #5c544a; --ink-3: #6f665b; --rule: #e6dfd3;
+    --long: #1f6b4a; --long-bg: #e3efe6;
+    --short: #b23a2e; --short-bg: #f8e4df;
+    --wait: #8a5a0e; --wait-bg: #f6ebd3;
+    --focus: #2c5a85; --focus-bg: #e4ecf4;
+    --book: #6b3f7a; --book-bg: #f1e7f1;
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: "Newsreader", Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface: #1e1a15; --paper: #16130f; --sunken: #27221c;
+      --ink: #f1ebe1; --ink-2: #bdb3a5; --ink-3: #968c7f; --rule: #342e26;
+      --long: #6cc49a; --long-bg: #1c3328;
+      --short: #f08a7c; --short-bg: #3e211c;
+      --wait: #e2b25a; --wait-bg: #3a2e18;
+      --focus: #8fb6e0; --focus-bg: #1f2a36;
+      --book: #cfa3db; --book-bg: #33243a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #1e1a15; --paper: #16130f; --sunken: #27221c;
+    --ink: #f1ebe1; --ink-2: #bdb3a5; --ink-3: #968c7f; --rule: #342e26;
+    --long: #6cc49a; --long-bg: #1c3328;
+    --short: #f08a7c; --short-bg: #3e211c;
+    --wait: #e2b25a; --wait-bg: #3a2e18;
+    --focus: #8fb6e0; --focus-bg: #1f2a36;
+    --book: #cfa3db; --book-bg: #33243a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 15px/1.5 var(--sans); font-variant-numeric: tabular-nums;
+  }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  a { color: var(--focus); }
+  code, .ref { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+
+  .bar { background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .bar-in, .page { max-width: 1240px; margin: 0 auto; padding-inline: 24px; }
+  .bar-in { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; padding-block: 14px; }
+  .brand { font: 600 19px/1.25 var(--serif); letter-spacing: -0.005em; }
+  .bar-sub { color: var(--ink-2); font-size: 13px; }
+  .tabs { display: flex; gap: 4px; max-width: 1240px; margin: 0 auto; padding-inline: 24px; overflow-x: auto; }
+  .tab {
+    appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
+    color: var(--ink-2); font: 500 14px/1.5 var(--sans); padding: 10px 14px; cursor: pointer; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .tab .n { color: var(--ink-3); font-weight: 400; margin-left: 4px; }
+
+  .page { padding-block: 32px 64px; }
+  .panels { position: relative; overflow: clip; }
+  .panel[data-off] { position: absolute; inset: 0 auto auto -200vw; width: 100%; visibility: hidden; pointer-events: none; }
+
+  h1 { font: 600 clamp(26px, 4vw, 34px)/1.25 var(--serif); letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
+  h2 { font: 600 20px/1.5 var(--sans); letter-spacing: -0.01em; margin: 0; }
+  .lede { color: var(--ink-2); max-width: 68ch; margin: 0 0 24px; }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0;
+    border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); overflow: hidden; margin-bottom: 24px; }
+  .fact { padding: 14px 20px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; }
+  .fact small { display: block; color: var(--ink-2); font-size: 12px; }
+  .fact b { font-size: 22px; font-weight: 600; }
+  .fact span { color: var(--ink-2); font-size: 13px; }
+  .meter { height: 6px; border-radius: 999px; background: var(--sunken); overflow: hidden; margin-top: 8px; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--long); border-radius: 999px; transition: width .2s; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 16px; }
+  .search { flex: 1 1 260px; min-width: 0; }
+  .search input {
+    width: 100%; font: 400 14px/1.5 var(--sans); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px;
+  }
+  .search input::placeholder { color: var(--ink-3); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    appearance: none; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2);
+    font: 500 13px/1.4 var(--sans); padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--ink-3); }
+  .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .chip .n { opacity: .75; margin-left: 4px; font-weight: 400; }
+  .btn {
+    appearance: none; border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+    font: 500 14px/1.5 var(--sans); padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--ink-3); }
+
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .areas { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .area-btn {
+    appearance: none; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink-2);
+    font: 400 14px/1.4 var(--sans); padding: 7px 10px; border-radius: 6px;
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: baseline;
+  }
+  .area-btn:hover { background: var(--sunken); }
+  .area-btn[aria-pressed="true"] { background: var(--sunken); color: var(--ink); font-weight: 600; }
+  .area-btn .n { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+  .area-btn .meter { grid-column: 1 / -1; height: 3px; margin-top: 3px; }
+
+  .group { margin-bottom: 32px; }
+  .group-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 4px; }
+  .group-head .n { color: var(--ink-3); font-size: 13px; }
+  .group p { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; }
+  .rules { list-style: none; margin: 0; padding: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .rule { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 14px; padding: 14px 20px; border-top: 1px solid var(--rule); }
+  .rule:first-child { border-top: 0; }
+  .rule.done { background: color-mix(in srgb, var(--long-bg) 45%, var(--surface)); }
+  .tick { display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; }
+  .tick input { width: 18px; height: 18px; margin: 0; accent-color: var(--long); cursor: pointer; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-bottom: 4px; }
+  .rid { font: 700 12px/1.4 var(--sans); color: var(--ink-3); letter-spacing: .02em; }
+  .pill { font: 600 12px/1.4 var(--sans); padding: 2px 9px; border-radius: 999px; background: var(--sunken); color: var(--ink-2); }
+  .pill.active { background: var(--long-bg); color: var(--long); }
+  .pill.pending { background: var(--wait-bg); color: var(--wait); }
+  .pill.paper-only { background: var(--book-bg); color: var(--book); }
+  .pill.gap { background: var(--wait-bg); color: var(--wait); text-decoration: none; }
+  .pill.gap:hover { text-decoration: underline; }
+  .when { color: var(--ink-3); font-size: 12px; }
+  .text { font-size: 14px; margin: 0; max-width: 78ch; }
+  .rule.retired .text { color: var(--ink-2); }
+  details.more { margin-top: 8px; }
+  details.more > summary { cursor: pointer; color: var(--focus); font-size: 13px; font-weight: 500; list-style: none; width: fit-content; }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::before { content: "▸ "; }
+  details.more[open] > summary::before { content: "▾ "; }
+  dl.how { margin: 10px 0 2px; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 16px; font-size: 13px;
+    background: var(--sunken); border-radius: 8px; padding: 12px 14px; }
+  dl.how dt { color: var(--ink-2); }
+  dl.how dd { margin: 0; overflow-wrap: anywhere; }
+  .empty { color: var(--ink-2); padding: 32px 0; }
+  .save-note { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+  .save-note.warn { color: var(--wait); }
+  .out { width: 100%; min-height: 140px; margin-top: 8px; font: 12.5px/1.5 var(--mono); color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; }
+
+  .fig { border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); padding: 20px; margin-bottom: 24px; }
+  .fig h2 { margin-bottom: 4px; }
+  .fig p { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; max-width: 78ch; }
+  .fig-scroll { overflow-x: auto; }
+  pre.mermaid { margin: 0; font: 12px/1.5 var(--mono); color: var(--ink-2); background: transparent; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 16px; border-top: 1px solid var(--rule); }
+  thead th { border-top: 0; color: var(--ink-2); font-weight: 500; font-size: 12px; white-space: nowrap; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+
+  @media (max-width: 860px) {
+    .bar-in, .page, .tabs { padding-inline: 16px; }
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .areas { position: static; flex-direction: row; overflow-x: auto; max-height: none; padding-bottom: 4px; }
+    .area-btn { white-space: nowrap; border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 5px 12px; }
+    .area-btn .meter { display: none; }
+    .rule { padding: 12px 14px; gap: 0 10px; }
+    dl.how { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    dl.how dd { margin-bottom: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <span class="brand">Trader Sahab</span>
+    <span class="bar-sub">Rulebook and system design · as of <span id="asof"></span></span>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-checklist" aria-controls="panel-checklist" aria-selected="true">Rules checklist<span class="n" id="tab-n"></span></button>
+    <button class="tab" role="tab" id="tab-architecture" aria-controls="panel-architecture" aria-selected="false">Architecture</button>
+    <button class="tab" role="tab" id="tab-day" aria-controls="panel-day" aria-selected="false">Trading day</button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="panels">
+
+    <section class="panel" id="panel-checklist" role="tabpanel" aria-labelledby="tab-checklist">
+      <h1>Every rule the system follows, and how to check it</h1>
+      <p class="lede">Each rule names the code that enforces it and a way to see it being followed. Tick a rule once you have checked it yourself.</p>
+
+      <div class="facts" id="facts"></div>
+      <p class="save-note" id="save-note">Ticks are kept in this browser.</p>
+
+      <div class="tools">
+        <div class="search">
+          <input id="search" type="search" aria-label="Search rules" placeholder="Search rules, files or settings" autocomplete="off">
+        </div>
+        <div class="seg" id="status-chips" role="group" aria-label="Status"></div>
+      </div>
+      <div class="tools">
+        <div class="seg" role="group" aria-label="More filters">
+          <button class="chip" id="f-unverified" aria-pressed="false">Not yet checked</button>
+          <button class="chip" id="f-gaps" aria-pressed="false">Touches a known gap</button>
+          <button class="chip" id="f-notest" aria-pressed="false">No automated test</button>
+        </div>
+        <button class="btn" id="expand">Open all details</button>
+        <button class="btn" id="copy">Copy my checked list</button>
+      </div>
+      <div id="copy-out" hidden>
+        <p class="save-note">Copying was blocked here. Select the text below and copy it.</p>
+        <textarea class="out" id="copy-text" readonly aria-label="Checked rules"></textarea>
+      </div>
+
+      <div class="layout">
+        <nav class="areas" id="areas" aria-label="Rule areas"></nav>
+        <div id="groups"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-architecture" role="tabpanel" aria-labelledby="tab-architecture" data-off>
+      <h1>How the system is put together</h1>
+      <p class="lede">These diagrams come from the high-level design in the repository. Only Kite can receive an order; every other connection is a read.</p>
+      {{FIGURES}}
+    </section>
+
+    <section class="panel" id="panel-day" role="tabpanel" aria-labelledby="tab-day" data-off>
+      <h1>What happens on a trading day</h1>
+      <p class="lede">All times are IST. Kite logs out at 06:00 every day, so reconnect before 09:15.</p>
+      <div class="table-scroll">{{DAY_TABLE}}</div>
+    </section>
+
+  </div>
+</main>
+
+<script type="application/json" id="rules-data">{{RULES_JSON}}</script>
+<script>
+(function () {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("rules-data").textContent);
+  var RULES = DATA.rules, AREAS = DATA.areas, STATUS = DATA.statuses;
+  var REPO = "https://github.com/harshece16/intraday-trading-agent";
+  var LS_KEY = "ts-rulebook-checks";
+  var checks = {};                    // rule id -> ISO time it was ticked
+  var filter = { q: "", status: "all", area: "all", unverified: false, gaps: false, notest: false };
+  var db = null, allOpen = false;
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function statusWord(s) {
+    return { "active": "Active", "paper-only": "Paper only", "off-by-default": "Off by default", "pending": "Pending", "retired": "Retired" }[s] || s;
+  }
+  function day(iso) {
+    try { return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
+    catch (e) { return ""; }
+  }
+
+  /* ---- saving ticks: the page's database when it is available, else this browser ---- */
+  function loadLocal() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(checks)); return true; } catch (e) { return false; }
+  }
+  function note(text, warn) {
+    var n = $("save-note");
+    n.textContent = text;
+    n.className = "save-note" + (warn ? " warn" : "");
+  }
+  function setCheck(id, on) {
+    var before = checks[id];
+    if (on) checks[id] = new Date().toISOString(); else delete checks[id];
+    paintChecks();
+    if (!db) {
+      if (!saveLocal()) note("This browser is not keeping ticks, so they last only until you close the page.", true);
+      return;
+    }
+    var ref = db.collection("checks").doc(id);
+    var p = on ? ref.set({ checked: true, at: checks[id] }) : ref.delete();
+    p.catch(function () {
+      if (before) checks[id] = before; else delete checks[id];
+      paintChecks();
+      note("That tick could not be saved. Try again in a moment.", true);
+    });
+  }
+  function connect() {
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    window.claude.use("db").then(function (got) {
+      if (!got) return;
+      db = got;
+      db.collection("checks").onSnapshot(function (snap) {
+        var next = {};
+        snap.docs.forEach(function (d) {
+          var body = d.data() || {};
+          if (body.checked) next[d.id] = body.at || new Date().toISOString();
+        });
+        checks = next;
+        paintChecks();
+        note("Ticks are saved to this page, so they follow you to any device.");
+      }, function () {
+        db = null;
+        checks = loadLocal();
+        paintChecks();
+        note("Ticks are kept in this browser.");
+      });
+    }).catch(function () {});
+  }
+
+  /* ---- filtering ---- */
+  function hay(r) {
+    return [r.id, r.rule, r.why, r.enforced_in, r.config, r.verify, r.source, r.test].join(" ").toLowerCase();
+  }
+  function shown(r, ignoreArea) {
+    if (!ignoreArea && filter.area !== "all" && r.area !== filter.area) return false;
+    if (filter.status !== "all" && r.status !== filter.status) return false;
+    if (filter.unverified && checks[r.id]) return false;
+    if (filter.gaps && !(r.issues && r.issues.length)) return false;
+    if (filter.notest && r.test) return false;
+    if (filter.q && r._hay.indexOf(filter.q) === -1) return false;
+    return true;
+  }
+
+  /* ---- building the page ---- */
+  function fact(label, big, small, meterId) {
+    var f = el("div", "fact");
+    f.appendChild(el("small", null, label));
+    var b = el("b", null, big); f.appendChild(b);
+    if (small) { f.appendChild(document.createTextNode(" ")); f.appendChild(el("span", null, small)); }
+    if (meterId) { var m = el("div", "meter"); var i = el("i"); i.id = meterId; m.appendChild(i); f.appendChild(m); b.id = meterId + "-n"; }
+    return f;
+  }
+  function buildFacts() {
+    var by = {};
+    RULES.forEach(function (r) { by[r.status] = (by[r.status] || 0) + 1; });
+    var gaps = RULES.filter(function (r) { return r.issues && r.issues.length; }).length;
+    var tested = RULES.filter(function (r) { return r.test; }).length;
+    var box = $("facts");
+    box.appendChild(fact("Checked by you", "0", "of " + RULES.length, "m-all"));
+    box.appendChild(fact("Enforced now", String((by["active"] || 0) + (by["paper-only"] || 0)), "rules"));
+    box.appendChild(fact("Switched off or pending", String((by["off-by-default"] || 0) + (by["pending"] || 0)), "rules"));
+    box.appendChild(fact("Retired", String(by["retired"] || 0), "kept on record"));
+    box.appendChild(fact("Covered by a test", String(tested), "of " + RULES.length));
+    box.appendChild(fact("Touch a known gap", String(gaps), "rules"));
+  }
+  function buildStatusChips() {
+    var box = $("status-chips");
+    var opts = [["all", "All"]].concat(Object.keys(STATUS).map(function (k) { return [k, statusWord(k)]; }));
+    opts.forEach(function (o) {
+      var n = o[0] === "all" ? RULES.length : RULES.filter(function (r) { return r.status === o[0]; }).length;
+      if (!n) return;
+      var b = el("button", "chip", o[1]);
+      b.appendChild(el("span", "n", String(n)));
+      b.setAttribute("aria-pressed", o[0] === "all" ? "true" : "false");
+      b.dataset.status = o[0];
+      b.addEventListener("click", function () {
+        filter.status = o[0];
+        Array.prototype.forEach.call(box.children, function (c) { c.setAttribute("aria-pressed", c === b ? "true" : "false"); });
+        paintList();
+      });
+      box.appendChild(b);
+    });
+  }
+  function buildAreas() {
+    var box = $("areas");
+    function add(id, title) {
+      var b = el("button", "area-btn");
+      b.dataset.area = id;
+      b.setAttribute("aria-pressed", id === "all" ? "true" : "false");
+      b.appendChild(el("span", null, title));
+      b.appendChild(el("span", "n"));
+      var m = el("div", "meter"); m.appendChild(el("i")); b.appendChild(m);
+      b.addEventListener("click", function () {
+        filter.area = id;
+        Array.prototype.forEach.call(box.children, function (c) { c.setAttribute("aria-pressed", c === b ? "true" : "false"); });
+        paintList();
+      });
+      box.appendChild(b);
+    }
+    add("all", "All areas");
+    AREAS.forEach(function (a) { add(a.id, a.title); });
+  }
+  function row(dt, dd, mono) {
+    if (!dd) return null;
+    var f = document.createDocumentFragment();
+    f.appendChild(el("dt", null, dt));
+    var d = el("dd", mono ? "ref" : null, dd);
+    f.appendChild(d);
+    return f;
+  }
+  function buildRule(r) {
+    var li = el("li", "rule " + r.status);
+    li.id = "rule-" + r.id;
+    var tick = el("div", "tick");
+    var cb = el("input");
+    cb.type = "checkbox"; cb.id = "check-" + r.id;
+    cb.setAttribute("aria-label", "I have checked " + r.id);
+    cb.addEventListener("change", function () { setCheck(r.id, cb.checked); });
+    tick.appendChild(cb);
+    li.appendChild(tick);
+
+    var body = el("div");
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", "rid", r.id));
+    meta.appendChild(el("span", "pill " + r.status, statusWord(r.status)));
+    (r.issues || []).forEach(function (n) {
+      var a = el("a", "pill gap", "Known gap #" + n);
+      a.href = REPO + "/issues/" + n; a.target = "_blank"; a.rel = "noopener";
+      meta.appendChild(a);
+    });
+    var when = el("span", "when"); when.id = "when-" + r.id; meta.appendChild(when);
+    body.appendChild(meta);
+    body.appendChild(el("p", "text", r.rule));
+
+    var more = el("details", "more");
+    more.appendChild(el("summary", null, "Why, where and how to check"));
+    var dl = el("dl", "how");
+    [row("Why", r.why), row("Enforced in", r.enforced_in, true), row("Setting", r.config, true),
+     row("How to check", r.verify), row("Test", r.test, true), row("Source", r.source)].forEach(function (x) { if (x) dl.appendChild(x); });
+    more.appendChild(dl);
+    body.appendChild(more);
+    li.appendChild(body);
+    r._li = li; r._cb = cb; r._when = when; r._more = more;
+    return li;
+  }
+  function buildGroups() {
+    var box = $("groups");
+    AREAS.forEach(function (a) {
+      var rules = RULES.filter(function (r) { return r.area === a.id; });
+      if (!rules.length) return;
+      var g = el("section", "group");
+      g.id = "area-" + a.id;
+      var head = el("div", "group-head");
+      head.appendChild(el("h2", null, a.title));
+      var n = el("span", "n"); head.appendChild(n);
+      g.appendChild(head);
+      g.appendChild(el("p", null, a.blurb));
+      var ul = el("ul", "rules");
+      rules.forEach(function (r) { ul.appendChild(buildRule(r)); });
+      g.appendChild(ul);
+      box.appendChild(g);
+      a._g = g; a._n = n; a._rules = rules;
+    });
+    var none = el("p", "empty", "No rule matches these filters.");
+    none.id = "none"; none.hidden = true;
+    box.appendChild(none);
+  }
+
+  /* ---- painting ---- */
+  function paintChecks() {
+    var done = 0;
+    RULES.forEach(function (r) {
+      var at = checks[r.id];
+      if (at) done++;
+      r._cb.checked = !!at;
+      r._li.classList.toggle("done", !!at);
+      r._when.textContent = at ? "Checked " + day(at) : "";
+    });
+    $("m-all-n").textContent = String(done);
+    $("m-all").style.width = (RULES.length ? (100 * done / RULES.length) : 0) + "%";
+    $("tab-n").textContent = done + "/" + RULES.length;
+    Array.prototype.forEach.call($("areas").children, function (b) {
+      var id = b.dataset.area;
+      var set = id === "all" ? RULES : RULES.filter(function (r) { return r.area === id; });
+      var d = set.filter(function (r) { return checks[r.id]; }).length;
+      b.children[1].textContent = d + "/" + set.length;
+      b.children[2].firstChild.style.width = (set.length ? 100 * d / set.length : 0) + "%";
+    });
+    if (filter.unverified) paintList();
+  }
+  function paintList() {
+    var any = false;
+    AREAS.forEach(function (a) {
+      if (!a._g) return;
+      var n = 0;
+      a._rules.forEach(function (r) {
+        var ok = shown(r);
+        r._li.hidden = !ok;
+        if (ok) n++;
+      });
+      a._g.hidden = n === 0;
+      a._n.textContent = n === a._rules.length ? n + " rules" : n + " of " + a._rules.length + " shown";
+      if (n) any = true;
+    });
+    $("none").hidden = any;
+  }
+
+  /* ---- controls ---- */
+  function toggleChip(id, key) {
+    var b = $(id);
+    b.addEventListener("click", function () {
+      filter[key] = !filter[key];
+      b.setAttribute("aria-pressed", filter[key] ? "true" : "false");
+      paintList();
+    });
+  }
+  function checkedList() {
+    var lines = ["Trader Sahab rulebook: rules I have checked (" + Object.keys(checks).length + " of " + RULES.length + ")", ""];
+    RULES.forEach(function (r) {
+      if (checks[r.id]) lines.push("- [x] " + r.id + " (" + day(checks[r.id]) + "): " + r.rule);
+    });
+    return lines.join("\n");
+  }
+  function selectTab(name, push, jump) {
+    ["checklist", "architecture", "day"].forEach(function (t) {
+      var on = t === name;
+      $("tab-" + t).setAttribute("aria-selected", on ? "true" : "false");
+      $("tab-" + t).tabIndex = on ? 0 : -1;
+      var p = $("panel-" + t);
+      if (on) { p.removeAttribute("data-off"); p.removeAttribute("inert"); p.removeAttribute("aria-hidden"); }
+      else { p.setAttribute("data-off", ""); p.setAttribute("inert", ""); p.setAttribute("aria-hidden", "true"); }
+    });
+    if (push) { try { history.replaceState(null, "", "#" + name); } catch (e) {} }
+    if (push || jump) { try { window.scrollTo(0, 0); } catch (e) {} }
+  }
+
+  RULES.forEach(function (r) { r._hay = hay(r); });
+  $("asof").textContent = day(DATA.as_of + "T00:00:00");
+  buildFacts(); buildStatusChips(); buildAreas(); buildGroups();
+  checks = loadLocal();
+  paintChecks(); paintList();
+
+  var t;
+  $("search").addEventListener("input", function (e) {
+    clearTimeout(t);
+    t = setTimeout(function () { filter.q = e.target.value.trim().toLowerCase(); paintList(); }, 120);
+  });
+  toggleChip("f-unverified", "unverified");
+  toggleChip("f-gaps", "gaps");
+  toggleChip("f-notest", "notest");
+  $("expand").addEventListener("click", function () {
+    allOpen = !allOpen;
+    RULES.forEach(function (r) { r._more.open = allOpen; });
+    $("expand").textContent = allOpen ? "Close all details" : "Open all details";
+  });
+  $("copy").addEventListener("click", function () {
+    var text = checkedList();
+    var done = function () { $("copy").textContent = "Copied"; setTimeout(function () { $("copy").textContent = "Copy my checked list"; }, 1600); };
+    var fallback = function () { $("copy-text").value = text; $("copy-out").hidden = false; $("copy-text").focus(); $("copy-text").select(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
+  ["checklist", "architecture", "day"].forEach(function (name) {
+    $("tab-" + name).addEventListener("click", function () { selectTab(name, true); });
+  });
+  function fromHash(jump) {
+    var name = (location.hash || "").replace("#", "");
+    selectTab(["architecture", "day"].indexOf(name) > -1 ? name : "checklist", false, jump === true);
+  }
+  window.addEventListener("hashchange", function () { fromHash(true); });
+  fromHash(false);
+  connect();
+})();
+</script>

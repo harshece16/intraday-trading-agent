@@ -48,10 +48,15 @@ def test_a_closed_position_is_not_restored():
     assert "CHOLAFIN" not in AppState(watchlist=[], paper_mode=True).positions
 
 
-def test_only_the_current_mode_is_restored():
+def test_a_live_leg_is_restored_in_either_mode_and_a_paper_leg_only_in_paper():
+    # #156: a restart comes back in Paper, and skipping the live leg left real money unwatched
     _leg("P4", "LIVECO", "BUY", 5, 200.0, mode="live", note=CHECKLIST)
-    assert "LIVECO" not in AppState(watchlist=[], paper_mode=True).positions
-    assert AppState(watchlist=[], paper_mode=False).positions["LIVECO"]["quantity"] == 5
+    _leg("P4b", "PAPERCO", "BUY", 5, 200.0, mode="paper", note=CHECKLIST)
+    paper, live = AppState(watchlist=[], paper_mode=True), AppState(watchlist=[], paper_mode=False)
+    assert paper.positions["LIVECO"]["quantity"] == 5 and paper.positions["LIVECO"]["live"] is True
+    assert paper.positions["PAPERCO"]["live"] is False
+    assert live.positions["LIVECO"]["quantity"] == 5
+    assert "PAPERCO" not in live.positions
 
 
 def test_yesterdays_open_leg_is_not_restored():
