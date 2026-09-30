@@ -3835,7 +3835,7 @@ Daily bars and the bars of earlier sessions still come from the delayed feed, wh
 | Momentum book | Shows the +0.71% band. The running backend had shown +0.82% until the restart |
 | Screener, Overview, Pre-market and Momentum book pages | Read in the browser, with no error in the console |
 
-**Found by the deploy (#198, not fixed).** The day's list is held in memory, so the restart chose the list for 2026-09-29 again and put HINDALCO in place of TVSMOTOR. Nothing was affected, because the market was closed. A restart inside a session would change the list part-way through the day.
+**Found by the deploy (#198, fixed in §106).** The day's list was held in memory, so the restart chose the list for 2026-09-29 again and put HINDALCO in place of TVSMOTOR. Nothing was affected, because the market was closed. A restart inside a session would have changed the list part-way through the day.
 
 **What this does not do.** It does not make the intraday side profitable. No selection rule tested here predicts direction after costs. This makes the scanner's numbers current and correct, which any later test of them needs.
 
@@ -3883,6 +3883,24 @@ The owner asked, before going to sleep, for Kronos to be added if it passed, for
 **What this means.** Nothing is added to Trader Sahab. Some of the models rank the next hour a little better or worse than chance with statistical significance, but the effect is at most a few basis points against a round trip of 16.63 bp a leg. This is the project's standing finding again, measured eight more ways: at this horizon and these costs, the entry signal is not the binding constraint. The trial count of record is now 202. Kronos's live shadow still runs today as a labelled record on the Kronos page.
 
 Results: `results-kronos-feature-ic.md`, `results-tsfm-family.md`, `results-qlib-lgbm-alpha158.md`, `results-combo-search.md`.
+
+### 106. The day's list survives a restart
+
+**The bug (#198).** The day's list was held in memory only. A backend restart lost it, and the first scan after the restart chose it again from the data of that moment. The restart of 2026-09-29 at 18:08, after the close, put HINDALCO in place of TVSMOTOR, and the Screener then said the list was "fixed at the first scan of the session at 06:08 PM", which is not what happened that day. The watchdog restarts a backend that stops answering, so a restart inside a session is an expected event. The engine, the order-book sampler and Jev's 09:45 round would each have seen a different list part-way through the day.
+
+**The fix.** The list is written to the journal when it is fixed, one row per session in a new `day_lists` table, and read back when the backend starts.
+
+- A list already fixed for the session is used as it is: the same stocks, the same time, and the same "before the open" or "at the first scan". The Screener's "Fixed at ..." line keeps the time it was first fixed.
+- The first list written for a session stands. A second write for the same session is ignored.
+- A list for an earlier session is not reused. The first scan that reads a later session chooses the new list, as before.
+- After a restart the engine watches the list from the first tick. Until now the watchlist held only the pinned stocks until the first scan finished, and the ordinary pre-market read could seed it with a list chosen again. The order-book sampler reads that watchlist, so it now samples the same stocks before and after a restart. Jev's round reads the first scan after the restart, which returns the fixed list.
+- If the journal cannot be written, the list is still fixed in memory for the running process, as it was before this change.
+
+**Checked.** On a copy of the live journal on 2026-09-30, the list the engine fixed at 08:45:10 (25 stocks) was fixed again through this code, and a second engine was started on the same copy, as a restart would. It read back the same 25 stocks with the time 08:45:10 and "before the open", watched them from its start, and its next scan's list equalled the running engine's latest scan (09:36). The new tests were also run against the code on `main`, and fail there: a scanner started on the same journal chooses the list again (the three most-traded stocks in place of the three fixed).
+
+**What this does not do.** It does not change the rule that chooses the list (SCN-14, SCN-15) or make the intraday side profitable. It removes one way for the list to change inside a session. Both running tests have a dated note: `prereg-orderbook.md` amendment 5 and `prereg-jev-book.md` clarification 8.
+
+Rule: SCN-24. Files: `backend/database.py`, `backend/scanner.py`, `backend/trading_engine.py`, `backend/tests/test_day_list_restart.py`, `backend/tests/test_scanner_live_feed.py`, `backend/tests/test_scanner_guards.py`.
 
 ### 109. Market breadth and intermarket moves, measured (run 2026-09-25, merged 2026-09-30): neither predicts the session by enough to trade
 

@@ -19,6 +19,8 @@ Tables:
   activity          the plain-English activity log
   research_briefs   one row per Research Desk brief (research_desk.py): the grounded
                     snapshot, every agent's validated output, the rating, tokens, cost
+  day_lists         one row per session: the day's list, written once when it is
+                    fixed, so a restart keeps it (#198)
 
 Single-writer (the trading engine's background thread) so no connection
 pooling is needed; SQLite's own locking covers the occasional API-thread read.
@@ -143,6 +145,10 @@ CREATE TABLE IF NOT EXISTS manual_reviews (
 CREATE INDEX IF NOT EXISTS idx_manual_reviews_date ON manual_reviews(session_date);
 CREATE TABLE IF NOT EXISTS control (
     key TEXT PRIMARY KEY, value TEXT, ts REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS day_lists (
+    session_date TEXT PRIMARY KEY, symbols_json TEXT NOT NULL, fixed_ts REAL NOT NULL,
+    fixed_when TEXT, mode TEXT
 );
 """
 
@@ -929,6 +935,41 @@ def set_control(key, value):
     with _conn() as c:
         c.execute("INSERT OR REPLACE INTO control (key, value, ts) VALUES (?, ?, ?)",
                   (key, json.dumps(value), time.time()))
+
+
+def record_day_list(session_date, symbols, fixed_ts, fixed_when, mode="liquidity"):
+    """The day's list, written when it is fixed (#198). The first list written
+    for a session stands: a later write for the same session is ignored, so
+    the list read back after a restart is the one the session started with,
+    with the time it was first fixed. Returns the list the journal holds."""
+    with _conn() as c:
+        c.execute("INSERT OR IGNORE INTO day_lists (session_date, symbols_json, fixed_ts, fixed_when, mode) "
+                  "VALUES (?, ?, ?, ?, ?)", (session_date, json.dumps(list(symbols)), fixed_ts, fixed_when, mode))
+    return get_day_list(session_date)
+
+
+def _day_list_row(row):
+    if row is None:
+        return None
+    return {"session": row["session_date"], "symbols": json.loads(row["symbols_json"]),
+            "fixed_ts": row["fixed_ts"], "when": row["fixed_when"], "mode": row["mode"]}
+
+
+def get_day_list(session_date):
+    """The list fixed for this session, or None."""
+    with _conn() as c:
+        row = c.execute("SELECT * FROM day_lists WHERE session_date = ?", (session_date,)).fetchone()
+    return _day_list_row(row)
+
+
+def latest_day_list(mode="liquidity"):
+    """The most recent list fixed in this mode: the one a scanner that had
+    been running all along would hold. Whether it is still the current
+    session's is the scanner's decision (Scanner.day_list_for)."""
+    with _conn() as c:
+        row = c.execute("SELECT * FROM day_lists WHERE mode = ? ORDER BY session_date DESC LIMIT 1",
+                        (mode,)).fetchone()
+    return _day_list_row(row)
 
 
 def session_summary_logged_on(session_date):
