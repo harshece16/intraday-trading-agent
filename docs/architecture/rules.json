@@ -898,6 +898,18 @@
    "test": null
   },
   {
+   "id": "FNO-08",
+   "area": "fno",
+   "status": "off-by-default",
+   "rule": "No stock-option buy in a stock on NSE's F&O ban list (Market Wide Position Limit) for the day. The check runs after the confidence gate and before any contract lookup, quote or order. A list that cannot be read, or is for another trade date, is unknown: stock-option buys are refused and the reason says the status is unknown. Index options are exempt.",
+   "why": "Increasing a derivative position in a banned stock is penalised (₹5,000 to ₹1,00,000, NISM Series VIII), so an unknown status is not treated as clear. The scanner's guard (SCN-17, SCN-20) reads the same list but lets an unknown list exclude nothing, because a cash trade carries no such penalty.",
+   "enforced_in": "backend/fno_risk.py:mwpl_block_reason; backend/trading_engine.py:_try_enter_fno; backend/nse_feed.py:fno_ban_list",
+   "config": "FNO.enabled = False, index_underlyings = [\"NIFTY\", \"BANKNIFTY\"]",
+   "verify": "activity 'F&O entry signal skipped — In NSE's F&O ban for …' or '… ban status is unknown …'; fno_evaluations block_reason",
+   "source": "README §108; NSE fo_secban.csv",
+   "test": "backend/tests/test_fno_mwpl.py::test_the_engine_refuses_a_banned_underlying_and_journals_why, backend/tests/test_fno_mwpl.py::test_the_engine_refuses_stock_options_when_the_list_is_unknown"
+  },
+  {
    "id": "SCN-01",
    "area": "scanner",
    "status": "active",

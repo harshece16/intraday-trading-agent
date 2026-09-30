@@ -1328,6 +1328,8 @@ class TradingEngine:
             log_eval(False, reason)
             return
 
+        # NSE's MWPL ban (FNO-08), read from the same list as the scanner's ban
+        # guard. Checked before any contract lookup, quote or order.
         mwpl = fno_risk.mwpl_block_reason(underlying, nse_feed.fno_ban_list(),
                                           datetime.now(IST).date().isoformat(), cfg["index_underlyings"])
         if mwpl:
