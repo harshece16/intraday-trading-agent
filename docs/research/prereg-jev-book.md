@@ -298,3 +298,92 @@ chosen again: the first scan after the restart returns the list fixed before
 the open, and the round reads that scan as before.
 
 **Unchanged:** everything else in the protocol.
+
+---
+
+# Clarification 9 — 2026-09-30, written before the change is deployed
+
+**What had been seen:** the status of each recorded day and how many decisions
+it holds: three closed rounds, 2026-09-28 to 2026-09-30, 15 decisions each,
+every one with a live entry price and none excluded. No fill, score or verdict
+was read in writing this. Neither case below has happened yet.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §113, #158.
+
+1. **A round interrupted part-way keeps its decisions.** If TypeSafe fails
+   after Jev has already answered for some stocks, the day was recorded as
+   "Jev unavailable", and the square-off closes only open rounds. Those
+   positions, opened at a live Kite price, never closed and never counted.
+   Now the day stays open with the decisions made so far, they close at 15:08
+   like any other round, and the stop is recorded beside them (the time, the
+   error, and the stocks not asked). An error on the first stock still records
+   the day as "Jev unavailable", as before.
+2. **"Live prices" means a Kite session that is still alive.** The gate
+   checked only that a token was stored and had not been rejected. Zerodha
+   ends every session at 06:00 IST, so on a morning without a reconnect the
+   gate passed, Jev was asked, and every fill failed. Such a day is now
+   recorded as "no live prices" and Jev is not asked, as clarification 3
+   intended. The live mark and the fills use the same check.
+3. **The round stops when Kite stops.** The gate is asked again before each
+   stock. If Kite rejects the session part-way, the remaining stocks are not
+   asked, and the round is recorded as in 1 (reason "no live prices"). Until
+   now each of them was asked and then excluded for want of an entry price.
+
+**How the record is read:** a decision made before a stop counts like any
+other. The stop comes from an outage at TypeSafe or Kite, not from any price,
+and the stocks are asked in the list's fixed order, so the decisions kept do
+not depend on how they turned out. Dropping them would make the sample depend
+on a later outage. A session still counts toward the 60 only if at least one
+decision was priced live at both ends (clarification 3).
+
+**Unchanged:** the list, the snapshot, the three questions, fills from Kite
+only, the cost, the comparison with the scanner's side, the pass rule and the
+kill rule.
+
+---
+
+# Clarification 10 — 2026-09-30, written before the change is deployed
+
+**What had been seen:** no fill, verdict or score of this book was read in
+writing this.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §115, the scanner audit's rule 3.8
+(`scanner-audit-2026-09-28.md`).
+
+The scanner no longer sets a side. It still scores every stock as a long and
+as a short and still works out the stronger of the two, but the engine no
+longer refuses an entry on the other side: the checklist's own reading picks
+the side. The scanner row carries the stronger side as `score_side`, and its
+`side` is empty.
+
+**What this does to the book: nothing in its inputs or its rules.**
+
+- **What Jev sees.** The snapshot's `side` is filled from `score_side`, under
+  the same key, so it holds the same value as before: the stronger of the old
+  score's two readings, worked out the same way. The scanner row gains new
+  fields (the shadow inputs of README §115), and the scan's market summary
+  gains the NIFTY's opening value. None of them is among the fields the
+  snapshot copies. A test builds the snapshot from the same stock-time as the
+  scanner wrote it before and after the change and finds them identical
+  (`test_jevs_snapshot_is_the_same_as_before_the_change`).
+- **The baseline.** Pass rule 3 scores "the scanner's own side" on the same
+  stock-days. That is the same side, read the same way (`jev_book.scanner_side`),
+  so the baseline is scored exactly as before.
+- The list, the three questions, the fills from Kite only, the cost, the pass
+  rule and the kill rule are unchanged.
+
+**What stops being true.** The protocol calls the baseline "what the engine
+would do without Jev". From this change the engine does not act on that side.
+The baseline keeps its definition, the old score's stronger side, because
+replacing it part-way through would change pass rule 3. Rule 3 therefore reads
+from now on: Jev must beat the old score's side on the same stock-days. What
+the engine itself would do without Jev is nothing: the confidence gate has
+stopped every automatic entry since README §70. That is always-skip, which the
+protocol already reports as 0.
+
+**How the record is read:** unchanged. Rounds before and after the change are
+shown the same snapshot fields and scored against the same baseline. The change
+was not made to move Jev's score; it follows from the audit's finding that the
+old score carries no information.

@@ -75,12 +75,12 @@ duration apart.
 
 1. `_sync_capital()`: at most every 300 s, or at once after a mode change. In live mode it also runs position reconciliation.
 2. Day rollover on the first tick of a new date: daily P&L and the open-position count reset.
-3. Set the phase, `market_status`, `next_open` and `holiday`.
+3. Set the phase, `market_status`, `next_open`, `holiday` and `holiday_calendar_missing` (set when the year has no NSE holiday list, [#162](https://github.com/harshece16/intraday-trading-agent/issues/162)).
 4. `_check_preopen_kite()`: once per trading day between 08:45 and the close.
 5. Holiday notice, once per date.
 6. Session summary, once, on a trading day at or after 15:30.
 7. If closed: `momentum_book.maybe_start_evening_job`.
-8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails.
+8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails. Each read first logs an error if the year has no NSE holiday list; start-up logs the same.
 9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
 11. If open: `jev_book.maybe_decide`. If in the square-off window: `jev_book.maybe_close`.
@@ -98,17 +98,21 @@ duration apart.
    3. `_check_stop_take()`. If it exits, stop here.
    4. Attach news and fundamentals and run the strategy function on the finished bars.
    5. Store the state and indicators. Journal the read to `checklist_evals`.
-   6. Record the signal.
+   6. Record the signal. An entry signal is also left in `_fno_signals` for `_process_fno()`.
    7. Exits the brain asks for.
    8. Entries: `_try_enter()`. If blocked, give the day's entry back.
    9. If flat and the review queue is on: `_offer_near_misses()`.
-4. `_process_fno()`: options stops, then options entries.
+4. `_process_fno()`: stops of open options positions, whether or not F&O is switched on, then options entries on this tick's entry signals.
 5. If a kill switch left anything open: `_square_off_all(reason="kill_switch")`.
 6. `stop_watcher.sync()`.
 
 **Phase `square_off_window`:** `_square_off_all()` exits each cash position
 at the live price, or at the average price if that read fails. Then every
 options position is closed. This repeats every tick until the book is flat.
+Then `_record_session_closes()`: once a session, Kite's last traded price of
+every universe stock and the NIFTY goes to `session_closes`, the 15:08
+outcome of the shadow log (README §115). Without Kite nothing is written; it
+is tried again each tick of the window and said once.
 
 **Failure handling.** `tick()` wraps `_tick_impl()` and catches everything.
 `_process_symbol` catches its own errors and logs each distinct message
@@ -123,11 +127,11 @@ the API and the WebSocket read it through `snapshot()`.
 | Field | Holds |
 | --- | --- |
 | `paper_mode`, `entries_paused`, `running` | Mode and control |
-| `market_status`, `holiday`, `next_open` | Market clock |
+| `market_status`, `holiday`, `next_open`, `holiday_calendar_missing` | Market clock; the last is `{year, message}` when the year has no NSE holiday list |
 | `watchlist`, `candles` | Watched symbols; last 200 candles each |
 | `strategy_state`, `indicators` | Per-symbol checklist state, including `entries_today` |
 | `positions` | `{quantity, avg_price, entry_atr, stop_price, target_price, initial_risk, position_id, charges}` per symbol |
-| `fno_positions` | Open option positions |
+| `fno_positions` | Open option positions, keyed by underlying; each carries `live`, `entry_lots` and `realized_so_far` |
 | `review_queue`, `scanner`, `market`, `premarket` | Read models for the dashboard |
 | `activity` | Newest first, capped at 300 |
 | `trades`, `signals_log` | Today's trades; last 100 signals |
@@ -139,7 +143,7 @@ the API and the WebSocket read it through `snapshot()`.
 | `record_trade(...)` | Writes the in-memory list and the `trades` table |
 | `log(kind, message, symbol, level)` | Writes `activity` in memory and in the database, then hands the line to Telegram. A Telegram failure never breaks the log |
 | `snapshot()` | The dashboard's view of everything |
-| `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts and open positions from the journal |
+| `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts, open positions and open option positions from the journal |
 
 ### 2.4 Restart recovery
 
@@ -151,6 +155,15 @@ Entry charges are carried over.
 A restart always comes back in Paper. A restored live position keeps
 `live: True`, so its exit is a real order, and `_verify_live_position()`
 checks it against Kite's positions before any order is sent.
+
+Open option positions come back through `_rehydrate_fno_positions()` (#187):
+every `fno_trades` row opened today with no exit, rebuilt with its entry leg
+in `trades` (mode, entry charges, "stop X, target Y") and the quantity its
+exit legs left open. Their legs are kept out of `_rehydrate_open_positions()`,
+which used to restore one as a cash position in the option's tradingsymbol,
+and `_rehydrate_entry_counts()` counts them on the underlying. A restored live
+option is checked against Kite's day book by `_verify_live_fno()` before any
+order is sent.
 
 The day's list is read back too (#198). `Scanner.__init__` loads the latest
 row of `day_lists`, so the scanner holds what it held before the restart, with
@@ -220,7 +233,7 @@ reach `_try_enter`, where the confidence gate stops every one.
 | 1 | Already positioned, or another thread is entering this symbol | `_try_enter` |
 | 2 | Entries paused | `_entry_block_reason` |
 | 3 | Kite holds a position in this symbol that the engine doesn't track | `_entry_block_reason` |
-| 4 | The scan excluded the stock, or favours the other side | `_entry_block_reason` |
+| 4 | The scan excluded the stock; or a short on a long-only stock (fixed price band), or with `SCANNER["allow_shorts"]` off. The scan sets no side, so disagreeing with the old score blocks nothing (README §115) | `_entry_block_reason` |
 | 5 | Risk-off and long, or risk-on and short | `_entry_block_reason` |
 | 6 | Daily loss limit reached | `_entry_block_reason` |
 | 7 | Three positions already open | `_entry_block_reason` |
@@ -293,7 +306,7 @@ With no order book to read, a paper entry proceeds and is recorded as
 | Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost, and `money`: a hit target and a stop after costs (`target_net_rs`, `stop_net_rs`), and the break-even rate or "cannot break even at any win rate" |
 | Expiry | 300 seconds after the offer |
 | Approval | `approve_review()` needs a pending, unexpired card. In live mode it also needs `confirm_live` |
-| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. It does **not** re-apply the minimum R:R or the cost floor: the approval overrides the card's blocker |
+| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. A card blocked on R:R is held to `REVIEW_QUEUE.min_net_rrr` again: `floor_reason()` on the net R:R at the live price, with the card's stop, target and `cost_pct`; under it the approval is refused, journaled as `refused` with the reason and `net_rrr_live` (#211). It does **not** re-apply the checklist's minimum R:R (1.5) or the stop-to-cost floor: the approval overrides the card's blocker |
 | Shadow | `shadow_outcome()` replays every unapproved card and every held-back near-miss as if approved at the offer, with the same slippage and charges. If one bar touches both stop and target, the stop is assumed first |
 
 The queue's switch is in memory only. A restart turns it off.
@@ -392,29 +405,35 @@ The slippage figure is an assumption that has never been measured
 
 ## 6. Options path
 
-Switched off (`FNO.enabled = False`). When on, it runs only in the open
-phase and only with Kite credentials.
+Switched off (`FNO.enabled = False`). When on, entries run only in the open
+phase and only with Kite credentials. The switch is in memory, so a restart
+turns it off; open option positions are watched and squared off either way.
 
 | Step | Behaviour | Module |
 | --- | --- | --- |
 | Side | A call on a long read, a put on a short read. Buying only | `_try_enter_fno` |
-| Gate | Confidence at least 60; one contract per underlying; shared position and loss limits | `_try_enter_fno` |
-| Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options; index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list` |
+| Signal | The same edge-triggered entry signal as cash, left by `_process_symbol` | `_process_fno` |
+| Entry rules | One entry per stock per day, shared with cash; then every `_entry_block_reason` rule on the underlying (pause, untracked position, scanner exclusion and short limits, market bias, loss limit, position cap, sector cap counting cash and options); and no untracked Kite position in a contract on it | `_fno_entry_block_reason`, `fno_risk.contract_on` |
+| Gate | Confidence at least 60; one contract per underlying, an unconfirmed order counting as one | `_try_enter_fno` |
+| Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options, and the reason says when the last fetch failed (`nse_feed.failure_text`); index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list`, `nse_feed.last_failure` |
 | Expiry | Nearest monthly expiry 5 to 35 days out | `fno_instruments.nearest_expiry` |
 | Strike | The strike whose delta is nearest 0.45, priced at a fixed 20% volatility | `fno_instruments.find_contract` |
 | Size | `floor(20% × ₹10,000 ÷ (premium × lot size))` lots | `fno_risk.lots_to_buy` |
-| Exits | Premium −40% or +80%; every position closed at 15:08 | `_check_fno_stop_take`, `_close_fno` |
+| Liquidity | The contract's own book: spread at most 2% of the mid premium, the order fills within five levels at most 1% from the mid, both sides hold 3× the order. No book: paper goes ahead, live is refused | `liquidity.check_option`, `assess_option` |
+| Order | Live: `place_fno_order`, then `wait_for_fill`; booked at Kite's executed premium and quantity, with stop, target and max loss from the premium paid. Rejected: nothing booked. Part filled: what filled. Unconfirmed: held in `_unconfirmed_orders` and booked when Kite answers | `_live_fno_fill`, `_book_fno_entry`, `_book_fno_exit` |
+| Exits | Premium −40% or +80%; every position closed at 15:08. A live position's close is a real order whatever the mode; one close at a time per position | `_check_fno_stop_take`, `_close_fno`, `_claim_fno_exit` |
 | Pricing | Black-Scholes-Merton price, Greeks and an implied-volatility solve by bisection | `options_pricing` |
 
 In paper the premium is a model price, repriced each tick by
-`_paper_fno_premium` from the underlying's live price.
+`_paper_fno_premium` from the underlying's live price. An index is read
+under its quote name: `NSE:NIFTY 50` / `NSE:NIFTY BANK` from Kite
+(`data_provider.kite_quote_key`, the table `kite_broker.INDEX_QUOTE_SYMBOLS`),
+`^NSEI` / `^NSEBANK` from yfinance (#189).
 
-Known gaps: the entry path skips several cash rules
-([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)),
-live orders book at the quoted premium
-([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)),
-and open positions are not restored after a restart
-([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)).
+The entry rules, the liquidity check, the live order booking and the restart
+recovery were added in README §110 (#157, #186, #187). Two cash rules are not
+applied to options: `trader_brain.recheck_plan` (an option's exits are on the
+premium) and cash sizing (FNO-05 sizes it).
 
 ## 7. Scanner
 
@@ -427,12 +446,13 @@ and open positions are not restored after a restart
 5. **Market bias.** See the table below.
 6. **Sectors.** Each industry is ranked by its members' average change and checked against its real sectoral index's daily trend (`sectoral_indices.sector_trend()`, which needs 51 daily bars). An index the delayed feed serves short of that is completed by `complete_sector_history()` from NSE's index closing files for the last 60 sessions (`nse_feed.index_history()`: each file downloaded once into `backend/data/nse_indices/`, one pass a day, at most 60 downloads 0.5 s apart, NSE's bar kept where both have one; #197). Industries whose trend still cannot be worked out are listed in the result's `sector_trends_unavailable` and on the Screener.
 7. **Exclusions.** See the table below.
-8. **Scoring.** Each stock is scored as a long and as a short. The stronger side is kept.
-9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`. It is shown, and in `liquidity` mode it does not choose the list.
+8. **Scoring.** Each stock is scored as a long and as a short (a long only when it is long-only). The stronger is kept as `score_side`, with `long_score` and `short_score`, for information. The row's `side` is empty: the scanner sets no side, and the checklist's own reading picks it at entry (README §115, scanner audit rule 3.8). Nothing that gates or sizes an entry reads `score_side`; the Jev book reads it as its registered baseline, and `score` mode ranks by it.
+    - **Shadow inputs** (audit passes 1 to 3, README §115). Each row also carries the time of its price (`price_at`), the average change of the other stocks in its industry (`sector_chg_pct`, empty when it is alone), its sector index's daily trend, and `shadow_side()`: LONG when the stock is above its VWAP, ahead of its industry and the NIFTY is above its open, SHORT when all three are down, empty otherwise. The NIFTY leg reads the open because an index has no traded volume, so no VWAP. `market_context()` returns the NIFTY's open as `nifty_open`, outside `nifty` (which Jev's snapshot copies).
+9. **Deep read.** The stocks on the day's list get news, fundamentals and a checklist read. `final_score = score + clamp(2 × (bull − bear), ±15)`, the edge signed by `score_side`. It is shown, and in `liquidity` mode it does not choose the list.
 10. **Selection** (`SCANNER["selection"]`, README §91).
     - `liquidity`, the default: `select_liquid()` takes the 25 eligible stocks with the highest 20-day average turnover. The list is fixed before the open by `Scanner.fix_day_list()`, from the pre-market read, and kept all day. If no read ran before the open, `day_list_for()` fixes it at the first scan that covers at least 90% of the universe. A stock that stops being eligible is dropped, not replaced. Either way `_keep()` writes the list to the journal (`day_lists`, one row per session, first write stands) and a restarted scanner reads it back, so a restart does not choose again (#198). A list for an earlier session is replaced when a scan reads a later one.
-    - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their side, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
-11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`. The watchlist becomes pinned + active + held.
+    - `score`, the old list: `select_active()` sorts by final score, skips scores under 20 and rows whose daily trend fights their `score_side`, allows at most 2 picks against the bias, stops at 25, and re-chooses every scan.
+11. **Output.** Every row is ACTIVE, WATCH or AVOID. The scan is journaled to `scans` and `scan_rows`, every stock with the shadow inputs above; with `session_closes` they form the view `scan_candidates` (section 14). The result no longer carries `active_sides`. The watchlist becomes pinned + active + held.
 
 | Market bias input | Score |
 | --- | --- |
@@ -456,7 +476,7 @@ Risk-on at +2 or more. Risk-off at −2 or less.
 | Results | Due today or the next weekday |
 | Corporate action | Ex-date today |
 
-The pre-market read (`run_premarket`) uses daily bars only, and chooses its watchlist by the same rule as the live scan. It runs once a
+The pre-market read (`run_premarket`) uses daily bars only, and chooses its watchlist by the same rule as the live scan. Its rows also carry `score_side` and no `side`, and its narrative names the list without a side. It runs once a
 day on the first tick and seeds the watchlist only until the day's first
 live scan.
 
@@ -516,7 +536,7 @@ If the tunnel can't start, the login isn't started and the route returns 503. Th
 
 | Module | Behaviour |
 | --- | --- |
-| `nse_feed` | NSE website endpoints with browser headers and primed cookies. Each response is cached: announcements 10 minutes, breadth 5 minutes, flows and deals 1 hour, calendar and corporate actions 6 hours. On failure it returns the last good payload or nothing |
+| `nse_feed` | NSE website endpoints with browser headers and primed cookies. Each response is cached: announcements 10 minutes, breadth 5 minutes, flows and deals 1 hour, calendar and corporate actions 6 hours. On failure it returns the last good payload or nothing. The two guard files from NSE's archives (`_archive`: F&O ban list 30 minutes, price bands 6 hours) return None when unknown, never a stale copy. A failed fetch is remembered per file for `ARCHIVE_RETRY_S` (180 s), so callers get None at once until then; `last_failure(url)` gives when and why (#212) |
 | `news_sentiment.get_sentiment` | NSE filings, Google News, Marketaux if keyed, Yahoo only if Google returned nothing. Cached 15 minutes. Headlines older than 72 hours are dropped |
 | `news_sentiment._aggregate` | Weight = source weight × 0.5^(age ÷ 12 h). Source weights: NSE filing 1.5, Marketaux 1.2, Alpha Vantage 1.2, Google 1.0, Yahoo 0.6 |
 | `sentiment_lexicon.score_text` | A weighted phrase lexicon with negation handling |
@@ -579,9 +599,10 @@ trial 126 month by month.
 | `lock()`, `why_not()` | Whether a row closed locked at a price band, and why an order cannot fill today |
 | `rebalance()` | The month-turn decision: drop open orders, sell what can be sold, count vacancies, fix each buy's amount, buy |
 | `work_orders()` | Try the open orders of one book. A buy is cancelled after five sessions |
-| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band |
+| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band. With `strict` (the evening job), a month turn with nothing to rank raises `IncompleteData` before the state changes; without it the month is skipped, as the research simulator skips months before its panel can rank |
 | `band_threshold(n, mean, sd)` | `n × mean − 2 × sd × √n` |
-| `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out |
+| `update_bhavcopies()`, `download_bhavcopy()` | Ask NSE for every day of the last 31 without a file (#159). Each answer is fetched, no file (404: no session, or not out yet) or failed |
+| `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out, 4 when the data is incomplete: it stops before a past day whose download failed, or before a month turn with an empty ranking, and keeps what it processed before it. Logs a failed corporate-actions refresh. Writes `data` to the state |
 | `maybe_start_evening_job()` | The engine hook. Never raises |
 
 ```mermaid
@@ -593,8 +614,13 @@ sequenceDiagram
 
     E->>E: weekday, not a holiday, 19:30 to 23:30,<br/>30 min since the last try
     E->>C: spawn momentum_book.py daily
-    C->>N: corporate actions, missing bhavcopies
-    N-->>C: files, or not yet published
+    C->>N: corporate actions, every day of the last 31 without a bhavcopy
+    N-->>C: files, 404 (no session), or a failed download
+    opt a past day failed, or a month-end ranking is empty
+        C->>C: process only the sessions before it
+        C->>F: save, with data.problem
+        C-->>E: exit 4, retried in 30 minutes
+    end
     alt today's bhavcopy is not out
         C-->>E: exit 3, retried in 30 minutes
     else published
@@ -628,6 +654,8 @@ month_points [{date, book, bench}]
 trades       [{date, side, symbol, value, cost, ordered?, series?, reason?}]
 fills        {waited_buy_locked, waited_sell_locked, buys_cancelled, ...}
 excess_months, cumulative_excess, band_floor     (after the first month turn)
+data         {corporate_actions_refreshed, corporate_actions_as_of,
+              failed_downloads, problem}      (the evening job's data checks)
 ```
 
 `status` is `waiting_for_month_end`, `active` or `switched_off`. Once
@@ -637,11 +665,13 @@ switched off, nothing turns the book back on.
 
 | Function | Behaviour |
 | --- | --- |
-| `build_state(row, market, now)` | The JSON Jev sees: scanner row fields, scanner reasons, chart fields with headlines, the market summary, the time, the exit rule and the cost. No keys, account data or positions |
+| `build_state(row, market, now)` | The JSON Jev sees: scanner row fields, scanner reasons, chart fields with headlines, the market summary, the time, the exit rule and the cost. No keys, account data or positions. Its `side` is `scanner_side(row)` |
+| `scanner_side(row)` | The side the test was registered with: the old score's stronger side, `score_side` on a row since README §115 (`side` before). The snapshot and the baseline both read it, so neither changed when the scanner stopped setting a side (clarification 9) |
 | `questions()` | Three typed questions: `action` (buy, short, skip), `p_up` (a probability), `size` (none, half, normal, double) |
 | `system_one()` | One POST to TypeSafe. Up to 4 attempts. Retries 429, 529, 5xx and connection errors. Fails at once on 401, 403 and 422 |
-| `live_ltp(symbol)` | Kite's last traded price, or an exception. Never the delayed feed |
-| `decide_round()`, `close_round()` | The morning round and the 15:08 close |
+| `kite_live()` | `kite_data_active()` and `kite_session_live()`: a stored token Kite has not rejected, before its 06:00 expiry (#158) |
+| `live_ltp(symbol)` | Kite's last traded price, or an exception. Never the delayed feed. Refuses without a call when `kite_live()` is false |
+| `decide_round()`, `close_round()` | The morning round and the 15:08 close. A round stopped part-way stays open with its decisions and records `interrupted` |
 | `_apply_kill_rule()` | After 100 traded decisions, t below −2 switches the book off |
 | `summary()` | The scored read model. Counts a trade only after its 15:08 close |
 | `live_marks()` | While today's round is open: each position at Kite's last traded price, and the mean after costs. One batched Kite call, cached 30 s. Display only: it writes nothing and feeds no score |
@@ -656,14 +686,17 @@ sequenceDiagram
     participant F as State file
 
     E->>J: first open tick from 09:45 with a same-day shortlist
-    J->>K: is Kite data active?
-    alt not active
+    J->>K: is the Kite session live? (kite_live, with the 06:00 expiry)
+    alt not live
         J->>F: day = no_live_prices
-    else active
+    else live
         loop up to 15 shortlisted stocks
+            J->>J: still live? if not, stop (as for an error)
             J->>T: snapshot and three questions
-            alt TypeSafe error
+            alt TypeSafe error, no decision yet
                 J->>F: day = jev_unavailable
+            else TypeSafe error after some decisions
+                J->>F: day = open, interrupted = time, error, stocks not asked
             else answered
                 T-->>J: action, probability, size
                 J->>K: last traded price
@@ -694,6 +727,14 @@ Each row holds the best bid and ask, the spread in basis points, level-1 and
 five-level quantities, `imbalance5 = (bidQ − askQ) / (bidQ + askQ)`, volume
 and the exchange's total buy and sell quantities. Both functions write only
 when Kite data is active and never raise. No live code reads the table.
+
+Since #188 (README §112) a row also holds the book itself, in
+`bid_levels_json` and `ask_levels_json`: each non-empty level, best first, as
+`[price, quantity, orders]`. The summary columns are computed from the same
+levels as before, so level 1 is `(bid, bid_qty1)` and the quantities add up to
+`bid_qty5`. Rows from before the deploy, and index rows, have NULL there.
+`research/measure_real_slippage.py` walks the recorded levels when a row has
+them and the modelled one-tick ladder when it does not, and counts each.
 
 ## 11. Research desk and holdings diagnostic
 
@@ -892,24 +933,31 @@ that the server pushes a snapshot every 3 seconds and reads nothing more.
 ## 14. Database schema
 
 `backend/data/sahab_journal.db`, or the path in `SAHAB_DB_PATH`. Schema
-changes are additive: `CREATE IF NOT EXISTS` runs on every connection.
+changes are additive: `CREATE IF NOT EXISTS` runs on every connection, and a
+column added to a table already in use is added by `database._migrate` with
+`ALTER TABLE ... ADD COLUMN`, once. That changes the table's definition only:
+existing rows are not rewritten and read NULL in the new column. The one
+migration that also rewrote rows, on purpose, is `trades.realized_gross`
+(#21), which restated `realized` net of charges.
 
 | Table | Holds | Written by | Read by |
 | --- | --- | --- | --- |
-| `scans` | One row per scan: bias, NIFTY, VIX, breadth | `record_scan` | `journal_summary` |
-| `scan_rows` | One row per stock per scan: side, scores, status | `record_scan` | `factor_ic`, `dimag_ki_batti` |
+| `scans` | One row per scan: bias, NIFTY price, open, change and trend, VIX, FII net, breadth, feed and quote time | `record_scan` | `journal_summary`, `scan_candidates` |
+| `scan_rows` | One row per stock per scan: status, exclusion, long-only, scores (`score_side`, `long_score`, `short_score`; `side` is empty from README §115 and held the old score's side before), feed and price time, price, change, gap, relative volume, VWAP, opening range, industry change, sector trend, turnover, ATR %, `shadow_side`. Columns added in `_migrate`; older rows have them empty | `record_scan` | `factor_ic`, `dimag_ki_batti`, `scan_candidates` |
+| `session_closes` | One row per session and stock (and `NIFTY 50`): Kite's last traded price at the 15:08 square-off, read once a session. First write stands | `record_session_closes` (from `_record_session_closes`) | `scan_candidates` |
+| `scan_candidates` (view) | The shadow log: `scan_rows` joined to `scans` and `session_closes`. Every stock of every scan with its inputs, `vwap_dist_bp`, `score_side` (from `side` on older rows) and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08 or without a close). Recreated when its definition changes | `_migrate` | `database.scan_candidates()`, research |
 | `checklist_evals` | Every checklist read, every tick | `record_checklist_eval` | `checklist_blocker_stats`, `session_summary` |
 | `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` |
 | `signals` | Every signal | `record_signal` | Research only |
 | `activity` | Every log line | `record_activity` | Blocked-signal views, once-a-day guards |
 | `manual_reviews` | Review cards, held-back near-misses (status `withheld`), decisions and shadow outcomes | `review_queue` | `review_queue` |
 | `liquidity_checks` | Every order-book check before an entry | `liquidity.check` | Journal |
-| `depth_samples` | Order-book samples | `depth_sampler` | The order-book test |
+| `depth_samples` | Order-book samples: touch, spread, level-1 and five-level quantities, imbalance; since #188 also each level's price, quantity and orders (`bid_levels_json`, `ask_levels_json`, NULL on older rows). The level columns were added by `_migrate` (ALTER TABLE ADD COLUMN; no row rewritten) | `depth_sampler` | The order-book test (summary columns only); `research/measure_real_slippage.py` |
 | `fno_evaluations`, `fno_trades` | Options evaluations and trades | Engine | `fno_journal_summary` |
 | `market_breadth_daily` | One row per session | `scanner.run` | `mcclellan_oscillator` |
 | `research_briefs` | Research desk briefs | `research_desk` | Stock page |
 | `chaywanaprash_reports` | Self-review reports | `chaywanaprash` | Reports route |
-| `control` | `entries_paused`, `telegram_enabled` | Control routes | Engine at startup |
+| `control` | `entries_paused`, `telegram_enabled`, `llm_sentiment_enabled` | Control routes | Engine at startup |
 | `day_lists` | One row per session: the day's list, when and how it was fixed. Written once; a second write for the session is ignored | `Scanner._keep` (`record_day_list`) | `Scanner.__init__` (`latest_day_list`) |
 
 Tests never touch this file. `conftest.py` points every test at a temporary
@@ -926,13 +974,17 @@ RES-32).
 
 ## 15. Files on disk
 
-All gitignored unless marked.
+All gitignored unless marked. The backend writes a credential file through
+`config.write_secret_file` (a 0600 temporary file that replaces it), and
+start-up sets any credential file other accounts can read to 0600
+(`config.tighten_secret_files`, [#161](https://github.com/harshece16/intraday-trading-agent/issues/161)).
 
 | Path | Holds | Mode |
 | --- | --- | --- |
-| `backend/.dashboard_key.json` | The dashboard key | Default ([#161](https://github.com/harshece16/intraday-trading-agent/issues/161)) |
+| `backend/.dashboard_key.json` | The dashboard key | 0600 |
 | `backend/.kite_session.json` | Kite key, secret and the day's access token | 0600 |
 | `backend/.typesafe_key.json` | The TypeSafe key | 0600 |
+| `backend/.telegram.json` | The Telegram bot token and chat id, written by hand | 0600 from start-up |
 | `backend/data/sahab_journal.db` | The journal | |
 | `backend/data/momentum_book_state.json`, `jev_book_state.json` | Book state, written atomically | |
 | `backend/data/kronos.db` | The Kronos store: the shadow's forecasts and L40's records, ingested from the files below | |

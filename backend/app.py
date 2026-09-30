@@ -114,6 +114,10 @@ else:
     # from backend/.dashboard_key.json (already gitignored) if it's ever needed again.
     k = config.DASHBOARD_API_KEY
     logger.warning(f"Dashboard API key: {k[:6]}...{k[-4:]} (unchanged — see backend/.dashboard_key.json for the full value)")
+if config.SECRET_FILES_TIGHTENED:
+    # Names and modes only, never contents (#161).
+    logger.warning(f"Credential files other accounts could read were set to owner-only (0600): "
+                   f"{', '.join(config.SECRET_FILES_TIGHTENED)}")
 
 
 @app.get("/api/state")
@@ -208,7 +212,7 @@ class LlmSentimentUpdate(BaseModel):
 def set_llm_sentiment_enabled(update: LlmSentimentUpdate):
     if update.enabled and not config.NEWS.get("anthropic_api_key"):
         raise HTTPException(status_code=400, detail="Set ANTHROPIC_API_KEY first — there's no key to call with.")
-    enabled = llm_sentiment.set_enabled(update.enabled)
+    enabled = llm_sentiment.set_enabled(update.enabled)    # saved, so a restart keeps it (#160)
     state.log("system", f"LLM news sentiment {'enabled' if enabled else 'disabled'} via the dashboard")
     return llm_sentiment.stats()
 

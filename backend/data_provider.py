@@ -21,8 +21,15 @@ import pandas as pd
 from kiteconnect.exceptions import TokenException
 
 import config
+from kite_broker import INDEX_QUOTE_SYMBOLS
 
 logger = logging.getLogger("trading_bot")
+
+# An index underlying's F&O name is not its quote name (#189). Kite quotes
+# NIFTY as "NSE:NIFTY 50" (kite_broker.INDEX_QUOTE_SYMBOLS) and yfinance as
+# "^NSEI"; "NSE:NIFTY" and "NIFTY.NS" are not instruments, so a paper index
+# option could never be repriced from its underlying.
+INDEX_YF_SYMBOLS = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
 
 # yfinance.download() keeps results in module-global state that every call resets and then waits on,
 # so overlapping calls from different threads get each other's tickers or wait for entries that never come.
@@ -397,7 +404,14 @@ def _get_intraday_candles_kite(symbol: str, interval: str, period: str):
 
 
 def _yf_symbol(symbol: str) -> str:
+    if symbol in INDEX_YF_SYMBOLS:
+        return INDEX_YF_SYMBOLS[symbol]
     return symbol if symbol.endswith(".NS") else f"{symbol}.NS"
+
+
+def kite_quote_key(symbol: str) -> str:
+    """Kite's quote key for an NSE stock, or for an index by its F&O name (#189)."""
+    return INDEX_QUOTE_SYMBOLS.get(symbol, f"NSE:{symbol}")
 
 
 def _get_intraday_candles_yfinance(symbol: str, interval: str, period: str):
@@ -558,7 +572,7 @@ def get_ltp(symbol: str) -> float:
     if kite_data_active():
         try:
             kite = _get_kite()
-            key = f"NSE:{symbol}"
+            key = kite_quote_key(symbol)
             return float(kite.ltp([key])[key]["last_price"])
         except Exception as exc:
             _note_kite_failure(exc)

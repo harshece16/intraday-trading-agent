@@ -3,6 +3,8 @@ backend/__pycache__/
 backend/.kite_session.json
 backend/.dashboard_key.json
 backend/.telegram.json
+# The temporary file a credential is written through before it replaces the real one (#161).
+backend/.*.json.tmp
 backend/data/*.db
 # sqlite WAL/SHM sidecars and pre-migration backups (sahab_journal.db.pre-issue21-...)
 backend/data/*.db.*
@@ -35,6 +37,8 @@ backend/data/bhav_daily/
 backend/data/bhav/
 backend/data/bhav_daily_2026_heldout/
 backend/data/corp_actions/
+# L50 raw NSE bulk/block deal CSVs and symbolchange.csv (re-downloadable)
+backend/data/nse_deals/
 backend/data/bhav_live/
 backend/data/momentum_book_state.json
 backend/data/momentum_book.log

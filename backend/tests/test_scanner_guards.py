@@ -12,6 +12,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import config  # noqa: E402
+import fno_risk  # noqa: E402
 import nse_feed  # noqa: E402
 import scanner  # noqa: E402
 import trading_engine  # noqa: E402
@@ -79,6 +80,113 @@ def test_a_file_that_cannot_be_fetched_is_unknown_and_the_last_good_one_is_kept(
     assert nse_feed.fno_ban_list(ttl=0)["symbols"] == {"LICHSGFIN", "SAIL"}
     assert nse_feed.fno_ban_list(ttl=0) is None                                 # the second fetch failed
     assert nse_feed.fno_ban_list(ttl=3600)["symbols"] == {"LICHSGFIN", "SAIL"}   # within the cache's life
+
+
+# --- a failed fetch is remembered (#212) ----------------------------------------------------
+
+class _Clock:
+    """Stands in for nse_feed's `time` module: a clock the test moves."""
+    def __init__(self, at):
+        self.now = at
+
+    def time(self):
+        return self.now
+
+
+class _Resp:
+    def __init__(self, code, text):
+        self.status_code, self.text = code, text
+
+
+@pytest.fixture
+def archive(monkeypatch):
+    """Fresh caches for both files, a test clock at 09:32:05 IST, and a fake
+    NSE whose answers the test sets: `nse["ban"]`/`nse["bands"]` is a
+    response or an exception to raise. Returns (nse, calls, clock)."""
+    clock = _Clock(datetime(2026, 9, 30, 9, 32, 5, tzinfo=IST).timestamp())
+    monkeypatch.setattr(nse_feed, "time", clock)
+    monkeypatch.setattr(nse_feed, "_ban_cache", {"at": 0.0, "value": None, "failed": None})
+    monkeypatch.setattr(nse_feed, "_bands_cache", {"at": 0.0, "value": None, "failed": None})
+    nse = {"ban": nse_feed.requests.Timeout("read timed out"), "bands": _Resp(200, BANDS)}
+    calls = []
+
+    def get(url, **kw):
+        key = "ban" if url == nse_feed.FNO_BAN_URL else "bands"
+        calls.append(key)
+        if isinstance(nse[key], Exception):
+            raise nse[key]
+        return nse[key]
+    monkeypatch.setattr(nse_feed.requests, "get", get)
+    return nse, calls, clock
+
+
+def test_a_failed_fetch_is_not_retried_until_the_retry_time(archive):
+    nse, calls, clock = archive
+    assert nse_feed.fno_ban_list() is None and calls == ["ban"]
+    clock.now += nse_feed.ARCHIVE_RETRY_S - 1
+    assert nse_feed.fno_ban_list() is None and calls == ["ban"]                 # answered at once, NSE not asked
+    nse["ban"] = _Resp(200, BAN)
+    clock.now += 1
+    assert nse_feed.fno_ban_list()["symbols"] == {"LICHSGFIN", "SAIL"} and calls == ["ban", "ban"]
+    assert nse_feed.last_failure(nse_feed.FNO_BAN_URL) is None                  # a good fetch clears it
+
+
+def test_the_failure_says_when_and_why_and_the_file_stays_unknown(archive):
+    _, _, clock = archive
+    at = clock.now
+    assert nse_feed.fno_ban_list() is None
+    failed = nse_feed.last_failure(nse_feed.FNO_BAN_URL)
+    assert failed == {"at": at, "error": "no answer within 15 s", "retry_at": at + nse_feed.ARCHIVE_RETRY_S}
+    assert nse_feed.failure_text(failed) == ("the last try, at 09:32:05 IST, failed (no answer within 15 s); "
+                                             "it is tried again after 09:35:05")
+    reason = fno_risk.mwpl_block_reason("SAIL", None, "2026-09-30", unknown_why=nse_feed.failure_text(failed))
+    assert "could not be read (the last try, at 09:32:05 IST, failed" in reason and "ban status is unknown" in reason
+
+
+@pytest.mark.parametrize("answer,error", [(_Resp(503, ""), "HTTP 503"),
+                                          (_Resp(200, "<html>Access denied</html>"), "not in the expected format")])
+def test_a_refusal_or_an_unreadable_file_is_remembered_too(archive, answer, error):
+    nse, calls, _ = archive
+    nse["ban"] = answer
+    assert nse_feed.fno_ban_list() is None and nse_feed.fno_ban_list() is None and calls == ["ban"]
+    assert nse_feed.last_failure(nse_feed.FNO_BAN_URL)["error"] == error
+
+
+def test_each_file_has_its_own_failure(archive):
+    _, calls, _ = archive
+    assert nse_feed.fno_ban_list() is None
+    assert nse_feed.price_bands()["ENRIN"]["band"] == 20.0 and calls == ["ban", "bands"]
+    assert nse_feed.last_failure(nse_feed.PRICE_BANDS_URL) is None
+
+
+def test_callers_during_a_fetch_wait_for_it_instead_of_asking_again(archive, monkeypatch):
+    import threading
+    import time as real_time
+    nse, calls, _ = archive
+    started = threading.Event()
+
+    def slow_get(url, **kw):
+        calls.append("ban")
+        started.set()
+        real_time.sleep(0.2)
+        raise nse_feed.requests.Timeout("read timed out")
+    monkeypatch.setattr(nse_feed.requests, "get", slow_get)
+    first = threading.Thread(target=nse_feed.fno_ban_list)
+    first.start()
+    started.wait(2)
+    assert nse_feed.fno_ban_list() is None          # waited for the first caller's answer
+    first.join()
+    assert calls == ["ban"]
+
+
+def test_the_scan_says_when_an_unread_guard_file_last_failed(archive):
+    _, _, clock = archive
+    guards = scanner.load_guards({})
+    assert guards["ban"] is None and guards["bands"] is not None
+    assert guards["unread"] == {"ban": nse_feed.last_failure(nse_feed.FNO_BAN_URL)}
+    out = scanner.guards_summary(guards, ["SAIL"])
+    assert out["ban"] is None and out["unread"]["ban"]["at"] == clock.now
+    assert scanner.guard_check("SAIL", guards, "2026-09-30", CFG) == (None, False)   # unknown still excludes nothing
 
 
 # --- the guards ---------------------------------------------------------------------------

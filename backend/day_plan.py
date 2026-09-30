@@ -44,6 +44,22 @@ def pick_rows(scanner_result, premarket_result):
     return [], None
 
 
+def plan_side(r):
+    """(side, basis) to size a pick at. The scanner sets no side (README
+    section 115), so it is the checklist's reading from the scanner's deep
+    read when there is one, and otherwise the long case. Size, risk and reward
+    are the same either way; a short mirrors the stop and the target."""
+    b = r.get("brain") or {}
+    shorts = not r.get("long_only")
+    if b.get("long_ok"):
+        return "LONG", "checklist"
+    if b.get("short_ok") and shorts:
+        return "SHORT", "checklist"
+    if b.get("bias") in ("long", "short"):
+        return ("SHORT" if b["bias"] == "short" and shorts else "LONG"), "checklist"
+    return "LONG", "long case"
+
+
 def plan(capital: float, rows: list) -> dict:
     cfg = {**config.RISK, "total_capital": capital}
     risk = RiskManager(cfg)
@@ -53,8 +69,8 @@ def plan(capital: float, rows: list) -> dict:
     candidates = []
     for r in rows:
         ltp = r.get("ltp") or r.get("close")
-        atr_pct, side = r.get("atr_pct"), r.get("side")
-        if not ltp or not atr_pct or side not in ("LONG", "SHORT"):
+        atr_pct, (side, basis) = r.get("atr_pct"), plan_side(r)
+        if not ltp or not atr_pct:
             continue
         atr = ltp * atr_pct / 100
         bside = "BUY" if side == "LONG" else "SELL"
@@ -64,7 +80,7 @@ def plan(capital: float, rows: list) -> dict:
         stop_distance = abs(ltp - stop)
         target_distance = abs(target - ltp)
         candidates.append({
-            "symbol": r["symbol"], "side": side, "ltp": round(ltp, 2), "atr_pct": atr_pct,
+            "symbol": r["symbol"], "side": side, "side_basis": basis, "ltp": round(ltp, 2), "atr_pct": atr_pct,
             "qty": qty, "tradable": qty > 0,
             "stop_price": round(stop, 2), "target_price": round(target, 2),
             "risk_rupees": round(qty * stop_distance, 2), "reward_rupees": round(qty * target_distance, 2),

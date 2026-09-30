@@ -11,6 +11,8 @@ What must hold, because an approval can place a real order:
 - every card and decision is journaled;
 - a card blocked on reward-to-risk is offered only at or above the R:R floor;
   below it the near-miss is held back, journaled and replayed (#166);
+- an approval of such a card is refused, and journaled, when its R:R at the
+  live price has fallen below the floor (#211);
 - a later, closer near-miss can replace an expired card (#166);
 - every card states its money after costs, and says when it can't break even.
 """
@@ -27,6 +29,7 @@ import data_provider
 import database
 import liquidity
 import review_queue
+import trader_brain
 import trading_engine
 from state import AppState, _new_position
 
@@ -465,6 +468,58 @@ def test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved
     result = engine.approve_review(row["id"])
     assert not result["ok"] and result["status"] == "withheld"
     assert engine.state.positions[SYMBOL]["quantity"] == 0
+
+
+# ---- the floor again at approval (#211) -------------------------------------
+
+def test_an_rrr_card_below_the_floor_at_the_live_price_is_refused_and_journaled(engine, monkeypatch):
+    # Offered at 100 with net R:R 1.004; by the click the price is 100.50 and
+    # the same stop, target and costs give 0.63.
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
+    monkeypatch.setattr(engine, "_execute", lambda *a, **k: pytest.fail("no order under the floor"))
+    [card] = offer(engine, plan(target=102.34))
+    assert card["net_rrr"] >= 1.0
+    result = engine.approve_review(card["id"])
+    assert not result["ok"] and result["status"] == "refused"
+    assert result["reason"] == ("reward-to-risk after costs is 0.63 at the live price 100.50, under the queue's "
+                                "floor of 1 (it was 1.00 at the offer)")
+    live = trader_brain._net_rrr(100.5, 98.0, 102.34, card["cost_pct"])      # the offer's own cost figure
+    assert result["net_rrr_live"] == round(live, 3) and result["live_price"] == 100.5
+    assert engine.state.positions[SYMBOL]["quantity"] == 0
+    [row] = database.reviews_on("2026-09-24")                    # the card stays, with the refusal
+    assert row["status"] == "refused" and row["outcome"]["reason"] == result["reason"]
+    assert row["outcome"]["net_rrr_live"] == round(live, 3)
+    assert any("could not be placed: reward-to-risk after costs is 0.63" in a.get("message", "")
+               for a in engine.state.activity)
+
+
+def test_an_rrr_card_still_at_the_floor_at_the_live_price_is_placed(engine, monkeypatch):
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.0)
+    [card] = offer(engine, plan(target=102.34))
+    result = engine.approve_review(card["id"])
+    assert result["ok"] and result["net_rrr_at_fill"] >= 1.0
+
+
+def test_the_approval_floor_leaves_cards_blocked_on_other_items_alone(engine, monkeypatch):
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
+    [card] = offer(engine, plan(failing=("volume",), target=102.34))
+    result = engine.approve_review(card["id"])
+    assert result["ok"] and result["net_rrr_at_fill"] < 1.0
+
+
+def test_the_approval_floor_is_off_when_the_floor_is(engine, monkeypatch):
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
+    [card] = offer(engine, plan(target=102.34))
+    monkeypatch.setitem(config.REVIEW_QUEUE, "min_net_rrr", None)
+    assert engine.approve_review(card["id"])["ok"]
+
+
+def test_the_approval_floor_uses_the_cost_the_offer_used(engine, monkeypatch):
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.0)
+    [card] = offer(engine, plan(target=102.34))
+    # A later change to the strategy's cost figure must not move the card's bar.
+    engine.strategy_params = {**engine.strategy_params, "cost_pct": 0.5}
+    assert engine.approve_review(card["id"])["ok"]
 
 
 def test_a_held_back_near_miss_does_not_take_the_stocks_card(engine):

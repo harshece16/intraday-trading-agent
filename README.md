@@ -116,7 +116,9 @@ going live is the owner's decision alone.
   rule). A home internet connection is often dynamic; a small cloud VM
   usually isn't. Run the backend there if you need this reliably.
 - **NSE holidays are hardcoded for 2026** (`holidays.py`, pulled from NSE's
-  own holiday-master API) — re-pull and update the list each year.
+  own holiday-master API) — re-pull and update the list each year. In a year
+  without a list every weekday counts as a session, and the engine says so
+  with an error at start-up and on every pre-market read (§114).
 
 ## How the agent decides
 
@@ -132,7 +134,7 @@ going live is the owner's decision alone.
 | NIFTY daily trend (EMA20/50), day change, holding above its open | Market bias score |
 | Breadth: advancers vs decliners across the NIFTY 100 | ≥ 60% up adds to the score, ≤ 40% subtracts |
 | India VIX ≥ 20 | Counts as risk; new position sizes halved |
-| **Bias** = risk-on / neutral / **risk-off** | Risk-off: **no new longs**, shorts get the slots (at most 2 long picks kept on watch). Risk-on: the mirror image, no new shorts. Neutral: both sides |
+| **Bias** = risk-on / neutral / **risk-off** | Risk-off: **no new longs**. Risk-on: the mirror image, no new shorts. Neutral: both sides. The bias blocks entries; it does not choose the day's list (§91). Only the old score mode (`SCANNER["selection"] = "score"`) also caps the picks against the bias at 2 |
 
 ### 2. Scanner — *what* to trade (`scanner.py`, every 5 min open / 60 min closed)
 
@@ -146,11 +148,11 @@ today for X" and when trading resumes.
 |---|---|
 | **Tradability filters** | Price ≥ ₹100 · turnover ≥ ₹50 cr/day · daily ATR ≥ 1.2% (anything slower can't beat costs) · **results due today or next session → excluded** · in the F&O ban, in trade-for-trade, or within 2% of a fixed price band → excluded; a stock with a fixed band is long only (§100) |
 | **Daily setup** | Daily uptrend +20 / downtrend −15 · 10-day relative strength vs NIFTY up to +20 · within 3% of 52-week high +10 · NR7 +8 / inside day +6 · daily RSI 45–70 +5, > 75 −8 · confirmed Bulkowski daily pattern +15 · Murphy reversal day/selling climax +10 to +18 |
-| **In play today** | Gap 0.3–3% +6, > 3% −10 · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
+| **In play today** | Gap under 0.5%: not scored. With the trade: +10 if Bulkowski's classifier calls it a breakaway, −8 if exhaustion, otherwise +6 up to 3% and −10 above it. Against the trade: +6 if exhaustion, −8 at 3% or more · relative volume vs the same time of day ≥ 2× +15, ≥ 1.3× +8, < 0.7× −8 · beating NIFTY today up to +15 · above VWAP ±5 · above the 15-min opening range +8 · top-3 sector +8, bottom-3 −5 |
 | **Catalysts** | Positive filing or news up to +12 · clearly negative −15 |
-| **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept |
-| **Deep read** | The top 25 (`SCANNER["deep_analysis"]`) get a full Sahab's Dimaag analysis with per-stock news; the timing edge for their side adjusts the score by up to ±15 |
-| **Active watchlist** | Top 25 (`SCANNER["active_count"]`, raised from 6 in §25) by final score whose daily trend doesn't fight their side, with at most 2 against the market bias, plus pinned stocks and open positions |
+| **Both sides** | Every rule above is scored twice, once as a long and once as a mirrored short (daily downtrend, lagging NIFTY, near the 52-week low, gap down, below VWAP, broke the opening range, bottom-3 sector, negative catalyst). The stronger side is kept as `score_side`, for information only: since §115 it blocks nothing, and the checklist picks the side at entry |
+| **Deep read** | The stocks on the day's list get a full Sahab's Dimaag analysis with per-stock news (in score mode, the top 25 by score, `SCANNER["deep_analysis"]`); the timing edge for their side adjusts the score by up to ±15 |
+| **Active watchlist** | The day's list: the 25 eligible stocks (`SCANNER["active_count"]`) with the highest 20-day average turnover, fixed before the open, or at the first scan if the engine starts later, and kept all day (§91, §100, §106). Plus pinned stocks and open positions. No score, side or trend chooses it. The old list is one setting away (`SCANNER["selection"] = "score"`): the best final scores of at least 20, daily trend agreeing with the side, at most 2 against the market bias, chosen again every scan |
 
 ### 3. The Rule Book — how the sources connect
 
@@ -205,7 +207,7 @@ module (chapters 4–18) and implemented rule for rule instead of paraphrased:
 | *(new, not in Varsity)* News doesn't contradict the trade | — | NSE filings + Google News + Marketaux + Alpha Vantage sentiment; strongly opposed news vetoes the entry outright, mildly opposed news sizes it down like a missed indicator |
 | Reward-to-risk of at least 1.5, net of costs | ch 18.5 | Target = next level beyond entry (or 2R if none); RRR is computed after estimated round-trip costs |
 
-**A trade needs every required point** (pattern, S/R, volume, trend, RRR);
+**A trade needs every required point** (pattern, S/R, a stop of at least 1× the round trip's cost, volume, trend, RRR);
 indicators and news only scale the size. This is stricter than the older
 confluence-score system (`entry_mode: "confluence"`, kept for comparison) and
 trades far less often — see the backtest table below.
@@ -417,7 +419,9 @@ this codebase.
 
 - **Off by default.** Needs `ANTHROPIC_API_KEY`; even with a key set, a
   separate runtime toggle (`config.NEWS["use_llm_sentiment"]`, flippable
-  from the Technical Analysis page with no restart) has to be on too.
+  from the Technical Analysis page with no restart) has to be on too. Until
+  §114 the key alone turned it on; now it doesn't, and a restart keeps the
+  toggle where it was left.
 - **Real usage tracking, not an estimate.** Every API response reports its
   own `input_tokens`/`output_tokens`; those are summed per day and priced
   at Haiku 4.5's published rate ($1/M input, $5/M output, verified against
@@ -495,8 +499,9 @@ sitting empty until the first live scan completes a few minutes into the
 session. That's the entire link. It does **not** place an order, and it
 never will on its own — every entry, for a pre-market pick or any other
 symbol, still has to clear the exact same live gate: `trader_brain_signal()`'s
-checklist (candlestick pattern, above-average volume, VWAP side, opening
-range, reward-to-risk — see "How the agent decides" above) evaluated against
+checklist (candlestick pattern, a stop at support or resistance, a stop of at
+least 1× the round trip's cost, above-average volume, trend agreement,
+reward-to-risk — see "How the agent decides" above) evaluated against
 *today's* intraday candles, which don't exist until the market is actually
 open. This mirrors how a discretionary trader actually works: build tonight's
 watchlist off the close, then let tomorrow's tape — not last night's
@@ -2710,7 +2715,9 @@ daily rank IC of the pre-market score vs that session's return
 ```
 
 **The scanner's ranking has no predictive power.** Positive on 49% of days —
-a coin flip. That is why picks barely differ from the benchmark in every row
+a coin flip. (This is §37's measurement run a second time, over 436 sessions
+where §37 had 434; §37 read 0.000. Two runs of one measurement, both nil, and
+the README quotes both.) That is why picks barely differ from the benchmark in every row
 above: the ranking isn't selecting anything. The hoped-for next-session edge
 from §36/§37 does not survive direct measurement.
 
@@ -3450,12 +3457,12 @@ The owner asked for the system to be presented at design level, with its rules a
 | --- | --- |
 | **High-level design**: parts, a trading day, where entries stop, how it fails | [`docs/architecture/HLD.md`](docs/architecture/HLD.md) |
 | **Low-level design**: modules, tick sequence, formulas, API, database, settings | [`docs/architecture/LLD.md`](docs/architecture/LLD.md) |
-| **Rules checklist**: 227 rules, each with its enforcing code and a way to check it | [`docs/architecture/RULES.md`](docs/architecture/RULES.md) |
+| **Rules checklist**: 227 rules when this was written, each with its enforcing code and a way to check it | [`docs/architecture/RULES.md`](docs/architecture/RULES.md) |
 | **Interactive rulebook**: search, filters, saved ticks, the design diagrams | [Open it](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK) (private to the owner), or [`rules.html`](docs/architecture/rules.html) opened in a browser |
 | **Checklists to tick on GitHub**: pre-market, new strategy, go-live readiness | New issue → choose a template |
 | **Knowledge graph**: 3,619 nodes, 8,545 edges, 200 clusters | [`docs/architecture/KNOWLEDGE_GRAPH.md`](docs/architecture/KNOWLEDGE_GRAPH.md) |
 
-The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_docs.py` builds the GitHub page and the interactive page from it, and a test in CI fails when a rule names code that no longer exists or when a built page is stale. Of the 227 rules, 208 are enforced now, 15 are switched off or pending, 4 are retired and kept on record, and 133 are covered by an automated test.
+The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_docs.py` builds the GitHub page and the interactive page from it, and a test in CI fails when a rule names code that no longer exists or when a built page is stale. Of the 227 rules, 208 are enforced now, 15 are switched off or pending, 4 are retired and kept on record, and 133 are covered by an automated test. Those figures are from 2026-09-28. The catalogue changes with the code, and `RULES.md` always gives the current count: 250 rules on 2026-09-30.
 
 **Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
 
@@ -3479,7 +3486,7 @@ The owner said the 25 stocks the scanner picks were wrong and there was too much
 
 | Problem with the old list | Measured |
 | --- | --- |
-| Its ranking predicts nothing | Rank IC ≈ 0 over 434–436 sessions (§37, §52). The one feature that survived testing, volatility, is worth 8 bp against a 16.6 bp round trip (step 2 follow-ups) |
+| Its ranking predicts nothing | Rank IC nil in two runs of the same measurement: 0.000 over 434 sessions (§37) and −0.0021 over 436 (§52). The one feature that survived testing, volatility, gives a quiet-minus-volatile spread of +8.1 bp. A spread is two positions, each paying the 16.6 bp round trip, so it covers 0.24× of its 33.2 bp cost (step 2 follow-ups, correction footnote) |
 | It was built from a pile of rules | About 20 score components plus a checklist read that moved each score by up to 15 points |
 | It rotated all day | 51 different stocks were on it; 4 stayed in every scan; the list changed in 69 of 72 scans |
 | So most stocks weren't watched long enough | Only 10 met the order-book test's rule of being sampled for 90% of the session |
@@ -3991,6 +3998,190 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 
 The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
+### 110. F&O: the cash entry rules, Kite's real fills, and positions that survive a restart (#157, #186, #187, #189)
+
+F&O is still **off** (`FNO.enabled = False`), and switching it on from the dashboard lasts only until the next restart. Nothing below changes what the running engine does until F&O is switched on. These are the four defects found on the F&O path while mapping the engine (2026-09-28), fixed before anyone turns it on.
+
+**Option buys pass the cash entry rules (#157).** An option buy used to check only the pause, the daily loss limit, the open-position cap and its own confidence gate. It now also passes:
+
+- **One entry per stock per day**, counted on the underlying and shared with cash. A cash trade in a stock today blocks an option on it today, and the other way round. The count is rebuilt after a restart.
+- **The market bias.** A call counts as a long and a put as a short: no calls in a risk-off market, no puts in a risk-on one.
+- **The scanner's exclusion** for the underlying, and its short limits: with `SCANNER.allow_shorts = False`, no puts. The scanner no longer sets a side (§115), so there is no side to disagree with.
+- **The sector cap**, which now counts open cash and option positions together. This applies to cash entries too, so an open option also blocks a cash entry in its sector.
+- **An untracked Kite position** in the stock, or in any contract on it.
+- **A spread and depth check on the contract's own order book**, the last gate before the order. The cash rule (a spread of at most twice the modelled slippage) would refuse every option, because the option tariff models no slippage. The cap is 2% of the mid premium (`FNO.max_spread_pct_of_premium`). Filling the order may move the price at most half that from the mid, and both sides must hold 3× the order across five levels. A market order pays about half the spread on each leg, so a round trip costs about one spread, and 2% is a twentieth of the 40% premium stop. As for cash, a paper buy goes ahead when no book can be read (journaled as unchecked) and a live one is refused.
+- It acts on the **edge-triggered** entry signal, as cash does, not on the checklist's `long_ok`/`short_ok` every tick.
+
+Two cash rules are not applied. The checklist's re-check of its stop and target at the live price doesn't apply because an option's exits are set on the premium (−40% / +80%), not on chart levels. The cash position sizing doesn't apply because an option's size comes from the ring-fenced ₹10,000 F&O allocation (FNO-05).
+
+**Live option orders are booked from Kite's report (#186).** This is what #155 did for cash (§98). The engine waits for Kite's answer, books the executed premium and quantity, and works out the premium stop, target, maximum loss and Greeks from the premium actually paid.
+- A rejected buy books nothing and doesn't spend the day's entry.
+- A rejected sale leaves the position open and watched, and the next tick tries again.
+- A part fill books what filled.
+- An order Kite never confirms books nothing, blocks further option orders on that underlying, and is booked when Kite answers.
+
+Each live leg records the quoted premium and Kite's order id. Closing an option now takes a claim, so the kill switch and the square-off can't both sell the same contract.
+
+**Open option positions survive a restart (#187).** They were held in memory only. Found while fixing it: the entry leg in `trades` came back as a **cash** position in the option's tradingsymbol. Checked on main: an open `RELIANCE26OCT1400CE` came back as a cash position of 500 with stop 12 and target 36, and no option position. A live one would have been squared off with an NSE cash order for an NFO symbol.
+
+A restart now rebuilds today's open option positions from `fno_trades` and their legs: the quantity still open, the entry charges, and the premium stop and target. It keeps them out of the cash restore and counts each against its underlying's entry for the day. As for cash (#156), a position carries whether it is real money. A live one restored in Paper is still closed with a real order, once Kite's day book confirms it is still open. If Kite is flat, it is dropped and no order is sent. Kite's NFO positions that the engine holds are no longer reported as untracked, which would have blocked going live. Open option positions are watched whether or not F&O is switched on, because the switch resets with the restart.
+
+**Paper index options reprice (#189).** A paper option is repriced from its underlying's price (§98, #154). For NIFTY that asked Kite for `NSE:NIFTY` and yfinance for `NIFTY.NS`, and neither exists, so a paper index option never repriced. It now asks Kite for `NSE:NIFTY 50` / `NSE:NIFTY BANK`, from the same table as the PCR read, and yfinance for `^NSEI` / `^NSEBANK`. No Kite call was made for this change. The Kite key is the one the scanner's live quotes have used since §101, and the tests stand in for Kite.
+
+Tests: `test_fno_entry_rules.py` (23), `test_fno_live_fills.py` (10), `test_fno_restart.py` (11) and `test_fno_index_quote.py` (4). Two existing tests were changed for the new order path. No real Kite order was placed.
+
+Files: `backend/trading_engine.py`, `backend/state.py`, `backend/database.py`, `backend/liquidity.py`, `backend/data_provider.py`, `backend/fno_risk.py`, `backend/config.py`, the four test files above and `backend/tests/fno_kit.py`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
+### 111. An approval is held to the R:R floor at the live price, and a failed NSE file is not fetched again for 3 minutes (#211, #212)
+
+**1. The R:R floor is checked again when you approve (#211).** Since §105 the review queue offers a card blocked on reward-to-risk only if its R:R after costs, at the offer, is at least `REVIEW_QUEUE["min_net_rrr"]` (1.0). Approval did not check it again. A card offered at 1.05 could be approved minutes later, after the price had moved toward the target, at a fill where the same trade netted well under 1.0.
+
+- **Now:** at the click, the engine works out the net R:R at the live price with the card's own stop, target and round-trip cost, the figures the offer used, so the two differ only by the price. Under the floor the approval is refused, for example: "reward-to-risk after costs is 0.63 at the live price 100.50, under the queue's floor of 1 (it was 1.00 at the offer)". The card stays in `manual_reviews` as `refused`, with that reason and `net_rrr_live`, and the activity log says so. The Overview page shows "Not placed: …" by the buttons and the reason in the decided list.
+- **Unchanged:** cards blocked on anything else (volume, pattern, confidence…) are not held to the floor, as at the offer. `min_net_rrr = None` switches it off in both places. Every other re-check (§64) runs as before.
+
+How much it bites, from the 71 real cards in the journal to 2026-09-30 (read-only copy; for each card, its net R:R at every live price the engine recorded while it was open):
+
+| Net R:R while a card was open, against its value at the offer | Prices (n = 425) | Cards whose lowest was this far down (n = 69) |
+| --- | --- | --- |
+| Lower at all | 45% | 53 |
+| More than 0.10 lower | 16% | 25 |
+| More than 0.25 lower | 5% | 6 |
+| More than 0.50 lower | 2% | 3 |
+
+So a card offered at 1.00 to 1.10 would often be refused if approved at a bad moment, and one offered at 1.25 or more rarely. No R:R card has cleared the floor at the offer yet (the floor goes live on 2026-10-01), so none of the 71 would have met this check. The 7 cards offered at 1.0 or more were all blocked on other items, and none went under 1.0 while open.
+
+**2. A failed NSE archive file is remembered (#212).** `nse_feed._archive` reads the F&O ban list and the price-band list from NSE's archives with a 15-second timeout. A failed fetch was not remembered, so while the archive was down every caller waited out its own timeout. The F&O ban check (§108) runs once per candidate.
+
+- **Now:** a failed fetch (no answer, a refusal such as HTTP 503, or a file not in the expected format) is remembered per file for `nse_feed.ARCHIVE_RETRY_S`, 180 seconds. Until then the file is unknown at once and NSE is not asked. One caller at a time fetches a given file, so a caller that arrives during a fetch gets its answer.
+- **Unknown, not empty, as before.** The answer is still "unknown", never a stale copy and never an empty list. The F&O path still refuses stock options on an unknown list, and its reason now says when the last try failed and when it is tried again: "NSE's F&O ban list could not be read (the last try, at 20:09:27 IST, failed (no answer within 15 s); it is tried again after 20:12:27), so the ban status is unknown; no stock option is bought". The scan result carries the same (`guards.unread`), and the Screener's guard line reads "F&O ban list: could not be read (the last try, at …, failed: …; tried again after …), so no stock is left out for it."
+
+**Checked on the real network, 2026-09-30.** NSE's live ban file was read in 0.11 s: trade date 2026-10-01, BANDHANBNK and SAIL. Then the same code was pointed at an address that never answers, and four candidates went through the ban check:
+
+| | Candidate 1 | 2 | 3 | 4 | Total |
+| --- | --- | --- | --- | --- | --- |
+| `main` | 15.0 s | 15.0 s | 15.0 s | 15.0 s | 60.0 s |
+| This change | 15.0 s | 0.00 s | 0.00 s | 0.00 s | 15.0 s |
+
+F&O is still off (`FNO.enabled = False`), so nothing in the running engine is faster today. The scanner reads the two files once per scan and is affected little.
+
+**Tests.** `backend/tests/test_review_queue.py`: a card offered at 1.00 and approved at 0.63 is refused, journaled and logged; one still at 1.00 is placed; a volume card is not held to the floor; `None` switches it off; a later change to the strategy's cost figure does not move the card's bar. `backend/tests/test_scanner_guards.py`: no second fetch before the retry time, and a fetch after it; the failure's time and reason; a refusal and an unreadable file remembered too; each file on its own; a caller during a fetch waits for it; the scan's `unread` note, with an unknown file still excluding nothing. `backend/tests/test_fno_mwpl.py`: with NSE down, three candidates make one fetch and all three reasons name the failed try.
+
+Rules: ENT-26, SCN-20, FNO-08. Files: `backend/review_queue.py`, `backend/trading_engine.py`, `backend/nse_feed.py`, `backend/fno_risk.py`, `backend/scanner.py`, `frontend/src/components/ReviewQueue.jsx`, `frontend/src/components/ListNotes.jsx`, the three test files, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
+### 112. The order-book samples keep every level (#188)
+
+**The problem.** The order-book sampler (§71) kept the best bid and ask, the quantity at level 1 and the summed quantity of five levels. It dropped the price and quantity of levels 2 to 5. So the cost of an order bigger than level 1 could only be modelled: in the first slippage measurement (#66, PR #185), 7,581 of 34,534 sampled legs (22%) needed a ladder that puts the rest of the quantity one tick apart, which is a floor, not a measurement.
+
+**The change.** Each `depth_samples` row with a book now also stores the book itself, in two new columns, `bid_levels_json` and `ask_levels_json`: each non-empty level, best first, as `[price, quantity, orders]` (Kite gives the number of orders at each level). It is the same quote call per tick; the levels were already in Kite's answer and were being thrown away.
+
+- **Every existing column keeps its meaning and its values.** They are computed from the same levels as before, because the pre-registered order-book test (L37, due after 15 full sessions) reads them. Checked: the new code and the old gave identical values on 20,000 random books. `prereg-orderbook.md` amendment 6 records the change before any sample has been joined to a return.
+- **The migration rewrites nothing.** The columns are added to the live journal at the next backend start, with `ALTER TABLE ... ADD COLUMN`, which changes the table's definition only. On a copy of the journal taken on 2026-09-30 (44,452 rows) it took 2 ms, the file size did not change, and every old row hashed the same before and after. Old rows read NULL in the new columns; they cannot be repaired.
+- **`research/measure_real_slippage.py` uses the real levels when a row has them.** An order past level 1 is walked on the recorded levels (counted as "walked recorded levels") and, on a row from before this change, on the modelled ladder as before ("modelled ladder"). The output says how many book samples carry levels: on the copy of 2026-09-30, 0 of 44,243, since every sample so far predates this.
+- `GET /api/journal/depth-samples` also reports `rows_with_levels`.
+
+**What this does not do.** It does not measure slippage yet. It starts recording what that measurement needs, from the first session after the next backend restart. A row grows by about 180 bytes, about 2.5 MB a session at 25 stocks.
+
+Rule: OBK-05. Files: `backend/depth_sampler.py`, `backend/database.py`, `backend/research/measure_real_slippage.py`, `backend/tests/test_depth_sampler.py`, `backend/tests/test_measure_real_slippage.py`, `docs/research/prereg-orderbook.md`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
+### 113. The two paper books keep their record when a round is cut short or data is missing (#158, #159)
+
+Two fixes to the forward paper tests. Neither changes a rule. Both change what happens when something fails part-way, so the record says what the rule says rather than what the failure left behind.
+
+**Jev book (#158, §86).**
+
+- **A round cut short keeps its decisions.** If TypeSafe failed after Jev had already answered for some stocks, the day was marked "Jev unavailable". The 15:08 close skips such days, so positions opened at a live Kite price never closed and never counted. Now the day stays open with the decisions made so far, they close at 15:08 like any other round, and the stop is recorded beside them: the time, the error and the stocks not asked. The Jev Book page says so ("Today's round stopped after 3 of 15 stocks…"). An error on the first stock still records the day as "Jev unavailable".
+- **"Live prices" now means a Kite session that is still alive.** The gate checked that a token was stored and not yet rejected. Zerodha ends every session at 06:00 IST, so on a morning without a reconnect the gate passed, Jev was asked about each stock, and every fill failed. The gate now also checks the 06:00 expiry (`kite_live()`: the check the dashboard's Kite status uses). Such a morning is recorded as "no live prices" and Jev is not asked. The fills and the live mark use the same check.
+- **The round stops when Kite stops.** The gate is asked again before each stock. If Kite rejects the session part-way, the rest of the list is not asked, and the round is kept as above.
+
+Neither case has happened: the three recorded rounds (28 to 30 September) closed with 15 decisions each and none excluded. Pre-registration clarification 9 records the change.
+
+**Momentum book (#159, §83).**
+
+- **A failed download is fetched again.** The evening job used to start at the day after the newest bhavcopy it had, so a day that failed while a later one arrived was never fetched again. Each run now asks NSE for every day of the last 31 without a file. NSE answers 404 for a weekend, a holiday or a file not yet out; anything else is a failed download.
+- **The book waits for missing data.** If a past day's download failed, the book stops before that day rather than trade past it: processing the next session without it would fill orders a day late or rank a month turn at the wrong close. It keeps the sessions before it, and the next run tries again. The same happens at a month turn whose ranking comes out empty. That used to skip the month's rebalance and mark, and the next session was no longer a month turn. The job exits with code 4 in both cases, and the Momentum Book page shows the reason in red.
+- **A failed corporate-actions refresh is logged**, and the page's footer gives the date of the file in use, with "the last refresh failed" when it did. A split or bonus missing from the file would show as a price drop.
+
+**Checked.**
+
+| Check | Result |
+| --- | --- |
+| Old and new evening job on the real bhavcopy cache to 2026-09-30, on copies of the state: the live book, a book started 2025-12-20 (9 rebalances) and one started 2024-06-20 (27) | Identical holdings, trades, values and month points in all three |
+| The new download window against NSE, 1 October, into a scratch folder | 10 days asked (weekends, 14 September's holiday, 1 October not yet out): all 404, none failed, 5 seconds |
+| The research parity tests (`test_momentum_book.py`) | Pass unchanged |
+| The two pages, on the worktree's dashboard against a mock of the two endpoints | The interruption line, the new "no live prices" text, the red "stopped early" line and the corporate-actions date show as written |
+
+The Jev part goes live with the next backend restart. The momentum job runs from the main checkout's file, so its part goes live when `main` is pulled there; the first rebalance is on the evening of 1 October.
+
+Rules: JEV-06, JEV-07, JEV-08, MOM-11, MOM-13. Files: `backend/jev_book.py`, `backend/momentum_book.py`, `backend/tests/test_jev_book.py`, `backend/tests/test_momentum_book_data.py`, `frontend/src/pages/JevBook.jsx`, `frontend/src/pages/MomentumBook.jsx`, `docs/research/prereg-jev-book.md`, `docs/research/prereg-3i-momentum-corrected-data.md`, `docs/architecture/` (rules, HLD, LLD).
+
+### 114. LLM headline scoring waits for its switch, credential files are owner-only, and a year without a holiday list is loud
+
+Three defects found while the design was mapped (§89), fixed together. No trading rule changes.
+
+**LLM headline scoring waits for its switch ([#160](https://github.com/harshece16/intraday-trading-agent/issues/160)).** `NEWS["use_llm_sentiment"]` was `bool(ANTHROPIC_API_KEY)`, so exporting the key for anything else started Claude Haiku reading headlines, up to 500 calls a day, though §12, the Setup section and the comment above the setting all said it stayed off. It is now `False`. The switch on the Technical Analysis page (or `POST /api/llm-sentiment/enable`) turns it on. Its position is saved in the journal's `control` table and read back at start-up, so a restart neither turns it off nor on.
+
+- **What changes at the next restart:** if `ANTHROPIC_API_KEY` is set where the backend starts, headline scoring was on and will be off until the switch is used once. The switch then holds across restarts.
+- **Chaywanaprash is left as it is.** The issue also named `CHAYWANAPRASH["enabled"]`, but since §92 it has been on by default whatever the key, and §92, §95 and rule INT-08 say so; the weekly review the owner asked for in §95 runs on it. The key chooses its backend (the API when set, otherwise the Claude Code CLI), not whether it runs. A test now pins that.
+
+**Credential files are owner-only ([#161](https://github.com/harshece16/intraday-trading-agent/issues/161)).** `backend/.dashboard_key.json` was written with the default mode. On this machine it is `-rw-r--r--`, readable by every local account, while the Kite session and the TypeSafe key are `-rw-------`.
+
+- Every credential the backend writes goes through `config.write_secret_file`: a 0600 temporary file that then replaces the real one, so the secret is never on disk under a wider mode, even for a moment. The Kite session was written first and made 0600 afterwards; it goes the same way now.
+- At start-up, any of the four credential files (dashboard key, Kite session, TypeSafe key, Telegram config) that other accounts can read is set to 0600, and the log names the file and its old mode (`.dashboard_key.json (644 -> 600)`). The live file is tightened by the next restart. Nothing reads or prints a key to do this.
+
+**A year without a holiday list is loud ([#162](https://github.com/harshece16/intraday-trading-agent/issues/162)).** `holidays.py` lists 2026 only, so from 2027-01-01 every weekday would count as a session, holidays included, with no warning. NSE's 2027 list is not out: the 2026 list was circular CMTR71775 of 2025-12-12, and on 2026-09-30 neither NSE's circulars from June to September nor its holiday-master API had a 2027 list. So the lists are now held per year, and a date in a year without one:
+
+| Where | What |
+| --- | --- |
+| Start-up and every pre-market read (at least once a day) | An error-level line in the live log and the backend log: "There is no NSE holiday list for 2027 in backend/holidays.py, so every weekday of 2027 is treated as a trading day, holidays included." The dashboard's browser alerts and Telegram both push error-level lines |
+| `/api/state` | `holiday_calendar_missing: {year, message}`, updated every tick; `null` when the year has a list |
+| The market clock | Weekends stay closed; weekdays are sessions, as before |
+
+The same issue's second part is fixed too: the results exclusion ended at the next weekday, not the next trading day, so results due right after a holiday were not excluded the day before it. It now uses `holidays.next_trading_day`. Read against NSE's live event calendar as if it were 2026-10-01, the day before Gandhi Jayanti: the horizon is Monday 2026-10-05, not the holiday, and two companies reporting that Monday are now excluded (LCCPROJECT, STEAMHOUSE; neither is in the NIFTY 100). The 2026 list was re-read from the same API on 2026-09-30 and still matches `holidays.py` in both segments.
+
+#162 stays open until NSE's 2027 list is added to `holidays.py`, with its circular.
+
+**Checked.** 23 new tests; run against the code on `main`, 18 of them fail there. The five that pass on `main` pin behaviour that was already right: Chaywanaprash doesn't follow the key, the switch off means no API call, the Kite session file ends up 0600, a listed holiday is closed, and weekends stay closed in a year without a list. The worktree's own new dashboard key file came out `-rw-------` on its first import of `config`.
+
+**Also corrected in place ([#176](https://github.com/harshece16/intraday-trading-agent/issues/176)):** the README and two code comments disagreed with the scanner in eight places. Item 5 (when the day's list is fixed) was already fixed by §100. The others are corrected where they stand: the rule count (§89), how the day's list is chosen and what the bias does (§2 and the scanner's docstring), what the live gate checks (§4, §14 and a comment in `trading_engine.py`), the gap points (§2), what volatility is worth against cost (§91), the two IC runs (§52, §91), and what has been backtested (Known limitations). Two more Known limitations bullets were out of date and are corrected too: the short side's guards (§100, §108 added them) and what a restart keeps (§98, §106).
+
+Rules: INT-07, INT-08, SEC-06, SEC-07, SEC-15 (new), OPS-13, SCN-05. Files: `backend/config.py`, `backend/llm_sentiment.py`, `backend/app.py`, `backend/trading_engine.py`, `backend/state.py`, `backend/holidays.py`, `backend/nse_feed.py`, `backend/scanner.py` (docstring), `.gitignore`, `backend/tests/test_llm_sentiment_default.py`, `backend/tests/test_secret_files.py`, `backend/tests/test_holiday_calendar.py`, `docs/architecture/` (HLD, LLD, rules).
+
+### 115. The scanner sets no side, and every scan is logged for a later test
+
+**What the scanner audit asked for** (`docs/research/scanner-audit-2026-09-28.md`, rule 3.8 and section 6; the owner approved its fixes on 2026-09-29). No stage of the intraday funnel has a measured edge after costs, and the old selection score's rank IC is nil (0.000 over 434 sessions, −0.0021 over 436; §37, §52). Since the move to the liquidity list (§91) that score chose nothing, but the side it produced still refused entries: a checklist long on a stock the score leaned short on was blocked with "scanner favours SHORT for this stock today". The audit's two remaining items were to stop that, and to log every candidate on every scan so that a later pre-registered test can read them.
+
+**1. The side.**
+
+- The scanner still scores each stock as a long and as a short. The stronger is kept as `score_side`, with `long_score` and `short_score`, and shown for information. The row's `side` is empty.
+- The engine no longer refuses an entry for disagreeing with the old score. The checklist's own reading picks the side (rules ENT-21, SCN-06).
+- Tradability stays. A stock with a fixed price band is still long-only, now refused explicitly ("this stock has a fixed price band, so it is long-only"), and `SCANNER.allow_shorts = False` still refuses every short. The market-bias gate (risk-off blocks new longs, risk-on blocks new shorts) is unchanged; the audit did not ask for it to change.
+- **The audit's replacement direction is not a gate.** Rule 3.8 takes the direction from the VWAP side (3.5), the stock against its industry (3.6) and the NIFTY against its VWAP (3.7), all agreeing. Rule 3.5 failed as a rule family (0 of 76), 3.6 and 3.7 were never tested, and the audit says nothing reaches the engine without a pre-registered test. So it runs in shadow: it is computed with every scan and journaled as `shadow_side`, and nothing that trades reads it. The NIFTY leg reads the index against its open, because an index has no traded volume and so no VWAP.
+- **The day's list does not change**: the 25 most-traded eligible stocks, as before (SCN-14). On 2026-09-30 a scan by this code after the close, on the delayed feed into a scratch journal, chose the same 25 stocks in the same order as the running engine's list for that session.
+- **The dashboard follows.** The Screener, the Overview's cards and the Stock page no longer show a Long or Short pill for the scanner. The chart cards and the Stock page show the checklist's side ("Long plan", "Waiting to buy"). The Stock page says the score is information and sets no side. The Pre-market note names the list without sides. The Day plan sizes each pick on the checklist's side; without that it would have gone empty, because it skipped rows without a side.
+- The research desk now flags a short lean on a long-only stock, and reads the market-bias flag from the checklist's side. Its flag "the engine refuses trades against the scanner's side" is gone, because that is no longer true. The Kronos shadow (§102) records `score_side` where it recorded the side, so its record keeps the same values.
+
+**What this changes in paper mode.** Automatic entries stay off: the confidence gate stops every one (§70). The review queue changes: a near-miss card can now be offered on either side of a listed stock, where before only the score's side could reach one.
+
+**2. The shadow log** (audit rule 5.3, and section 6: run passes 1 to 3 in shadow, log candidates, place no orders).
+
+- Every scan already wrote one `scan_rows` row per stock. Those rows now also carry the inputs of passes 1 to 3: the long-only flag, the price feed and the time of the price, VWAP, the opening range, the average change of the other NIFTY 100 stocks in the industry, the sector index's daily trend, turnover, ATR %, the old score's two readings and side, and `shadow_side`. Each scan's `scans` row adds the feed, the quote time, the NIFTY's open and daily trend, and the FII net.
+- **Why extend `scan_rows` rather than add a table.** The rows already exist for every stock of every scan (8,000 to 9,000 a session), with the symbol, session, status, price, change, gap and relative volume. A new table would write all of that a second time. The columns are added in place (SQLite `ADD COLUMN`: 0.01 s on a copy of the 855 MB live journal), and older rows leave them empty. The one thing a scan cannot know, the price at 15:08, gets its own small table.
+- `session_closes`: at the first tick of the square-off window, one Kite quote request for the 100 stocks and the NIFTY, written once a session. Kite only: without Kite nothing is written and the activity log says so once, rather than recording a price 15 minutes old.
+- The view `scan_candidates` joins them: every stock of every scan with its inputs, its distance from VWAP in bp, and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08). `database.scan_candidates(session)` reads one session. Rows from before this change read the old score's side from `side`.
+- **Limits, stated now.** Relative volume still compares with at most four earlier sessions; the audit wants 20. The industry comparison uses the other NIFTY 100 stocks in the industry, not the live sector index, which the scanner does not read. There is no pre-open data, so pass 2's 09:08 read does not exist. A delayed-feed row's price is about 15 minutes old; `feed` and `price_at` say so.
+
+**Checked.**
+
+- `backend/tests/test_scanner_side_shadow_log.py`: 18 tests. 15 of the first 17 fail on `main`: for example, a real scan on `main` refuses a short in FFF with "scanner favours LONG for this stock today".
+- A copy of the live journal migrates in 0.01 s. Its 7,700 rows for 2026-09-30 read through the view, with the old score's side.
+- A real scan after the close on 2026-09-30 (delayed feed, no Kite, news off, sector history not completed): 100 rows journaled, no row with a side, `score_side` 74 short and 26 long, `shadow_side` 41 short and 59 empty (the NIFTY closed below its open, so no stock could be long), and the list matched the engine's.
+- The dashboard from this branch, fed that scan by a read-only stub (no engine, no key): the Screener, Overview, Stock, Pre-market and Day plan pages, checked in the browser.
+- **Not checked live:** the 15:08 Kite read runs for the first time at the first session after this is deployed. Its test uses a fake Kite.
+
+**Running tests.** `prereg-jev-book.md` clarification 10: Jev's snapshot and the book's baseline keep the old score's side, read from `score_side`, so neither changes; only the engine no longer acts on it. `prereg-orderbook.md` amendment 7: no effect on L37, whose list is unchanged and which never read the side.
+
+Rules: ENT-21, SCN-06, SCN-07 and JEV-11 changed; SCN-26 new. Files: `backend/scanner.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/jev_book.py`, `backend/research_desk.py`, `backend/day_plan.py`, `backend/research/kronos_shadow.py`, `backend/config.py` (comment), `backend/tests/test_scanner_side_shadow_log.py`, `backend/tests/test_scanner_selection.py`, the dashboard pages named above, `docs/architecture/` (HLD, LLD, rules).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
@@ -4278,28 +4469,38 @@ key on each call, so no restart is needed.
   - Before going live: slippage has never been measured from real fills ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66); a first reading from the order book is in §98). Live fills booked at the modelled price and a live position unwatched after a restart were fixed in §98, untested against a real order.
   - Before enabling options: options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)); live option orders book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)); open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)); paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189)).
   - For the paper books: [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) (Jev book) and [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) (momentum book).
-  - Housekeeping: [#160](https://github.com/harshece16/intraday-trading-agent/issues/160), [#161](https://github.com/harshece16/intraday-trading-agent/issues/161), [#162](https://github.com/harshece16/intraday-trading-agent/issues/162), [#163](https://github.com/harshece16/intraday-trading-agent/issues/163).
+  - Housekeeping: [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) (NSE's 2027 holiday list, not published yet; a year without a list is loud since §114), [#163](https://github.com/harshece16/intraday-trading-agent/issues/163).
 - **Square-off time (#78, fixed).** Zerodha auto-squares MIS positions in F&O-eligible stocks at 15:12 and charges ₹50 + GST per order. The engine squares off at **15:08**.
 - **Slippage is still an assumption** (3 bp per leg), because no real-money order has ever been placed. The charges side of the cost model now matches Zerodha's published tariff to within about 0.03 bp (#79). Measured spreads have been accumulating in `liquidity_checks` since §58, but only for setups that reach the last gate.
 - **Cash equity only, in practice.** At a small account, NFO futures and all but one MCX contract are out of reach on margin, and Kite has no intraday history for expired F&O/MCX/CDS contracts. A non-equity backtest would need a forward-collected cache first (`docs/research/phase3-scoping.md`).
 - F&O confidence currently borrows cash equity's Scorecard rather than
   having its own — untested assumption, not a proof (see "Improving the
   brain" above).
-- Shorts (cash) are intraday cash (MIS) only. No check for stocks in the
-  exchange's short-sell ban or circuit limits. No Market Wide Position Limit
-  check for F&O either (documented, not yet built).
-- News, gaps, relative volume and results-day filters can't be backtested
-  (no historical data for them). F&O hasn't been backtested at all yet —
-  only the pricing/Greeks/sizing math has been unit-tested with synthetic data.
+- Shorts (cash) are intraday cash (MIS) only. The scanner's guards (§100)
+  leave out a stock in the F&O ban, in trade-for-trade or under a
+  surveillance remark, and make a stock with a fixed price band long only,
+  left alone within 2% of either band. A stock without a fixed band (every
+  F&O stock) is not checked against the day's price limits. F&O entries
+  refuse a stock in the Market Wide Position Limit ban (§108).
+- The news sentiment score has never been backtested: there is no record of
+  the headlines as they were scored at the time. Relative volume, gaps and
+  results days have been measured, not as the scanner's score points but in
+  their own tests: trial 35 computed relative volume from the Kite 5-minute
+  cache (`docs/research/results-3a-opening-range.md`), L35 measured 9,586 NSE
+  filings and results days (§73), and L36 the gap on results days (§74). None
+  gave an intraday rule that clears costs. F&O hasn't been
+  backtested at all yet — only the pricing/Greeks/sizing math has been
+  unit-tested with synthetic data.
 - Live entries fill at the live price a few seconds after the signal candle
   closes; the backtester fills at that candle's close (§42, issue #13).
 - A stuck engine cycle is detected and reported (thread stacks in the log,
   an alert on the dashboard), but not restarted automatically (§43).
-- Live positions and the current watchlist still reset on restart (only
-  history is persisted, in `sahab_journal.db`). §19 added detection — a
-  clear alert if Kite shows a real open position this app isn't tracking —
-  but not auto-healing; the app still won't know that position's real entry
-  price, stop, or target, and won't act on it until you do.
+- A restart comes back in Paper. Today's open cash positions are rebuilt
+  from the journal with their stops and targets, live ones included (§98),
+  and the day's list is read back (§106). Open option positions are not
+  (#187). A position Kite holds that today's journal doesn't know is only
+  reported (§19): the app won't know its entry price, stop or target, and
+  won't act on it until you do.
 - Single-user. An API key now gates every route, but there's still no
   per-user auth, rate limiting, or HTTPS termination built in — treat this
   as "safe enough to expose briefly via a tunnel," not "safe to run

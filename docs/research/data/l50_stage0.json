@@ -1,0 +1,644 @@
+{
+ "started": "2026-09-30T20:19:50.383765",
+ "prereg": "docs/research/prereg-bulk-block-deals.md (66c1ed3)",
+ "candle_db": "/Users/harshgupta/Projects/webapp/backend/data/kite_history.db",
+ "reads_price": false,
+ "source": {
+  "endpoint": "https://www.nseindia.com/api/historicalOR/bulk-block-short-deals?optionType={kind}&from={from}&to={to}&csv=true",
+  "files": [
+   {
+    "file": "bulk_deals_2024-09-19_2024-09-30.csv",
+    "from": "2024-09-19",
+    "to": "2024-09-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 120814,
+    "fetched_at": "2026-09-30T20:19:55.698933",
+    "rows": 1108,
+    "dates": 8
+   },
+   {
+    "file": "bulk_deals_2024-10-01_2024-10-31.csv",
+    "from": "2024-10-01",
+    "to": "2024-10-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 152192,
+    "fetched_at": "2026-09-30T20:19:58.158292",
+    "rows": 1401,
+    "dates": 22
+   },
+   {
+    "file": "bulk_deals_2024-11-01_2024-11-30.csv",
+    "from": "2024-11-01",
+    "to": "2024-11-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 86472,
+    "fetched_at": "2026-09-30T20:20:00.646777",
+    "rows": 808,
+    "dates": 19
+   },
+   {
+    "file": "bulk_deals_2024-12-01_2024-12-31.csv",
+    "from": "2024-12-01",
+    "to": "2024-12-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 233308,
+    "fetched_at": "2026-09-30T20:20:03.232855",
+    "rows": 2144,
+    "dates": 21
+   },
+   {
+    "file": "bulk_deals_2025-01-01_2025-01-31.csv",
+    "from": "2025-01-01",
+    "to": "2025-01-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 161875,
+    "fetched_at": "2026-09-30T20:20:05.972880",
+    "rows": 1472,
+    "dates": 23
+   },
+   {
+    "file": "bulk_deals_2025-02-01_2025-02-28.csv",
+    "from": "2025-02-01",
+    "to": "2025-02-28",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 97766,
+    "fetched_at": "2026-09-30T20:20:08.107651",
+    "rows": 890,
+    "dates": 20
+   },
+   {
+    "file": "bulk_deals_2025-03-01_2025-03-31.csv",
+    "from": "2025-03-01",
+    "to": "2025-03-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 145841,
+    "fetched_at": "2026-09-30T20:20:10.665287",
+    "rows": 1337,
+    "dates": 19
+   },
+   {
+    "file": "bulk_deals_2025-04-01_2025-04-30.csv",
+    "from": "2025-04-01",
+    "to": "2025-04-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 84406,
+    "fetched_at": "2026-09-30T20:20:13.143379",
+    "rows": 776,
+    "dates": 19
+   },
+   {
+    "file": "bulk_deals_2025-05-01_2025-05-31.csv",
+    "from": "2025-05-01",
+    "to": "2025-05-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 120546,
+    "fetched_at": "2026-09-30T20:20:15.737864",
+    "rows": 1127,
+    "dates": 21
+   },
+   {
+    "file": "bulk_deals_2025-06-01_2025-06-30.csv",
+    "from": "2025-06-01",
+    "to": "2025-06-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 151848,
+    "fetched_at": "2026-09-30T20:20:18.341605",
+    "rows": 1414,
+    "dates": 21
+   },
+   {
+    "file": "bulk_deals_2025-07-01_2025-07-31.csv",
+    "from": "2025-07-01",
+    "to": "2025-07-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 227262,
+    "fetched_at": "2026-09-30T20:20:20.779103",
+    "rows": 2122,
+    "dates": 23
+   },
+   {
+    "file": "bulk_deals_2025-08-01_2025-08-31.csv",
+    "from": "2025-08-01",
+    "to": "2025-08-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 178981,
+    "fetched_at": "2026-09-30T20:20:23.273169",
+    "rows": 1634,
+    "dates": 19
+   },
+   {
+    "file": "bulk_deals_2025-09-01_2025-09-30.csv",
+    "from": "2025-09-01",
+    "to": "2025-09-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 290219,
+    "fetched_at": "2026-09-30T20:20:25.814460",
+    "rows": 2648,
+    "dates": 22
+   },
+   {
+    "file": "bulk_deals_2025-10-01_2025-10-31.csv",
+    "from": "2025-10-01",
+    "to": "2025-10-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 206103,
+    "fetched_at": "2026-09-30T20:20:28.302575",
+    "rows": 1873,
+    "dates": 21
+   },
+   {
+    "file": "bulk_deals_2025-11-01_2025-11-30.csv",
+    "from": "2025-11-01",
+    "to": "2025-11-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 186519,
+    "fetched_at": "2026-09-30T20:20:30.832008",
+    "rows": 1686,
+    "dates": 19
+   },
+   {
+    "file": "bulk_deals_2025-12-01_2025-12-22.csv",
+    "from": "2025-12-01",
+    "to": "2025-12-22",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 193247,
+    "fetched_at": "2026-09-30T20:20:33.371623",
+    "rows": 1736,
+    "dates": 16
+   },
+   {
+    "file": "block_deals_2024-09-19_2024-09-30.csv",
+    "from": "2024-09-19",
+    "to": "2024-09-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 9335,
+    "fetched_at": "2026-09-30T20:20:35.739176",
+    "rows": 81,
+    "dates": 6
+   },
+   {
+    "file": "block_deals_2024-10-01_2024-10-31.csv",
+    "from": "2024-10-01",
+    "to": "2024-10-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 2193,
+    "fetched_at": "2026-09-30T20:20:38.207613",
+    "rows": 20,
+    "dates": 6
+   },
+   {
+    "file": "block_deals_2024-11-01_2024-11-30.csv",
+    "from": "2024-11-01",
+    "to": "2024-11-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 5274,
+    "fetched_at": "2026-09-30T20:20:40.713673",
+    "rows": 47,
+    "dates": 10
+   },
+   {
+    "file": "block_deals_2024-12-01_2024-12-31.csv",
+    "from": "2024-12-01",
+    "to": "2024-12-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 15712,
+    "fetched_at": "2026-09-30T20:20:43.257648",
+    "rows": 142,
+    "dates": 11
+   },
+   {
+    "file": "block_deals_2025-01-01_2025-01-31.csv",
+    "from": "2025-01-01",
+    "to": "2025-01-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 5853,
+    "fetched_at": "2026-09-30T20:20:45.698061",
+    "rows": 58,
+    "dates": 1
+   },
+   {
+    "file": "block_deals_2025-02-01_2025-02-28.csv",
+    "from": "2025-02-01",
+    "to": "2025-02-28",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 12426,
+    "fetched_at": "2026-09-30T20:20:48.321092",
+    "rows": 101,
+    "dates": 8
+   },
+   {
+    "file": "block_deals_2025-03-01_2025-03-31.csv",
+    "from": "2025-03-01",
+    "to": "2025-03-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 7136,
+    "fetched_at": "2026-09-30T20:20:50.698664",
+    "rows": 63,
+    "dates": 11
+   },
+   {
+    "file": "block_deals_2025-04-01_2025-04-30.csv",
+    "from": "2025-04-01",
+    "to": "2025-04-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 1896,
+    "fetched_at": "2026-09-30T20:20:53.219680",
+    "rows": 16,
+    "dates": 2
+   },
+   {
+    "file": "block_deals_2025-05-01_2025-05-31.csv",
+    "from": "2025-05-01",
+    "to": "2025-05-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 10752,
+    "fetched_at": "2026-09-30T20:20:55.771609",
+    "rows": 93,
+    "dates": 10
+   },
+   {
+    "file": "block_deals_2025-06-01_2025-06-30.csv",
+    "from": "2025-06-01",
+    "to": "2025-06-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 29497,
+    "fetched_at": "2026-09-30T20:20:58.306515",
+    "rows": 261,
+    "dates": 13
+   },
+   {
+    "file": "block_deals_2025-07-01_2025-07-31.csv",
+    "from": "2025-07-01",
+    "to": "2025-07-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 16864,
+    "fetched_at": "2026-09-30T20:21:00.759365",
+    "rows": 115,
+    "dates": 7
+   },
+   {
+    "file": "block_deals_2025-08-01_2025-08-31.csv",
+    "from": "2025-08-01",
+    "to": "2025-08-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 16093,
+    "fetched_at": "2026-09-30T20:21:03.318584",
+    "rows": 137,
+    "dates": 10
+   },
+   {
+    "file": "block_deals_2025-09-01_2025-09-30.csv",
+    "from": "2025-09-01",
+    "to": "2025-09-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 76865,
+    "fetched_at": "2026-09-30T20:21:05.822825",
+    "rows": 666,
+    "dates": 21
+   },
+   {
+    "file": "block_deals_2025-10-01_2025-10-31.csv",
+    "from": "2025-10-01",
+    "to": "2025-10-31",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 27672,
+    "fetched_at": "2026-09-30T20:21:08.443131",
+    "rows": 248,
+    "dates": 16
+   },
+   {
+    "file": "block_deals_2025-11-01_2025-11-30.csv",
+    "from": "2025-11-01",
+    "to": "2025-11-30",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 19133,
+    "fetched_at": "2026-09-30T20:21:10.869598",
+    "rows": 165,
+    "dates": 13
+   },
+   {
+    "file": "block_deals_2025-12-01_2025-12-22.csv",
+    "from": "2025-12-01",
+    "to": "2025-12-22",
+    "source": "nse",
+    "status": 200,
+    "attempts": 1,
+    "bytes": 8152,
+    "fetched_at": "2026-09-30T20:21:13.363803",
+    "rows": 74,
+    "dates": 9
+   }
+  ],
+  "rows": {
+   "BULK": 24176,
+   "BLOCK": 2287
+  }
+ },
+ "completeness": {
+  "seed": 123,
+  "dates": [
+   "2024-10-28",
+   "2024-11-25",
+   "2024-12-10",
+   "2025-04-07",
+   "2025-04-08",
+   "2025-07-22"
+  ],
+  "checks": [
+   {
+    "date": "2024-10-28",
+    "kind": "BULK",
+    "month_rows": 50,
+    "day_rows": 50,
+    "identical": true
+   },
+   {
+    "date": "2024-10-28",
+    "kind": "BLOCK",
+    "month_rows": 2,
+    "day_rows": 2,
+    "identical": true
+   },
+   {
+    "date": "2024-11-25",
+    "kind": "BULK",
+    "month_rows": 54,
+    "day_rows": 54,
+    "identical": true
+   },
+   {
+    "date": "2024-11-25",
+    "kind": "BLOCK",
+    "month_rows": 0,
+    "day_rows": 0,
+    "identical": true
+   },
+   {
+    "date": "2024-12-10",
+    "kind": "BULK",
+    "month_rows": 94,
+    "day_rows": 94,
+    "identical": true
+   },
+   {
+    "date": "2024-12-10",
+    "kind": "BLOCK",
+    "month_rows": 0,
+    "day_rows": 0,
+    "identical": true
+   },
+   {
+    "date": "2025-04-07",
+    "kind": "BULK",
+    "month_rows": 22,
+    "day_rows": 22,
+    "identical": true
+   },
+   {
+    "date": "2025-04-07",
+    "kind": "BLOCK",
+    "month_rows": 0,
+    "day_rows": 0,
+    "identical": true
+   },
+   {
+    "date": "2025-04-08",
+    "kind": "BULK",
+    "month_rows": 44,
+    "day_rows": 44,
+    "identical": true
+   },
+   {
+    "date": "2025-04-08",
+    "kind": "BLOCK",
+    "month_rows": 0,
+    "day_rows": 0,
+    "identical": true
+   },
+   {
+    "date": "2025-07-22",
+    "kind": "BULK",
+    "month_rows": 96,
+    "day_rows": 96,
+    "identical": true
+   },
+   {
+    "date": "2025-07-22",
+    "kind": "BLOCK",
+    "month_rows": 2,
+    "day_rows": 2,
+    "identical": true
+   }
+  ],
+  "all_identical": true
+ },
+ "symbol_changes": {
+  "url": "https://nsearchives.nseindia.com/content/equities/symbolchange.csv",
+  "source": "nse",
+  "symbols_with_changes": 1065
+ },
+ "adjustment": {
+  "fetch_run_dates": [
+   "2026-09-20"
+  ],
+  "spans": 1302,
+  "events_with_boundary_between": 0
+ },
+ "boundaries": {
+  "deal_dates": [
+   "2024-09-19",
+   "2025-12-22"
+  ],
+  "deal_rows_outside_window": 0,
+  "last_bar_date_loaded": "2025-12-23",
+  "bar_bound_exclusive": "2025-12-24"
+ },
+ "symbols": {
+  "stock_days_outside_sample": 0,
+  "stock_days_not_nifty100_on_entry": 8094,
+  "nifty100_stock_days_lost_no_cached_bars": {
+   "BULK:INDUSINDBK": 6,
+   "BULK:SWIGGY": 1,
+   "BULK:BAJAJHFL": 1,
+   "BLOCK:INDUSINDBK": 1,
+   "BLOCK:NAUKRI": 2,
+   "BLOCK:DABUR": 1,
+   "BLOCK:HEROMOTOCO": 6,
+   "BLOCK:ICICIGI": 1,
+   "BLOCK:SWIGGY": 1,
+   "BLOCK:JSWENERGY": 1
+  },
+  "nifty100_stock_days": 277,
+  "deal_dates_not_a_regular_cached_session": 0
+ },
+ "classes": {
+  "BULK_BUY": 2,
+  "BULK_SELL": 19,
+  "MIXED": 5,
+  "BLOCK": 251,
+  "BLOCK_with_buy_ne_sell": 2,
+  "info_other_thresholds": {
+   "0.0": {
+    "BULK_BUY": 2,
+    "BULK_SELL": 20,
+    "MIXED": 4
+   },
+   "0.5": {
+    "BULK_BUY": 2,
+    "BULK_SELL": 18,
+    "MIXED": 6
+   }
+  },
+  "dominance_of_record": "1/3"
+ },
+ "bars": {
+  "cells": {
+   "BULK_BUY:15m": {
+    "events": 2,
+    "sessions": 2,
+    "first_half": 0,
+    "second_half": 2
+   },
+   "BULK_BUY:30m": {
+    "events": 2,
+    "sessions": 2,
+    "first_half": 0,
+    "second_half": 2
+   },
+   "BULK_BUY:60m": {
+    "events": 2,
+    "sessions": 2,
+    "first_half": 0,
+    "second_half": 2
+   },
+   "BULK_SELL:15m": {
+    "events": 19,
+    "sessions": 18,
+    "first_half": 2,
+    "second_half": 17
+   },
+   "BULK_SELL:30m": {
+    "events": 19,
+    "sessions": 18,
+    "first_half": 2,
+    "second_half": 17
+   },
+   "BULK_SELL:60m": {
+    "events": 19,
+    "sessions": 18,
+    "first_half": 2,
+    "second_half": 17
+   },
+   "BULK_ALL:15m": {
+    "events": 21,
+    "sessions": 20,
+    "first_half": 2,
+    "second_half": 19
+   },
+   "BULK_ALL:30m": {
+    "events": 21,
+    "sessions": 20,
+    "first_half": 2,
+    "second_half": 19
+   },
+   "BULK_ALL:60m": {
+    "events": 21,
+    "sessions": 20,
+    "first_half": 2,
+    "second_half": 19
+   }
+  },
+  "events_without_any_bars": {
+   "BULK_BUY": 0,
+   "BULK_SELL": 0,
+   "BULK_ALL": 0
+  }
+ },
+ "family": {
+  "cells": [],
+  "size": 0,
+  "bh_q": 0.1,
+  "min_events": 60
+ },
+ "sessions": {
+  "regular_in_sample": 311,
+  "first": "2024-09-20",
+  "last": "2025-12-23",
+  "first_half": 155,
+  "second_half": 156,
+  "halves_boundary": "2025-05-12",
+  "deal_dates_in_sample_not_regular": [
+   "2024-11-01",
+   "2025-10-21"
+  ],
+  "regular_sessions_with_no_bulk_row": []
+ },
+ "status": "VOID",
+ "halt": {
+  "step": 6,
+  "why": "BULK_ALL has fewer than 60 events at every horizon: L50 is VOID"
+ },
+ "finished": "2026-09-30T20:21:52.178352"
+}

@@ -102,7 +102,7 @@ ANALYSTS = (
      "how sentiment toward this stock and the market's mood read today"),
     ("news", "News analyst",
      "`news.headlines`, `scanner.catalyst`, `scanner.event` and `scanner.large_deals`",
-     "what recent headlines, filings and events say, and whether they support or contradict the scanner's side"),
+     "what recent headlines, filings and events say, and whether they support or contradict the checklist's side"),
     ("fundamentals", "Fundamentals analyst",
      "the `fundamentals` section, and `scanner.event` for any results or corporate event",
      "the company's quality and any red flags in its financial ratios"),
@@ -410,7 +410,8 @@ _TECH_KEYS = ("bias", "setup", "regime", "structure", "htf_trend", "always_in", 
               "entry_threshold", "rsi", "adx", "atr", "ema20", "ema50", "vwap", "volume_ratio",
               "support", "resistance", "long_ok", "short_ok", "entry_mode", "bar_time",
               "news_score", "fundamentals_score", "fundamentals_label")
-_SCAN_KEYS = ("name", "industry", "side", "status", "rank", "score", "final_score", "long_score", "short_score",
+_SCAN_KEYS = ("name", "industry", "side", "score_side", "long_only", "status", "rank", "score", "final_score",
+              "long_score", "short_score",
               "ltp", "chg_pct", "gap_pct", "rvol", "rs_today", "atr_pct", "daily_trend", "rs10",
               "pct_from_high", "pct_from_low", "turnover_cr", "beta", "excluded")
 
@@ -617,14 +618,14 @@ def deterministic_flags(snapshot):
         add("high", f"The scanner excludes this stock today: {scan['excluded']}", "scanner.excluded")
     if scan.get("event"):
         add("high", "A results date or corporate event is flagged for this stock.", "scanner.event")
-    if tech.get("available") and scan.get("side") and tech.get("bias") and tech["bias"] != scan["side"].lower():
-        add("medium", f"The checklist leans {tech['bias']} but the scanner ranks this stock "
-                      f"{scan['side'].lower()}, and the engine refuses trades against the scanner's side.",
-            "technical.bias", "scanner.side")
-    side = (scan.get("side") or "").upper()
+    # The scanner sets no side (README section 115): the checklist's lean is the side a trade would take.
+    side = (tech.get("bias") or "").upper() if tech.get("available") else ""
+    if side == "SHORT" and scan.get("long_only"):
+        add("high", "The checklist leans short, but this stock has a fixed price band and is long-only, "
+                    "so the engine refuses a short.", "technical.bias", "scanner.long_only")
     if (side == "LONG" and market.get("bias") == "risk-off") or (side == "SHORT" and market.get("bias") == "risk-on"):
         add("medium", f"The market is {market['bias']}, which blocks new {side.lower()}s.",
-            "market.bias", "scanner.side")
+            "market.bias", "technical.bias")
     if market.get("vix_high"):
         add("low", f"India VIX is high, so new positions are sized at {risk['vix_size_multiplier']}x.",
             "market.vix", "risk.vix_size_multiplier")
