@@ -29,6 +29,7 @@ INDEXES = ["NIFTY", "BANKNIFTY"]
 TODAY = "2026-09-29"
 BAN = nse_feed.parse_fno_ban("Securities in Ban For Trade Date 29-SEP-2026:\n1,LICHSGFIN\n2,SAIL\n")
 CLEAR = nse_feed.parse_fno_ban("Securities in Ban For Trade Date 29-SEP-2026:\n")
+FNO_BAN_LIST = nse_feed.fno_ban_list      # the real one, before any test replaces it
 
 
 def test_a_banned_stock_is_refused_and_a_clear_one_is_not():
@@ -88,6 +89,27 @@ def test_the_engine_refuses_stock_options_when_the_list_is_unknown(monkeypatch):
     e._try_enter_fno("RELIANCE", "LONG", {"ltp": 100.0})
     [(_, executed, reason)] = _evaluations()
     assert executed == 0 and "unknown" in reason
+
+
+def test_nse_down_costs_one_timeout_not_one_per_candidate_and_the_reason_says_when(monkeypatch):
+    """#212: while NSE's archive does not answer, the first candidate waits
+    out the timeout and the rest are refused at once until the retry time."""
+    e, _ = _engine(monkeypatch, None)
+    monkeypatch.setattr(nse_feed, "fno_ban_list", FNO_BAN_LIST)
+    monkeypatch.setattr(nse_feed, "_ban_cache", {"at": 0.0, "value": None, "failed": None})
+    calls = []
+
+    def down(url, **kw):
+        calls.append(url)
+        raise nse_feed.requests.Timeout("read timed out")
+    monkeypatch.setattr(nse_feed.requests, "get", down)
+    for underlying in ("RELIANCE", "SAIL", "TCS"):
+        e._try_enter_fno(underlying, "LONG", {"ltp": 100.0})
+    assert calls == [nse_feed.FNO_BAN_URL]
+    reasons = [r for _, _, r in _evaluations()]
+    assert len(reasons) == 3 and len(set(reasons)) == 1
+    assert "could not be read (the last try, at " in reasons[0] and "failed (no answer within 15 s)" in reasons[0]
+    assert "ban status is unknown" in reasons[0]
 
 
 def test_the_engine_lets_an_index_and_a_clear_stock_past_the_ban_check(monkeypatch):

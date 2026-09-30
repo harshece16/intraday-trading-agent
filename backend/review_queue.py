@@ -17,7 +17,10 @@ Nothing here places an order. `TradingEngine.approve_review()` does, and
 only after the user clicks Approve. That approval overrides the one gate
 named on the card, plus the confidence gate. It **re-checks every risk
 limit**: daily loss, max positions, sector cap, one entry per stock per day,
-the entry window, the scanner/market filters, sizing and liquidity.
+the entry window, the scanner/market filters, sizing and liquidity. A card
+blocked on reward-to-risk is also held to the R:R floor again, at the live
+price: the price can move toward the target in the minutes before the click,
+and the floor judged the offer's price, not the fill's (#211).
 
 The card is a numbers card, deterministic and free. It states the money in
 rupees: what a hit target makes after charges and slippage, what a stop
@@ -63,16 +66,17 @@ def single_blocker(plan):
     return failing[0] if len(failing) == 1 else None
 
 
-def floor_reason(blocker, net_rrr, floor=None):
-    """Why a near-miss is held back instead of offered, or None if it may be
-    offered. Only a card blocked on reward-to-risk is held to the floor; a
-    card blocked on anything else is unaffected (#166). `net_rrr` is the R:R
-    after costs at the price the card would be offered at."""
+def floor_reason(blocker, net_rrr, floor=None, at="at the offer"):
+    """Why a near-miss is held back instead of offered, or an approval
+    refused, or None if it may go ahead. Only a card blocked on
+    reward-to-risk is held to the floor; a card blocked on anything else is
+    unaffected (#166). `net_rrr` is the R:R after costs at the price named by
+    `at`: the offer's, or the live price when the user approves (#211)."""
     floor = config.REVIEW_QUEUE.get("min_net_rrr") if floor is None else floor
     if floor is None or (blocker or {}).get("key") != "rrr" or net_rrr >= floor:
         return None
     shown = f"{net_rrr:.2f}" if f"{net_rrr:.2f}" != f"{floor:.2f}" else f"{net_rrr:.3f}"
-    return f"reward-to-risk after costs is {shown} at the offer, under the queue's floor of {floor:g}"
+    return f"reward-to-risk after costs is {shown} {at}, under the queue's floor of {floor:g}"
 
 
 def progress(blocker, net_rrr=None):
