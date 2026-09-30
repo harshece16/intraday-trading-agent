@@ -1910,15 +1910,15 @@ Once switched off, the momentum book stops processing: no more trades, and the N
 <details>
 <summary><code>MOM-11</code> <b>Active</b> · known gap #159 · known gap #177 · known gap #178 — Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers…</summary>
 
-Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers, dividends) into total-return closes, and positions are valued by total-return ratio from the fill date. A dividend is read without face values or bracketed remarks, and is applied when it is below the previous close. A demerger is applied when it leaves between 1% and 98% of the price.
+Prices come from NSE's daily bhavcopies, adjusted with NSE's own corporate-actions file (splits, bonuses, consolidations, rights at TERP, demergers, dividends) into total-return closes, and positions are valued by total-return ratio from the fill date. A dividend is read without face values or bracketed remarks, and is applied when it is below the previous close. A demerger is applied when it leaves between 1% and 98% of the price. A failed refresh of the corporate-actions file is logged as a warning, and the Momentum Book page shows the date of the file in use and says when the last refresh failed.
 
 | | |
 | --- | --- |
-| **Why** | The uncorrected data had produced false signals (the reason for 3i). Consolidations, seven dividend amounts and two real actions outside the old bounds were wrong until 2026-09-28 (#177, #178). |
-| **Enforced in** | `backend/momentum_book.py:build_panel and value_of` |
-| **How to check** | Parity test against the repaired panel of research/nse_prices.py; on the real cache the two panels have 0 differences |
+| **Why** | The uncorrected data had produced false signals (the reason for 3i). Consolidations, seven dividend amounts and two real actions outside the old bounds were wrong until 2026-09-28 (#177, #178). A refresh that failed was silent, and a split it missed would show as a price drop (#159). |
+| **Enforced in** | `backend/momentum_book.py:build_panel, value_of and daily` |
+| **How to check** | Parity test against the repaired panel of research/nse_prices.py; on the real cache the two panels have 0 differences; the page footer 'corporate-actions file from ...'; state.data.corporate_actions_refreshed |
 | **Test** | `backend/tests/test_momentum_book.py::test_the_panel_is_the_research_loaders_repaired_panel` |
-| **Source** | README §82, §97 |
+| **Source** | README §82, §97, §113 |
 | **Known gap** | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) |
 | **Known gap** | [#177](https://github.com/harshece16/intraday-trading-agent/issues/177) |
 | **Known gap** | [#178](https://github.com/harshece16/intraday-trading-agent/issues/178) |
@@ -1942,17 +1942,17 @@ The momentum evening job starts only on weekdays that are not holidays, between 
 </details>
 
 <details>
-<summary><code>MOM-13</code> <b>Active</b> · known gap #159 — The evening job exits with code 3 when today's bhavcopy isn't published yet, and with 0 once today's session is processed.</summary>
+<summary><code>MOM-13</code> <b>Active</b> · known gap #159 — The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 when its data is incomplete, and 0 once today's session is processed.</summary>
 
-The evening job exits with code 3 when today's bhavcopy isn't published yet, and with 0 once today's session is processed. Evenings it missed are caught up in order on the next run.
+The evening job exits with code 3 when today's bhavcopy isn't published yet, 4 when its data is incomplete, and 0 once today's session is processed. Evenings it missed are caught up in order on the next run. Each run asks NSE again for every day of the last 31 without a bhavcopy (a 404 means no session that day). The book stops before a past day whose download failed, and before a month turn whose ranking comes out empty, keeping the sessions before it, until a later run has the data. The reason is kept in state.data.problem and shown on the page.
 
 | | |
 | --- | --- |
-| **Why** | A Mac asleep or a late NSE file must not lose a session or a month turn. |
-| **Enforced in** | `backend/momentum_book.py:daily` |
-| **How to check** | momentum_book.log lines 'daily done code=N'; state.last_processed advances |
-| **Test** | `backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed` |
-| **Source** | README §83 |
+| **Why** | A Mac asleep, a late NSE file or a failed download must not lose a session or a month turn, or move a fill to a later day. The job used to start at the day after the newest file, so a day that failed was never fetched again, and an empty ranking skipped the month's rebalance (#159). |
+| **Enforced in** | `backend/momentum_book.py:daily, update_bhavcopies, download_bhavcopy and process_session` |
+| **How to check** | momentum_book.log lines 'daily done code=N' and any warning before them; state.last_processed advances; state.data.problem is null; the Momentum Book page shows no 'stopped early' line |
+| **Test** | `backend/tests/test_momentum_book_data.py::test_the_book_waits_at_a_day_whose_download_failed; backend/tests/test_momentum_book_data.py::test_a_day_that_failed_is_fetched_again_after_a_later_day_succeeded; backend/tests/test_momentum_book_data.py::test_an_empty_month_end_ranking_stops_the_job_and_leaves_the_book_as_it_was; backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed` |
+| **Source** | README §83, §113; docs/research/prereg-3i-momentum-corrected-data.md (third note on the forward paper book) |
 | **Known gap** | [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) |
 
 </details>
@@ -2072,44 +2072,48 @@ TypeSafe calls retry HTTP 429, 529, 5xx and connection errors with backoff of ma
 </details>
 
 <details>
-<summary><code>JEV-06</code> <b>Active</b> · known gap #158 — If Jev can't be reached or no key is stored, the day is recorded as 'jev_unavailable' with the error, no further stock is asked, and nothing is…</summary>
+<summary><code>JEV-06</code> <b>Active</b> · known gap #158 — If Jev can't be reached, or no key is stored, before any stock of the day has been decided, the day is recorded as 'jev_unavailable' with the error…</summary>
 
-If Jev can't be reached or no key is stored, the day is recorded as 'jev_unavailable' with the error, no further stock is asked, and nothing is traded.
+If Jev can't be reached, or no key is stored, before any stock of the day has been decided, the day is recorded as 'jev_unavailable' with the error and nothing is traded. If it fails after some stocks were decided, the round stops there: the day stays open with the decisions made so far, they close at the square-off like any other round, and the stop is recorded under 'interrupted' (the time, the error and the stocks not asked).
 
 | | |
 | --- | --- |
-| **Why** | A missing judge must not be scored as a skip. |
-| **Enforced in** | `backend/jev_book.py:decide_round` |
-| **How to check** | Jev Book page 'Jev unavailable' pill and error; typesafe_key.py status |
-| **Test** | `backend/tests/test_jev_book.py::test_no_key_records_unavailable_and_trades_nothing` |
-| **Source** | README §86 |
+| **Why** | A missing judge must not be scored as a skip. Positions already opened at a live price must close and count: marked 'Jev unavailable', they were never closed (#158). |
+| **Enforced in** | `backend/jev_book.py:decide_round and _stop_round` |
+| **How to check** | Jev Book page 'Jev unavailable' pill and error; for a round stopped part-way, the line 'Today's round stopped after N of M stocks'; state days[date].interrupted; typesafe_key.py status |
+| **Test** | `backend/tests/test_jev_book.py::test_no_key_records_unavailable_and_trades_nothing; backend/tests/test_jev_book.py::test_a_round_typesafe_interrupts_keeps_its_decisions_and_closes_them` |
+| **Source** | README §86, §113; docs/research/prereg-jev-book.md (Clarification 9) |
 | **Known gap** | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) |
 
 </details>
 
 <details>
-<summary><code>JEV-07</code> <b>Active</b> — Kite-only fills: Jev entries and exits come only from Kite's live last traded price (live_ltp), never from the delayed yfinance fallback.</summary>
+<summary><code>JEV-07</code> <b>Active</b> — Kite-only fills: Jev entries and exits come only from Kite's live last traded price (live_ltp), never from the delayed yfinance fallback, and only…</summary>
+
+Kite-only fills: Jev entries and exits come only from Kite's live last traded price (live_ltp), never from the delayed yfinance fallback, and only while the Kite session is alive (kite_live: a stored token Kite has not rejected, before its 06:00 IST expiry). The live mark uses the same check.
 
 | | |
 | --- | --- |
 | **Why** | A delayed fill against live headlines would leak information in Jev's favour (#151). |
-| **Enforced in** | `backend/jev_book.py:live_ltp; maybe_decide passes live_ltp; maybe_close` |
+| **Enforced in** | `backend/jev_book.py:live_ltp and kite_live; maybe_decide passes live_ltp; maybe_close` |
 | **How to check** | decisions[].entry_error / exit_error mention Kite; code review of live_ltp |
-| **Test** | `backend/tests/test_jev_book.py::test_live_ltp_never_falls_back_to_delayed_prices` |
-| **Source** | README §86; docs/research/prereg-jev-book.md (Clarification 3) |
+| **Test** | `backend/tests/test_jev_book.py::test_live_ltp_never_falls_back_to_delayed_prices; backend/tests/test_jev_book.py::test_the_live_price_gate_knows_the_0600_expiry` |
+| **Source** | README §86, §113; docs/research/prereg-jev-book.md (Clarifications 3 and 9) |
 
 </details>
 
 <details>
-<summary><code>JEV-08</code> <b>Active</b> · known gap #158 — If Kite isn't connected when the round is due, the day is recorded as 'no_live_prices', Jev is not asked, and the day does not count as a session.</summary>
+<summary><code>JEV-08</code> <b>Active</b> · known gap #158 — If Kite has no live session when the round is due (not connected, rejected, or past the 06:00 IST expiry without a reconnect), the day is recorded as…</summary>
+
+If Kite has no live session when the round is due (not connected, rejected, or past the 06:00 IST expiry without a reconnect), the day is recorded as 'no_live_prices', Jev is not asked, and the day does not count as a session. The check is repeated before each stock: if Kite stops part-way, the remaining stocks are not asked and the round is recorded as interrupted (JEV-06).
 
 | | |
 | --- | --- |
-| **Why** | The pre-registration requires live-price fills (#151). |
-| **Enforced in** | `backend/jev_book.py:decide_round` |
+| **Why** | The pre-registration requires live-price fills (#151). The old check ignored the 06:00 expiry, so on a morning without a reconnect Jev was asked and every fill failed (#158). |
+| **Enforced in** | `backend/jev_book.py:decide_round and kite_live; backend/data_provider.py:kite_session_live` |
 | **How to check** | Jev Book page 'No live prices' pill and explanation |
-| **Test** | `backend/tests/test_jev_book.py::test_no_live_prices_skips_the_day_without_asking_jev` |
-| **Source** | docs/research/prereg-jev-book.md (Clarification 3) |
+| **Test** | `backend/tests/test_jev_book.py::test_no_live_prices_skips_the_day_without_asking_jev; backend/tests/test_jev_book.py::test_the_live_price_gate_knows_the_0600_expiry; backend/tests/test_jev_book.py::test_a_kite_session_that_dies_mid_round_stops_asking_jev` |
+| **Source** | docs/research/prereg-jev-book.md (Clarifications 3 and 9); README §113 |
 | **Known gap** | [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) |
 
 </details>
