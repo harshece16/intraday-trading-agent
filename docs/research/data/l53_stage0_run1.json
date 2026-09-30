@@ -1,0 +1,451 @@
+{
+ "stage0": {
+  "look": "L53",
+  "prereg": "docs/research/prereg-after-tax-l53.md",
+  "prereg_commit": "ec7cb12",
+  "started": "2026-10-01T00:53:27.513604+05:30",
+  "environment": {
+   "python": "3.9.6",
+   "platform": "macOS-26.6.2-arm64-arm-64bit",
+   "commit": "8b834d8a6e55eef14313328f8f005d2d9b32f310",
+   "branch": "research/l53-after-tax",
+   "sahab_research_data": "/Users/harshgupta/Projects/webapp/backend/data",
+   "sahab_db_path": "/private/tmp/claude-501/-Users-harshgupta/610aeabe-b7b8-4c83-9176-3ea71c59e2f9/scratchpad/l53/throwaway.db"
+  },
+  "1_inputs_cut_before_2026": {
+   "files": {
+    "nifty100_tri.csv": {
+     "sha256_matches_manifest": true,
+     "first": "2003-01-01",
+     "last": "2025-12-31",
+     "rows": 5717,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 185
+    },
+    "nifty200_momentum30_tri.csv": {
+     "sha256_matches_manifest": true,
+     "first": "2005-04-01",
+     "last": "2025-12-31",
+     "rows": 5148,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 185
+    },
+    "nifty200_momentum30_tri_download2.csv": {
+     "sha256_matches_manifest": true,
+     "first": "2005-04-01",
+     "last": "2025-12-31",
+     "rows": 5148,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 185
+    },
+    "nifty100_equal_weight_tri.csv": {
+     "sha256_matches_manifest": true,
+     "first": "2003-01-01",
+     "last": "2025-12-31",
+     "rows": 5717,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 185
+    },
+    "uti_nifty200_momentum30_direct_nav.csv": {
+     "sha256_matches_manifest": true,
+     "first": "2021-03-12",
+     "last": "2025-12-31",
+     "rows": 1183,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 184
+    },
+    "iima_four_factors_monthly.csv": {
+     "sha256_matches_manifest": true,
+     "first": "1993-10",
+     "last": "2025-12",
+     "rows": 387,
+     "rows_dropped_on_or_after_2026_01_01_in_source": 0
+    }
+   },
+   "passes": true,
+   "bad": [],
+   "panel_first_session": "2009-01-01",
+   "panel_last_session": "2025-12-31",
+   "panel_sessions_on_or_after_cutoff": 0,
+   "iima_last_month": "2025-12"
+  },
+  "2_trial126_reproduced": {
+   "points": 190,
+   "recorded_points": 190,
+   "first_point": "2010-03-02",
+   "last_point": "2025-12-01",
+   "months": [
+    "2010-02",
+    "2025-11"
+   ],
+   "strategy_max_relative_difference": 0.0,
+   "benchmark_max_relative_difference": 0.0,
+   "holdings_identical": true,
+   "months_identical": true,
+   "book_counts": {
+    "buys": 531,
+    "sells": 516,
+    "forced_exits": 2
+   },
+   "fills": {
+    "orders_dropped_at_month_end": 0,
+    "ended": 2,
+    "carried_buy_locked": 7,
+    "carried_sell_locked": 9,
+    "sells_priced_in_t2t": 14
+   },
+   "recorded_fills": {
+    "orders_dropped_at_month_end": 0,
+    "ended": 2,
+    "carried_buy_locked": 7,
+    "carried_sell_locked": 9,
+    "sells_priced_in_t2t": 14
+   },
+   "capital_100000": {
+    "cagr": 0.20356061175049533,
+    "recorded_cagr": 0.20356061175049533,
+    "excess_mean": 0.006940161829575154,
+    "recorded_excess_mean": 0.006940161829575154
+   },
+   "passes": true
+  },
+  "3_replay_tax_off": {
+   "1000000": {
+    "points": 190,
+    "max_relative_difference": 0.0,
+    "largest_lot_deviation": 4.359230195684539e-16,
+    "identity_residual_rupees": 3.725290298461914e-09,
+    "marks": 190,
+    "tax_paid": 0,
+    "prorata_sales": 0
+   },
+   "100000": {
+    "points": 190,
+    "max_relative_difference": 0.0,
+    "largest_lot_deviation": 2.1701492363332205e-16,
+    "identity_residual_rupees": 4.656612873077393e-10,
+    "marks": 190,
+    "tax_paid": 0,
+    "prorata_sales": 0
+   },
+   "passes": true
+  },
+  "4_coverage": {
+   "fund_c_first_point": "2021-04-01",
+   "fund_c_points": 57,
+   "series": {
+    "nifty100_tri.csv": {
+     "substitutions": [],
+     "thin_years": {},
+     "values_positive_finite": true
+    },
+    "nifty200_momentum30_tri.csv": {
+     "substitutions": [],
+     "thin_years": {},
+     "values_positive_finite": true
+    },
+    "nifty100_equal_weight_tri.csv": {
+     "substitutions": [],
+     "thin_years": {},
+     "values_positive_finite": true
+    },
+    "uti_nifty200_momentum30_direct_nav.csv": {
+     "substitutions": [
+      {
+       "date": "2024-11-01",
+       "used": "2024-10-31",
+       "stale_days": 1
+      },
+      {
+       "date": "2025-02-01",
+       "used": "2025-01-31",
+       "stale_days": 1
+      }
+     ],
+     "values_positive_finite": true
+    }
+   },
+   "iima": {
+    "labels_needed": [
+     "2010-03",
+     "2025-11"
+    ],
+    "missing_or_na": []
+   },
+   "bad": [],
+   "passes": true
+  },
+  "5_hand_checks_data": {
+   "tri_base_values": {
+    "nifty100_tri.csv": {
+     "date": "2003-01-01",
+     "value": 1000.0,
+     "expected": 1000.0
+    },
+    "nifty100_equal_weight_tri.csv": {
+     "date": "2003-01-01",
+     "value": 1000.0,
+     "expected": 1000.0
+    },
+    "nifty200_momentum30_tri.csv": {
+     "date": "2005-04-01",
+     "value": 1000.0,
+     "expected": 1000.0
+    }
+   },
+   "download_agreement": {
+    "dates_first": 5148,
+    "dates_second": 5148,
+    "common": 5148,
+    "only_first": 0,
+    "only_second": 0,
+    "mismatched_values": 0
+   },
+   "uti_first_nav": {
+    "date": "2021-03-12",
+    "nav": 9.9454,
+    "near": 10.0
+   },
+   "passes": true
+  },
+  "6_hand_checks_lots": {
+   "checked": [
+    {
+     "kind": "dividend",
+     "name": "ANGELONE",
+     "ex_date": "2022-04-08",
+     "purpose": "Interim Dividend - Rs 7 Per Share",
+     "buy_date": "2022-03-02",
+     "buy_file": "02MAR2022.zip",
+     "printed_buy_close": 1334.65,
+     "shares_hand": 333.02117401681755,
+     "shares_engine": 333.02117401681755,
+     "hand": 2331.148218117723,
+     "engine": 2331.1482181177425,
+     "relative_difference": 8.388199401540788e-15,
+     "shares_relative_difference": 0.0,
+     "ok": true
+    },
+    {
+     "kind": "dividend",
+     "name": "CHENNPETRO",
+     "ex_date": "2022-08-08",
+     "purpose": "Dividend - Rs 2 Per Share",
+     "buy_date": "2022-08-01",
+     "buy_file": "01AUG2022.zip",
+     "printed_buy_close": 281.25,
+     "shares_hand": 1752.9199081122263,
+     "shares_engine": 1752.9199081122263,
+     "hand": 3505.8398162244525,
+     "engine": 3505.8398162244534,
+     "relative_difference": 2.5942277726550304e-16,
+     "shares_relative_difference": 0.0,
+     "ok": true
+    },
+    {
+     "kind": "dividend",
+     "name": "NAM-INDIA",
+     "ex_date": "2020-02-03",
+     "purpose": "Interim Dividend - Rs 3 Per Share",
+     "buy_date": "2019-12-02",
+     "buy_file": "02DEC2019.zip",
+     "printed_buy_close": 352.25,
+     "shares_hand": 670.4265139048205,
+     "shares_engine": 670.4265139048206,
+     "hand": 2011.2795417144614,
+     "engine": 2011.2795417144575,
+     "relative_difference": 1.921837518040893e-15,
+     "shares_relative_difference": 1.6957389865066703e-16,
+     "ok": true
+    },
+    {
+     "kind": "bonus",
+     "name": "HDFCAMC",
+     "ex_date": "2025-11-26",
+     "purpose": "Bonus 1:1",
+     "buy_date": "2025-09-01",
+     "buy_file": "20250901.zip",
+     "printed_buy_close": 5579.5,
+     "shares_hand": 230.5038487133048,
+     "shares_engine": 230.50384871330476,
+     "hand": 230.5038487133048,
+     "engine": 230.50384871330482,
+     "relative_difference": 1.2330253741556505e-16,
+     "shares_relative_difference": 1.2330253741556505e-16,
+     "ok": true
+    },
+    {
+     "kind": "bonus",
+     "name": "IEX",
+     "ex_date": "2021-12-03",
+     "purpose": "Bonus 2:1",
+     "buy_date": "2021-11-01",
+     "buy_file": "01NOV2021.zip",
+     "printed_buy_close": 734.05,
+     "shares_hand": 672.7390329486321,
+     "shares_engine": 672.739032948632,
+     "hand": 1345.4780658972643,
+     "engine": 1345.4780658972643,
+     "relative_difference": 0.0,
+     "shares_relative_difference": 1.689909937636943e-16,
+     "ok": true
+    },
+    {
+     "kind": "bonus",
+     "name": "APLAPOLLO",
+     "ex_date": "2021-09-16",
+     "purpose": "Bonus 1:1",
+     "buy_date": "2021-08-02",
+     "buy_file": "02AUG2021.zip",
+     "printed_buy_close": 1773.45,
+     "shares_hand": 163.28553631605348,
+     "shares_engine": 163.28553631605345,
+     "hand": 163.28553631605348,
+     "engine": 163.28553631605345,
+     "relative_difference": 1.7406140232403253e-16,
+     "shares_relative_difference": 1.7406140232403253e-16,
+     "ok": true
+    },
+    {
+     "kind": "split",
+     "name": "CANFINHOME",
+     "ex_date": "2017-10-12",
+     "purpose": "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share",
+     "buy_date": "2017-08-01",
+     "buy_file": "01AUG2017.zip",
+     "printed_buy_close": 3086.85,
+     "shares_hand": 69.25818229958952,
+     "shares_engine": 69.25818229958952,
+     "hand": 346.2909114979476,
+     "engine": 346.2909114979476,
+     "relative_difference": 0.0,
+     "shares_relative_difference": 0.0,
+     "ok": true
+    },
+    {
+     "kind": "split",
+     "name": "LAURUSLABS",
+     "ex_date": "2020-09-29",
+     "purpose": "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share",
+     "buy_date": "2020-09-01",
+     "buy_file": "01SEP2020.zip",
+     "printed_buy_close": 1122.9,
+     "shares_hand": 329.72507396736523,
+     "shares_engine": 329.7250739673651,
+     "hand": 1648.6253698368262,
+     "engine": 1648.625369836826,
+     "relative_difference": 1.379171275677606e-16,
+     "shares_relative_difference": 3.4479281891940153e-16,
+     "ok": true
+    },
+    {
+     "kind": "rights",
+     "name": "DHANI",
+     "ex_date": "2018-02-09",
+     "purpose": "Rights 3:16 @ Premium Rs 238/-",
+     "buy_date": "2017-07-03",
+     "buy_file": "03JUL2017.zip",
+     "printed_buy_close": 171.9,
+     "shares_hand": 1428.9204859364074,
+     "shares_engine": 1428.9204859364074,
+     "hand": 349.70948734758207,
+     "engine": 349.7094873475917,
+     "relative_difference": 2.7470051957522266e-14,
+     "shares_relative_difference": 0.0,
+     "ok": true
+    }
+   ],
+   "candidates_by_kind": {
+    "dividend": 229,
+    "bonus": 11,
+    "split": 4,
+    "rights": 1
+   },
+   "checked_by_kind": {
+    "dividend": 3,
+    "bonus": 3,
+    "split": 2,
+    "rights": 1
+   },
+   "passes": true
+  },
+  "7_tax_engine_tests": {
+   "returncode": 0,
+   "summary": [
+    "38 passed, 1 warning in 2.07s"
+   ],
+   "file_sha256": "e16c882fc76fcdb5bdb641275a8c3b49b23893d8c45c0a01feb3c57a6ec8142f",
+   "passes": true
+  },
+  "8_information": {
+   "events_on_held_positions_by_kind": {
+    "dividend": 325,
+    "bonus": 24,
+    "split": 18,
+    "rights": 2
+   },
+   "tax_payment_dates": [
+    "2010-04-01",
+    "2011-04-01",
+    "2012-04-02",
+    "2013-04-01",
+    "2014-04-01",
+    "2015-04-01",
+    "2016-04-01",
+    "2017-04-03",
+    "2018-04-02",
+    "2019-04-01",
+    "2020-04-01",
+    "2021-04-01",
+    "2022-04-01",
+    "2023-04-03",
+    "2024-04-01",
+    "2025-04-01"
+   ],
+   "harvest_dates": [
+    "2011-03-01",
+    "2012-03-01",
+    "2013-03-01",
+    "2014-03-03",
+    "2015-03-02",
+    "2016-03-01",
+    "2017-03-01",
+    "2018-03-01",
+    "2019-03-01",
+    "2020-03-02",
+    "2021-03-01",
+    "2022-03-02",
+    "2023-03-01",
+    "2024-03-01",
+    "2025-03-03"
+   ],
+   "points_per_financial_year": {
+    "2009": 1,
+    "2010": 12,
+    "2011": 12,
+    "2012": 12,
+    "2013": 12,
+    "2014": 12,
+    "2015": 12,
+    "2016": 12,
+    "2017": 12,
+    "2018": 12,
+    "2019": 12,
+    "2020": 12,
+    "2021": 12,
+    "2022": 12,
+    "2023": 12,
+    "2024": 12,
+    "2025": 9
+   },
+   "windows": {
+    "returns": 189,
+    "half1": 94,
+    "half2": 95,
+    "fund_b_backtest_returns": 126,
+    "fund_b_live_returns": 63,
+    "fund_c_returns": 56
+   },
+   "positions_closed": 516,
+   "lots_open_at_end": 19
+  },
+  "seconds": 69,
+  "finished": "2026-10-01T00:54:36.222485+05:30"
+ },
+ "status": "STAGE0_DONE"
+}

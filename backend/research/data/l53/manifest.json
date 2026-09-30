@@ -1,0 +1,61 @@
+{
+ "look": "L53",
+ "prepared": "2026-10-01T00:53:05.771882+05:30",
+ "cutoff": "2026-01-01",
+ "files": {
+  "nifty100_tri.csv": {
+   "source": "tri/NIFTY_100.json",
+   "source_sha256": "355b2b6b3ec26fd48b0cdb18c139e2fd17f3c04e7aafe705cc9b709c03011365",
+   "rows_kept": 5717,
+   "rows_dropped_on_or_after_2026_01_01": 185,
+   "first": "2003-01-01",
+   "last": "2025-12-31",
+   "sha256": "a3e901808be920b6c9ab55aecfe651125c3af0cf2d8c309eb6f29b2100770878"
+  },
+  "nifty200_momentum30_tri.csv": {
+   "source": "tri/NIFTY200_MOMENTUM_30.json",
+   "source_sha256": "f355f50098a7800eaa6bc8f8869f39c982b7cec0c08fd813c1cca1dbfbade701",
+   "rows_kept": 5148,
+   "rows_dropped_on_or_after_2026_01_01": 185,
+   "first": "2005-04-01",
+   "last": "2025-12-31",
+   "sha256": "2c3767f81276544771809279ef9cfe078673726f963d86b3adf5ee738c412a50"
+  },
+  "nifty200_momentum30_tri_download2.csv": {
+   "source": "tri_test.json",
+   "source_sha256": "2e1ebcb43dbb0570f7298a089b13599387c1e47524c14a3a37aaa23ff41d2e5f",
+   "rows_kept": 5148,
+   "rows_dropped_on_or_after_2026_01_01": 185,
+   "first": "2005-04-01",
+   "last": "2025-12-31",
+   "sha256": "2c3767f81276544771809279ef9cfe078673726f963d86b3adf5ee738c412a50"
+  },
+  "nifty100_equal_weight_tri.csv": {
+   "source": "tri/NIFTY100_EQUAL_WEIGHT.json",
+   "source_sha256": "93a023f3f875961b29b393f899dc4143f74ba8783cc1298845fccc99c77405b7",
+   "rows_kept": 5717,
+   "rows_dropped_on_or_after_2026_01_01": 185,
+   "first": "2003-01-01",
+   "last": "2025-12-31",
+   "sha256": "5a02477c7738cf7c3dff357724fc7750ce59b1536e8c999be5ddf9dba07c8f71"
+  },
+  "uti_nifty200_momentum30_direct_nav.csv": {
+   "source": "nav/148703.json",
+   "source_sha256": "a2a6ebb98d9369d48166eeb83038a0b6b9dbbd3b39255089d50d329918193d36",
+   "rows_kept": 1183,
+   "rows_dropped_on_or_after_2026_01_01": 184,
+   "first": "2021-03-12",
+   "last": "2025-12-31",
+   "sha256": "65e525f28e88eb038f401cad9ba813dd5060fbf2dff2cc686078685dd752d0dd"
+  },
+  "iima_four_factors_monthly.csv": {
+   "source": "iima/2025-12_FourFactors_and_Market_Returns_Monthly_SurvivorshipBiasAdjusted.csv",
+   "source_sha256": "c07a12d1c04630c18a7f87a96c91db6a7c4ebfc1e37f888e41fe8469fe234c44",
+   "rows_kept": 387,
+   "rows_dropped_on_or_after_2026_01_01": 0,
+   "first": "1993-10",
+   "last": "2025-12",
+   "sha256": "3f76efb16a68b87a497b3517dd0821004c65d21ecf228211d282196492802087"
+  }
+ }
+}

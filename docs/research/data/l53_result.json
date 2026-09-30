@@ -1,0 +1,5449 @@
+{
+ "look": "L53",
+ "status": "DONE",
+ "started": "2026-10-01T01:49:47.421429+05:30",
+ "review_note": "independent second review APPROVED after amendment 2 (e0b2e98, code 635d911, stage 0 run 3 2f39ce5), 2026-10-01; run on the main session's instruction",
+ "rerun_reason": null,
+ "stage0_sha256": "df55b4724f318017fb80f9287fbd535b0740dd895cc2d0b689bbe7af3ea8ffa1",
+ "prereg_commit": "ec7cb12",
+ "amendments": [
+  "2550a00",
+  "e0b2e98"
+ ],
+ "note": "a measurement for the owner's decision, not investment advice",
+ "environment": {
+  "python": "3.9.6",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "commit": "2f39ce5804c85762ff32e6704e65f2d217f6996e",
+  "branch": "research/l53-after-tax",
+  "sahab_research_data": "/Users/harshgupta/Projects/webapp/backend/data",
+  "sahab_db_path": "/private/tmp/claude-501/-Users-harshgupta/610aeabe-b7b8-4c83-9176-3ea71c59e2f9/scratchpad/l53/throwaway.db",
+  "code_sha256": {
+   "after_tax_l53.py": "7cc12f42d758475defeaf7f5947692bd3bbfeaf1835cf0f021f690cd15ebc432",
+   "india_tax.py": "65f6d5eec9cfe339178353f38aa8b04719955014feba07e99eb1f7fb1a66a4f5",
+   "test_after_tax_l53.py": "83c32e75945fede62e941761cf1c5c594ac457c5e7e2a0c1822fcaa29ef6f566"
+  }
+ },
+ "finished": "2026-10-01T01:51:38.277349+05:30",
+ "seconds": 111,
+ "dates": {
+  "first": "2010-03-02",
+  "last": "2025-12-01",
+  "points": 190,
+  "fund_c_first": "2021-04-01"
+ },
+ "after_tax": {
+  "1000000_forward": {
+   "book": {
+    "cagr_after_tax": 0.1767304905697522,
+    "cagr_pre_tax_liquidated": 0.2054680229513044,
+    "terminal_after_tax": 12976657.90561433,
+    "terminal_pre_tax_liquidated": 18975891.482031655,
+    "terminal_liability": 407057.71307958954,
+    "tax_paid_by_fy": {
+     "2009": 0.0,
+     "2010": 2948.3686149694,
+     "2011": 4802.562444975077,
+     "2012": 29041.546529322564,
+     "2013": 3370.203822635947,
+     "2014": 52617.93795297876,
+     "2015": 75432.97194655915,
+     "2016": 70382.8056219825,
+     "2017": 85215.8508682178,
+     "2018": 48011.12440688368,
+     "2019": 25169.49539984447,
+     "2020": 38816.646216418856,
+     "2021": 332038.1735160063,
+     "2022": 154381.6247668687,
+     "2023": 750164.3667054666,
+     "2024": 367241.48162251816
+    },
+    "tax_paid_total": 2039635.1604356477,
+    "settled_by_fy": {
+     "2009": {
+      "fy": 2009,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 0.0,
+      "st_losses": 0.0,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {},
+      "dividends": 0.0,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2010": {
+      "fy": 2010,
+      "tax": 2948.3686149694,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 2834.9698220859614,
+      "st_gains": 252131.96956627743,
+      "st_losses": 285151.4554271849,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.2": 0.0
+      },
+      "dividends": 9449.899406953205,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 33019.48586090744
+     },
+     "2011": {
+      "fy": 2011,
+      "tax": 4802.562444975077,
+      "cg_tax_before_cess": 1224.3217528222885,
+      "dividend_tax_before_cess": 3393.5267519614385,
+      "st_gains": 245470.23319527705,
+      "st_losses": 206329.13857025816,
+      "lt_gains": 0.0,
+      "lt_losses": 25141.814209074102,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.2": 6121.608764111443
+      },
+      "dividends": 11311.755839871463,
+      "brought_forward_used": 33019.48586090744,
+      "lapsed": 0.0,
+      "carry_out": 25141.814209074102
+     },
+     "2012": {
+      "fy": 2012,
+      "tax": 29041.546529322564,
+      "cg_tax_before_cess": 25075.03376376198,
+      "dividend_tax_before_cess": 2849.5302067404855,
+      "st_gains": 199169.22395205795,
+      "st_losses": 73794.05513324804,
+      "lt_gains": 91166.0658026817,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 66024.2515936076,
+      "exemption_used": 66024.2515936076,
+      "taxable_by_bucket": {
+       "st@0.2": 125375.1688188099,
+       "lt@0.125": 0.0
+      },
+      "dividends": 9498.434022468286,
+      "brought_forward_used": 25141.814209074102,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2013": {
+      "fy": 2013,
+      "tax": 3370.203822635947,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 3240.58059868841,
+      "st_gains": 180855.2869075163,
+      "st_losses": 346148.2773077746,
+      "lt_gains": 33176.79830249032,
+      "lt_losses": 917.7591000235407,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 0.0
+      },
+      "dividends": 10801.935328961368,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 133033.9511977915
+     },
+     "2014": {
+      "fy": 2014,
+      "tax": 52617.93795297876,
+      "cg_tax_before_cess": 46298.14393804802,
+      "dividend_tax_before_cess": 4296.027170585403,
+      "st_gains": 442515.4061991816,
+      "st_losses": 134195.7482270116,
+      "lt_gains": 214928.02066537848,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 214928.02066537848,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 175285.70677437854,
+       "lt@0.125": 89928.02066537848
+      },
+      "dividends": 14320.09056861801,
+      "brought_forward_used": 133033.9511977915,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2015": {
+      "fy": 2015,
+      "tax": 75432.97194655915,
+      "cg_tax_before_cess": 67838.33378068381,
+      "dividend_tax_before_cess": 4693.370014084607,
+      "st_gains": 349976.0727122789,
+      "st_losses": 241195.59328315625,
+      "lt_gains": 493657.90315887425,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 493657.90315887425,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 368657.90315887425,
+       "st@0.2": 108780.47942912267
+      },
+      "dividends": 15644.566713615355,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2016": {
+      "fy": 2016,
+      "tax": 70382.8056219825,
+      "cg_tax_before_cess": 58686.122724968176,
+      "dividend_tax_before_cess": 8989.65191155346,
+      "st_gains": 616643.6433977862,
+      "st_losses": 323213.02977294533,
+      "lt_gains": 32362.644980786168,
+      "lt_losses": 35666.1999899417,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 293430.61362484086
+      },
+      "dividends": 29965.506371844865,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 3303.5550091555306
+     },
+     "2017": {
+      "fy": 2017,
+      "tax": 85215.8508682178,
+      "cg_tax_before_cess": 74235.81534146733,
+      "dividend_tax_before_cess": 7702.502801049799,
+      "st_gains": 565295.5339241929,
+      "st_losses": 207460.71479062087,
+      "lt_gains": 237800.0781945238,
+      "lt_losses": 88145.71106734496,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 146350.8121180233,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 357834.81913357205,
+       "lt@0.125": 21350.812118023314
+      },
+      "dividends": 25675.009336832663,
+      "brought_forward_used": 3303.5550091555306,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2018": {
+      "fy": 2018,
+      "tax": 48011.12440688368,
+      "cg_tax_before_cess": 31850.047803640507,
+      "dividend_tax_before_cess": 14314.494895286109,
+      "st_gains": 763141.5534831613,
+      "st_losses": 603891.3144649587,
+      "lt_gains": 40059.93476629953,
+      "lt_losses": 17665.219798229627,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 22394.7149680699,
+      "exemption_used": 22394.7149680699,
+      "taxable_by_bucket": {
+       "st@0.2": 159250.23901820253,
+       "lt@0.125": 0.0
+      },
+      "dividends": 47714.98298428703,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2019": {
+      "fy": 2019,
+      "tax": 25169.49539984447,
+      "cg_tax_before_cess": 16990.51470110051,
+      "dividend_tax_before_cess": 7210.923183365324,
+      "st_gains": 626885.857958309,
+      "st_losses": 541933.2844528065,
+      "lt_gains": 87763.7142108343,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 87763.7142108343,
+      "exemption_used": 87763.7142108343,
+      "taxable_by_bucket": {
+       "st@0.2": 84952.57350550254,
+       "lt@0.125": 0.0
+      },
+      "dividends": 24036.410611217747,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2020": {
+      "fy": 2020,
+      "tax": 38816.646216418856,
+      "cg_tax_before_cess": 31817.92403310392,
+      "dividend_tax_before_cess": 5505.774251914211,
+      "st_gains": 604647.0130601876,
+      "st_losses": 445557.392894668,
+      "lt_gains": 9269.856677310367,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 9269.856677310367,
+      "exemption_used": 9269.856677310367,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 159089.6201655196
+      },
+      "dividends": 18352.58083971404,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2021": {
+      "fy": 2021,
+      "tax": 332038.1735160063,
+      "cg_tax_before_cess": 305975.45629296673,
+      "dividend_tax_before_cess": 13292.01824165474,
+      "st_gains": 1383647.7747513955,
+      "st_losses": 658690.164103113,
+      "lt_gains": 1412871.4733064822,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1412871.4733064822,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 724957.6106482825,
+       "lt@0.125": 1287871.4733064822
+      },
+      "dividends": 44306.727472182465,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2022": {
+      "fy": 2022,
+      "tax": 154381.6247668687,
+      "cg_tax_before_cess": 125609.64835815717,
+      "dividend_tax_before_cess": 22834.221609985827,
+      "st_gains": 1909346.750501537,
+      "st_losses": 2859378.5907814675,
+      "lt_gains": 2079909.0271451878,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1129877.1868652573,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 1004877.1868652573,
+       "st@0.2": 0.0
+      },
+      "dividends": 76114.0720332861,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2023": {
+      "fy": 2023,
+      "tax": 750164.3667054666,
+      "cg_tax_before_cess": 664437.3261711521,
+      "dividend_tax_before_cess": 56874.5648917965,
+      "st_gains": 3145087.393976832,
+      "st_losses": 420456.6433867007,
+      "lt_gains": 1081089.408425006,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1081089.408425006,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 2724630.750590131,
+       "lt@0.125": 956089.4084250061
+      },
+      "dividends": 189581.882972655,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2024": {
+      "fy": 2024,
+      "tax": 367241.48162251816,
+      "cg_tax_before_cess": 319458.00291684363,
+      "dividend_tax_before_cess": 33658.806335577676,
+      "st_gains": 3467554.2650487786,
+      "st_losses": 2929581.78550324,
+      "lt_gains": 1819908.056061887,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1819908.056061887,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 537972.4795455388,
+       "lt@0.125": 1694908.056061887
+      },
+      "dividends": 112196.02111859227,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     }
+    },
+    "carry_at_end": [],
+    "prorata_sales": [
+     {
+      "date": "2011-04-01",
+      "fy_paid": 2010,
+      "tax": 2948.3686149694,
+      "interest": 0.0,
+      "fraction": 0.003144549150831645,
+      "from_cash": 0.0,
+      "from_holdings": 2948.3686149694,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2012-04-02",
+      "fy_paid": 2011,
+      "tax": 4802.562444975077,
+      "interest": 0.0,
+      "fraction": 0.004461830572612915,
+      "from_cash": 6.492818025599867e-14,
+      "from_holdings": 4802.562444975078,
+      "cash_after_over_before": 1.0625
+     },
+     {
+      "date": "2013-04-01",
+      "fy_paid": 2012,
+      "tax": 29041.546529322564,
+      "interest": 1757.0135650240152,
+      "fraction": 0.027043319896063334,
+      "from_cash": -2.361192591726722e-12,
+      "from_holdings": 30798.560094346576,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2014-04-01",
+      "fy_paid": 2013,
+      "tax": 3370.203822635947,
+      "interest": 0.0,
+      "fraction": 0.0028233509257474297,
+      "from_cash": 0.0,
+      "from_holdings": 3370.203822635946,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2015-04-01",
+      "fy_paid": 2014,
+      "tax": 52617.93795297876,
+      "interest": 3183.385246155215,
+      "fraction": 0.023776109873481586,
+      "from_cash": 1.3839517413569606e-12,
+      "from_holdings": 55801.32319913397,
+      "cash_after_over_before": 0.875
+     },
+     {
+      "date": "2016-04-01",
+      "fy_paid": 2015,
+      "tax": 75432.97194655915,
+      "interest": 4563.694802766829,
+      "fraction": 0.03483416146934105,
+      "from_cash": 0.0,
+      "from_holdings": 79996.66674932599,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2017-04-03",
+      "fy_paid": 2016,
+      "tax": 70382.8056219825,
+      "interest": 4258.1597401299405,
+      "fraction": 0.026138129206716723,
+      "from_cash": 0.0,
+      "from_holdings": 74640.96536211243,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2018-04-02",
+      "fy_paid": 2017,
+      "tax": 85215.8508682178,
+      "interest": 5155.558977527177,
+      "fraction": 0.027625893141018803,
+      "from_cash": -4.824115861152322e-12,
+      "from_holdings": 90371.40984574494,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2019-04-01",
+      "fy_paid": 2018,
+      "tax": 48011.12440688368,
+      "interest": 2904.6730266164627,
+      "fraction": 0.0159028488522454,
+      "from_cash": 9.256676335496246e-13,
+      "from_holdings": 50915.79743350013,
+      "cash_after_over_before": 0.75
+     },
+     {
+      "date": "2020-04-01",
+      "fy_paid": 2019,
+      "tax": 25169.49539984447,
+      "interest": 1522.7544716905904,
+      "fraction": 0.010828032311538383,
+      "from_cash": 0.0,
+      "from_holdings": 26692.24987153505,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2021-04-01",
+      "fy_paid": 2020,
+      "tax": 38816.646216418856,
+      "interest": 2348.407096093341,
+      "fraction": 0.007196563649542689,
+      "from_cash": 1795.2818912270945,
+      "from_holdings": 39369.7714212851,
+      "cash_after_over_before": 0.9928034363504569
+     },
+     {
+      "date": "2022-04-01",
+      "fy_paid": 2021,
+      "tax": 332038.1735160063,
+      "interest": 20088.309497718383,
+      "fraction": 0.043823194652396966,
+      "from_cash": 0.0,
+      "from_holdings": 352126.4830137247,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2023-04-03",
+      "fy_paid": 2022,
+      "tax": 154381.6247668687,
+      "interest": 9340.088298395556,
+      "fraction": 0.025273581509555672,
+      "from_cash": 0.0,
+      "from_holdings": 163721.71306526425,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2024-04-01",
+      "fy_paid": 2023,
+      "tax": 750164.3667054666,
+      "interest": 45384.94418568073,
+      "fraction": 0.05811610618611763,
+      "from_cash": -1.3531210409970402e-11,
+      "from_holdings": 795549.3108911471,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2025-04-01",
+      "fy_paid": 2024,
+      "tax": 367241.48162251816,
+      "interest": 22218.109638162347,
+      "fraction": 0.03208574271605593,
+      "from_cash": 2.2411632386075282e-11,
+      "from_holdings": 389459.59126068046,
+      "cash_after_over_before": 0.9166666666666666
+     }
+    ],
+    "dividends_total": 679425.8649906918,
+    "events_on_held_positions": {
+     "dividend": 325,
+     "bonus": 24,
+     "split": 18,
+     "rights": 2
+    },
+    "going_concern_value_at_end": 13404553.960379932,
+    "interest_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 0.0,
+     "2012": 1757.0135650240152,
+     "2013": 0.0,
+     "2014": 3183.385246155215,
+     "2015": 4563.694802766829,
+     "2016": 4258.1597401299405,
+     "2017": 5155.558977527177,
+     "2018": 2904.6730266164627,
+     "2019": 1522.7544716905904,
+     "2020": 2348.407096093341,
+     "2021": 20088.309497718383,
+     "2022": 9340.088298395556,
+     "2023": 45384.94418568073,
+     "2024": 22218.109638162347
+    },
+    "interest_total": 122725.0985459606,
+    "income": {
+     "largest_settled_year": {
+      "fy": 2023,
+      "income": 3995302.0419877926
+     },
+     "terminal_year_income": 2281775.770889601,
+     "years_over_50_lakh": []
+    },
+    "carried_losses_valued_at_zero_at_end": 0,
+    "tax_drag_pp": 2.873753238155219
+   },
+   "funds": {
+    "a_nifty100": {
+     "cagr_after_tax": 0.11856332484701615,
+     "cagr_pre_tax_liquidated": 0.1239286351409965,
+     "terminal_after_tax": 5839881.9368479205,
+     "terminal_pre_tax_liquidated": 6297020.323664121,
+     "terminal_liability": 455078.4817430899,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 178.29092471645868,
+       "value": 1104441.4543838035,
+       "lt_after_setoff": 104441.45438380353
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 178.28022735012118,
+       "value": 1062421.4083769908,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 178.26953062562032,
+       "value": 1190403.8740501998,
+       "lt_after_setoff": 85984.08829502366
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 145.50932017328975,
+       "value": 1096694.4842607945,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2015-03-02",
+       "units_sold": 31.454683733557275,
+       "value": 335050.75586681097,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2016-03-01",
+       "units_sold": 98.1692546286729,
+       "value": 863819.6059583034,
+       "lt_after_setoff": 124999.99999999985
+      },
+      {
+       "date": "2017-03-01",
+       "units_sold": 33.880229477384816,
+       "value": 380365.9013389697,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2018-03-01",
+       "units_sold": 29.72219280296384,
+       "value": 395677.6423659556,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2019-03-01",
+       "units_sold": 31.499850253390647,
+       "value": 432715.5570661721,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2020-03-02",
+       "units_sold": 23.45424992714406,
+       "value": 331391.0342342047,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2021-03-01",
+       "units_sold": 12.421586792419717,
+       "value": 234306.59274464444,
+       "lt_after_setoff": 124999.99999999999
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 9.806093205623286,
+       "value": 211290.9589857875,
+       "lt_after_setoff": 124999.99999999999
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 9.302237705144275,
+       "value": 206857.16732024783,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 5.972119600980637,
+       "value": 177553.03174672223,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 6.028944955263486,
+       "value": 178053.0794428794,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2012,
+       "income": 127993.08988729259
+      },
+      "terminal_year_income": 3604679.8365713516,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.5365310293980352
+    },
+    "b_nifty200_momentum30": {
+     "cagr_after_tax": 0.17283407080874524,
+     "cagr_pre_tax_liquidated": 0.18096651942282982,
+     "terminal_after_tax": 12316180.24804647,
+     "terminal_pre_tax_liquidated": 13732258.535096923,
+     "terminal_liability": 1413420.2040778005,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 369.8381877022654,
+       "value": 1124043.9401250933,
+       "lt_after_setoff": 124043.94012509333
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 369.8159975959224,
+       "value": 1121693.6003771117,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 191.00546674781873,
+       "value": 706709.1755006795,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2014-03-03",
+       "units_sold": 95.43678733463594,
+       "value": 414485.0063249754,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2015-03-02",
+       "units_sold": 30.08849480507516,
+       "value": 216266.35914948778,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2016-03-01",
+       "units_sold": 38.04275390437198,
+       "value": 240393.72984142593,
+       "lt_after_setoff": 124999.99999999999
+      },
+      {
+       "date": "2017-03-01",
+       "units_sold": 21.688453965006556,
+       "value": 195100.18170125017,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2018-03-01",
+       "units_sold": 16.06837569745838,
+       "value": 184455.0331252929,
+       "lt_after_setoff": 124999.99999999997
+      },
+      {
+       "date": "2019-03-01",
+       "units_sold": 14.957158311717974,
+       "value": 180343.38751017032,
+       "lt_after_setoff": 124999.99999999999
+      },
+      {
+       "date": "2020-03-02",
+       "units_sold": 13.671397521881412,
+       "value": 175585.90910723334,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2021-03-01",
+       "units_sold": 9.851624660524532,
+       "value": 161452.26384780675,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 6.845735375634995,
+       "value": 150330.0913041103,
+       "lt_after_setoff": 124999.99999999999
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 7.265440622793553,
+       "value": 151883.05408283215,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 3.989421415743162,
+       "value": 139761.3664809493,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 4.572719589204901,
+       "value": 141919.64388733183,
+       "lt_after_setoff": 124999.99999999999
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2012,
+       "income": 127339.0993085804
+      },
+      "terminal_year_income": 10980746.853604103,
+      "years_over_50_lakh": [
+       "terminal"
+      ]
+     },
+     "tax_drag_pp": 0.8132448614084575
+    },
+    "c_uti": {
+     "cagr_after_tax": 0.16883874322441206,
+     "cagr_pre_tax_liquidated": 0.1795898541167471,
+     "terminal_after_tax": 2071038.2831594767,
+     "terminal_pre_tax_liquidated": 2161448.0380394626,
+     "terminal_liability": 90295.43424459164,
+     "tax_paid_by_fy": {
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2023-03-01",
+       "units_sold": 58677.600174021114,
+       "value": 729609.0160838134,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 11802.825059051278,
+       "value": 246615.30847885285,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 15071.526805963606,
+       "value": 280295.73407926934,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2022,
+       "income": 125000.0
+      },
+      "terminal_year_income": 786367.8961579641,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 1.0751110892335047
+    },
+    "b_fresh_from_2021_04_information": {
+     "cagr_after_tax": 0.16755502168220548,
+     "terminal_liability": 88711.86517790821
+    }
+   },
+   "comparisons": {
+    "a_nifty100": {
+     "months": 189,
+     "cagr_book": 0.1767304905697522,
+     "cagr_fund": 0.11856332484701615,
+     "difference_pp": 5.816716572273606,
+     "ci95_pp": [
+      -2.0536356373172016,
+      15.358451037940302
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.005066252361799541,
+      "sd": 0.0404345823985231,
+      "t": 1.722521927557476,
+      "share_positive": 0.5343915343915344
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -1.9998628893820127,
+       14.64634426459959
+      ],
+      "24": [
+       -1.1719744691970366,
+       13.943970210974657
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1683332646384459,
+       "cagr_fund": 0.11255920954122622,
+       "difference_pp": 5.577405509721967
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.18509872738581867,
+       "cagr_fund": 0.12453613074802683,
+       "difference_pp": 6.056259663779184
+      }
+     },
+     "verdict": "TIES",
+     "break_even_pre_tax_margin_pp": 2.3372222087571837,
+     "pre_tax_liquidated_difference_pp": 8.153938781030789
+    },
+    "b_nifty200_momentum30": {
+     "months": 189,
+     "cagr_book": 0.1767304905697522,
+     "cagr_fund": 0.17283407080874524,
+     "difference_pp": 0.3896419761006964,
+     "ci95_pp": [
+      -5.9897388711565585,
+      7.326784000803093
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.0009100245748134375,
+      "sd": 0.03288545396271392,
+      "t": 0.3804347511590585,
+      "share_positive": 0.5079365079365079
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -6.38847784446199,
+       7.668991980596086
+      ],
+      "24": [
+       -5.115044821954711,
+       6.616340406967164
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1683332646384459,
+       "cagr_fund": 0.1969074439804046,
+       "difference_pp": -2.8574179341958716
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.18509872738581867,
+       "cagr_fund": 0.14949070435981082,
+       "difference_pp": 3.560802302600785
+      }
+     },
+     "verdict": "TIES",
+     "break_even_pre_tax_margin_pp": 2.0605083767467613,
+     "pre_tax_liquidated_difference_pp": 2.4501503528474577,
+     "windows": {
+      "backtest_2010_03_to_2020_08": {
+       "months": 126,
+       "cagr_book": 0.1286182066203696,
+       "cagr_fund": 0.1573474918862401,
+       "difference_pp": -2.8729285265870486,
+       "ci95_pp": [
+        -10.575399241225117,
+        4.816749981840794
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 126,
+        "mean": -0.0014603070733920933,
+        "sd": 0.03316957369875116,
+        "t": -0.49418501404992266,
+        "share_positive": 0.48412698412698413
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -11.091422440018228,
+         5.57002520252071
+        ],
+        "24": [
+         -8.42494499784103,
+         3.676990135559128
+        ]
+       }
+      },
+      "live_2020_09_to_2025_11": {
+       "months": 63,
+       "cagr_book": 0.27919548032227826,
+       "cagr_fund": 0.2044316838229443,
+       "difference_pp": 7.476379649933396,
+       "ci95_pp": [
+        0.5641659554619983,
+        16.40771497912034
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 63,
+        "mean": 0.005650687871224499,
+        "sd": 0.03204377539998242,
+        "t": 1.3996772843174905,
+        "share_positive": 0.5555555555555556
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -2.9933130377399104,
+         19.59324668587565
+        ],
+        "24": [
+         1.947630989609019,
+         13.091602574151565
+        ]
+       }
+      }
+     }
+    },
+    "c_uti": {
+     "window": [
+      "2021-04-01",
+      "2025-12-01"
+     ],
+     "book_minus_c": {
+      "months": 56,
+      "cagr_book": 0.21389951669476148,
+      "cagr_fund": 0.16883874322441206,
+      "difference_pp": 4.5060773470349424,
+      "ci95_pp": [
+       -2.648388626536257,
+       15.438381140755627
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.0038946355056874676,
+       "sd": 0.0320247261114495,
+       "t": 0.9100712779203222,
+       "share_positive": 0.5178571428571429
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.144602290436495,
+        16.82142301113368
+       ],
+       "24": [
+        -1.639000343791754,
+        12.702907440138109
+       ]
+      }
+     },
+     "b_slice_minus_c": {
+      "months": 56,
+      "cagr_book": 0.1723069022368935,
+      "cagr_fund": 0.16883874322441206,
+      "difference_pp": 0.3468159012481431,
+      "ci95_pp": [
+       -2.304585788827023,
+       4.035146975050181
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.0004780595793183303,
+       "sd": 0.008212013087125589,
+       "t": 0.43563865212995556,
+       "share_positive": 0.6428571428571429
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -2.5917430075808583,
+        4.047455808333314
+       ],
+       "24": [
+        -1.2764374903676867,
+        2.1028378015726843
+       ]
+      }
+     },
+     "b_fresh_from_2021_04_minus_c": {
+      "months": 56,
+      "cagr_book": 0.16755502168220548,
+      "cagr_fund": 0.16883874322441206,
+      "difference_pp": -0.1283721542206573,
+      "ci95_pp": [
+       -0.4548649721561141,
+       0.30042344846479824
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": -9.566690602453536e-05,
+       "sd": 0.0015206068951048623,
+       "t": -0.470802528580967,
+       "share_positive": 0.42857142857142855
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -0.5079372974083263,
+        0.29153443510591515
+       ],
+       "24": [
+        -0.3930366315683725,
+        0.1757675874219023
+       ]
+      }
+     },
+     "book_minus_b_fresh_from_2021_04": {
+      "months": 56,
+      "cagr_book": 0.21389951669476148,
+      "cagr_fund": 0.16755502168220548,
+      "difference_pp": 4.6344495012556,
+      "ci95_pp": [
+       -2.6342507195776577,
+       15.621888671751801
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.003990302411712003,
+       "sd": 0.03216875820346314,
+       "t": 0.9282512181422506,
+       "share_positive": 0.5357142857142857
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.082639168317215,
+        17.040541523882464
+       ],
+       "24": [
+        -1.6761925733025052,
+        13.026466138917204
+       ]
+      }
+     }
+    },
+    "b_td_minus_0_3pp_information": {
+     "months": 189,
+     "cagr_book": 0.1767304905697522,
+     "cagr_fund": 0.1751276398404673,
+     "difference_pp": 0.16028507292848992,
+     "ci95_pp": [
+      -6.019819587455732,
+      6.9698258439461
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.0007342285214971241,
+      "sd": 0.0326018852328494,
+      "t": 0.30961317909608616,
+      "share_positive": 0.5079365079365079
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -6.453201676588467,
+       7.3055085088320215
+      ],
+      "24": [
+       -5.283509108318564,
+       6.356734425153945
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1683332646384459,
+       "cagr_fund": 0.19919114776038538,
+       "difference_pp": -3.085788312193949
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.18509872738581867,
+       "cagr_fund": 0.1517927372927943,
+       "difference_pp": 3.3305990093024374
+      }
+     },
+     "cagr_fund_after_tax": 0.1751276398404673,
+     "tracking_difference": -0.003
+    }
+   }
+  },
+  "1000000_historical": {
+   "book": {
+    "cagr_after_tax": 0.18609941135680508,
+    "cagr_pre_tax_liquidated": 0.2054680229513044,
+    "terminal_after_tax": 14703041.172220092,
+    "terminal_pre_tax_liquidated": 18975891.482031655,
+    "terminal_liability": 463216.79971352126,
+    "tax_paid_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 980.7505021034698,
+     "2012": 19450.526106483467,
+     "2013": 0.0,
+     "2014": 22652.27508863936,
+     "2015": 16534.280301605624,
+     "2016": 47656.073452784934,
+     "2017": 58502.29648760338,
+     "2018": 26110.65888741562,
+     "2019": 14100.949562456803,
+     "2020": 34077.740779801716,
+     "2021": 290201.9957632113,
+     "2022": 143482.02390443144,
+     "2023": 654454.1129858237,
+     "2024": 376526.2403453576
+    },
+    "tax_paid_total": 1704729.9241677185,
+    "settled_by_fy": {
+     "2009": {
+      "fy": 2009,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 0.0,
+      "st_losses": 0.0,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {},
+      "dividends": 0.0,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2010": {
+      "fy": 2010,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 252131.96956627743,
+      "st_losses": 285151.4554271849,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 0.0
+      },
+      "dividends": 9449.899406953205,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 33019.48586090744
+     },
+     "2011": {
+      "fy": 2011,
+      "tax": 980.7505021034698,
+      "cg_tax_before_cess": 952.1849534985143,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 245884.62457371366,
+      "st_losses": 206517.23902281612,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": -25221.197329614533,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 6347.899689990096
+      },
+      "dividends": 11347.441851365833,
+      "brought_forward_used": 33019.48586090744,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2012": {
+      "fy": 2012,
+      "tax": 19450.526106483467,
+      "cg_tax_before_cess": 18884.005928624723,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 200188.3606109544,
+      "st_losses": 74294.98775345624,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 91600.7743577789,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 125893.37285749817
+      },
+      "dividends": 9560.86748538079,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2013": {
+      "fy": 2013,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 183371.30561081384,
+      "st_losses": 350441.3039690756,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 32462.82512925312,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 0.0
+      },
+      "dividends": 10973.390395379707,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 167069.99835826177
+     },
+     "2014": {
+      "fy": 2014,
+      "tax": 22652.27508863936,
+      "cg_tax_before_cess": 21992.50008605763,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 450165.6642516058,
+      "st_losses": 136478.99865295982,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 218959.9699719291,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 146616.6672403842
+      },
+      "dividends": 14588.654220921213,
+      "brought_forward_used": 167069.99835826177,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2015": {
+      "fy": 2015,
+      "tax": 16534.280301605624,
+      "cg_tax_before_cess": 16052.699321947208,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 355817.0555254705,
+      "st_losses": 248799.06004582247,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 504163.6659038169,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 107017.99547964806
+      },
+      "dividends": 16161.340677151928,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2016": {
+      "fy": 2016,
+      "tax": 47656.073452784934,
+      "cg_tax_before_cess": 46268.032478431975,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 648066.0241649598,
+      "st_losses": 339612.47430874663,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": -5345.378413170056,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 308453.54985621315
+      },
+      "dividends": 31833.36785609912,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2017": {
+      "fy": 2017,
+      "tax": 58502.29648760338,
+      "cg_tax_before_cess": 56798.3461044693,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 601119.2167422296,
+      "st_losses": 222463.57604576767,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 160529.63226079938,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 378655.640696462
+      },
+      "dividends": 27540.432242601706,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2018": {
+      "fy": 2018,
+      "tax": 26110.65888741562,
+      "cg_tax_before_cess": 25106.40277636117,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 820521.6678055945,
+      "st_losses": 653145.64929652,
+      "lt_gains": 0.0,
+      "lt_losses": 19133.090048806138,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "st@0.15": 167376.01850907446,
+       "lt@0.1": 0.0
+      },
+      "dividends": 51704.65645520688,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 19133.090048806138
+     },
+     "2019": {
+      "fy": 2019,
+      "tax": 14100.949562456803,
+      "cg_tax_before_cess": 13558.605348516156,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 681459.3086718316,
+      "st_losses": 591068.6063483906,
+      "lt_gains": 95875.06684101195,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 76741.97679220582,
+      "exemption_used": 76741.97679220582,
+      "taxable_by_bucket": {
+       "st@0.15": 90390.70232344104,
+       "lt@0.1": 0.0
+      },
+      "dividends": 26255.44400192722,
+      "brought_forward_used": 19133.090048806138,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2020": {
+      "fy": 2020,
+      "tax": 34077.740779801716,
+      "cg_tax_before_cess": 26721.033462874653,
+      "dividend_tax_before_cess": 6046.024979242379,
+      "st_gains": 663940.3970979562,
+      "st_losses": 485800.1740121251,
+      "lt_gains": 10127.03388092498,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 10127.03388092498,
+      "exemption_used": 10127.03388092498,
+      "taxable_by_bucket": {
+       "lt@0.1": 0.0,
+       "st@0.15": 178140.22308583104
+      },
+      "dividends": 20153.4165974746,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2021": {
+      "fy": 2021,
+      "tax": 290201.9957632113,
+      "cg_tax_before_cess": 264422.7969741379,
+      "dividend_tax_before_cess": 14617.58356741138,
+      "st_gains": 1518615.54841848,
+      "st_losses": 724198.3041193512,
+      "lt_gains": 1552602.103292686,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1552602.103292686,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 794417.2442991288,
+       "lt@0.1": 1452602.103292686
+      },
+      "dividends": 48725.278558037935,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2022": {
+      "fy": 2022,
+      "tax": 143482.02390443144,
+      "cg_tax_before_cess": 112615.91681453073,
+      "dividend_tax_before_cess": 25347.567708961018,
+      "st_gains": 2100416.3738145297,
+      "st_losses": 3165306.505916723,
+      "lt_gains": 2291049.3002475007,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1226159.1681453073,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "lt@0.1": 1126159.1681453073,
+       "st@0.15": 0.0
+      },
+      "dividends": 84491.8923632034,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2023": {
+      "fy": 2023,
+      "tax": 654454.1129858237,
+      "cg_tax_before_cess": 565881.375359748,
+      "dividend_tax_before_cess": 63401.42558815939,
+      "st_gains": 3503069.4068770753,
+      "st_losses": 467322.87533028977,
+      "lt_gains": 1205193.9562773025,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 1205193.9562773025,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 3035746.5315467855,
+       "lt@0.1": 1105193.9562773025
+      },
+      "dividends": 211338.08529386466,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2024": {
+      "fy": 2024,
+      "tax": 376526.2403453576,
+      "cg_tax_before_cess": 324019.61658803467,
+      "dividend_tax_before_cess": 38024.84528250146,
+      "st_gains": 3855671.8409930207,
+      "st_losses": 3307467.7168106423,
+      "lt_gains": 2059311.9836854227,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 2059311.9836854227,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 548204.1241823788,
+       "lt@0.125": 1934311.9836854227,
+       "st@0.2": 0.0
+      },
+      "dividends": 126749.48427500487,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     }
+    },
+    "carry_at_end": [],
+    "prorata_sales": [
+     {
+      "date": "2012-04-02",
+      "fy_paid": 2011,
+      "tax": 980.7505021034698,
+      "interest": 0.0,
+      "fraction": 0.0010701322797391128,
+      "from_cash": 0.0,
+      "from_holdings": 980.7505021034696,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2013-04-01",
+      "fy_paid": 2012,
+      "tax": 19450.526106483467,
+      "interest": 1176.7568294422497,
+      "fraction": 0.01805967690157398,
+      "from_cash": -1.5768173239403968e-12,
+      "from_holdings": 20627.28293592571,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2015-04-01",
+      "fy_paid": 2014,
+      "tax": 22652.27508863936,
+      "interest": 1370.4626428626812,
+      "fraction": 0.010101845863552223,
+      "from_cash": 5.880048186257611e-13,
+      "from_holdings": 24022.737731502024,
+      "cash_after_over_before": 0.75
+     },
+     {
+      "date": "2016-04-01",
+      "fy_paid": 2015,
+      "tax": 16534.280301605624,
+      "interest": 1000.3239582471402,
+      "fraction": 0.0074667133331903935,
+      "from_cash": 0.0,
+      "from_holdings": 17534.604259852764,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2017-04-03",
+      "fy_paid": 2016,
+      "tax": 47656.073452784934,
+      "interest": 2883.1924438934884,
+      "fraction": 0.01668396954040203,
+      "from_cash": 0.0,
+      "from_holdings": 50539.265896678415,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2018-04-02",
+      "fy_paid": 2017,
+      "tax": 58502.29648760338,
+      "interest": 3539.3889375000044,
+      "fraction": 0.017701424961261706,
+      "from_cash": -3.091075625490928e-12,
+      "from_holdings": 62041.685425103395,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2019-04-01",
+      "fy_paid": 2018,
+      "tax": 26110.65888741562,
+      "interest": 1579.694862688645,
+      "fraction": 0.008011404619856777,
+      "from_cash": 4.663251235532095e-13,
+      "from_holdings": 27690.353750104256,
+      "cash_after_over_before": 0.875
+     },
+     {
+      "date": "2020-04-01",
+      "fy_paid": 2019,
+      "tax": 14100.949562456803,
+      "interest": 853.1074485286365,
+      "fraction": 0.005590786782154061,
+      "from_cash": -3.2542662125511914e-13,
+      "from_holdings": 14954.057010985434,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2021-04-01",
+      "fy_paid": 2020,
+      "tax": 34077.740779801716,
+      "interest": 2061.7033171780035,
+      "fraction": 0.005757573986084982,
+      "from_cash": 1577.2518529028155,
+      "from_holdings": 34562.19224407692,
+      "cash_after_over_before": 0.994242426013915
+     },
+     {
+      "date": "2022-04-01",
+      "fy_paid": 2021,
+      "tax": 290201.9957632113,
+      "interest": 17557.220743674283,
+      "fraction": 0.0348316419818499,
+      "from_cash": 0.0,
+      "from_holdings": 307759.2165068855,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2023-04-03",
+      "fy_paid": 2022,
+      "tax": 143482.02390443144,
+      "interest": 8680.662446218103,
+      "fraction": 0.021162334962648698,
+      "from_cash": 0.0,
+      "from_holdings": 152162.68635064954,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2024-04-01",
+      "fy_paid": 2023,
+      "tax": 654454.1129858237,
+      "interest": 39594.47383564233,
+      "fraction": 0.04548367953269,
+      "from_cash": 0.0,
+      "from_holdings": 694048.586821466,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2025-04-01",
+      "fy_paid": 2024,
+      "tax": 376526.2403453576,
+      "interest": 22779.837540894136,
+      "fraction": 0.02911917846407602,
+      "from_cash": -2.0339511193388155e-11,
+      "from_holdings": 399306.0778862518,
+      "cash_after_over_before": null
+     }
+    ],
+    "dividends_total": 746717.6574337475,
+    "events_on_held_positions": {
+     "dividend": 325,
+     "bonus": 24,
+     "split": 18,
+     "rights": 2
+    },
+    "going_concern_value_at_end": 15189841.024663975,
+    "interest_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 0.0,
+     "2012": 1176.7568294422497,
+     "2013": 0.0,
+     "2014": 1370.4626428626812,
+     "2015": 1000.3239582471402,
+     "2016": 2883.1924438934884,
+     "2017": 3539.3889375000044,
+     "2018": 1579.694862688645,
+     "2019": 853.1074485286365,
+     "2020": 2061.7033171780035,
+     "2021": 17557.220743674283,
+     "2022": 8680.662446218103,
+     "2023": 39594.47383564233,
+     "2024": 22779.837540894136
+    },
+    "interest_total": 103076.82500676971,
+    "income": {
+     "largest_settled_year": {
+      "fy": 2023,
+      "income": 4452278.573117953
+     },
+     "terminal_year_income": 2583693.9568364564,
+     "years_over_50_lakh": []
+    },
+    "carried_losses_valued_at_zero_at_end": 0,
+    "tax_drag_pp": 1.9368611594499319
+   },
+   "funds": {
+    "a_nifty100": {
+     "cagr_after_tax": 0.11913284514565237,
+     "cagr_pre_tax_liquidated": 0.1239286351409965,
+     "terminal_after_tax": 5886889.179717722,
+     "terminal_pre_tax_liquidated": 6297020.323664121,
+     "terminal_liability": 406594.53594240453,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 178.29092471645868,
+       "value": 1104441.4543838035,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 178.28022735012118,
+       "value": 1062421.4083769908,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 178.26953062562032,
+       "value": 1190403.8740501998,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 178.25883454291755,
+       "value": 1343525.489509236,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 178.2481391019744,
+       "value": 1860614.2328258364,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 178.23744430275235,
+       "value": 1623630.3264744068,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 178.22675014521292,
+       "value": 2028040.2519720185,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 178.2160566293176,
+       "value": 2349883.506378081,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 77.58230230954447,
+       "value": 1123019.429094862,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2020-03-02",
+       "units_sold": 100.62306144548344,
+       "value": 1421728.7060473931,
+       "lt_after_setoff": 94888.12759923749
+      },
+      {
+       "date": "2021-03-01",
+       "units_sold": 22.794982819675152,
+       "value": 429978.45970936265,
+       "lt_after_setoff": 99999.99999999994
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 14.142311023615164,
+       "value": 304723.0324856975,
+       "lt_after_setoff": 99999.99999999997
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 12.884222587809441,
+       "value": 286511.0387540325,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 6.5554873872109445,
+       "value": 194896.74319073904,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 8.301722458391078,
+       "value": 245175.1109630163,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2014,
+       "income": 517102.17857149546
+      },
+      "terminal_year_income": 3223838.576309585,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.4795789995344135
+    },
+    "b_nifty200_momentum30": {
+     "cagr_after_tax": 0.17450885990446952,
+     "cagr_pre_tax_liquidated": 0.18096651942282982,
+     "terminal_after_tax": 12596116.864752013,
+     "terminal_pre_tax_liquidated": 13732258.535096923,
+     "terminal_liability": 1129069.273056331,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 369.8381877022654,
+       "value": 1124043.9401250933,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 369.8159975959224,
+       "value": 1121693.6003771117,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 369.7938088209747,
+       "value": 1368215.696580901,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 369.77162137734234,
+       "value": 1616210.2248208693,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 369.7494352649456,
+       "value": 2613643.88363979,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 369.72725048370444,
+       "value": 2450672.9524045503,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 369.705067033539,
+       "value": 3355867.852138004,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 369.68288491436954,
+       "value": 4213518.252216224,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 96.69069493541885,
+       "value": 1202102.3584664979,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2020-03-02",
+       "units_sold": 69.2004185881988,
+       "value": 888761.9856684444,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2021-03-01",
+       "units_sold": 20.039421430595976,
+       "value": 328413.84722402843,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 9.468401714796858,
+       "value": 207922.97922520505,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 10.518964497502912,
+       "value": 219897.53087478003,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 4.231055246174102,
+       "value": 148226.52240450904,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 6.365232499046269,
+       "value": 197552.35629521543,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2014,
+       "income": 997449.8209211689
+      },
+      "terminal_year_income": 8786879.202784352,
+      "years_over_50_lakh": [
+       "terminal"
+      ]
+     },
+     "tax_drag_pp": 0.6457659518360304
+    },
+    "c_uti": {
+     "cagr_after_tax": 0.16805369828173644,
+     "cagr_pre_tax_liquidated": 0.1795898541167471,
+     "terminal_after_tax": 2064554.9244444668,
+     "terminal_pre_tax_liquidated": 2161448.0380394626,
+     "terminal_liability": 96797.6291563292,
+     "tax_paid_by_fy": {
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2023-03-01",
+       "units_sold": 46942.08013921688,
+       "value": 583687.2128670505,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 9442.260047241025,
+       "value": 197292.24678308232,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 15071.52680596361,
+       "value": 280295.7340792694,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2024,
+       "income": 125000.0
+      },
+      "terminal_year_income": 836384.780094407,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 1.1536155835010664
+    },
+    "b_fresh_from_2021_04_information": {
+     "cagr_after_tax": 0.16676676457078377,
+     "terminal_liability": 95214.01674647313
+    }
+   },
+   "comparisons": {
+    "a_nifty100": {
+     "months": 189,
+     "cagr_book": 0.18609941135680508,
+     "cagr_fund": 0.11913284514565237,
+     "difference_pp": 6.696656621115271,
+     "ci95_pp": [
+      -1.4637122082371146,
+      16.815027539390957
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.005733399996615051,
+      "sd": 0.04161071475254179,
+      "t": 1.8942529319814025,
+      "share_positive": 0.5343915343915344
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -1.4702997867971836,
+       15.970048692064081
+      ],
+      "24": [
+       -0.6803536717261588,
+       15.259823217546234
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.18237412164425182,
+       "cagr_fund": 0.11404940633810456,
+       "difference_pp": 6.8324715306147255
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.18979703991010655,
+       "cagr_fund": 0.12418560461474537,
+       "difference_pp": 6.561143529536118
+      }
+     },
+     "break_even_pre_tax_margin_pp": 1.4572821599155183,
+     "pre_tax_liquidated_difference_pp": 8.153938781030789
+    },
+    "b_nifty200_momentum30": {
+     "months": 189,
+     "cagr_book": 0.18609941135680508,
+     "cagr_fund": 0.17450885990446952,
+     "difference_pp": 1.1590551452335562,
+     "ci95_pp": [
+      -5.382864394173911,
+      8.643103058472924
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.0015513588850101533,
+      "sd": 0.03422172817337837,
+      "t": 0.6232197992384,
+      "share_positive": 0.5079365079365079
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -5.899971649459659,
+       8.811704851566653
+      ],
+      "24": [
+       -4.63715849370044,
+       7.805474498099414
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.18237412164425182,
+       "cagr_fund": 0.20317096230806797,
+       "difference_pp": -2.079684066381615
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.18979703991010655,
+       "cagr_fund": 0.14682056975517432,
+       "difference_pp": 4.297647015493222
+      }
+     },
+     "break_even_pre_tax_margin_pp": 1.2910952076139015,
+     "pre_tax_liquidated_difference_pp": 2.4501503528474577,
+     "windows": {
+      "backtest_2010_03_to_2020_08": {
+       "months": 126,
+       "cagr_book": 0.13974844682507293,
+       "cagr_fund": 0.16436170947921802,
+       "difference_pp": -2.4613262654145096,
+       "ci95_pp": [
+        -10.15756394736918,
+        5.498276411029466
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 126,
+        "mean": -0.0010842973196169567,
+        "sd": 0.034343675173830995,
+        "t": -0.3543944311319967,
+        "share_positive": 0.47619047619047616
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -10.730988084757959,
+         6.479501814361395
+        ],
+        "24": [
+         -7.93833891507673,
+         4.113799464732952
+        ]
+       }
+      },
+      "live_2020_09_to_2025_11": {
+       "months": 63,
+       "cagr_book": 0.28453296195460753,
+       "cagr_fund": 0.19506922180507913,
+       "difference_pp": 8.946374014952841,
+       "ci95_pp": [
+        1.2766007791078604,
+        19.510841059866816
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 63,
+        "mean": 0.006822671294264374,
+        "sd": 0.03362745763101373,
+        "t": 1.6103886044404376,
+        "share_positive": 0.5714285714285714
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -2.002974537402457,
+         22.04356175652954
+        ],
+        "24": [
+         2.716735181772356,
+         15.315247025432841
+        ]
+       }
+      }
+     }
+    },
+    "c_uti": {
+     "window": [
+      "2021-04-01",
+      "2025-12-01"
+     ],
+     "book_minus_c": {
+      "months": 56,
+      "cagr_book": 0.2164082331538193,
+      "cagr_fund": 0.16805369828173644,
+      "difference_pp": 4.8354534872082855,
+      "ci95_pp": [
+       -2.7304832984689096,
+       16.57837381894958
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004161593466587956,
+       "sd": 0.03254996741107307,
+       "t": 0.9567602165839257,
+       "share_positive": 0.5178571428571429
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.194328773696411,
+        17.7087680520311
+       ],
+       "24": [
+        -1.9441623058992192,
+        13.77080226533759
+       ]
+      }
+     },
+     "b_slice_minus_c": {
+      "months": 56,
+      "cagr_book": 0.16402128960265205,
+      "cagr_fund": 0.16805369828173644,
+      "difference_pp": -0.4032408679084387,
+      "ci95_pp": [
+       -1.9271831763579654,
+       1.825669882373221
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": -0.00017469849118732387,
+       "sd": 0.005035913373711355,
+       "t": -0.259600136659054,
+       "share_positive": 0.625
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -2.117220822678901,
+        1.760440348552168
+       ],
+       "24": [
+        -1.3845193535592804,
+        0.7197230399147011
+       ]
+      }
+     },
+     "b_fresh_from_2021_04_minus_c": {
+      "months": 56,
+      "cagr_book": 0.16676676457078377,
+      "cagr_fund": 0.16805369828173644,
+      "difference_pp": -0.12869337109526757,
+      "ci95_pp": [
+       -0.4564443846984856,
+       0.3179465593964664
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": -9.47976412693904e-05,
+       "sd": 0.001534093459978725,
+       "t": -0.4624233189929378,
+       "share_positive": 0.39285714285714285
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -0.5121106336491299,
+        0.3072223080019394
+       ],
+       "24": [
+        -0.3993682031434953,
+        0.18635713261761772
+       ]
+      }
+     },
+     "book_minus_b_fresh_from_2021_04": {
+      "months": 56,
+      "cagr_book": 0.2164082331538193,
+      "cagr_fund": 0.16676676457078377,
+      "difference_pp": 4.964146858303553,
+      "ci95_pp": [
+       -2.735708154850269,
+       16.86816266959569
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004256391107857346,
+       "sd": 0.03271537158538564,
+       "t": 0.9736069901053901,
+       "share_positive": 0.5178571428571429
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.213098182029868,
+        17.876842415264036
+       ],
+       "24": [
+        -2.0024371170912323,
+        14.112281272747529
+       ]
+      }
+     }
+    }
+   }
+  },
+  "100000_forward": {
+   "book": {
+    "cagr_after_tax": 0.18214984392886557,
+    "cagr_pre_tax_liquidated": 0.20330447917173977,
+    "terminal_after_tax": 1395058.2292364645,
+    "terminal_pre_tax_liquidated": 1844652.861009323,
+    "terminal_liability": 35214.84671876902,
+    "tax_paid_by_fy": {
+     "2009": 0.0,
+     "2010": 294.19739671010575,
+     "2011": 350.2670608880885,
+     "2012": 2669.871826738368,
+     "2013": 331.9680195050329,
+     "2014": 3742.8726147259235,
+     "2015": 2548.1753585085235,
+     "2016": 6911.277947211043,
+     "2017": 8155.30815389063,
+     "2018": 4709.572555705441,
+     "2019": 2372.3661373186733,
+     "2020": 3787.907384159053,
+     "2021": 18592.362229206345,
+     "2022": 2430.367364469141,
+     "2023": 65128.5342939871,
+     "2024": 23240.45244360477
+    },
+    "tax_paid_total": 145265.50078662825,
+    "settled_by_fy": {
+     "2009": {
+      "fy": 2009,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 0.0,
+      "st_losses": 0.0,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {},
+      "dividends": 0.0,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2010": {
+      "fy": 2010,
+      "tax": 294.19739671010575,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 282.8821122212555,
+      "st_gains": 24987.545513993573,
+      "st_losses": 28685.04329096938,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.2": 0.0
+      },
+      "dividends": 942.9403740708517,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 3697.497776975808
+     },
+     "2011": {
+      "fy": 2011,
+      "tax": 350.2670608880885,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 336.79525085393124,
+      "st_gains": 24209.773753375,
+      "st_losses": 20838.841759074676,
+      "lt_gains": 0.0,
+      "lt_losses": 2521.2501622760124,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.2": 0.0
+      },
+      "dividends": 1122.6508361797707,
+      "brought_forward_used": 3370.9319943003247,
+      "lapsed": 0.0,
+      "carry_out": 2847.8159449514956
+     },
+     "2012": {
+      "fy": 2012,
+      "tax": 2669.871826738368,
+      "cg_tax_before_cess": 2284.877692626737,
+      "dividend_tax_before_cess": 282.3067561601549,
+      "st_gains": 19365.968769000116,
+      "st_losses": 7615.014523190949,
+      "lt_gains": 8996.96334126878,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 6475.713178992768,
+      "exemption_used": 6475.713178992768,
+      "taxable_by_bucket": {
+       "st@0.2": 11424.388463133684,
+       "lt@0.125": 0.0
+      },
+      "dividends": 941.0225205338497,
+      "brought_forward_used": 2847.8159449514956,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2013": {
+      "fy": 2013,
+      "tax": 331.9680195050329,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 319.2000187548393,
+      "st_gains": 17670.793081126856,
+      "st_losses": 34610.41110611321,
+      "lt_gains": 3264.9298497070213,
+      "lt_losses": 99.70082532806282,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 0.0
+      },
+      "dividends": 1064.000062516131,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 13774.3890006074
+     },
+     "2014": {
+      "fy": 2014,
+      "tax": 3742.8726147259235,
+      "cg_tax_before_cess": 3177.6622457663143,
+      "dividend_tax_before_cess": 421.2537299316893,
+      "st_gains": 43060.104535961225,
+      "st_losses": 13397.404306522254,
+      "lt_gains": 21117.937123996104,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 21117.937123996104,
+      "exemption_used": 21117.937123996104,
+      "taxable_by_bucket": {
+       "st@0.2": 15888.311228831571,
+       "lt@0.125": 0.0
+      },
+      "dividends": 1404.1790997722976,
+      "brought_forward_used": 13774.3890006074,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2015": {
+      "fy": 2015,
+      "tax": 2548.1753585085235,
+      "cg_tax_before_cess": 1988.2597390738244,
+      "dividend_tax_before_cess": 461.90887487667885,
+      "st_gains": 33967.015974385664,
+      "st_losses": 24025.717279016542,
+      "lt_gains": 48348.49596106277,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 48348.49596106277,
+      "exemption_used": 48348.49596106277,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 9941.298695369122
+      },
+      "dividends": 1539.6962495889295,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2016": {
+      "fy": 2016,
+      "tax": 6911.277947211043,
+      "cg_tax_before_cess": 5741.326939975401,
+      "dividend_tax_before_cess": 904.132624650602,
+      "st_gains": 61261.38548362639,
+      "st_losses": 32554.75078374939,
+      "lt_gains": 3089.573062491135,
+      "lt_losses": 3600.682775387724,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 28706.634699877002
+      },
+      "dividends": 3013.7754155020066,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 511.1097128965894
+     },
+     "2017": {
+      "fy": 2017,
+      "tax": 8155.30815389063,
+      "cg_tax_before_cess": 7066.824073704126,
+      "dividend_tax_before_cess": 774.8183819599403,
+      "st_gains": 56400.211242601064,
+      "st_losses": 21066.090874080433,
+      "lt_gains": 23903.030047814515,
+      "lt_losses": 8876.462368804912,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 14515.457966113012,
+      "exemption_used": 14515.457966113012,
+      "taxable_by_bucket": {
+       "st@0.2": 35334.12036852063,
+       "lt@0.125": 0.0
+      },
+      "dividends": 2582.7279398664678,
+      "brought_forward_used": 511.1097128965894,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2018": {
+      "fy": 2018,
+      "tax": 4709.572555705441,
+      "cg_tax_before_cess": 3087.4276519204054,
+      "dividend_tax_before_cess": 1441.0074977963648,
+      "st_gains": 76525.11333298657,
+      "st_losses": 61087.97507338454,
+      "lt_gains": 4020.2830801889722,
+      "lt_losses": 1792.2679811906462,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 2228.015098998326,
+      "exemption_used": 2228.015098998326,
+      "taxable_by_bucket": {
+       "st@0.2": 15437.138259602027,
+       "lt@0.125": 0.0
+      },
+      "dividends": 4803.358325987882,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2019": {
+      "fy": 2019,
+      "tax": 2372.3661373186733,
+      "cg_tax_before_cess": 1555.8942680559587,
+      "dividend_tax_before_cess": 725.2270178273808,
+      "st_gains": 62660.03060523525,
+      "st_losses": 54880.55926495546,
+      "lt_gains": 8826.085137955444,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 8826.085137955444,
+      "exemption_used": 8826.085137955444,
+      "taxable_by_bucket": {
+       "st@0.2": 7779.471340279793,
+       "lt@0.125": 0.0
+      },
+      "dividends": 2417.423392757936,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2020": {
+      "fy": 2020,
+      "tax": 3787.907384159053,
+      "cg_tax_before_cess": 3089.3630356670765,
+      "dividend_tax_before_cess": 552.8556029473976,
+      "st_gains": 60555.78002204102,
+      "st_losses": 45108.96484370564,
+      "lt_gains": 918.7355472987438,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 918.7355472987438,
+      "exemption_used": 918.7355472987438,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 15446.815178335382
+      },
+      "dividends": 1842.8520098246588,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2021": {
+      "fy": 2021,
+      "tax": 18592.362229206345,
+      "cg_tax_before_cess": 16543.475597887074,
+      "dividend_tax_before_cess": 1333.7957763497952,
+      "st_gains": 138480.59680766216,
+      "st_losses": 66377.92789588508,
+      "lt_gains": 141983.53452425325,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 141983.53452425325,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 72102.66891177709,
+       "lt@0.125": 16983.53452425325
+      },
+      "dividends": 4445.985921165984,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2022": {
+      "fy": 2022,
+      "tax": 2430.367364469141,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 2336.8916966049433,
+      "st_gains": 191516.8539705187,
+      "st_losses": 291384.5554732982,
+      "lt_gains": 209559.15614095752,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 109691.45463817805,
+      "exemption_used": 109691.45463817805,
+      "taxable_by_bucket": {
+       "lt@0.125": 0.0,
+       "st@0.2": 0.0
+      },
+      "dividends": 7789.638988683145,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2023": {
+      "fy": 2023,
+      "tax": 65128.5342939871,
+      "cg_tax_before_cess": 56679.36760215791,
+      "dividend_tax_before_cess": 5944.223065137379,
+      "st_gains": 326940.9247965726,
+      "st_losses": 43544.086785783074,
+      "lt_gains": 113010.74255184922,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 113010.74255184922,
+      "exemption_used": 113010.74255184922,
+      "taxable_by_bucket": {
+       "st@0.2": 283396.83801078954,
+       "lt@0.125": 0.0
+      },
+      "dividends": 19814.076883791266,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2024": {
+      "fy": 2024,
+      "tax": 23240.45244360477,
+      "cg_tax_before_cess": 18793.780316038145,
+      "dividend_tax_before_cess": 3552.8085720433614,
+      "st_gains": 361307.7895274915,
+      "st_losses": 309403.1347235398,
+      "lt_gains": 192302.79484198248,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 192302.79484198248,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.2": 51904.65480395168,
+       "lt@0.125": 67302.79484198248
+      },
+      "dividends": 11842.695240144538,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     }
+    },
+    "carry_at_end": [],
+    "prorata_sales": [
+     {
+      "date": "2011-04-01",
+      "fy_paid": 2010,
+      "tax": 294.19739671010575,
+      "interest": 0.0,
+      "fraction": 0.005209866579552374,
+      "from_cash": 0.0,
+      "from_holdings": 294.19739671010586,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2012-04-02",
+      "fy_paid": 2011,
+      "tax": 350.2670608880885,
+      "interest": 0.0,
+      "fraction": 0.0051971696097967675,
+      "from_cash": -9.453596448650874e-15,
+      "from_holdings": 350.2670608880886,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2013-04-01",
+      "fy_paid": 2012,
+      "tax": 2669.871826738368,
+      "interest": 0.0,
+      "fraction": 0.025664540770769125,
+      "from_cash": 1.4005058312669893e-13,
+      "from_holdings": 2669.871826738369,
+      "cash_after_over_before": 1.1666666666666667
+     },
+     {
+      "date": "2014-04-01",
+      "fy_paid": 2013,
+      "tax": 331.9680195050329,
+      "interest": 0.0,
+      "fraction": 0.004485119485716379,
+      "from_cash": 0.0,
+      "from_holdings": 331.9680195050328,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2015-04-01",
+      "fy_paid": 2014,
+      "tax": 3742.8726147259235,
+      "interest": 0.0,
+      "fraction": 0.017223859740110786,
+      "from_cash": 6.266003671084322e-14,
+      "from_holdings": 3742.8726147259244,
+      "cash_after_over_before": 1.25
+     },
+     {
+      "date": "2016-04-01",
+      "fy_paid": 2015,
+      "tax": 2548.1753585085235,
+      "interest": 0.0,
+      "fraction": 0.01226281109334659,
+      "from_cash": 0.0,
+      "from_holdings": 2548.1753585085235,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2017-04-03",
+      "fy_paid": 2016,
+      "tax": 6911.277947211043,
+      "interest": 0.0,
+      "fraction": 0.02480957224318397,
+      "from_cash": 0.0,
+      "from_holdings": 6911.277947211043,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2018-04-02",
+      "fy_paid": 2017,
+      "tax": 8155.30815389063,
+      "interest": 0.0,
+      "fraction": 0.02545064271715239,
+      "from_cash": 0.0,
+      "from_holdings": 8155.308153890631,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2019-04-01",
+      "fy_paid": 2018,
+      "tax": 4709.572555705441,
+      "interest": 0.0,
+      "fraction": 0.015269648967974035,
+      "from_cash": 0.0,
+      "from_holdings": 4709.572555705442,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2020-04-01",
+      "fy_paid": 2019,
+      "tax": 2372.3661373186733,
+      "interest": 0.0,
+      "fraction": 0.010418935478208692,
+      "from_cash": 3.7903866462179183e-14,
+      "from_holdings": 2372.3661373186724,
+      "cash_after_over_before": 0.75
+     },
+     {
+      "date": "2021-04-01",
+      "fy_paid": 2020,
+      "tax": 3787.907384159053,
+      "interest": 0.0,
+      "fraction": 0.0069329410598400615,
+      "from_cash": 173.56650434627988,
+      "from_holdings": 3614.340879812774,
+      "cash_after_over_before": 0.9930670589401593
+     },
+     {
+      "date": "2022-04-01",
+      "fy_paid": 2021,
+      "tax": 18592.362229206345,
+      "interest": 1124.8379148669837,
+      "fraction": 0.02471586607944421,
+      "from_cash": 0.0,
+      "from_holdings": 19717.200144073322,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2023-04-03",
+      "fy_paid": 2022,
+      "tax": 2430.367364469141,
+      "interest": 0.0,
+      "fraction": 0.004008349553480915,
+      "from_cash": 0.0,
+      "from_holdings": 2430.367364469141,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2024-04-01",
+      "fy_paid": 2023,
+      "tax": 65128.5342939871,
+      "interest": 3940.2763247862194,
+      "fraction": 0.048433205086304595,
+      "from_cash": -1.4095917893080214e-12,
+      "from_holdings": 69068.81061877335,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2025-04-01",
+      "fy_paid": 2024,
+      "tax": 23240.45244360477,
+      "interest": 1406.0473728380884,
+      "fraction": 0.019409445983813868,
+      "from_cash": -1.6946676755161491e-12,
+      "from_holdings": 24646.49981644286,
+      "cash_after_over_before": null
+     }
+    ],
+    "dividends_total": 69891.8499673435,
+    "events_on_held_positions": {
+     "dividend": 325,
+     "bonus": 24,
+     "split": 18,
+     "rights": 2
+    },
+    "going_concern_value_at_end": 1432705.8264891123,
+    "interest_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 0.0,
+     "2012": 0.0,
+     "2013": 0.0,
+     "2014": 0.0,
+     "2015": 0.0,
+     "2016": 0.0,
+     "2017": 0.0,
+     "2018": 0.0,
+     "2019": 0.0,
+     "2020": 0.0,
+     "2021": 1124.8379148669837,
+     "2022": 0.0,
+     "2023": 3940.2763247862194,
+     "2024": 1406.0473728380884
+    },
+    "interest_total": 6471.161612491292,
+    "income": {
+     "largest_settled_year": {
+      "fy": 2023,
+      "income": 416221.65744643
+     },
+     "terminal_year_income": 242268.58918158853,
+     "years_over_50_lakh": []
+    },
+    "carried_losses_valued_at_zero_at_end": 0,
+    "tax_drag_pp": 2.11546352428742
+   },
+   "funds": {
+    "a_nifty100": {
+     "cagr_after_tax": 0.12384825700816582,
+     "cagr_pre_tax_liquidated": 0.1239286351409965,
+     "terminal_after_tax": 628993.1310432382,
+     "terminal_pre_tax_liquidated": 629702.0323664121,
+     "terminal_liability": 180.16226134823773,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 17.82909247164587,
+       "value": 110444.14543838035,
+       "lt_after_setoff": 10444.14543838035
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 17.828022735012116,
+       "value": 106242.14083769906,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 17.826953062562026,
+       "value": 119040.38740501994,
+       "lt_after_setoff": 8598.408829502325
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 17.82588345429175,
+       "value": 134352.54895092355,
+       "lt_after_setoff": 15313.351949777658
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 17.824813910197435,
+       "value": 186061.4232825836,
+       "lt_after_setoff": 51710.217857149546
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 17.823744430275234,
+       "value": 162363.03264744068,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 17.82267501452129,
+       "value": 202804.02519720185,
+       "lt_after_setoff": 16746.086159177532
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 17.82160566293176,
+       "value": 234988.3506378081,
+       "lt_after_setoff": 32186.353480858204
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 17.820536375502787,
+       "value": 257955.8480583955,
+       "lt_after_setoff": 22969.847304093768
+      },
+      {
+       "date": "2020-03-19",
+       "units_sold": 17.819467152230526,
+       "value": 187967.21844378862,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2021-03-22",
+       "units_sold": 17.818397993111127,
+       "value": 335514.8259477218,
+       "lt_after_setoff": 77563.43711999129
+      },
+      {
+       "date": "2022-03-23",
+       "units_sold": 17.817328898140744,
+       "value": 397420.53549325507,
+       "lt_after_setoff": 61909.06469379272
+      },
+      {
+       "date": "2023-03-24",
+       "units_sold": 17.81625986731552,
+       "value": 386811.3181551038,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2024-03-26",
+       "units_sold": 17.665446337491304,
+       "value": 519161.40538616676,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 0.14974456314030604,
+       "value": 4422.412344913329,
+       "lt_after_setoff": 1171.1245563615048
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2020,
+       "income": 147549.4871761176
+      },
+      "terminal_year_income": 105601.00320753462,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.008037813283068296
+    },
+    "b_nifty200_momentum30": {
+     "cagr_after_tax": 0.17883360647462476,
+     "cagr_pre_tax_liquidated": 0.18096651942282982,
+     "terminal_after_tax": 1334679.5497014942,
+     "terminal_pre_tax_liquidated": 1373225.8535096922,
+     "terminal_liability": 37530.42607843346,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 36.983818770226534,
+       "value": 112404.3940125093,
+       "lt_after_setoff": 12404.394012509307
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 36.98159975959223,
+       "value": 112169.36003771113,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 36.97938088209745,
+       "value": 136821.56965809004,
+       "lt_after_setoff": 24419.421383121226
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 36.97716213773422,
+       "value": 161621.02248208685,
+       "lt_after_setoff": 24800.821039693372
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 36.974943526494535,
+       "value": 261364.38836397883,
+       "lt_after_setoff": 99744.98209211678
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 36.972725048370414,
+       "value": 245067.29524045484,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 36.97050670335388,
+       "value": 335586.78521380015,
+       "lt_after_setoff": 74227.46116665736
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 36.96828849143693,
+       "value": 421351.82522162213,
+       "lt_after_setoff": 85768.39587567409
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 36.96607041261159,
+       "value": 459578.871120113,
+       "lt_after_setoff": 38231.259416743065
+      },
+      {
+       "date": "2020-03-19",
+       "units_sold": 36.963852466869874,
+       "value": 362996.3867039416,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2021-03-22",
+       "units_sold": 32.396632352015736,
+       "value": 539738.6787703118,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 4.565002302188049,
+       "value": 100245.94513744953,
+       "lt_after_setoff": 55413.97854022645
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 29.455435716181487,
+       "value": 615761.9018836624,
+       "lt_after_setoff": 125000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 7.503981258423865,
+       "value": 262886.9115170641,
+       "lt_after_setoff": 113670.58933920429
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 12.339284449486478,
+       "value": 382963.97160012746,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2020,
+       "income": 221577.88862746023
+      },
+      "terminal_year_income": 368587.50074403116,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.21329129482050568
+    },
+    "c_uti": {
+     "cagr_after_tax": 0.17165959050287616,
+     "cagr_pre_tax_liquidated": 0.1795898541167471,
+     "terminal_after_tax": 209446.66113191223,
+     "terminal_pre_tax_liquidated": 216144.80380394627,
+     "terminal_liability": 6659.239265844847,
+     "tax_paid_by_fy": {
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2023-03-01",
+       "units_sold": 9705.0488188365,
+       "value": 120674.51802317682,
+       "lt_after_setoff": 20674.518023176817
+      },
+      {
+       "date": "2024-03-04",
+       "units_sold": 9704.466520759896,
+       "value": 206988.50731459196,
+       "lt_after_setoff": 86315.19603659537
+      },
+      {
+       "date": "2025-03-05",
+       "units_sold": 9703.884257620883,
+       "value": 184094.32902817728,
+       "lt_after_setoff": 0
+      }
+     ],
+     "carry_at_end": [
+      {
+       "fy": 2024,
+       "term": "lt",
+       "amount": 22892.10840134154
+      }
+     ],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2023,
+       "income": 86315.19603659537
+      },
+      "terminal_year_income": 32015.57339348484,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.7930263613870947
+    },
+    "b_fresh_from_2021_04_information": {
+     "cagr_after_tax": 0.1693821100553925,
+     "terminal_liability": 7334.744810091251
+    }
+   },
+   "comparisons": {
+    "a_nifty100": {
+     "months": 189,
+     "cagr_book": 0.18214984392886557,
+     "cagr_fund": 0.12384825700816582,
+     "difference_pp": 5.8301586920699755,
+     "ci95_pp": [
+      -2.29051568125223,
+      15.768664444739425
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.005055757185500259,
+      "sd": 0.04136094479653571,
+      "t": 1.6804541176592533,
+      "share_positive": 0.5343915343915344
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -2.212455262942551,
+       15.02837013182107
+      ],
+      "24": [
+       -1.5297833719526681,
+       14.373806946020299
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1697002683214801,
+       "cagr_fund": 0.11287766183508552,
+       "difference_pp": 5.682260648639459
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.19459878734331792,
+       "cagr_fund": 0.13480981359340682,
+       "difference_pp": 5.97889737499111
+      }
+     },
+     "break_even_pre_tax_margin_pp": 2.1074257110043515,
+     "pre_tax_liquidated_difference_pp": 7.937584403074327
+    },
+    "b_nifty200_momentum30": {
+     "months": 189,
+     "cagr_book": 0.18214984392886557,
+     "cagr_fund": 0.17883360647462476,
+     "difference_pp": 0.33162374542408113,
+     "ci95_pp": [
+      -6.243717044458089,
+      7.771825054524893
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.00090295529492512,
+      "sd": 0.034686264340874684,
+      "t": 0.35788180711747347,
+      "share_positive": 0.5185185185185185
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -6.771492543787841,
+       7.8517531864323695
+      ],
+      "24": [
+       -5.441166260672673,
+       6.9001993724517305
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1697002683214801,
+       "cagr_fund": 0.201099053102072,
+       "difference_pp": -3.139878478059188
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.19459878734331792,
+       "cagr_fund": 0.15720881239529771,
+       "difference_pp": 3.738997494802021
+      }
+     },
+     "break_even_pre_tax_margin_pp": 1.902172229466914,
+     "pre_tax_liquidated_difference_pp": 2.2337959748909952,
+     "windows": {
+      "backtest_2010_03_to_2020_08": {
+       "months": 126,
+       "cagr_book": 0.12907459071097538,
+       "cagr_fund": 0.15904712877199256,
+       "difference_pp": -2.9972538061017184,
+       "ci95_pp": [
+        -10.827613111994435,
+        4.917466705984721
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 126,
+        "mean": -0.0015427956729996831,
+        "sd": 0.03453132288011068,
+        "t": -0.5015110060686707,
+        "share_positive": 0.48412698412698413
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -11.334186860118264,
+         5.937134112913845
+        ],
+        "24": [
+         -8.715630472826257,
+         3.4000433371334586
+        ]
+       }
+      },
+      "live_2020_09_to_2025_11": {
+       "months": 63,
+       "cagr_book": 0.29590247655292967,
+       "cagr_fund": 0.2194256728174897,
+       "difference_pp": 7.647680373543997,
+       "ci95_pp": [
+        -0.0780631643126866,
+        18.180044603195434
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 63,
+        "mean": 0.005794457230774726,
+        "sd": 0.034751915549267924,
+        "t": 1.323440095855627,
+        "share_positive": 0.5873015873015873
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -2.932702289707166,
+         20.509208948895
+        ],
+        "24": [
+         1.3803053835668468,
+         14.29986484841001
+        ]
+       }
+      }
+     }
+    },
+    "c_uti": {
+     "window": [
+      "2021-04-01",
+      "2025-12-01"
+     ],
+     "book_minus_c": {
+      "months": 56,
+      "cagr_book": 0.22791024597740583,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": 5.625065547452968,
+      "ci95_pp": [
+       -2.289968368947825,
+       17.319172941397536
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004636799035335442,
+       "sd": 0.03653550304652565,
+       "t": 0.9497235245101671,
+       "share_positive": 0.5535714285714286
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.637317913211355,
+        19.242588681343015
+       ],
+       "24": [
+        -0.7696626263480741,
+        14.0865122834172
+       ]
+      }
+     },
+     "b_slice_minus_c": {
+      "months": 56,
+      "cagr_book": 0.17280735226140154,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": 0.11477617585253785,
+      "ci95_pp": [
+       -2.6382394743341893,
+       2.3868984537067375
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 8.634502055797157e-05,
+       "sd": 0.011928293172470633,
+       "t": 0.05416927288935269,
+       "share_positive": 0.7142857142857143
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -2.9927821403724595,
+        2.572289628915083
+       ],
+       "24": [
+        -2.095516307861062,
+        1.9816108579100589
+       ]
+      }
+     },
+     "b_fresh_from_2021_04_minus_c": {
+      "months": 56,
+      "cagr_book": 0.1693821100553925,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": -0.22774804474836596,
+      "ci95_pp": [
+       -0.6368260753866312,
+       0.2503335218489122
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": -0.00017222698409339162,
+       "sd": 0.0016762972450761057,
+       "t": -0.7688545323661613,
+       "share_positive": 0.4107142857142857
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -0.7068559269394242,
+        0.2505980534447105
+       ],
+       "24": [
+        -0.6284422273515,
+        0.15495879669936866
+       ]
+      }
+     },
+     "book_minus_b_fresh_from_2021_04": {
+      "months": 56,
+      "cagr_book": 0.22791024597740583,
+      "cagr_fund": 0.1693821100553925,
+      "difference_pp": 5.852813592201334,
+      "ci95_pp": [
+       -2.170052887847048,
+       17.709537929440692
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004809026019428834,
+       "sd": 0.03663393133095411,
+       "t": 0.9823530849707109,
+       "share_positive": 0.5357142857142857
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.405897347847056,
+        19.504260740066943
+       ],
+       "24": [
+        -0.6919701984858961,
+        14.489113728223547
+       ]
+      }
+     }
+    },
+    "b_td_minus_0_3pp_information": {
+     "months": 189,
+     "cagr_book": 0.18214984392886557,
+     "cagr_fund": 0.18116303217324337,
+     "difference_pp": 0.09868117556222078,
+     "ci95_pp": [
+      -6.467772890380114,
+      7.504770897375873
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.0007363247687461706,
+      "sd": 0.03468230759928411,
+      "t": 0.29187192742502205,
+      "share_positive": 0.5132275132275133
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -7.018776412526298,
+       7.605259229072814
+      ],
+      "24": [
+       -5.674165037639631,
+       6.646130597659615
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.1697002683214801,
+       "cagr_fund": 0.20347297032074096,
+       "difference_pp": -3.3772701999260857
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.19459878734331792,
+       "cagr_fund": 0.15949503559457945,
+       "difference_pp": 3.5103751748738476
+      }
+     },
+     "cagr_fund_after_tax": 0.18116303217324337,
+     "tracking_difference": -0.003
+    }
+   }
+  },
+  "100000_historical": {
+   "book": {
+    "cagr_after_tax": 0.18796297232666292,
+    "cagr_pre_tax_liquidated": 0.20330447917173977,
+    "terminal_after_tax": 1507112.7464122623,
+    "terminal_pre_tax_liquidated": 1844652.861009323,
+    "terminal_liability": 38063.38084741734,
+    "tax_paid_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 0.0,
+     "2012": 1846.654820914459,
+     "2013": 0.0,
+     "2014": 2057.7447119834824,
+     "2015": 1541.5363524991772,
+     "2016": 4589.158907398215,
+     "2017": 5637.605954435619,
+     "2018": 2475.683714481315,
+     "2019": 1261.8627272458464,
+     "2020": 3239.5367273351862,
+     "2021": 18844.12339953128,
+     "2022": 4375.720317293237,
+     "2023": 55975.68474763991,
+     "2024": 22776.279688600778
+    },
+    "tax_paid_total": 124621.5920693585,
+    "settled_by_fy": {
+     "2009": {
+      "fy": 2009,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 0.0,
+      "st_losses": 0.0,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {},
+      "dividends": 0.0,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2010": {
+      "fy": 2010,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 24987.545513993573,
+      "st_losses": 28685.04329096938,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 0.0
+      },
+      "dividends": 942.9403740708517,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 3697.497776975808
+     },
+     "2011": {
+      "fy": 2011,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 24313.180141539473,
+      "st_losses": 20712.803078126854,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": -2534.3595279113592,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 0.0
+      },
+      "dividends": 1128.5360292868593,
+      "brought_forward_used": 3600.3770634126195,
+      "lapsed": 0.0,
+      "carry_out": 97.12071356318847
+     },
+     "2012": {
+      "fy": 2012,
+      "tax": 1846.654820914459,
+      "cg_tax_before_cess": 1792.8687581693775,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 19560.12671134265,
+      "st_losses": 7510.547609983613,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 9082.19766345832,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 11952.45838779585
+      },
+      "dividends": 950.9070050096077,
+      "brought_forward_used": 97.12071356318847,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2013": {
+      "fy": 2013,
+      "tax": 0.0,
+      "cg_tax_before_cess": 0.0,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 17975.166314859125,
+      "st_losses": 35143.32549776324,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 3198.0743825886575,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 0.0
+      },
+      "dividends": 1083.51482583744,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 17168.159182904114
+     },
+     "2014": {
+      "fy": 2014,
+      "tax": 2057.7447119834824,
+      "cg_tax_before_cess": 1997.8103999839636,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 44008.8230834028,
+      "st_losses": 13521.927900605597,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 21602.985788871047,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 13318.735999893092
+      },
+      "dividends": 1436.4660419258023,
+      "brought_forward_used": 17168.159182904114,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2015": {
+      "fy": 2015,
+      "tax": 1541.5363524991772,
+      "cg_tax_before_cess": 1496.6372354360942,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 34723.9881090855,
+      "st_losses": 24746.406539511536,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 49530.24649176375,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 9977.581569573962
+      },
+      "dividends": 1587.2964905649685,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2016": {
+      "fy": 2016,
+      "tax": 4589.158907398215,
+      "cg_tax_before_cess": 4455.494084852636,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 63359.708344265455,
+      "st_losses": 33656.41444524788,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": -558.2566176127152,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 29703.293899017575
+      },
+      "dividends": 3121.8349536257056,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2017": {
+      "fy": 2017,
+      "tax": 5637.605954435619,
+      "cg_tax_before_cess": 5473.403839257883,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 58495.90801938772,
+      "st_losses": 22006.54909100183,
+      "lt_gains": 0.0,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 15705.46413061196,
+      "lt_after_setoff": 0,
+      "exemption_used": 0,
+      "taxable_by_bucket": {
+       "st@0.15": 36489.35892838589
+      },
+      "dividends": 2699.1900591104436,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2018": {
+      "fy": 2018,
+      "tax": 2475.683714481315,
+      "cg_tax_before_cess": 2380.465110078187,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 80151.03725706822,
+      "st_losses": 64281.26985654698,
+      "lt_gains": 0.0,
+      "lt_losses": 1887.882746874127,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 0.0,
+      "exemption_used": 0.0,
+      "taxable_by_bucket": {
+       "st@0.15": 15869.767400521247,
+       "lt@0.1": 0.0
+      },
+      "dividends": 5063.635787047184,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 1887.882746874127
+     },
+     "2019": {
+      "fy": 2019,
+      "tax": 1261.8627272458464,
+      "cg_tax_before_cess": 1213.3295454286983,
+      "dividend_tax_before_cess": 0.0,
+      "st_gains": 66288.72967404382,
+      "st_losses": 58199.866037852495,
+      "lt_gains": 9375.44096712798,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 7487.558220253852,
+      "exemption_used": 7487.558220253852,
+      "taxable_by_bucket": {
+       "st@0.15": 8088.863636191323,
+       "lt@0.1": 0.0
+      },
+      "dividends": 2567.6455603356326,
+      "brought_forward_used": 1887.882746874127,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2020": {
+      "fy": 2020,
+      "tax": 3239.5367273351862,
+      "cg_tax_before_cess": 2524.802553218081,
+      "dividend_tax_before_cess": 590.1366076811364,
+      "st_gains": 64650.48587648316,
+      "st_losses": 47818.468855029285,
+      "lt_gains": 976.7603235349779,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 976.7603235349779,
+      "exemption_used": 976.7603235349779,
+      "taxable_by_bucket": {
+       "lt@0.1": 0.0,
+       "st@0.15": 16832.017021453874
+      },
+      "dividends": 1967.1220256037882,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2021": {
+      "fy": 2021,
+      "tax": 18844.12339953128,
+      "cg_tax_before_cess": 16693.612506399142,
+      "dividend_tax_before_cess": 1425.7369162270877,
+      "st_gains": 147777.3969995908,
+      "st_losses": 70920.37300729632,
+      "lt_gains": 151650.58907554968,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 151650.58907554968,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 76857.02399229447,
+       "lt@0.1": 51650.58907554968
+      },
+      "dividends": 4752.4563874236255,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2022": {
+      "fy": 2022,
+      "tax": 4375.720317293237,
+      "cg_tax_before_cess": 1706.138697650272,
+      "dividend_tax_before_cess": 2501.2846843624557,
+      "st_gains": 204742.7857653541,
+      "st_losses": 311728.0592492181,
+      "lt_gains": 224046.6604603667,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 117061.38697650272,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "lt@0.1": 17061.38697650272,
+       "st@0.15": 0.0
+      },
+      "dividends": 8337.615614541519,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2023": {
+      "fy": 2023,
+      "tax": 55975.68474763991,
+      "cg_tax_before_cess": 47475.939488061085,
+      "dividend_tax_before_cess": 6346.834307746517,
+      "st_gains": 349276.9232328723,
+      "st_losses": 46545.75378675879,
+      "lt_gains": 120662.6407114407,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 120662.6407114407,
+      "exemption_used": 100000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 302731.16944611346,
+       "lt@0.1": 20662.640711440705
+      },
+      "dividends": 21156.114359155057,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     },
+     "2024": {
+      "fy": 2024,
+      "tax": 22776.279688600778,
+      "cg_tax_before_cess": 18069.148637468876,
+      "dividend_tax_before_cess": 3831.1202938780243,
+      "st_gains": 385072.94607721653,
+      "st_losses": 333458.55034748313,
+      "lt_gains": 207615.91422407082,
+      "lt_losses": 0.0,
+      "exempt_lt_net": 0.0,
+      "lt_after_setoff": 207615.91422407082,
+      "exemption_used": 125000.0,
+      "taxable_by_bucket": {
+       "st@0.15": 51614.395729733485,
+       "lt@0.125": 82615.91422407082,
+       "st@0.2": 0.0
+      },
+      "dividends": 12770.400979593414,
+      "brought_forward_used": 0.0,
+      "lapsed": 0.0,
+      "carry_out": 0
+     }
+    },
+    "carry_at_end": [],
+    "prorata_sales": [
+     {
+      "date": "2013-04-01",
+      "fy_paid": 2012,
+      "tax": 1846.654820914459,
+      "interest": 0.0,
+      "fraction": 0.018187037579161763,
+      "from_cash": 1.984921718303132e-13,
+      "from_holdings": 1846.6548209144582,
+      "cash_after_over_before": 0.9375
+     },
+     {
+      "date": "2015-04-01",
+      "fy_paid": 2014,
+      "tax": 2057.7447119834824,
+      "interest": 0.0,
+      "fraction": 0.009695047398628209,
+      "from_cash": 0.0,
+      "from_holdings": 2057.7447119834824,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2016-04-01",
+      "fy_paid": 2015,
+      "tax": 1541.5363524991772,
+      "interest": 0.0,
+      "fraction": 0.007585065853067724,
+      "from_cash": 0.0,
+      "from_holdings": 1541.5363524991772,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2017-04-03",
+      "fy_paid": 2016,
+      "tax": 4589.158907398215,
+      "interest": 0.0,
+      "fraction": 0.01616238989723271,
+      "from_cash": 0.0,
+      "from_holdings": 4589.158907398214,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2018-04-02",
+      "fy_paid": 2017,
+      "tax": 5637.605954435619,
+      "interest": 0.0,
+      "fraction": 0.017039734663778044,
+      "from_cash": 0.0,
+      "from_holdings": 5637.605954435618,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2019-04-01",
+      "fy_paid": 2018,
+      "tax": 2475.683714481315,
+      "interest": 0.0,
+      "fraction": 0.007933891575366307,
+      "from_cash": -5.772665881789222e-14,
+      "from_holdings": 2475.6837144813144,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2020-04-01",
+      "fy_paid": 2019,
+      "tax": 1261.8627272458464,
+      "interest": 0.0,
+      "fraction": 0.005623183229298045,
+      "from_cash": 0.0,
+      "from_holdings": 1261.8627272458461,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2021-04-01",
+      "fy_paid": 2020,
+      "tax": 3239.5367273351862,
+      "interest": 0.0,
+      "fraction": 0.005605125177955875,
+      "from_cash": 149.7932200188083,
+      "from_holdings": 3089.743507316379,
+      "cash_after_over_before": 0.9943948748220439
+     },
+     {
+      "date": "2022-04-01",
+      "fy_paid": 2021,
+      "tax": 18844.12339953128,
+      "interest": 1140.0694656716423,
+      "fraction": 0.02343200389367285,
+      "from_cash": 0.0,
+      "from_holdings": 19984.192865202924,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2023-04-03",
+      "fy_paid": 2022,
+      "tax": 4375.720317293237,
+      "interest": 0.0,
+      "fraction": 0.006483088665980669,
+      "from_cash": 0.0,
+      "from_holdings": 4375.720317293239,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2024-04-01",
+      "fy_paid": 2023,
+      "tax": 55975.68474763991,
+      "interest": 3386.5289272322148,
+      "fraction": 0.03900664485436512,
+      "from_cash": 0.0,
+      "from_holdings": 59362.213674872124,
+      "cash_after_over_before": null
+     },
+     {
+      "date": "2025-04-01",
+      "fy_paid": 2024,
+      "tax": 22776.279688600778,
+      "interest": 1377.964921160347,
+      "fraction": 0.01764293439058955,
+      "from_cash": 1.540430913788984e-12,
+      "from_holdings": 24154.24460976111,
+      "cash_after_over_before": 0.8333333333333334
+     }
+    ],
+    "dividends_total": 74237.81609663962,
+    "events_on_held_positions": {
+     "dividend": 325,
+     "bonus": 24,
+     "split": 18,
+     "rights": 2
+    },
+    "going_concern_value_at_end": 1547785.8024390645,
+    "interest_by_fy": {
+     "2009": 0.0,
+     "2010": 0.0,
+     "2011": 0.0,
+     "2012": 0.0,
+     "2013": 0.0,
+     "2014": 0.0,
+     "2015": 0.0,
+     "2016": 0.0,
+     "2017": 0.0,
+     "2018": 0.0,
+     "2019": 0.0,
+     "2020": 0.0,
+     "2021": 1140.0694656716423,
+     "2022": 0.0,
+     "2023": 3386.5289272322148,
+     "2024": 1377.964921160347
+    },
+    "interest_total": 5904.563314064205,
+    "income": {
+     "largest_settled_year": {
+      "fy": 2023,
+      "income": 444549.9245167092
+     },
+     "terminal_year_income": 261674.2641064887,
+     "years_over_50_lakh": []
+    },
+    "carried_losses_valued_at_zero_at_end": 0,
+    "tax_drag_pp": 1.5341506845076847
+   },
+   "funds": {
+    "a_nifty100": {
+     "cagr_after_tax": 0.12340244453606708,
+     "cagr_pre_tax_liquidated": 0.1239286351409965,
+     "terminal_after_tax": 625074.8020022698,
+     "terminal_pre_tax_liquidated": 629702.0323664121,
+     "terminal_liability": 4098.4913023167455,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 17.82909247164587,
+       "value": 110444.14543838035,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 17.828022735012116,
+       "value": 106242.14083769906,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 17.826953062562026,
+       "value": 119040.38740501994,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 17.82588345429175,
+       "value": 134352.54895092355,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 17.824813910197435,
+       "value": 186061.4232825836,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 17.823744430275234,
+       "value": 162363.03264744068,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 17.82267501452129,
+       "value": 202804.02519720185,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 17.82160566293176,
+       "value": 234988.3506378081,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 17.820536375502787,
+       "value": 257955.8480583955,
+       "lt_after_setoff": 22969.847304093768
+      },
+      {
+       "date": "2020-03-19",
+       "units_sold": 17.819467152230526,
+       "value": 187967.21844378862,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2021-03-22",
+       "units_sold": 17.818397993111127,
+       "value": 335514.8259477218,
+       "lt_after_setoff": 77563.43711999129
+      },
+      {
+       "date": "2022-03-23",
+       "units_sold": 17.817328898140744,
+       "value": 397420.53549325507,
+       "lt_after_setoff": 61909.06469379272
+      },
+      {
+       "date": "2023-03-24",
+       "units_sold": 17.81625986731552,
+       "value": 386811.3181551038,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2024-03-26",
+       "units_sold": 14.408668441338762,
+       "value": 423449.50786061183,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 3.406522459292848,
+       "value": 100604.96796191338,
+       "lt_after_setoff": 26641.782647806627
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2020,
+       "income": 147549.4871761176
+      },
+      "terminal_year_income": 105130.34982267056,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.05261906049294218
+    },
+    "b_nifty200_momentum30": {
+     "cagr_after_tax": 0.1786717479836335,
+     "cagr_pre_tax_liquidated": 0.18096651942282982,
+     "terminal_after_tax": 1331796.1767278006,
+     "terminal_pre_tax_liquidated": 1373225.8535096922,
+     "terminal_liability": 40429.45311102664,
+     "tax_paid_by_fy": {
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0,
+      "2016": 0.0,
+      "2017": 0.0,
+      "2018": 0.0,
+      "2019": 0.0,
+      "2020": 0.0,
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2011-03-03",
+       "units_sold": 36.983818770226534,
+       "value": 112404.3940125093,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2012-03-05",
+       "units_sold": 36.98159975959223,
+       "value": 112169.36003771113,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2013-03-06",
+       "units_sold": 36.97938088209745,
+       "value": 136821.56965809004,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2014-03-07",
+       "units_sold": 36.97716213773422,
+       "value": 161621.02248208685,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2015-03-09",
+       "units_sold": 36.974943526494535,
+       "value": 261364.38836397883,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2016-03-10",
+       "units_sold": 36.972725048370414,
+       "value": 245067.29524045484,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2017-03-14",
+       "units_sold": 36.97050670335388,
+       "value": 335586.78521380015,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2018-03-15",
+       "units_sold": 36.96828849143693,
+       "value": 421351.82522162213,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2019-03-18",
+       "units_sold": 36.96607041261159,
+       "value": 459578.871120113,
+       "lt_after_setoff": 38231.259416743065
+      },
+      {
+       "date": "2020-03-19",
+       "units_sold": 36.963852466869874,
+       "value": 362996.3867039416,
+       "lt_after_setoff": 0
+      },
+      {
+       "date": "2021-03-22",
+       "units_sold": 28.741412899310752,
+       "value": 478841.5059845182,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2022-03-02",
+       "units_sold": 8.220221754893032,
+       "value": 180513.35892288684,
+       "lt_after_setoff": 99784.21953987022
+      },
+      {
+       "date": "2023-03-01",
+       "units_sold": 23.564348572945192,
+       "value": 492609.52150693,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2024-03-01",
+       "units_sold": 5.551676679713431,
+       "value": 194491.8418383308,
+       "lt_after_setoff": 100000.0
+      },
+      {
+       "date": "2025-03-03",
+       "units_sold": 13.156013362399348,
+       "value": 408312.0985105809,
+       "lt_after_setoff": 125000.0
+      }
+     ],
+     "carry_at_end": [],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2020,
+       "income": 196577.88862746023
+      },
+      "terminal_year_income": 387902.0350082124,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.22947714391963192
+    },
+    "c_uti": {
+     "cagr_after_tax": 0.17165959050287616,
+     "cagr_pre_tax_liquidated": 0.1795898541167471,
+     "terminal_after_tax": 209446.66113191223,
+     "terminal_pre_tax_liquidated": 216144.80380394627,
+     "terminal_liability": 6659.239265844847,
+     "tax_paid_by_fy": {
+      "2021": 0.0,
+      "2022": 0.0,
+      "2023": 0.0,
+      "2024": 0.0
+     },
+     "tax_paid_total": 0.0,
+     "harvests": [
+      {
+       "date": "2023-03-01",
+       "units_sold": 9705.0488188365,
+       "value": 120674.51802317682,
+       "lt_after_setoff": 20674.518023176817
+      },
+      {
+       "date": "2024-03-04",
+       "units_sold": 9704.466520759896,
+       "value": 206988.50731459196,
+       "lt_after_setoff": 86315.19603659537
+      },
+      {
+       "date": "2025-03-05",
+       "units_sold": 9703.884257620883,
+       "value": 184094.32902817728,
+       "lt_after_setoff": 0
+      }
+     ],
+     "carry_at_end": [
+      {
+       "fy": 2024,
+       "term": "lt",
+       "amount": 22892.10840134154
+      }
+     ],
+     "interest_total": 0.0,
+     "income": {
+      "largest_settled_year": {
+       "fy": 2023,
+       "income": 86315.19603659537
+      },
+      "terminal_year_income": 32015.57339348484,
+      "years_over_50_lakh": []
+     },
+     "tax_drag_pp": 0.7930263613870947
+    },
+    "b_fresh_from_2021_04_information": {
+     "cagr_after_tax": 0.1693821100553925,
+     "terminal_liability": 7334.744810091251
+    }
+   },
+   "comparisons": {
+    "a_nifty100": {
+     "months": 189,
+     "cagr_book": 0.18796297232666292,
+     "cagr_fund": 0.12340244453606708,
+     "difference_pp": 6.4560527790595845,
+     "ci95_pp": [
+      -1.829466712111108,
+      16.70089789626855
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.005564923898856016,
+      "sd": 0.041960719481095525,
+      "t": 1.8232541280422294,
+      "share_positive": 0.5343915343915344
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -1.7201569748426158,
+       15.812224010717754
+      ],
+      "24": [
+       -1.029963566755052,
+       15.129244964483659
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.17918435909039454,
+       "cagr_fund": 0.11404940633810456,
+       "difference_pp": 6.513495275228998
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.1967135028420981,
+       "cagr_fund": 0.13273431566812266,
+       "difference_pp": 6.397918717397544
+      }
+     },
+     "break_even_pre_tax_margin_pp": 1.4815316240147425,
+     "pre_tax_liquidated_difference_pp": 7.937584403074327
+    },
+    "b_nifty200_momentum30": {
+     "months": 189,
+     "cagr_book": 0.18796297232666292,
+     "cagr_fund": 0.1786717479836335,
+     "difference_pp": 0.9291224343029425,
+     "ci95_pp": [
+      -5.775268499874004,
+      8.549856089413623
+     ],
+     "bootstrap": {
+      "block": 12,
+      "resamples": 10000,
+      "seed": 53
+     },
+     "monthly_difference": {
+      "n": 189,
+      "mean": 0.0013943438771725789,
+      "sd": 0.03470893727001099,
+      "t": 0.5522802077373596,
+      "share_positive": 0.5079365079365079
+     },
+     "ci95_pp_other_blocks": {
+      "6": [
+       -6.230961861597624,
+       8.624862725824856
+      ],
+      "24": [
+       -4.869884045203653,
+       7.572098588247345
+      ]
+     },
+     "halves": {
+      "half1": {
+       "months": 94,
+       "cagr_book": 0.17918435909039454,
+       "cagr_fund": 0.20317096230806775,
+       "difference_pp": -2.398660321767321
+      },
+      "half2": {
+       "months": 95,
+       "cagr_book": 0.1967135028420981,
+       "cagr_fund": 0.15492146435566467,
+       "difference_pp": 4.1792038486433425
+      }
+     },
+     "break_even_pre_tax_margin_pp": 1.3046735405880527,
+     "pre_tax_liquidated_difference_pp": 2.2337959748909952,
+     "windows": {
+      "backtest_2010_03_to_2020_08": {
+       "months": 126,
+       "cagr_book": 0.1371270015587489,
+       "cagr_fund": 0.1606984721775364,
+       "difference_pp": -2.3571470618787504,
+       "ci95_pp": [
+        -10.289380422937834,
+        5.834186339191336
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 126,
+        "mean": -0.000998470241022657,
+        "sd": 0.03464985412938506,
+        "t": -0.3234588121652232,
+        "share_positive": 0.47619047619047616
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -10.75968315113718,
+         6.747318120799789
+        ],
+        "24": [
+         -8.063274700817164,
+         4.233129678323228
+        ]
+       }
+      },
+      "live_2020_09_to_2025_11": {
+       "months": 63,
+       "cagr_book": 0.2965544754590854,
+       "cagr_fund": 0.21545755127692545,
+       "difference_pp": 8.109692418215996,
+       "ci95_pp": [
+        0.05545554463031844,
+        19.294371098957424
+       ],
+       "bootstrap": {
+        "block": 12,
+        "resamples": 10000,
+        "seed": 53
+       },
+       "monthly_difference": {
+        "n": 63,
+        "mean": 0.00617997211356305,
+        "sd": 0.03460485025963529,
+        "t": 1.4174893865274918,
+        "share_positive": 0.5714285714285714
+       },
+       "ci95_pp_other_blocks": {
+        "6": [
+         -2.8165683145835936,
+         21.391376880448227
+        ],
+        "24": [
+         1.5142194227796946,
+         15.12185219288648
+        ]
+       }
+      }
+     }
+    },
+    "c_uti": {
+     "window": [
+      "2021-04-01",
+      "2025-12-01"
+     ],
+     "book_minus_c": {
+      "months": 56,
+      "cagr_book": 0.22606874869912885,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": 5.440915819625269,
+      "ci95_pp": [
+       -2.6863417632561593,
+       17.76798669526581
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004532610434887402,
+       "sd": 0.034954358622087296,
+       "t": 0.9703782866351082,
+       "share_positive": 0.5535714285714286
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.570075630284664,
+        19.11497236812543
+       ],
+       "24": [
+        -1.4048101460074358,
+        14.483095279107172
+       ]
+      }
+     },
+     "b_slice_minus_c": {
+      "months": 56,
+      "cagr_book": 0.1717151288740011,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": 0.005553837112493021,
+      "ci95_pp": [
+       -2.6286546077936324,
+       2.219867772160188
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 1.3472256606044436e-05,
+       "sd": 0.00911244091899255,
+       "t": 0.01106368071840256,
+       "share_positive": 0.6964285714285714
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -2.846131388050845,
+        2.273796530734542
+       ],
+       "24": [
+        -1.9436372626731813,
+        1.795078754049189
+       ]
+      }
+     },
+     "b_fresh_from_2021_04_minus_c": {
+      "months": 56,
+      "cagr_book": 0.1693821100553925,
+      "cagr_fund": 0.17165959050287616,
+      "difference_pp": -0.22774804474836596,
+      "ci95_pp": [
+       -0.6294834160015153,
+       0.27111607381474323
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": -0.00016925409554222854,
+       "sd": 0.0016500772453478527,
+       "t": -0.7675893217881661,
+       "share_positive": 0.39285714285714285
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -0.6912971416977332,
+        0.25683249952640136
+       ],
+       "24": [
+        -0.6133366334278478,
+        0.1546573338426492
+       ]
+      }
+     },
+     "book_minus_b_fresh_from_2021_04": {
+      "months": 56,
+      "cagr_book": 0.22606874869912885,
+      "cagr_fund": 0.1693821100553925,
+      "difference_pp": 5.668663864373635,
+      "ci95_pp": [
+       -2.5966745558597086,
+       18.102053875142442
+      ],
+      "bootstrap": {
+       "block": 12,
+       "resamples": 10000,
+       "seed": 53
+      },
+      "monthly_difference": {
+       "n": 56,
+       "mean": 0.004701864530429631,
+       "sd": 0.0351765457005192,
+       "t": 1.0002554714536822,
+       "share_positive": 0.5357142857142857
+      },
+      "ci95_pp_other_blocks": {
+       "6": [
+        -5.414785374176927,
+        19.455992848930194
+       ],
+       "24": [
+        -1.3640416263950625,
+        14.889312095576624
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "benchmark_realism": {
+  "window": [
+   "2020-09",
+   "2025-11"
+  ],
+  "book_minus_n200m30_tri": {
+   "n": 63,
+   "mean": 0.007829215127003438,
+   "sd": 0.03814573151547326,
+   "t": 1.6290805312101833,
+   "share_positive": 0.5396825396825397,
+   "half1": {
+    "n": 31,
+    "mean": 0.0063074647786464455,
+    "sd": 0.03904067745593257,
+    "t": 0.8995355588794136,
+    "share_positive": 0.5161290322580645
+   },
+   "half2": {
+    "n": 32,
+    "mean": 0.009303410776974275,
+    "sd": 0.03782363027062855,
+    "t": 1.391406335456059,
+    "share_positive": 0.5625
+   }
+  },
+  "book_minus_n100ew_tri": {
+   "n": 63,
+   "mean": 0.008525679657581204,
+   "sd": 0.045819034429874804,
+   "t": 1.476907692126402,
+   "share_positive": 0.49206349206349204,
+   "half1": {
+    "n": 31,
+    "mean": 0.00724753811246251,
+    "sd": 0.045511213394955306,
+    "t": 0.88665147357495,
+    "share_positive": 0.41935483870967744
+   },
+   "half2": {
+    "n": 32,
+    "mean": 0.009763879279414939,
+    "sd": 0.04680914682158237,
+    "t": 1.1799583146391104,
+    "share_positive": 0.5625
+   }
+  },
+  "book_minus_own_ew200": {
+   "n": 63,
+   "mean": 0.008484681763102232,
+   "sd": 0.041267240868915055,
+   "t": 1.6319257667359335,
+   "share_positive": 0.49206349206349204,
+   "half1": {
+    "n": 31,
+    "mean": 0.00746442766449806,
+    "sd": 0.04207580119684874,
+    "t": 0.9877452872466624,
+    "share_positive": 0.41935483870967744
+   },
+   "half2": {
+    "n": 32,
+    "mean": 0.009473052921125023,
+    "sd": 0.04111759710033803,
+    "t": 1.3032784854076929,
+    "share_positive": 0.5625
+   }
+  },
+  "information": {
+   "full_189": {
+    "book_minus_n200m30_tri": {
+     "n": 189,
+     "mean": 0.002302256367304982,
+     "sd": 0.03797291340911226,
+     "t": 0.833509714572289,
+     "share_positive": 0.5026455026455027,
+     "half1": {
+      "n": 94,
+      "mean": -0.0003685370458861965,
+      "sd": 0.03754718075552644,
+      "t": -0.09516291652822835,
+      "share_positive": 0.5106382978723404
+     },
+     "half2": {
+      "n": 95,
+      "mean": 0.004944936165620464,
+      "sd": 0.038404428232863434,
+      "t": 1.254992668092048,
+      "share_positive": 0.49473684210526314
+     }
+    },
+    "book_minus_n100ew_tri": {
+     "n": 189,
+     "mean": 0.006470958014716997,
+     "sd": 0.04491195491552027,
+     "t": 1.9807858493646444,
+     "share_positive": 0.5291005291005291,
+     "half1": {
+      "n": 94,
+      "mean": 0.005392766796320314,
+      "sd": 0.046210872764306285,
+      "t": 1.1314396552344805,
+      "share_positive": 0.5531914893617021
+     },
+     "half2": {
+      "n": 95,
+      "mean": 0.007537799851867399,
+      "sd": 0.043807845971802,
+      "t": 1.6770827996376128,
+      "share_positive": 0.5052631578947369
+     }
+    },
+    "book_minus_own_ew200": {
+     "n": 189,
+     "mean": 0.00709068124374717,
+     "sd": 0.03891422510688387,
+     "t": 2.505015847471697,
+     "share_positive": 0.5343915343915344,
+     "half1": {
+      "n": 94,
+      "mean": 0.006498914222862675,
+      "sd": 0.038995913638563064,
+      "t": 1.6157926630595945,
+      "share_positive": 0.5425531914893617
+     },
+     "half2": {
+      "n": 95,
+      "mean": 0.007676219138096039,
+      "sd": 0.03903118395643092,
+      "t": 1.9168911034885845,
+      "share_positive": 0.5263157894736842
+     }
+    }
+   },
+   "live_window_against_funds": {
+    "book_minus_fund_b": {
+     "n": 63,
+     "mean": 0.008254286045196704,
+     "sd": 0.038149823993201,
+     "t": 1.7173438176181421,
+     "share_positive": 0.5555555555555556,
+     "half1": {
+      "n": 31,
+      "mean": 0.006732101474186763,
+      "sd": 0.03904316557603502,
+      "t": 0.9600336991614146,
+      "share_positive": 0.5483870967741935
+     },
+     "half2": {
+      "n": 32,
+      "mean": 0.009728902348362583,
+      "sd": 0.03782936512244366,
+      "t": 1.454821734758106,
+      "share_positive": 0.5625
+     }
+    },
+    "book_minus_fund_a": {
+     "n": 63,
+     "mean": 0.011018820956802062,
+     "sd": 0.05031611170343262,
+     "t": 1.7381943281712002,
+     "share_positive": 0.5396825396825397,
+     "half1": {
+      "n": 31,
+      "mean": 0.008002125856472269,
+      "sd": 0.04948840621985477,
+      "t": 0.9002906857136145,
+      "share_positive": 0.4838709677419355
+     },
+     "half2": {
+      "n": 32,
+      "mean": 0.013941244335246548,
+      "sd": 0.0517243331105082,
+      "t": 1.5246902670076043,
+      "share_positive": 0.59375
+     }
+    }
+   }
+  }
+ },
+ "band_proposals": {
+  "P1_expected_figure": {
+   "n200m30_minus_ew200_backtest_2010_03_to_2020_08": {
+    "n": 126,
+    "mean": 0.006854903996613885,
+    "sd": 0.027440113477776345,
+    "t": 2.804146804494379,
+    "share_positive": 0.626984126984127,
+    "half1": {
+     "n": 63,
+     "mean": 0.007774963377782909,
+     "sd": 0.03186967020421875,
+     "t": 1.936382091665819,
+     "share_positive": 0.6666666666666666
+    },
+    "half2": {
+     "n": 63,
+     "mean": 0.005934844615444861,
+     "sd": 0.022375610929986973,
+     "t": 2.1052550884187644,
+     "share_positive": 0.5873015873015873
+    }
+   },
+   "n200m30_minus_ew200_live_2020_09_to_2025_11": {
+    "n": 63,
+    "mean": 0.0006554666360987932,
+    "sd": 0.02524720158449365,
+    "t": 0.20606660575989452,
+    "share_positive": 0.5396825396825397,
+    "half1": {
+     "n": 31,
+     "mean": 0.001156962885851614,
+     "sd": 0.028928388879936952,
+     "t": 0.22267734133749773,
+     "share_positive": 0.5806451612903226
+    },
+    "half2": {
+     "n": 32,
+     "mean": 0.000169642144150748,
+     "sd": 0.02155204794085074,
+     "t": 0.04452666803015088,
+     "share_positive": 0.5
+    }
+   },
+   "s_interval": {
+    "draws": 10000,
+    "share_backtest_mean_not_positive": 0.0002,
+    "ci95_unclipped": [
+     -1.0011592638826337,
+     1.2269065546762234
+    ],
+    "ci95_clipped": [
+     0.0,
+     1.0
+    ],
+    "reading": "close to uninformative (amendment 2, N12)"
+   },
+   "s": 0.09562010444239245,
+   "s_unclipped": 0.09562010444239245,
+   "proposed_expected_monthly": 0.0006789027415409865,
+   "sd": 0.0389,
+   "floors": {
+    "6": -0.1864968855392853,
+    "12": -0.26136027275922546,
+    "24": -0.3648469381800788,
+    "36": -0.4423595013045245,
+    "60": -0.5619020441774148
+   },
+   "current_floors": {
+    "6": -0.14797030198853123,
+    "12": -0.1843071056577173,
+    "24": -0.21074060397706246,
+    "36": -0.2112,
+    "60": -0.17663620866987395
+   }
+  },
+  "P2_line_against_the_fund": {
+   "break_even_margin_pp_a_year": 2.0605083767467613,
+   "expected_monthly": 0.0017010844380027645,
+   "sd": 0.03797291340911226,
+   "floors": {
+    "6": -0.175822017170412,
+    "12": -0.2426710480879506,
+    "24": -0.3312310210847908,
+    "36": -0.3944359211412476,
+    "60": -0.48620877868170653
+   }
+  },
+  "P3_book_minus_n100ew": {
+   "n": 63,
+   "mean": 0.008525679657581204,
+   "sd": 0.045819034429874804,
+   "t": 1.476907692126402,
+   "share_positive": 0.49206349206349204,
+   "half1": {
+    "n": 31,
+    "mean": 0.00724753811246251,
+    "sd": 0.045511213394955306,
+    "t": 0.88665147357495,
+    "share_positive": 0.41935483870967744
+   },
+   "half2": {
+    "n": 32,
+    "mean": 0.009763879279414939,
+    "sd": 0.04680914682158237,
+    "t": 1.1799583146391104,
+    "share_positive": 0.5625
+   }
+  },
+  "note": "Proposals for the owner only. This look does not change the band."
+ },
+ "turnover": {
+  "years": 15.75,
+  "grid": {
+   "keep30_every1": {
+    "phase0": {
+     "sells": 516,
+     "sells_a_year": 32.76190476190476,
+     "one_sided_turnover_by_names": 2.184126984126984,
+     "holding_days_mean": 165.24031007751938,
+     "holding_days_median": 123.0,
+     "share_long_term": 0.06395348837209303,
+     "share_within_30_days_before_the_12_month_line": 0.029069767441860465,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      28,
+      28,
+      28,
+      28,
+      61,
+      61,
+      91,
+      91,
+      122,
+      122,
+      122,
+      244
+     ]
+    }
+   },
+   "keep30_every3": {
+    "phase0": {
+     "sells": 389,
+     "sells_a_year": 24.6984126984127,
+     "one_sided_turnover_by_names": 1.6465608465608466,
+     "holding_days_mean": 219.40359897172237,
+     "holding_days_median": 183,
+     "share_long_term": 0.11053984575835475,
+     "share_within_30_days_before_the_12_month_line": 0.08997429305912596,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      91,
+      91,
+      182,
+      273,
+      273
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 396.6666666666667,
+     "sells_a_year": 25.185185185185187,
+     "one_sided_turnover_by_names": 1.6790123456790125,
+     "holding_days_mean": 212.39684125843795,
+     "holding_days_median": 182.66666666666666,
+     "share_long_term": 0.10098802939419906,
+     "share_within_30_days_before_the_12_month_line": 0.0889888122393121,
+     "open_at_end": 15
+    }
+   },
+   "keep30_every6": {
+    "phase0": {
+     "sells": 298,
+     "sells_a_year": 18.92063492063492,
+     "one_sided_turnover_by_names": 1.2613756613756615,
+     "holding_days_mean": 280.3020134228188,
+     "holding_days_median": 184.0,
+     "share_long_term": 0.17114093959731544,
+     "share_within_30_days_before_the_12_month_line": 0.21140939597315436,
+     "open_at_end": 15,
+     "open_age_days": [
+      91,
+      91,
+      91,
+      91,
+      91,
+      91,
+      91,
+      91,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 301.1666666666667,
+     "sells_a_year": 19.12169312169312,
+     "one_sided_turnover_by_names": 1.2747795414462082,
+     "holding_days_mean": 275.73688379827365,
+     "holding_days_median": 183.5,
+     "share_long_term": 0.15175403357950112,
+     "share_within_30_days_before_the_12_month_line": 0.23797693172915996,
+     "open_at_end": 15
+    }
+   },
+   "keep45_every1": {
+    "phase0": {
+     "sells": 419,
+     "sells_a_year": 26.603174603174605,
+     "one_sided_turnover_by_names": 1.7735449735449735,
+     "holding_days_mean": 202.8949880668258,
+     "holding_days_median": 154,
+     "share_long_term": 0.1026252983293556,
+     "share_within_30_days_before_the_12_month_line": 0.0405727923627685,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      28,
+      28,
+      61,
+      61,
+      91,
+      122,
+      122,
+      244,
+      244,
+      273
+     ]
+    }
+   },
+   "keep45_every3": {
+    "phase0": {
+     "sells": 323,
+     "sells_a_year": 20.50793650793651,
+     "one_sided_turnover_by_names": 1.3671957671957673,
+     "holding_days_mean": 262.54489164086687,
+     "holding_days_median": 184,
+     "share_long_term": 0.16408668730650156,
+     "share_within_30_days_before_the_12_month_line": 0.12693498452012383,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      91,
+      91,
+      91,
+      182,
+      182,
+      273,
+      273,
+      273
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 326.6666666666667,
+     "sells_a_year": 20.74074074074074,
+     "one_sided_turnover_by_names": 1.382716049382716,
+     "holding_days_mean": 256.27564970198273,
+     "holding_days_median": 184.33333333333334,
+     "share_long_term": 0.16171144663971362,
+     "share_within_30_days_before_the_12_month_line": 0.1118862072085746,
+     "open_at_end": 15
+    }
+   },
+   "keep45_every6": {
+    "phase0": {
+     "sells": 259,
+     "sells_a_year": 16.444444444444443,
+     "one_sided_turnover_by_names": 1.096296296296296,
+     "holding_days_mean": 317.57915057915056,
+     "holding_days_median": 186,
+     "share_long_term": 0.22007722007722008,
+     "share_within_30_days_before_the_12_month_line": 0.25096525096525096,
+     "open_at_end": 15,
+     "open_age_days": [
+      91,
+      91,
+      91,
+      91,
+      91,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273,
+      455,
+      455,
+      640
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 263,
+     "sells_a_year": 16.698412698412696,
+     "one_sided_turnover_by_names": 1.1132275132275131,
+     "holding_days_mean": 312.2551813839639,
+     "holding_days_median": 187.58333333333334,
+     "share_long_term": 0.20542580985793615,
+     "share_within_30_days_before_the_12_month_line": 0.2781319056298699,
+     "open_at_end": 15
+    }
+   },
+   "keep60_every1": {
+    "phase0": {
+     "sells": 349,
+     "sells_a_year": 22.158730158730158,
+     "one_sided_turnover_by_names": 1.4772486772486773,
+     "holding_days_mean": 242.2922636103152,
+     "holding_days_median": 212,
+     "share_long_term": 0.17191977077363896,
+     "share_within_30_days_before_the_12_month_line": 0.04871060171919771,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      28,
+      61,
+      91,
+      91,
+      91,
+      122,
+      122,
+      153,
+      182,
+      244,
+      273,
+      273
+     ]
+    }
+   },
+   "keep60_every3": {
+    "phase0": {
+     "sells": 274,
+     "sells_a_year": 17.396825396825395,
+     "one_sided_turnover_by_names": 1.1597883597883596,
+     "holding_days_mean": 305.96715328467155,
+     "holding_days_median": 273.0,
+     "share_long_term": 0.24452554744525548,
+     "share_within_30_days_before_the_12_month_line": 0.16058394160583941,
+     "open_at_end": 15,
+     "open_age_days": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      91,
+      91,
+      91,
+      91,
+      182,
+      273,
+      273,
+      273,
+      364,
+      731
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 283.3333333333333,
+     "sells_a_year": 17.989417989417987,
+     "one_sided_turnover_by_names": 1.199294532627866,
+     "holding_days_mean": 293.69357508526144,
+     "holding_days_median": 273.0,
+     "share_long_term": 0.22158463234491085,
+     "share_within_30_days_before_the_12_month_line": 0.14258110537201507,
+     "open_at_end": 15
+    }
+   },
+   "keep60_every6": {
+    "phase0": {
+     "sells": 224,
+     "sells_a_year": 14.222222222222221,
+     "one_sided_turnover_by_names": 0.9481481481481481,
+     "holding_days_mean": 365.5625,
+     "holding_days_median": 364.0,
+     "share_long_term": 0.29910714285714285,
+     "share_within_30_days_before_the_12_month_line": 0.2544642857142857,
+     "open_at_end": 15,
+     "open_age_days": [
+      91,
+      91,
+      91,
+      91,
+      91,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273,
+      273,
+      455,
+      640,
+      822
+     ]
+    },
+    "mean_over_phases": {
+     "sells": 232,
+     "sells_a_year": 14.73015873015873,
+     "one_sided_turnover_by_names": 0.982010582010582,
+     "holding_days_mean": 351.5117326163875,
+     "holding_days_median": 364.25,
+     "share_long_term": 0.2684837460820938,
+     "share_within_30_days_before_the_12_month_line": 0.2868408474256334,
+     "open_at_end": 15
+    }
+   }
+  },
+  "trial126_with_fill_rules": {
+   "sells": 516,
+   "sells_a_year": 32.76190476190476,
+   "one_sided_turnover_by_names": 2.184126984126984,
+   "holding_days_mean": 164.765503875969,
+   "holding_days_median": 123.0,
+   "share_long_term": 0.06395348837209303,
+   "share_within_30_days_before_the_12_month_line": 0.029069767441860465,
+   "open_at_end": 15,
+   "open_age_days": [
+    0,
+    0,
+    0,
+    28,
+    28,
+    28,
+    28,
+    61,
+    61,
+    91,
+    91,
+    122,
+    122,
+    122,
+    244
+   ]
+  }
+ },
+ "iima": {
+  "correlations": {
+   "WML": {
+    "full": {
+     "n": 189,
+     "r": 0.398962806189853,
+     "ci95": [
+      0.27170448603829783,
+      0.5125087506811188
+     ]
+    },
+    "half1": {
+     "n": 94,
+     "r": 0.5021034779805689,
+     "ci95": [
+      0.33340540524524037,
+      0.6396462366960358
+     ]
+    },
+    "half2": {
+     "n": 95,
+     "r": 0.28467402713835893,
+     "ci95": [
+      0.088190888212844,
+      0.4598344652536984
+     ]
+    }
+   },
+   "HML": {
+    "full": {
+     "n": 189,
+     "r": -0.01801641919829575,
+     "ci95": [
+      -0.16033440139832972,
+      0.1250353881514493
+     ]
+    },
+    "half1": {
+     "n": 94,
+     "r": -0.25653656580248285,
+     "ci95": [
+      -0.4364665834458955,
+      -0.05687593463937032
+     ]
+    },
+    "half2": {
+     "n": 95,
+     "r": 0.2310416215477818,
+     "ci95": [
+      0.030939296193200384,
+      0.41333763574119137
+     ]
+    }
+   }
+  },
+  "regression_information": {
+   "n": 189,
+   "r2": 0.30087353511441006,
+   "coef": {
+    "const": {
+     "b": 0.0006388563971527134,
+     "t": 0.24967386196539537
+    },
+    "MF_minus_RF": {
+     "b": 0.136712971841113,
+     "t": 2.1386715028519023
+    },
+    "SMB": {
+     "b": 0.2554811881856163,
+     "t": 4.077364480754338
+    },
+    "HML": {
+     "b": 0.10035318159613955,
+     "t": 1.643180585142708
+    },
+    "WML": {
+     "b": 0.44742125283385586,
+     "t": 7.728039569872889
+    }
+   }
+  }
+ }
+}
