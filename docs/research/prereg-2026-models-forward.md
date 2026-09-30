@@ -1,6 +1,6 @@
 # Pre-registration — do the five newest forecasting models rank the next intraday move past cost, on sessions after they were released? (research look L52, forward; a trial only if one clears)
 
-**Written 2026-09-30 at about 20:15 IST, before any of the sessions it scores exists.** The owner asked on 2026-09-30 to complete every open research item. The predictive-tools sweep (`predictive-tools-sweep-2026-09-29.md`) recommended that the models released after the L40 selection sample be judged forward only, on sessions after their release, and not on the 2026 held-out window. This fixes that test now.
+**Written 2026-09-30 by 20:01 IST (its commit), before any of the sessions it scores exists.** The owner asked on 2026-09-30 to complete every open research item. The predictive-tools sweep (`predictive-tools-sweep-2026-09-29.md`) recommended that the models released after the L40 selection sample be judged forward only, on sessions after their release, and not on the 2026 held-out window. This fixes that test now.
 
 **Seen before this was written:** L40 (Kronos) FAIL; L46 (six zero-shot models) FAIL 18 of 18; L47 (LightGBM on Alpha158) FAIL; the 75-combination search FAIL; one day of the Kronos live shadow (2026-09-30). None of the five models below has been run on any project data.
 
