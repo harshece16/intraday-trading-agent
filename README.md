@@ -3991,6 +3991,42 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 
 The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
+### 111. An approval is held to the R:R floor at the live price, and a failed NSE file is not fetched again for 3 minutes (#211, #212)
+
+**1. The R:R floor is checked again when you approve (#211).** Since §105 the review queue offers a card blocked on reward-to-risk only if its R:R after costs, at the offer, is at least `REVIEW_QUEUE["min_net_rrr"]` (1.0). Approval did not check it again. A card offered at 1.05 could be approved minutes later, after the price had moved toward the target, at a fill where the same trade netted well under 1.0.
+
+- **Now:** at the click, the engine works out the net R:R at the live price with the card's own stop, target and round-trip cost, the figures the offer used, so the two differ only by the price. Under the floor the approval is refused, for example: "reward-to-risk after costs is 0.63 at the live price 100.50, under the queue's floor of 1 (it was 1.00 at the offer)". The card stays in `manual_reviews` as `refused`, with that reason and `net_rrr_live`, and the activity log says so. The Overview page shows "Not placed: …" by the buttons and the reason in the decided list.
+- **Unchanged:** cards blocked on anything else (volume, pattern, confidence…) are not held to the floor, as at the offer. `min_net_rrr = None` switches it off in both places. Every other re-check (§64) runs as before.
+
+How much it bites, from the 71 real cards in the journal to 2026-09-30 (read-only copy; for each card, its net R:R at every live price the engine recorded while it was open):
+
+| Net R:R while a card was open, against its value at the offer | Prices (n = 425) | Cards whose lowest was this far down (n = 69) |
+| --- | --- | --- |
+| Lower at all | 45% | 53 |
+| More than 0.10 lower | 16% | 25 |
+| More than 0.25 lower | 5% | 6 |
+| More than 0.50 lower | 2% | 3 |
+
+So a card offered at 1.00 to 1.10 would often be refused if approved at a bad moment, and one offered at 1.25 or more rarely. No R:R card has cleared the floor at the offer yet (the floor goes live on 2026-10-01), so none of the 71 would have met this check. The 7 cards offered at 1.0 or more were all blocked on other items, and none went under 1.0 while open.
+
+**2. A failed NSE archive file is remembered (#212).** `nse_feed._archive` reads the F&O ban list and the price-band list from NSE's archives with a 15-second timeout. A failed fetch was not remembered, so while the archive was down every caller waited out its own timeout. The F&O ban check (§108) runs once per candidate.
+
+- **Now:** a failed fetch (no answer, a refusal such as HTTP 503, or a file not in the expected format) is remembered per file for `nse_feed.ARCHIVE_RETRY_S`, 180 seconds. Until then the file is unknown at once and NSE is not asked. One caller at a time fetches a given file, so a caller that arrives during a fetch gets its answer.
+- **Unknown, not empty, as before.** The answer is still "unknown", never a stale copy and never an empty list. The F&O path still refuses stock options on an unknown list, and its reason now says when the last try failed and when it is tried again: "NSE's F&O ban list could not be read (the last try, at 20:09:27 IST, failed (no answer within 15 s); it is tried again after 20:12:27), so the ban status is unknown; no stock option is bought". The scan result carries the same (`guards.unread`), and the Screener's guard line reads "F&O ban list: could not be read (the last try, at …, failed: …; tried again after …), so no stock is left out for it."
+
+**Checked on the real network, 2026-09-30.** NSE's live ban file was read in 0.11 s: trade date 2026-10-01, BANDHANBNK and SAIL. Then the same code was pointed at an address that never answers, and four candidates went through the ban check:
+
+| | Candidate 1 | 2 | 3 | 4 | Total |
+| --- | --- | --- | --- | --- | --- |
+| `main` | 15.0 s | 15.0 s | 15.0 s | 15.0 s | 60.0 s |
+| This change | 15.0 s | 0.00 s | 0.00 s | 0.00 s | 15.0 s |
+
+F&O is still off (`FNO.enabled = False`), so nothing in the running engine is faster today. The scanner reads the two files once per scan and is affected little.
+
+**Tests.** `backend/tests/test_review_queue.py`: a card offered at 1.00 and approved at 0.63 is refused, journaled and logged; one still at 1.00 is placed; a volume card is not held to the floor; `None` switches it off; a later change to the strategy's cost figure does not move the card's bar. `backend/tests/test_scanner_guards.py`: no second fetch before the retry time, and a fetch after it; the failure's time and reason; a refusal and an unreadable file remembered too; each file on its own; a caller during a fetch waits for it; the scan's `unread` note, with an unknown file still excluding nothing. `backend/tests/test_fno_mwpl.py`: with NSE down, three candidates make one fetch and all three reasons name the failed try.
+
+Rules: ENT-26, SCN-20, FNO-08. Files: `backend/review_queue.py`, `backend/trading_engine.py`, `backend/nse_feed.py`, `backend/fno_risk.py`, `backend/scanner.py`, `frontend/src/components/ReviewQueue.jsx`, `frontend/src/components/ListNotes.jsx`, the three test files, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
