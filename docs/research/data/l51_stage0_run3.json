@@ -1,0 +1,1902 @@
+{
+ "look": "L51",
+ "prereg": "docs/research/prereg-index-timing.md",
+ "prereg_commit": "769c21c",
+ "mode": "stage0",
+ "started": "2026-09-30T20:33:45.500969",
+ "argv": [
+  "--stage0"
+ ],
+ "environment": {
+  "python": "3.9.6",
+  "numpy": "2.0.2",
+  "pandas": "2.3.3",
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "git_head": "ebbc5a48ac007203c3a8aaa9175accaea946fbe9",
+  "data_dir": "/Users/harshgupta/Projects/webapp/backend/data",
+  "kite_db": "/Users/harshgupta/Projects/webapp/backend/data/kite_history.db",
+  "index_db": "/Users/harshgupta/Projects/webapp/backend/data/overnight_1m.db"
+ },
+ "cost": {
+  "round_trip_bp": 6.945965138461537,
+  "charges_bp": 5.9459651384615375,
+  "slippage_bp_per_leg": 0.5,
+  "notional": 1625000.0,
+  "tariff": {
+   "brokerage_per_order": 20.0,
+   "brokerage_pct": 0.03,
+   "stt_pct_sell": 0.05,
+   "exchange_txn_pct": 0.00183,
+   "sebi_charges_pct": 0.0001,
+   "ipft_pct": 1e-07,
+   "stamp_duty_pct_buy": 0.002,
+   "gst_pct": 18.0,
+   "slippage_pct": 0.005
+  },
+  "source": "zerodha.com/charges, equity futures, read 2026-09-30",
+  "round_trip_bp_2025_tariff": 3.922365138461539,
+  "tariff_2025": {
+   "brokerage_per_order": 20.0,
+   "brokerage_pct": 0.03,
+   "stt_pct_sell": 0.02,
+   "exchange_txn_pct": 0.00173,
+   "sebi_charges_pct": 0.0001,
+   "ipft_pct": 1e-07,
+   "stamp_duty_pct_buy": 0.002,
+   "gst_pct": 18.0,
+   "slippage_pct": 0.005
+  }
+ },
+ "factors": {
+  "hand_checks": [
+   {
+    "session": "2025-09-22",
+    "bar": "14:45",
+    "LIQ": true,
+    "TURN": true,
+    "ILLIQ": true,
+    "MOM": true,
+    "REV21": true,
+    "REV5": true,
+    "REV1": true,
+    "VOL": true,
+    "IVOL": true,
+    "BETA": true,
+    "HIGH52": true,
+    "RANGE": true,
+    "FIN": true,
+    "CAPG": true,
+    "AUTO": true,
+    "HLTH": true,
+    "FMCG": true,
+    "METAL": true,
+    "POWER": true,
+    "OILGAS": true,
+    "IT": true,
+    "MKT": true,
+    "EWX": true
+   },
+   {
+    "session": "2025-01-02",
+    "bar": "11:40",
+    "LIQ": true,
+    "TURN": true,
+    "ILLIQ": true,
+    "MOM": true,
+    "REV21": true,
+    "REV5": true,
+    "REV1": true,
+    "VOL": true,
+    "IVOL": true,
+    "BETA": true,
+    "HIGH52": true,
+    "RANGE": true,
+    "FIN": true,
+    "CAPG": true,
+    "AUTO": true,
+    "HLTH": true,
+    "FMCG": true,
+    "METAL": true,
+    "POWER": true,
+    "OILGAS": true,
+    "IT": true,
+    "MKT": true,
+    "EWX": true
+   },
+   {
+    "session": "2025-09-30",
+    "bar": "11:35",
+    "LIQ": true,
+    "TURN": true,
+    "ILLIQ": true,
+    "MOM": true,
+    "REV21": true,
+    "REV5": true,
+    "REV1": true,
+    "VOL": true,
+    "IVOL": true,
+    "BETA": true,
+    "HIGH52": true,
+    "RANGE": true,
+    "FIN": true,
+    "CAPG": true,
+    "AUTO": true,
+    "HLTH": true,
+    "FMCG": true,
+    "METAL": true,
+    "POWER": true,
+    "OILGAS": true,
+    "IT": true,
+    "MKT": true,
+    "EWX": true
+   },
+   {
+    "session": "2025-08-28",
+    "bar": "09:25",
+    "LIQ": true,
+    "TURN": true,
+    "ILLIQ": true,
+    "MOM": true,
+    "REV21": true,
+    "REV5": true,
+    "REV1": true,
+    "VOL": true,
+    "IVOL": true,
+    "BETA": true,
+    "HIGH52": true,
+    "RANGE": true,
+    "FIN": true,
+    "CAPG": true,
+    "AUTO": true,
+    "HLTH": true,
+    "FMCG": true,
+    "METAL": true,
+    "POWER": true,
+    "OILGAS": true,
+    "IT": true,
+    "MKT": true,
+    "EWX": true
+   },
+   {
+    "session": "2025-04-04",
+    "bar": "10:20",
+    "LIQ": true,
+    "TURN": true,
+    "ILLIQ": true,
+    "MOM": true,
+    "REV21": true,
+    "REV5": true,
+    "REV1": true,
+    "VOL": true,
+    "IVOL": true,
+    "BETA": true,
+    "HIGH52": true,
+    "RANGE": true,
+    "FIN": true,
+    "CAPG": true,
+    "AUTO": true,
+    "HLTH": true,
+    "FMCG": true,
+    "METAL": true,
+    "POWER": true,
+    "OILGAS": true,
+    "IT": true,
+    "MKT": true,
+    "EWX": true
+   }
+  ],
+  "mismatches": [],
+  "bar_sd_bp": {
+   "LIQ": 5.345149530239039,
+   "TURN": 5.319482199193615,
+   "ILLIQ": 6.066224024969617,
+   "MOM": 6.0766825068763035,
+   "REV21": 6.464255970554824,
+   "REV5": 6.59289695494338,
+   "REV1": 6.500703045341394,
+   "VOL": 8.449509195577917,
+   "IVOL": 6.046605601849435,
+   "BETA": 10.23020251971718,
+   "HIGH52": 7.5530390098579465,
+   "RANGE": 8.477995805417782,
+   "FIN": 4.886965647958067,
+   "CAPG": 11.280727033250232,
+   "AUTO": 7.323807239121172,
+   "HLTH": 8.790772983219847,
+   "FMCG": 8.408231303880426,
+   "METAL": 9.437533547489743,
+   "POWER": 11.14492573798061,
+   "OILGAS": 7.711880626810469,
+   "IT": 10.757124612735089,
+   "MKT": 7.1769230130328365,
+   "EWX": 4.317062263231342
+  },
+  "missing_factor_bars": {
+   "LIQ": 0,
+   "TURN": 0,
+   "ILLIQ": 0,
+   "MOM": 0,
+   "REV21": 0,
+   "REV5": 0,
+   "REV1": 0,
+   "VOL": 0,
+   "IVOL": 0,
+   "BETA": 0,
+   "HIGH52": 0,
+   "RANGE": 0,
+   "FIN": 0,
+   "CAPG": 0,
+   "AUTO": 0,
+   "HLTH": 0,
+   "FMCG": 0,
+   "METAL": 0,
+   "POWER": 0,
+   "OILGAS": 0,
+   "IT": 0,
+   "MKT": 0,
+   "EWX": 0
+  },
+  "largest_abs_correlations": [
+   {
+    "pair": [
+     "VOL",
+     "RANGE"
+    ],
+    "corr": 0.931456890217686
+   },
+   {
+    "pair": [
+     "VOL",
+     "BETA"
+    ],
+    "corr": 0.8577503441979138
+   },
+   {
+    "pair": [
+     "BETA",
+     "RANGE"
+    ],
+    "corr": 0.8469028923673745
+   },
+   {
+    "pair": [
+     "VOL",
+     "IVOL"
+    ],
+    "corr": 0.8117178901706777
+   },
+   {
+    "pair": [
+     "RANGE",
+     "EWX"
+    ],
+    "corr": 0.764856013019871
+   },
+   {
+    "pair": [
+     "IVOL",
+     "RANGE"
+    ],
+    "corr": 0.7616224971023408
+   },
+   {
+    "pair": [
+     "ILLIQ",
+     "EWX"
+    ],
+    "corr": 0.7554138155702061
+   },
+   {
+    "pair": [
+     "LIQ",
+     "ILLIQ"
+    ],
+    "corr": -0.7223109035429449
+   },
+   {
+    "pair": [
+     "BETA",
+     "HIGH52"
+    ],
+    "corr": -0.7154777153051806
+   },
+   {
+    "pair": [
+     "VOL",
+     "EWX"
+    ],
+    "corr": 0.7108992847496424
+   }
+  ],
+  "sessions_used_for_moments": "all used sessions (factor returns only, no target)"
+ },
+ "status": "STAGE0_DONE",
+ "data": {
+  "stock_cache": {
+   "rows": 2323788,
+   "off_grid_rows": 1164,
+   "symbols": 100,
+   "first": "2024-09-20",
+   "last": "2026-01-01",
+   "max_ts_ist": "2026-01-01T15:25:00+05:30"
+  },
+  "index_db": {
+   "rows": 118620,
+   "first": "2024-09-20 09:15",
+   "last": "2025-12-31 15:29",
+   "dates_any_minute": [
+    "2024-09-20",
+    "2024-09-23",
+    "2024-09-24",
+    "2024-09-25",
+    "2024-09-26",
+    "2024-09-27",
+    "2024-09-30",
+    "2024-10-01",
+    "2024-10-03",
+    "2024-10-04",
+    "2024-10-07",
+    "2024-10-08",
+    "2024-10-09",
+    "2024-10-10",
+    "2024-10-11",
+    "2024-10-14",
+    "2024-10-15",
+    "2024-10-16",
+    "2024-10-17",
+    "2024-10-18",
+    "2024-10-21",
+    "2024-10-22",
+    "2024-10-23",
+    "2024-10-24",
+    "2024-10-25",
+    "2024-10-28",
+    "2024-10-29",
+    "2024-10-30",
+    "2024-10-31",
+    "2024-11-01",
+    "2024-11-04",
+    "2024-11-05",
+    "2024-11-06",
+    "2024-11-07",
+    "2024-11-08",
+    "2024-11-11",
+    "2024-11-12",
+    "2024-11-13",
+    "2024-11-14",
+    "2024-11-18",
+    "2024-11-19",
+    "2024-11-21",
+    "2024-11-22",
+    "2024-11-25",
+    "2024-11-26",
+    "2024-11-27",
+    "2024-11-28",
+    "2024-11-29",
+    "2024-12-02",
+    "2024-12-03",
+    "2024-12-04",
+    "2024-12-05",
+    "2024-12-06",
+    "2024-12-09",
+    "2024-12-10",
+    "2024-12-11",
+    "2024-12-12",
+    "2024-12-13",
+    "2024-12-16",
+    "2024-12-17",
+    "2024-12-18",
+    "2024-12-19",
+    "2024-12-20",
+    "2024-12-23",
+    "2024-12-24",
+    "2024-12-26",
+    "2024-12-27",
+    "2024-12-30",
+    "2024-12-31",
+    "2025-01-01",
+    "2025-01-02",
+    "2025-01-03",
+    "2025-01-06",
+    "2025-01-07",
+    "2025-01-08",
+    "2025-01-09",
+    "2025-01-10",
+    "2025-01-13",
+    "2025-01-14",
+    "2025-01-15",
+    "2025-01-16",
+    "2025-01-17",
+    "2025-01-20",
+    "2025-01-21",
+    "2025-01-22",
+    "2025-01-23",
+    "2025-01-24",
+    "2025-01-27",
+    "2025-01-28",
+    "2025-01-29",
+    "2025-01-30",
+    "2025-01-31",
+    "2025-02-01",
+    "2025-02-03",
+    "2025-02-04",
+    "2025-02-05",
+    "2025-02-06",
+    "2025-02-07",
+    "2025-02-10",
+    "2025-02-11",
+    "2025-02-12",
+    "2025-02-13",
+    "2025-02-14",
+    "2025-02-17",
+    "2025-02-18",
+    "2025-02-19",
+    "2025-02-20",
+    "2025-02-21",
+    "2025-02-24",
+    "2025-02-25",
+    "2025-02-27",
+    "2025-02-28",
+    "2025-03-03",
+    "2025-03-04",
+    "2025-03-05",
+    "2025-03-06",
+    "2025-03-07",
+    "2025-03-10",
+    "2025-03-11",
+    "2025-03-12",
+    "2025-03-13",
+    "2025-03-17",
+    "2025-03-18",
+    "2025-03-19",
+    "2025-03-20",
+    "2025-03-21",
+    "2025-03-24",
+    "2025-03-25",
+    "2025-03-26",
+    "2025-03-27",
+    "2025-03-28",
+    "2025-04-01",
+    "2025-04-02",
+    "2025-04-03",
+    "2025-04-04",
+    "2025-04-07",
+    "2025-04-08",
+    "2025-04-09",
+    "2025-04-11",
+    "2025-04-15",
+    "2025-04-16",
+    "2025-04-17",
+    "2025-04-21",
+    "2025-04-22",
+    "2025-04-23",
+    "2025-04-24",
+    "2025-04-25",
+    "2025-04-28",
+    "2025-04-29",
+    "2025-04-30",
+    "2025-05-02",
+    "2025-05-05",
+    "2025-05-06",
+    "2025-05-07",
+    "2025-05-08",
+    "2025-05-09",
+    "2025-05-12",
+    "2025-05-13",
+    "2025-05-14",
+    "2025-05-15",
+    "2025-05-16",
+    "2025-05-19",
+    "2025-05-20",
+    "2025-05-21",
+    "2025-05-22",
+    "2025-05-23",
+    "2025-05-26",
+    "2025-05-27",
+    "2025-05-28",
+    "2025-05-29",
+    "2025-05-30",
+    "2025-06-02",
+    "2025-06-03",
+    "2025-06-04",
+    "2025-06-05",
+    "2025-06-06",
+    "2025-06-09",
+    "2025-06-10",
+    "2025-06-11",
+    "2025-06-12",
+    "2025-06-13",
+    "2025-06-16",
+    "2025-06-17",
+    "2025-06-18",
+    "2025-06-19",
+    "2025-06-20",
+    "2025-06-23",
+    "2025-06-24",
+    "2025-06-25",
+    "2025-06-26",
+    "2025-06-27",
+    "2025-06-30",
+    "2025-07-01",
+    "2025-07-02",
+    "2025-07-03",
+    "2025-07-04",
+    "2025-07-07",
+    "2025-07-08",
+    "2025-07-09",
+    "2025-07-10",
+    "2025-07-11",
+    "2025-07-14",
+    "2025-07-15",
+    "2025-07-16",
+    "2025-07-17",
+    "2025-07-18",
+    "2025-07-21",
+    "2025-07-22",
+    "2025-07-23",
+    "2025-07-24",
+    "2025-07-25",
+    "2025-07-28",
+    "2025-07-29",
+    "2025-07-30",
+    "2025-07-31",
+    "2025-08-01",
+    "2025-08-04",
+    "2025-08-05",
+    "2025-08-06",
+    "2025-08-07",
+    "2025-08-08",
+    "2025-08-11",
+    "2025-08-12",
+    "2025-08-13",
+    "2025-08-14",
+    "2025-08-18",
+    "2025-08-19",
+    "2025-08-20",
+    "2025-08-21",
+    "2025-08-22",
+    "2025-08-25",
+    "2025-08-26",
+    "2025-08-28",
+    "2025-08-29",
+    "2025-09-01",
+    "2025-09-02",
+    "2025-09-03",
+    "2025-09-04",
+    "2025-09-05",
+    "2025-09-08",
+    "2025-09-09",
+    "2025-09-10",
+    "2025-09-11",
+    "2025-09-12",
+    "2025-09-15",
+    "2025-09-16",
+    "2025-09-17",
+    "2025-09-18",
+    "2025-09-19",
+    "2025-09-22",
+    "2025-09-23",
+    "2025-09-24",
+    "2025-09-25",
+    "2025-09-26",
+    "2025-09-29",
+    "2025-09-30",
+    "2025-10-01",
+    "2025-10-03",
+    "2025-10-06",
+    "2025-10-07",
+    "2025-10-08",
+    "2025-10-09",
+    "2025-10-10",
+    "2025-10-13",
+    "2025-10-14",
+    "2025-10-15",
+    "2025-10-16",
+    "2025-10-17",
+    "2025-10-20",
+    "2025-10-21",
+    "2025-10-23",
+    "2025-10-24",
+    "2025-10-27",
+    "2025-10-28",
+    "2025-10-29",
+    "2025-10-30",
+    "2025-10-31",
+    "2025-11-03",
+    "2025-11-04",
+    "2025-11-06",
+    "2025-11-07",
+    "2025-11-10",
+    "2025-11-11",
+    "2025-11-12",
+    "2025-11-13",
+    "2025-11-14",
+    "2025-11-17",
+    "2025-11-18",
+    "2025-11-19",
+    "2025-11-20",
+    "2025-11-21",
+    "2025-11-24",
+    "2025-11-25",
+    "2025-11-26",
+    "2025-11-27",
+    "2025-11-28",
+    "2025-12-01",
+    "2025-12-02",
+    "2025-12-03",
+    "2025-12-04",
+    "2025-12-05",
+    "2025-12-08",
+    "2025-12-09",
+    "2025-12-10",
+    "2025-12-11",
+    "2025-12-12",
+    "2025-12-15",
+    "2025-12-16",
+    "2025-12-17",
+    "2025-12-18",
+    "2025-12-19",
+    "2025-12-22",
+    "2025-12-23",
+    "2025-12-24",
+    "2025-12-26",
+    "2025-12-29",
+    "2025-12-30",
+    "2025-12-31"
+   ]
+  },
+  "symbols_without_sector": [],
+  "panel": {
+   "sessions": 4215,
+   "first": "2009-01-01",
+   "last": "2025-12-31",
+   "symbols": 215,
+   "missing_symbols": [],
+   "fund_units_excluded": 322
+  },
+  "load_seconds": 3.4,
+  "sessions": {
+   "cached": 319,
+   "index": 317,
+   "used": 316,
+   "dropped": [
+    [
+     "2024-11-01",
+     "no index bars"
+    ],
+    [
+     "2025-10-21",
+     "index has 60 minutes"
+    ],
+    [
+     "2026-01-01",
+     "no index bars"
+    ]
+   ],
+   "index_only_dates": [],
+   "first": "2024-09-20",
+   "last": "2025-12-31"
+  }
+ },
+ "predictors": {
+  "count": 92,
+  "factors": [
+   "LIQ",
+   "TURN",
+   "ILLIQ",
+   "MOM",
+   "REV21",
+   "REV5",
+   "REV1",
+   "VOL",
+   "IVOL",
+   "BETA",
+   "HIGH52",
+   "RANGE",
+   "FIN",
+   "CAPG",
+   "AUTO",
+   "HLTH",
+   "FMCG",
+   "METAL",
+   "POWER",
+   "OILGAS",
+   "IT",
+   "MKT",
+   "EWX"
+  ],
+  "lags": [
+   "last5",
+   "last30",
+   "sofar",
+   "prev"
+  ]
+ },
+ "grid": {
+  "h30": [
+   "09:45",
+   "10:15",
+   "10:45",
+   "11:15",
+   "11:45",
+   "12:15",
+   "12:45",
+   "13:15",
+   "13:45",
+   "14:15",
+   "14:45"
+  ],
+  "h60": [
+   "09:45",
+   "10:45",
+   "11:45",
+   "12:45",
+   "13:45"
+  ]
+ },
+ "training_bars": {
+  "h30": [
+   "09:45",
+   "14:45",
+   61
+  ],
+  "h60": [
+   "09:45",
+   "14:15",
+   55
+  ]
+ },
+ "coverage": {
+  "dropped": {
+   "2024-11-01": "no index bars",
+   "2025-10-21": "index has 60 minutes",
+   "2026-01-01": "no index bars"
+  },
+  "expected_dropped": {
+   "2024-11-01": "no index bars",
+   "2025-10-21": "index has 60 minutes",
+   "2026-01-01": "no index bars"
+  },
+  "cache_equals_index_dates_to_2025_12_31": true,
+  "dates_only_in_cache": [],
+  "dates_only_in_index": [],
+  "selection_sessions": 79,
+  "scoring_sessions": 78,
+  "scoring_first_last": [
+   "2025-09-01",
+   "2025-12-23"
+  ],
+  "scoring_halves": [
+   39,
+   39
+  ],
+  "members_with_all_bars": {
+   "min": 85,
+   "median": 89.0,
+   "max": 94
+  },
+  "held_out_read": {
+   "stock_max_ts_ist": "2026-01-01T15:25:00+05:30",
+   "index_last": "2025-12-31 15:29",
+   "panel_last": "2025-12-31"
+  }
+ },
+ "alignment": {
+  "corr_by_index_lag": {
+   "-2": -0.006961811123003494,
+   "-1": -0.008510586525996173,
+   "0": 0.8881919352544932,
+   "1": 0.011740710342116318,
+   "2": -0.019367877457734373
+  },
+  "pairs": 16543,
+  "fetch_spans": {
+   "spans": 1302,
+   "not_whole_days": [],
+   "count_not_whole_days": 0
+  }
+ },
+ "characteristics": {
+  "hand_checks": [
+   {
+    "symbol": "HDFCLIFE",
+    "session": "2025-12-03",
+    "LIQ": {
+     "vectorised": 21.419847856435545,
+     "hand": 21.419847856435545,
+     "match": true
+    },
+    "TURN": {
+     "vectorised": 0.7361768030111944,
+     "hand": 0.7361768030111945,
+     "match": true
+    },
+    "ILLIQ": {
+     "vectorised": 5.539723185640308e-12,
+     "hand": 5.539723185640308e-12,
+     "match": true
+    },
+    "MOM": {
+     "vectorised": 0.07835263026544292,
+     "hand": 0.07835263026544292,
+     "match": true
+    },
+    "REV21": {
+     "vectorised": 0.037097765935642624,
+     "hand": 0.037097765935642624,
+     "match": true
+    },
+    "REV5": {
+     "vectorised": -0.009849324897266865,
+     "hand": -0.009849324897266865,
+     "match": true
+    },
+    "REV1": {
+     "vectorised": -0.01010759700032604,
+     "hand": -0.01010759700032604,
+     "match": true
+    },
+    "VOL": {
+     "vectorised": 0.01171628857384797,
+     "hand": 0.01171628857384797,
+     "match": true
+    },
+    "IVOL": {
+     "vectorised": 0.010562520910562595,
+     "hand": 0.010562520910562595,
+     "match": true
+    },
+    "BETA": {
+     "vectorised": 0.7135807113324582,
+     "hand": 0.7135807113324582,
+     "match": true
+    },
+    "HIGH52": {
+     "vectorised": 0.9320889107208646,
+     "hand": 0.9320889107208646,
+     "match": true
+    },
+    "RANGE": {
+     "vectorised": 0.01708153976964946,
+     "hand": 0.01708153976964946,
+     "match": true
+    }
+   },
+   {
+    "symbol": "KOTAKBANK",
+    "session": "2025-02-12",
+    "LIQ": {
+     "vectorised": 22.689276952791886,
+     "hand": 22.689276952791886,
+     "match": true
+    },
+    "TURN": {
+     "vectorised": 0.9761647808097533,
+     "hand": 0.9761647808097533,
+     "match": true
+    },
+    "ILLIQ": {
+     "vectorised": 1.3869914083097314e-12,
+     "hand": 1.3869914083097314e-12,
+     "match": true
+    },
+    "MOM": {
+     "vectorised": 0.013192304210532413,
+     "hand": 0.013192304210532413,
+     "match": true
+    },
+    "REV21": {
+     "vectorised": 0.09596709699531591,
+     "hand": 0.09596709699531591,
+     "match": true
+    },
+    "REV5": {
+     "vectorised": -0.0051335234638321126,
+     "hand": -0.0051335234638321126,
+     "match": true
+    },
+    "REV1": {
+     "vectorised": -0.021197357345101198,
+     "hand": -0.021197357345101198,
+     "match": true
+    },
+    "VOL": {
+     "vectorised": 0.017037438946245254,
+     "hand": 0.017037438946245254,
+     "match": true
+    },
+    "IVOL": {
+     "vectorised": 0.015679521597212493,
+     "hand": 0.015679521597212493,
+     "match": true
+    },
+    "BETA": {
+     "vectorised": 0.5730464734677909,
+     "hand": 0.5730464734677908,
+     "match": true
+    },
+    "HIGH52": {
+     "vectorised": 0.9788026426548988,
+     "hand": 0.9788026426548988,
+     "match": true
+    },
+    "RANGE": {
+     "vectorised": 0.021822015363331285,
+     "hand": 0.02182201536333128,
+     "match": true
+    }
+   },
+   {
+    "symbol": "MARUTI",
+    "session": "2025-03-21",
+    "LIQ": {
+     "vectorised": 22.3054277437329,
+     "hand": 22.3054277437329,
+     "match": true
+    },
+    "TURN": {
+     "vectorised": 0.8440704310709869,
+     "hand": 0.8440704310709869,
+     "match": true
+    },
+    "ILLIQ": {
+     "vectorised": 2.1646397130064516e-12,
+     "hand": 2.1646397130064516e-12,
+     "match": true
+    },
+    "MOM": {
+     "vectorised": 0.12967134592043372,
+     "hand": 0.12967134592043372,
+     "match": true
+    },
+    "REV21": {
+     "vectorised": -0.08091421228717599,
+     "hand": -0.08091421228717599,
+     "match": true
+    },
+    "REV5": {
+     "vectorised": 0.0077404833291809805,
+     "hand": 0.0077404833291809805,
+     "match": true
+    },
+    "REV1": {
+     "vectorised": 0.009870389262669477,
+     "hand": 0.009870389262669477,
+     "match": true
+    },
+    "VOL": {
+     "vectorised": 0.015089302183363053,
+     "hand": 0.015089302183363053,
+     "match": true
+    },
+    "IVOL": {
+     "vectorised": 0.013795388034614494,
+     "hand": 0.013795388034614492,
+     "match": true
+    },
+    "BETA": {
+     "vectorised": 0.6305435843669314,
+     "hand": 0.6305435843669316,
+     "match": true
+    },
+    "HIGH52": {
+     "vectorised": 0.8691869942796172,
+     "hand": 0.8691869942796172,
+     "match": true
+    },
+    "RANGE": {
+     "vectorised": 0.018320100254061916,
+     "hand": 0.018320100254061916,
+     "match": true
+    }
+   },
+   {
+    "symbol": "BOSCHLTD",
+    "session": "2025-03-03",
+    "LIQ": {
+     "vectorised": 20.357983662327293,
+     "hand": 20.357983662327293,
+     "match": true
+    },
+    "TURN": {
+     "vectorised": 0.9619060641840005,
+     "hand": 0.9619060641840003,
+     "match": true
+    },
+    "ILLIQ": {
+     "vectorised": 1.6037329064660605e-11,
+     "hand": 1.6037329064660605e-11,
+     "match": true
+    },
+    "MOM": {
+     "vectorised": -0.0017476827659426153,
+     "hand": -0.0017476827659426153,
+     "match": true
+    },
+    "REV21": {
+     "vectorised": -0.0713539780748017,
+     "hand": -0.0713539780748017,
+     "match": true
+    },
+    "REV5": {
+     "vectorised": -0.03187510371854929,
+     "hand": -0.03187510371854929,
+     "match": true
+    },
+    "REV1": {
+     "vectorised": -0.01037016048303352,
+     "hand": -0.01037016048303352,
+     "match": true
+    },
+    "VOL": {
+     "vectorised": 0.012621167989366522,
+     "hand": 0.012621167989366522,
+     "match": true
+    },
+    "IVOL": {
+     "vectorised": 0.010817435366543829,
+     "hand": 0.01081743536654383,
+     "match": true
+    },
+    "BETA": {
+     "vectorised": 0.7501377681628091,
+     "hand": 0.750137768162809,
+     "match": true
+    },
+    "HIGH52": {
+     "vectorised": 0.6842013011784843,
+     "hand": 0.6842013011784843,
+     "match": true
+    },
+    "RANGE": {
+     "vectorised": 0.021996810854591296,
+     "hand": 0.021996810854591292,
+     "match": true
+    }
+   },
+   {
+    "symbol": "POWERGRID",
+    "session": "2025-12-05",
+    "LIQ": {
+     "vectorised": 22.00059471730816,
+     "hand": 22.00059471730816,
+     "match": true
+    },
+    "TURN": {
+     "vectorised": 0.7230949547781075,
+     "hand": 0.7230949547781074,
+     "match": true
+    },
+    "ILLIQ": {
+     "vectorised": 2.508918621679648e-12,
+     "hand": 2.508918621679648e-12,
+     "match": true
+    },
+    "MOM": {
+     "vectorised": -0.13924072361290485,
+     "hand": -0.13924072361290485,
+     "match": true
+    },
+    "REV21": {
+     "vectorised": -0.019434094650240152,
+     "hand": -0.019434094650240152,
+     "match": true
+    },
+    "REV5": {
+     "vectorised": -0.01680672268907546,
+     "hand": -0.01680672268907546,
+     "match": true
+    },
+    "REV1": {
+     "vectorised": 0.002421307506053294,
+     "hand": 0.002421307506053294,
+     "match": true
+    },
+    "VOL": {
+     "vectorised": 0.011257538654791276,
+     "hand": 0.011257538654791276,
+     "match": true
+    },
+    "IVOL": {
+     "vectorised": 0.010043643898442268,
+     "hand": 0.010043643898442266,
+     "match": true
+    },
+    "BETA": {
+     "vectorised": 0.935320118613455,
+     "hand": 0.9353201186134547,
+     "match": true
+    },
+    "HIGH52": {
+     "vectorised": 0.829922020884457,
+     "hand": 0.829922020884457,
+     "match": true
+    },
+    "RANGE": {
+     "vectorised": 0.016117946670090904,
+     "hand": 0.016117946670090904,
+     "match": true
+    }
+   }
+  ],
+  "mismatches": [],
+  "scale_invariance_failures": [],
+  "ranked_members_per_session": {
+   "LIQ": {
+    "min": 85,
+    "median": 89.0
+   },
+   "TURN": {
+    "min": 85,
+    "median": 89.0
+   },
+   "ILLIQ": {
+    "min": 85,
+    "median": 89.0
+   },
+   "MOM": {
+    "min": 85,
+    "median": 88.0
+   },
+   "REV21": {
+    "min": 85,
+    "median": 89.0
+   },
+   "REV5": {
+    "min": 85,
+    "median": 89.0
+   },
+   "REV1": {
+    "min": 85,
+    "median": 89.0
+   },
+   "VOL": {
+    "min": 85,
+    "median": 89.0
+   },
+   "IVOL": {
+    "min": 85,
+    "median": 89.0
+   },
+   "BETA": {
+    "min": 85,
+    "median": 88.0
+   },
+   "HIGH52": {
+    "min": 85,
+    "median": 88.0
+   },
+   "RANGE": {
+    "min": 85,
+    "median": 89.0
+   }
+  }
+ },
+ "lookahead": {
+  "checks": 240,
+  "by_window": {
+   "first_training_window": 80,
+   "pseudo_oos": 80,
+   "scoring_sample": 80
+  },
+  "failures": [],
+  "bit_identical": true
+ },
+ "alpha": {
+  "h30": {
+   "alpha": 100.0,
+   "curve": [
+    {
+     "alpha": 0.001,
+     "mse": 1315.066779097269
+    },
+    {
+     "alpha": 0.0031622776601683794,
+     "mse": 993.4137084252878
+    },
+    {
+     "alpha": 0.01,
+     "mse": 734.9704667386417
+    },
+    {
+     "alpha": 0.03162277660168379,
+     "mse": 543.5110066299654
+    },
+    {
+     "alpha": 0.1,
+     "mse": 425.8984827615868
+    },
+    {
+     "alpha": 0.31622776601683794,
+     "mse": 370.41298051917374
+    },
+    {
+     "alpha": 1.0,
+     "mse": 350.12997178532254
+    },
+    {
+     "alpha": 3.1622776601683795,
+     "mse": 343.7892474211778
+    },
+    {
+     "alpha": 10.0,
+     "mse": 341.8043292662771
+    },
+    {
+     "alpha": 31.622776601683793,
+     "mse": 341.2380435029329
+    },
+    {
+     "alpha": 100.0,
+     "mse": 341.2007075945082
+    },
+    {
+     "alpha": 316.22776601683796,
+     "mse": 341.24153061824273
+    },
+    {
+     "alpha": 1000.0,
+     "mse": 341.2633969210202
+    },
+    {
+     "alpha": 3162.2776601683795,
+     "mse": 341.2713943700509
+    },
+    {
+     "alpha": 10000.0,
+     "mse": 341.2740386684024
+    }
+   ],
+   "folds": [
+    {
+     "train": [
+      "2024-09-23",
+      "2024-10-15"
+     ],
+     "validate": [
+      "2024-10-23",
+      "2024-11-25"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2024-11-14"
+     ],
+     "validate": [
+      "2024-11-26",
+      "2024-12-24"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2024-12-17"
+     ],
+     "validate": [
+      "2024-12-26",
+      "2025-01-23"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2025-01-16"
+     ],
+     "validate": [
+      "2025-01-24",
+      "2025-02-20"
+     ],
+     "gap_sessions": 5
+    }
+   ]
+  },
+  "h60": {
+   "alpha": 31.622776601683793,
+   "curve": [
+    {
+     "alpha": 0.001,
+     "mse": 4010.5590221811563
+    },
+    {
+     "alpha": 0.0031622776601683794,
+     "mse": 2894.5229795678883
+    },
+    {
+     "alpha": 0.01,
+     "mse": 1994.4029224747603
+    },
+    {
+     "alpha": 0.03162277660168379,
+     "mse": 1352.325949611649
+    },
+    {
+     "alpha": 0.1,
+     "mse": 965.3404628634124
+    },
+    {
+     "alpha": 0.31622776601683794,
+     "mse": 776.8475777575607
+    },
+    {
+     "alpha": 1.0,
+     "mse": 709.6366697329706
+    },
+    {
+     "alpha": 3.1622776601683795,
+     "mse": 689.6714272451678
+    },
+    {
+     "alpha": 10.0,
+     "mse": 683.207362963727
+    },
+    {
+     "alpha": 31.622776601683793,
+     "mse": 681.2945613674393
+    },
+    {
+     "alpha": 100.0,
+     "mse": 681.4737590260173
+    },
+    {
+     "alpha": 316.22776601683796,
+     "mse": 681.8526246374531
+    },
+    {
+     "alpha": 1000.0,
+     "mse": 682.0292916277896
+    },
+    {
+     "alpha": 3162.2776601683795,
+     "mse": 682.0921188627093
+    },
+    {
+     "alpha": 10000.0,
+     "mse": 682.1127307386051
+    }
+   ],
+   "folds": [
+    {
+     "train": [
+      "2024-09-23",
+      "2024-10-15"
+     ],
+     "validate": [
+      "2024-10-23",
+      "2024-11-25"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2024-11-14"
+     ],
+     "validate": [
+      "2024-11-26",
+      "2024-12-24"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2024-12-17"
+     ],
+     "validate": [
+      "2024-12-26",
+      "2025-01-23"
+     ],
+     "gap_sessions": 5
+    },
+    {
+     "train": [
+      "2024-09-23",
+      "2025-01-16"
+     ],
+     "validate": [
+      "2025-01-24",
+      "2025-02-20"
+     ],
+     "gap_sessions": 5
+    }
+   ]
+  }
+ },
+ "purge": {
+  "refit_gaps_sessions": [
+   [
+    "2025-03",
+    5
+   ],
+   [
+    "2025-04",
+    5
+   ],
+   [
+    "2025-05",
+    5
+   ],
+   [
+    "2025-06",
+    5
+   ],
+   [
+    "2025-07",
+    5
+   ],
+   [
+    "2025-08",
+    5
+   ],
+   [
+    "2025-09",
+    5
+   ],
+   [
+    "2025-10",
+    5
+   ],
+   [
+    "2025-11",
+    5
+   ],
+   [
+    "2025-12",
+    5
+   ]
+  ],
+  "cv_fold_gaps_sessions": [
+   5,
+   5,
+   5,
+   5
+  ],
+  "first_window": [
+   "2024-09-23",
+   "2025-02-20",
+   105
+  ],
+  "latest_training_session_of_any_stage0_fit": "2025-07-24",
+  "forecast_rows_with_training_inside_purge": []
+ },
+ "controls": {
+  "sample": [
+   "2025-03-03",
+   "2025-08-29",
+   122
+  ],
+  "positive": {
+   "noise_mult": 1.020204061220407,
+   "h30": {
+    "trades": 517,
+    "sessions": 122,
+    "sessions_with_trades": 122,
+    "mean_net_bp_per_trade": 4.351619135331083,
+    "mean_gross_bp_per_trade": 11.29758427379262,
+    "per_session_mean_bp": 3.992810799441186,
+    "t": 4.470166275830289,
+    "se": 0.8932130379645802,
+    "half1_bp": 5.581808183422593,
+    "half2_bp": 2.403813415459779,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": 1.0,
+    "sharpe_per_session": 0.405,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": true,
+     "positive_net": true,
+     "t_over_2": true,
+     "both_halves_positive": true,
+     "dsr_over_bar": true
+    },
+    "passes": true,
+    "alpha": 0.31622776601683794,
+    "target_sd_first_window_bp": 19.100553525383127,
+    "corr_planted_target_first_window": 0.7078086310654267,
+    "forecast_stats": {
+     "n": 1342,
+     "ic": 0.5931664596897085,
+     "ic_t": 26.970564278963963,
+     "rank_ic": 0.5066477089997785,
+     "rank_ic_t": 21.51166618420354,
+     "r2_oos_uncentred": 0.3488372870616677,
+     "hit_rate": 0.6736214605067065,
+     "sign_rule_gross_bp": 6.165555102073229,
+     "forecast_abs_pct": {
+      "50": 5.409001901305459,
+      "90": 12.76420825846329,
+      "99": 22.992457551918232,
+      "100": 37.523171664546624
+     },
+     "share_above_cost": 0.38524590163934425
+    }
+   },
+   "h60": {
+    "trades": 311,
+    "sessions": 122,
+    "sessions_with_trades": 118,
+    "mean_net_bp_per_trade": 7.836016576674295,
+    "mean_gross_bp_per_trade": 14.781981715135831,
+    "per_session_mean_bp": 7.463945341732622,
+    "t": 4.682439768818979,
+    "se": 1.5940291194851193,
+    "half1_bp": 11.939112675936792,
+    "half2_bp": 3.1379502520019247,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": 1.0,
+    "sharpe_per_session": 0.431,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": true,
+     "positive_net": true,
+     "t_over_2": true,
+     "both_halves_positive": true,
+     "dsr_over_bar": true
+    },
+    "passes": true,
+    "alpha": 0.31622776601683794,
+    "target_sd_first_window_bp": 26.432395004742784,
+    "corr_planted_target_first_window": 0.7041808972665874,
+    "forecast_stats": {
+     "n": 610,
+     "ic": 0.6024683939424477,
+     "ic_t": 18.612533399142414,
+     "rank_ic": 0.4883555711574908,
+     "rank_ic_t": 13.799090490768428,
+     "r2_oos_uncentred": 0.3570128229452819,
+     "hit_rate": 0.6475409836065574,
+     "sign_rule_gross_bp": 8.471306775965466,
+     "forecast_abs_pct": {
+      "50": 7.233484626109581,
+      "90": 18.798912435064633,
+      "99": 36.8262977654674,
+      "100": 61.198404121964934
+     },
+     "share_above_cost": 0.5098360655737705
+    }
+   }
+  },
+  "negative": {
+   "deranged_sessions": 232,
+   "h30": {
+    "trades": 0,
+    "sessions": 122,
+    "sessions_with_trades": 0,
+    "mean_net_bp_per_trade": null,
+    "mean_gross_bp_per_trade": null,
+    "per_session_mean_bp": null,
+    "t": null,
+    "se": null,
+    "half1_bp": null,
+    "half2_bp": null,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": null,
+    "sharpe_per_session": null,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": false,
+     "positive_net": false,
+     "t_over_2": false,
+     "both_halves_positive": false,
+     "dsr_over_bar": false
+    },
+    "passes": false,
+    "alpha": 100.0,
+    "forecast_stats": {
+     "n": 1342,
+     "ic": -0.04587997542679615,
+     "ic_t": -1.6812532870865822,
+     "rank_ic": -0.05155372278215655,
+     "rank_ic_t": -1.8896889796971785,
+     "r2_oos_uncentred": -0.0027826076576913383,
+     "hit_rate": 0.4791356184798808,
+     "sign_rule_gross_bp": -0.39333630250713497,
+     "forecast_abs_pct": {
+      "50": 0.2046538437370976,
+      "90": 0.6930414458862091,
+      "99": 0.9045359628633327,
+      "100": 0.98890354728541
+     },
+     "share_above_cost": 0.0
+    }
+   },
+   "h60": {
+    "trades": 0,
+    "sessions": 122,
+    "sessions_with_trades": 0,
+    "mean_net_bp_per_trade": null,
+    "mean_gross_bp_per_trade": null,
+    "per_session_mean_bp": null,
+    "t": null,
+    "se": null,
+    "half1_bp": null,
+    "half2_bp": null,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": null,
+    "sharpe_per_session": null,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": false,
+     "positive_net": false,
+     "t_over_2": false,
+     "both_halves_positive": false,
+     "dsr_over_bar": false
+    },
+    "passes": false,
+    "alpha": 10000.0,
+    "forecast_stats": {
+     "n": 610,
+     "ic": -0.053754960403322234,
+     "ic_t": -1.3273905210030217,
+     "rank_ic": -0.07252382463524713,
+     "rank_ic_t": -1.792989033967568,
+     "r2_oos_uncentred": -0.0035098582738772865,
+     "hit_rate": 0.5,
+     "sign_rule_gross_bp": -0.42583621104273317,
+     "forecast_abs_pct": {
+      "50": 0.3349756564731057,
+      "90": 1.2805396920631327,
+      "99": 1.2845368599266234,
+      "100": 1.286345074030256
+     },
+     "share_above_cost": 0.0
+    }
+   }
+  },
+  "power_information_corr_0_5": {
+   "noise_mult": 1.7320508075688772,
+   "h30": {
+    "trades": 365,
+    "sessions": 122,
+    "sessions_with_trades": 119,
+    "mean_net_bp_per_trade": 2.1003275610774166,
+    "mean_gross_bp_per_trade": 9.046292699538954,
+    "per_session_mean_bp": 1.2514654085604446,
+    "t": 1.235628612172858,
+    "se": 1.0128167931946297,
+    "half1_bp": 3.1552376085538807,
+    "half2_bp": -0.7507777672947209,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": 0.775,
+    "sharpe_per_session": 0.113,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": true,
+     "positive_net": true,
+     "t_over_2": false,
+     "both_halves_positive": false,
+     "dsr_over_bar": false
+    },
+    "passes": false,
+    "alpha": 0.31622776601683794,
+    "target_sd_first_window_bp": 19.100553525383127,
+    "corr_planted_target_first_window": 0.5133246145626952,
+    "forecast_stats": {
+     "n": 1342,
+     "ic": 0.3810338958854839,
+     "ic_t": 15.086219004593609,
+     "rank_ic": 0.31678915416615744,
+     "rank_ic_t": 12.22607926440047,
+     "r2_oos_uncentred": 0.14383468712198422,
+     "hit_rate": 0.6013412816691506,
+     "sign_rule_gross_bp": 3.9105632039432816,
+     "forecast_abs_pct": {
+      "50": 4.148792613608587,
+      "90": 10.163591940664778,
+      "99": 15.618510277176032,
+      "100": 21.37636762275805
+     },
+     "share_above_cost": 0.2719821162444113
+    }
+   },
+   "h60": {
+    "trades": 143,
+    "sessions": 122,
+    "sessions_with_trades": 81,
+    "mean_net_bp_per_trade": 7.039496605157051,
+    "mean_gross_bp_per_trade": 13.985461743618588,
+    "per_session_mean_bp": 7.056158490360633,
+    "t": 2.87325908998984,
+    "se": 2.455803068697708,
+    "half1_bp": 10.107355097240633,
+    "half2_bp": 2.3840136860756314,
+    "half_sessions": [
+     61,
+     61
+    ],
+    "dsr": 0.998,
+    "sharpe_per_session": 0.319,
+    "dsr_n_trials": 2,
+    "checks": {
+     "enough_trades": true,
+     "positive_net": true,
+     "t_over_2": true,
+     "both_halves_positive": true,
+     "dsr_over_bar": true
+    },
+    "passes": true,
+    "alpha": 1.0,
+    "target_sd_first_window_bp": 26.432395004742784,
+    "corr_planted_target_first_window": 0.5056592614894722,
+    "forecast_stats": {
+     "n": 610,
+     "ic": 0.3851842484047417,
+     "ic_t": 10.291864116590155,
+     "rank_ic": 0.2796389855528929,
+     "rank_ic_t": 7.181756492519425,
+     "r2_oos_uncentred": 0.13439604520829418,
+     "hit_rate": 0.5868852459016394,
+     "sign_rule_gross_bp": 5.176315648146229,
+     "forecast_abs_pct": {
+      "50": 4.060142882499615,
+      "90": 9.988669005496801,
+      "99": 18.22966464700539,
+      "100": 24.43378030118901
+     },
+     "share_above_cost": 0.23442622950819672
+    }
+   }
+  }
+ },
+ "feasibility_information": {
+  "h30": {
+   "decisions": 1342,
+   "abs_forecast_bp_pct": {
+    "50": 0.20020153805110527,
+    "90": 0.6702310988601253,
+    "99": 0.8091583605211619,
+    "100": 0.8820467083749203
+   },
+   "forecast_sd_bp": 0.21585563304050748,
+   "forecast_mean_bp": -0.27369127270584154,
+   "share_above_cost": 0.0,
+   "expected_trades_in_78_sessions": 0.0,
+   "refits": [
+    {
+     "month": "2025-03",
+     "train_first": "2024-09-23",
+     "train_last": "2025-02-20",
+     "first_forecast": "2025-03-03",
+     "gap_sessions": 5,
+     "train_rows": 6405
+    },
+    {
+     "month": "2025-04",
+     "train_first": "2024-09-23",
+     "train_last": "2025-03-21",
+     "first_forecast": "2025-04-01",
+     "gap_sessions": 5,
+     "train_rows": 7564
+    },
+    {
+     "month": "2025-05",
+     "train_first": "2024-09-23",
+     "train_last": "2025-04-23",
+     "first_forecast": "2025-05-02",
+     "gap_sessions": 5,
+     "train_rows": 8723
+    },
+    {
+     "month": "2025-06",
+     "train_first": "2024-09-23",
+     "train_last": "2025-05-23",
+     "first_forecast": "2025-06-02",
+     "gap_sessions": 5,
+     "train_rows": 10004
+    },
+    {
+     "month": "2025-07",
+     "train_first": "2024-09-23",
+     "train_last": "2025-06-23",
+     "first_forecast": "2025-07-01",
+     "gap_sessions": 5,
+     "train_rows": 11285
+    },
+    {
+     "month": "2025-08",
+     "train_first": "2024-09-23",
+     "train_last": "2025-07-24",
+     "first_forecast": "2025-08-01",
+     "gap_sessions": 5,
+     "train_rows": 12688
+    }
+   ]
+  },
+  "h60": {
+   "decisions": 610,
+   "abs_forecast_bp_pct": {
+    "50": 0.3463773427957336,
+    "90": 1.260569139642254,
+    "99": 1.9585288975711892,
+    "100": 2.124402451845168
+   },
+   "forecast_sd_bp": 0.49557571597933514,
+   "forecast_mean_bp": -0.5079591721886613,
+   "share_above_cost": 0.0,
+   "expected_trades_in_78_sessions": 0.0,
+   "refits": [
+    {
+     "month": "2025-03",
+     "train_first": "2024-09-23",
+     "train_last": "2025-02-20",
+     "first_forecast": "2025-03-03",
+     "gap_sessions": 5,
+     "train_rows": 5775
+    },
+    {
+     "month": "2025-04",
+     "train_first": "2024-09-23",
+     "train_last": "2025-03-21",
+     "first_forecast": "2025-04-01",
+     "gap_sessions": 5,
+     "train_rows": 6820
+    },
+    {
+     "month": "2025-05",
+     "train_first": "2024-09-23",
+     "train_last": "2025-04-23",
+     "first_forecast": "2025-05-02",
+     "gap_sessions": 5,
+     "train_rows": 7865
+    },
+    {
+     "month": "2025-06",
+     "train_first": "2024-09-23",
+     "train_last": "2025-05-23",
+     "first_forecast": "2025-06-02",
+     "gap_sessions": 5,
+     "train_rows": 9020
+    },
+    {
+     "month": "2025-07",
+     "train_first": "2024-09-23",
+     "train_last": "2025-06-23",
+     "first_forecast": "2025-07-01",
+     "gap_sessions": 5,
+     "train_rows": 10175
+    },
+    {
+     "month": "2025-08",
+     "train_first": "2024-09-23",
+     "train_last": "2025-07-24",
+     "first_forecast": "2025-08-01",
+     "gap_sessions": 5,
+     "train_rows": 11440
+    }
+   ]
+  }
+ },
+ "target_volatility_information": {
+  "h30": {
+   "first_window_sd_bp": 19.100553525383127,
+   "pseudo_oos_grid_sd_bp": 15.173201888560573,
+   "pseudo_oos_share_abs_target_above_cost": 0.5216095380029806
+  },
+  "h60": {
+   "first_window_sd_bp": 26.432395004742784,
+   "pseudo_oos_grid_sd_bp": 22.530813875896374,
+   "pseudo_oos_share_abs_target_above_cost": 0.6442622950819672
+  }
+ },
+ "targets_computed_through": "2025-08-29",
+ "finished": "2026-09-30T20:33:54.634288"
+}
