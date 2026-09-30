@@ -161,4 +161,23 @@ Research look **L51**, two configurations (30 and 60 minutes), in the new family
 
 ## Amendments
 
-(none)
+All three are dated 2026-09-30, about 20:25 IST, written while the code was being built and before stage 0 ran. No L51 check, statistic, target or forecast existed on project data. One smoke run had loaded the data and built the factors and predictors, and printed only their shapes: 316 sessions, 23 factors, 92 predictors.
+
+A correction to the header: this text was committed at 20:13 IST (769c21c), so "about 20:30" should read "by 20:14".
+
+1. **The positive control's planted signal is stronger: noise 1.732 times the target's standard deviation, a correlation of about 0.5, instead of 3.18 and 0.3.**
+   - Why: at a correlation of 0.3, the forecast's standard deviation is about 0.3 times the target's, roughly 6 to 8 bp. Only about a quarter to two-fifths of decisions would clear 6.95 bp, at a net of 3 to 4 bp a trade against a per-trade standard deviation of 20 to 30 bp. The expected t over 2025-03 to 2025-08 is then about 2.5 to 2.8, so the control would fail by chance often enough to make its halt uninformative.
+   - At 0.5 the expected t is well above 5 at both horizons. The control still tests the whole pipeline end to end: predictors, Ridge, refits, the trade rule's sign and timing, the statistics.
+   - Seed 51, as before.
+2. **The 2025-tariff figure in §7 and §8 is corrected to 2.92 bp in charges, 3.92 bp with slippage.** The 2.87 in §7 was computed at 75 × 25,900 (₹19.4 lakh), not at the fixed notional of 65 × 25,000. It is information only and changes no threshold.
+3. **Implementation choices the text left open, fixed now:**
+   - **Missing factor bars.** A factor bar return that is missing counts as 0 in the predictors (no information). Stage 0 counts them.
+   - **Statistics.** VOL uses ddof 1. IVOL is the residual standard deviation with n − 2. BETA and IVOL use the rows where both the stock's and the market's return exist. M needs at least 50 members with a return. REV1 is C(t)/C(t−1) − 1, i.e. R(t).
+   - **Ties.** Tercile ties are broken by symbol, alphabetically.
+   - **Who is ranked** is decided by point-in-time membership and the characteristic alone. No bar of the session decides it. A stock that stops trading later in the session stays in its group, and simply drops out of the bars it lacks.
+   - **The §2 session filter** uses whole-session completeness, so it is a sample definition, not a predictor. The §9.5 proof keeps the session list and removes everything else after the decision.
+   - **Stage 0 and scoring-window returns.** Stage 0 computes no target on or after 2025-09-01 (those targets are left missing). §9.2's alignment correlation uses sessions before 2025-09-01.
+   - **The negative control's derangement** leaves out the first session, which has no predictors.
+   - **The look-ahead proof** draws 240 pairs, 80 per window, at decision bars closing 09:45 to 15:15.
+   - **The threshold C** is the computed 6.946 bp, which the text rounds to 6.95.
+   - **§9.4's hand check** re-reads the two bars from the cache rather than from the loaded arrays.
