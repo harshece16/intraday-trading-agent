@@ -221,10 +221,19 @@ def complete_sector_history(daily, session, industries):
 
 def load_guards(cfg):
     """The day's tradability guards from NSE. Either file may be missing, in
-    which case its guard is unknown and excludes nothing."""
+    which case its guard is unknown and excludes nothing; "unread" then holds
+    when and why its last fetch failed (#212)."""
     if not cfg.get("guards", True):
         return {"ban": None, "bands": None, "off": True}
-    return {"ban": nse_feed.fno_ban_list(), "bands": nse_feed.price_bands()}
+    guards = {"ban": nse_feed.fno_ban_list(), "bands": nse_feed.price_bands()}
+    unread = {}
+    for key, url in (("ban", nse_feed.FNO_BAN_URL), ("bands", nse_feed.PRICE_BANDS_URL)):
+        failed = nse_feed.last_failure(url) if guards[key] is None else None
+        if failed:
+            unread[key] = failed
+    if unread:
+        guards["unread"] = unread
+    return guards
 
 
 def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None, limits=None):
@@ -259,11 +268,12 @@ def guard_check(symbol, guards, session, cfg, ltp=None, prev_close=None, limits=
 
 
 def guards_summary(guards, symbols):
-    """What the page shows about the guards: what was read, and which of the
-    universe's stocks they touch."""
+    """What the page shows about the guards: what was read, which of the
+    universe's stocks they touch, and for a file that could not be read, when
+    its last fetch failed ("unread", only when there is one)."""
     ban, bands = guards.get("ban"), guards.get("bands")
     uni = set(symbols)
-    return {
+    out = {
         "off": bool(guards.get("off")),
         "ban": None if not ban else {"trade_date": ban["trade_date"], "count": len(ban["symbols"]),
                                      "in_universe": sorted(ban["symbols"] & uni)},
@@ -273,6 +283,10 @@ def guards_summary(guards, symbols):
             "surveillance": sorted(s for s in uni if s in bands and bands[s]["remarks"]),
         },
     }
+    unread = {k: v for k, v in (guards.get("unread") or {}).items() if v and guards.get(k) is None}
+    if unread:
+        out["unread"] = unread
+    return out
 
 
 def tradability_exclusion(p, cfg):

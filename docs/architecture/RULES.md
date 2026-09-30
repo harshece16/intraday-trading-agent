@@ -425,15 +425,16 @@ Each (stock, side) has one review card at a time per session, remembered across 
 <details>
 <summary><code>ENT-26</code> <b>Active</b> — An approval overrides only the card's blocker and the confidence gate.</summary>
 
-An approval overrides only the card's blocker and the confidence gate. At click time it re-checks market open, the wall-clock entry window, one entry per day, every _entry_block_reason rule, the live price vs stop/target, sizing and liquidity. Net R:R and the cost floor are not re-applied at the live price.
+An approval overrides only the card's blocker and the confidence gate. At click time it re-checks market open, the wall-clock entry window, one entry per day, every _entry_block_reason rule, the live price vs stop/target, sizing and liquidity. A card blocked on reward-to-risk is also held to the R:R floor again: its net R:R after costs at the live price, with the card's stop, target and round-trip cost, must be at least REVIEW_QUEUE.min_net_rrr (1.0), or the approval is refused with that number and the offer's in the reason. Cards blocked on any other item are not held to it, and the stop-to-cost floor is not re-applied.
 
 | | |
 | --- | --- |
-| **Why** | The owner decides one gate; every risk limit still applies. |
-| **Enforced in** | `backend/trading_engine.py:_approve_claimed` |
-| **How to check** | card status 'refused' with reason; trade note 'Manually approved — overrode …' |
-| **Test** | `backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit` |
-| **Source** | README §64 |
+| **Why** | The owner decides one gate; every risk limit still applies. The floor judged the offer's price, and in the minutes before a click the price can move toward the target: over 71 real cards the net R:R fell below its offer value at 45% of the prices seen while the card was open, by more than 0.10 at 16% (#211). |
+| **Enforced in** | `backend/trading_engine.py:_approve_claimed, _refuse_review; backend/review_queue.py:floor_reason` |
+| **Setting** | `REVIEW_QUEUE.min_net_rrr = 1.0` |
+| **How to check** | card status 'refused' with reason, and for the floor 'reward-to-risk after costs is N at the live price P, under the queue's floor of 1 (it was M at the offer)' and outcome net_rrr_live; trade note 'Manually approved — overrode …' |
+| **Test** | `backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit; backend/tests/test_review_queue.py::test_an_rrr_card_below_the_floor_at_the_live_price_is_refused_and_journaled; backend/tests/test_review_queue.py::test_the_approval_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_the_approval_floor_uses_the_cost_the_offer_used` |
+| **Source** | README §64, §111 |
 
 </details>
 
@@ -1014,16 +1015,16 @@ Live F&O entries need a real premium quote (blocked otherwise). Paper uses the B
 <details>
 <summary><code>FNO-08</code> <b>Off by default</b> — No stock-option buy in a stock on NSE's F&amp;O ban list (Market Wide Position Limit) for the day.</summary>
 
-No stock-option buy in a stock on NSE's F&O ban list (Market Wide Position Limit) for the day. The check runs after the confidence gate and before any contract lookup, quote or order. A list that cannot be read, or is for another trade date, is unknown: stock-option buys are refused and the reason says the status is unknown. Index options are exempt.
+No stock-option buy in a stock on NSE's F&O ban list (Market Wide Position Limit) for the day. The check runs after the confidence gate and before any contract lookup, quote or order. A list that cannot be read, or is for another trade date, is unknown: stock-option buys are refused and the reason says the status is unknown, and for a list that could not be fetched, when the last try failed and when it is tried again. While it cannot be fetched, the check answers at once until then (SCN-20), not after a timeout per candidate. Index options are exempt.
 
 | | |
 | --- | --- |
 | **Why** | Increasing a derivative position in a banned stock is penalised (₹5,000 to ₹1,00,000, NISM Series VIII), so an unknown status is not treated as clear. The scanner's guard (SCN-17, SCN-20) reads the same list but lets an unknown list exclude nothing, because a cash trade carries no such penalty. |
-| **Enforced in** | `backend/fno_risk.py:mwpl_block_reason; backend/trading_engine.py:_try_enter_fno; backend/nse_feed.py:fno_ban_list` |
+| **Enforced in** | `backend/fno_risk.py:mwpl_block_reason; backend/trading_engine.py:_try_enter_fno; backend/nse_feed.py:fno_ban_list, last_failure` |
 | **Setting** | `FNO.enabled = False, index_underlyings = ["NIFTY", "BANKNIFTY"]` |
 | **How to check** | activity 'F&O entry signal skipped — In NSE's F&O ban for …' or '… ban status is unknown …'; fno_evaluations block_reason |
-| **Test** | `backend/tests/test_fno_mwpl.py::test_the_engine_refuses_a_banned_underlying_and_journals_why, backend/tests/test_fno_mwpl.py::test_the_engine_refuses_stock_options_when_the_list_is_unknown` |
-| **Source** | README §108; NSE fo_secban.csv |
+| **Test** | `backend/tests/test_fno_mwpl.py::test_the_engine_refuses_a_banned_underlying_and_journals_why, backend/tests/test_fno_mwpl.py::test_the_engine_refuses_stock_options_when_the_list_is_unknown, backend/tests/test_fno_mwpl.py::test_nse_down_costs_one_timeout_not_one_per_candidate_and_the_reason_says_when` |
+| **Source** | README §108, §111; NSE fo_secban.csv |
 
 </details>
 
@@ -1240,15 +1241,18 @@ A stock with a fixed price band is long-only: it is never scored or traded as a 
 </details>
 
 <details>
-<summary><code>SCN-20</code> <b>Active</b> — A guard file that cannot be fetched or read is unknown, not empty: it excludes nothing, and the page says it could not be read.</summary>
+<summary><code>SCN-20</code> <b>Active</b> — A guard file that cannot be fetched or read is unknown, not empty: it excludes nothing, and the page says it could not be read, when the last try…</summary>
+
+A guard file that cannot be fetched or read is unknown, not empty: it excludes nothing, and the page says it could not be read, when the last try failed and when NSE is asked again. A failed fetch (no answer, a refusal or an unreadable file) is remembered per file for 180 s: until then a caller gets 'unknown' at once instead of another 15 s timeout, and a stale good copy is not returned in its place.
 
 | | |
 | --- | --- |
-| **Why** | Showing 'no stock is banned' when the list was never read would be a false statement. |
-| **Enforced in** | `backend/nse_feed.py:_archive, parse_fno_ban, parse_price_bands; backend/scanner.py:guards_summary` |
-| **How to check** | Screener page: 'could not be read' |
-| **Test** | `backend/tests/test_scanner_guards.py::test_unknown_files_exclude_nothing` |
-| **Source** | README §100 |
+| **Why** | Showing 'no stock is banned' when the list was never read would be a false statement. Without the memory, every caller waited out its own timeout while NSE was down: four F&O candidates took 60 s, now 15 s (#212). |
+| **Enforced in** | `backend/nse_feed.py:_archive, last_failure, failure_text, parse_fno_ban, parse_price_bands; backend/scanner.py:load_guards, guards_summary` |
+| **Setting** | `nse_feed.ARCHIVE_RETRY_S = 180, ARCHIVE_TIMEOUT_S = 15` |
+| **How to check** | Screener page: 'could not be read (the last try, at …, failed: …; tried again after …)'; backend log 'NSE F&O ban list unavailable (…); not asked for again for 180 s' |
+| **Test** | `backend/tests/test_scanner_guards.py::test_unknown_files_exclude_nothing; backend/tests/test_scanner_guards.py::test_a_failed_fetch_is_not_retried_until_the_retry_time; backend/tests/test_scanner_guards.py::test_the_failure_says_when_and_why_and_the_file_stays_unknown; backend/tests/test_scanner_guards.py::test_the_scan_says_when_an_unread_guard_file_last_failed` |
+| **Source** | README §100, §111 |
 
 </details>
 
