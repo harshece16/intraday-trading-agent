@@ -262,3 +262,5 @@ to 2026-09-30, from a copy of the book started on 2025-12-20 (9 rebalances)
 and on 2024-06-20 (27), gave identical states from the old and the new job
 (holdings, trades, values, month points). On a copy of the live state both
 gave the same state too.
+
+**Live from the job's run on the evening of 2026-10-01, the book's first rebalance.** `main` was pulled into the main checkout, which the evening job runs from, on 2026-09-30 at 21:05 IST. The job's run of 2026-09-30, at 19:30, used the old code and finished normally (exit code 0).

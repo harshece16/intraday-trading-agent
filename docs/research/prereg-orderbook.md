@@ -242,6 +242,8 @@ requirement, the session and coverage rules of amendment 1, the list rules of
 amendments 2, 3 and 5, the 33.26 bp hurdle and the Benjamini–Hochberg family
 of 15.
 
+**Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at 21:05 IST, after the close, with no position open. The restart read the day's list for 2026-09-30 back from the journal (#207) instead of choosing it again; the session of 2026-10-01 fixes its own before the open. The first depth samples that keep all five levels are that session's; `depth_sample_stats` counts them as `rows_with_levels`.
+
 ---
 
 # Amendment 7 — 2026-09-30, before any `depth_samples` row has been joined to a return, written before the change is deployed
@@ -279,3 +281,5 @@ section 6.
   after the day's last sample.
 
 **Unchanged:** everything in the test.
+
+**Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at 21:05 IST, after the close, with no position open. The restart read the day's list for 2026-09-30 back from the journal (#207) instead of choosing it again; the session of 2026-10-01 fixes its own before the open. The first 15:08 outcome prices (`session_closes`) are written at that session's square-off, and only with Kite connected.

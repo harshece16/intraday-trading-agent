@@ -401,10 +401,7 @@
    "config": "REVIEW_QUEUE.min_net_rrr = 1.0",
    "verify": "manual_reviews table (status 'withheld' with withheld_reason for a held-back near-miss); activity kind 'review'; Overview page review queue and its 'Held back today' list",
    "source": "README §64, §105",
-   "test": "backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even",
-   "issues": [
-    166
-   ]
+   "test": "backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even"
   },
   {
    "id": "ENT-24",
@@ -416,10 +413,7 @@
    "config": null,
    "verify": "manual_reviews rows per session_date: an expired card followed by a later card for the same stock and side",
    "source": "README §64, §105",
-   "test": "backend/tests/test_review_queue.py::test_one_card_per_stock_side_and_day_and_it_is_journaled; backend/tests/test_review_queue.py::test_a_later_closer_near_miss_replaces_an_expired_card; backend/tests/test_review_queue.py::test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss; backend/tests/test_review_queue.py::test_no_new_card_unless_the_last_one_expired_and_this_one_is_later_and_closer",
-   "issues": [
-    166
-   ]
+   "test": "backend/tests/test_review_queue.py::test_one_card_per_stock_side_and_day_and_it_is_journaled; backend/tests/test_review_queue.py::test_a_later_closer_near_miss_replaces_an_expired_card; backend/tests/test_review_queue.py::test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss; backend/tests/test_review_queue.py::test_no_new_card_unless_the_last_one_expired_and_this_one_is_later_and_closer"
   },
   {
    "id": "ENT-25",
@@ -455,11 +449,7 @@
    "config": "SQUARE_OFF_TIME = \"15:08\"",
    "verify": "manual_reviews.shadow_json; 'If approved' column on Overview; the 'Held back today' list and its total",
    "source": "README §68, §105, issue #102",
-   "test": "backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both; backend/tests/test_review_queue.py::test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved",
-   "issues": [
-    102,
-    166
-   ]
+   "test": "backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both; backend/tests/test_review_queue.py::test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved"
   },
   {
    "id": "RSK-01",
@@ -555,10 +545,7 @@
    "config": "RISK.max_positions_per_sector = 1",
    "verify": "blocked reason 'already at the max of 1 open position(s) in <industry>'",
    "source": "README §19",
-   "test": "backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too",
-   "issues": [
-    157
-   ]
+   "test": "backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too"
   },
   {
    "id": "RSK-09",
@@ -854,10 +841,7 @@
    "config": "FNO.min_confidence_to_trade = 60",
    "verify": "fno_evaluations table; GET /api/fno/journal",
    "source": "README §7, §8, §110",
-   "test": "backend/tests/test_fno_entry_rules.py::test_a_standing_long_ok_without_a_signal_buys_nothing, backend/tests/test_fno_entry_rules.py::test_the_signal_is_taken_once",
-   "issues": [
-    157
-   ]
+   "test": "backend/tests/test_fno_entry_rules.py::test_a_standing_long_ok_without_a_signal_buys_nothing, backend/tests/test_fno_entry_rules.py::test_the_signal_is_taken_once"
   },
   {
    "id": "FNO-04",
@@ -893,10 +877,7 @@
    "config": "FNO.stop_loss_pct_of_premium = 40.0, target_pct_of_premium = 80.0",
    "verify": "trades reason 'fno_stop_loss' / 'fno_take_profit'",
    "source": "README §7, §98, §110",
-   "test": "backend/tests/test_paper_fno_stops.py, backend/tests/test_fno_index_quote.py::test_a_paper_nifty_option_reprices_from_the_index, backend/tests/test_fno_restart.py::test_the_restored_option_is_watched_with_fno_switched_off",
-   "issues": [
-    189
-   ]
+   "test": "backend/tests/test_paper_fno_stops.py, backend/tests/test_fno_index_quote.py::test_a_paper_nifty_option_reprices_from_the_index, backend/tests/test_fno_restart.py::test_the_restored_option_is_watched_with_fno_switched_off"
   },
   {
    "id": "FNO-07",
@@ -932,10 +913,7 @@
    "config": "STRATEGY_PARAMS.sahab_dimaag.max_entries_per_day = 1; RISK.max_positions_per_sector = 1",
    "verify": "activity 'F&O entry signal skipped — …'; fno_evaluations block_reason",
    "source": "README §110",
-   "test": "backend/tests/test_fno_entry_rules.py::test_one_entry_per_stock_per_day_counts_a_cash_entry_too, backend/tests/test_fno_entry_rules.py::test_market_bias_blocks_calls_in_risk_off_and_puts_in_risk_on, backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too, backend/tests/test_fno_entry_rules.py::test_an_untracked_kite_position_in_any_contract_on_the_stock_blocks",
-   "issues": [
-    157
-   ]
+   "test": "backend/tests/test_fno_entry_rules.py::test_one_entry_per_stock_per_day_counts_a_cash_entry_too, backend/tests/test_fno_entry_rules.py::test_market_bias_blocks_calls_in_risk_off_and_puts_in_risk_on, backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too, backend/tests/test_fno_entry_rules.py::test_an_untracked_kite_position_in_any_contract_on_the_stock_blocks"
   },
   {
    "id": "FNO-10",
@@ -947,10 +925,7 @@
    "config": "FNO.max_spread_pct_of_premium = 2.0; LIQUIDITY.min_depth_multiple = 3.0",
    "verify": "liquidity_checks rows whose symbol is an NFO contract; blocked reason 'liquidity: the option's …'",
    "source": "README §110",
-   "test": "backend/tests/test_fno_entry_rules.py::test_assess_option_rules, backend/tests/test_fno_entry_rules.py::test_paper_goes_ahead_without_a_book_and_live_does_not",
-   "issues": [
-    157
-   ]
+   "test": "backend/tests/test_fno_entry_rules.py::test_assess_option_rules, backend/tests/test_fno_entry_rules.py::test_paper_goes_ahead_without_a_book_and_live_does_not"
   },
   {
    "id": "FNO-11",
@@ -962,10 +937,7 @@
    "config": "KITE_FILL_DEADLINE_S = 5; KITE_FILL_POLL_S = 0.25",
    "verify": "A live NFO row in trades has order_id and signal_price, and its note gives the slippage in bp against the quoted premium",
    "source": "README §110",
-   "test": "backend/tests/test_fno_live_fills.py::test_a_live_buy_is_booked_at_kites_premium_and_quantity, backend/tests/test_fno_live_fills.py::test_a_rejected_exit_leaves_the_position_open_and_watched, backend/tests/test_fno_live_fills.py::test_an_unconfirmed_buy_books_nothing_blocks_a_second_and_is_booked_when_kite_answers",
-   "issues": [
-    186
-   ]
+   "test": "backend/tests/test_fno_live_fills.py::test_a_live_buy_is_booked_at_kites_premium_and_quantity, backend/tests/test_fno_live_fills.py::test_a_rejected_exit_leaves_the_position_open_and_watched, backend/tests/test_fno_live_fills.py::test_an_unconfirmed_buy_books_nothing_blocks_a_second_and_is_booked_when_kite_answers"
   },
   {
    "id": "FNO-12",
@@ -977,10 +949,7 @@
    "config": null,
    "verify": "activity 'Restored N open F&O position(s) from today's journal after a restart'; 'A LIVE option position is open' at error level",
    "source": "README §110",
-   "test": "backend/tests/test_fno_restart.py::test_an_open_paper_option_is_restored_as_an_option_not_as_cash, backend/tests/test_fno_restart.py::test_kite_flat_drops_it_and_sends_nothing, backend/tests/test_fno_restart.py::test_reconciliation_verifies_it_and_does_not_call_it_untracked",
-   "issues": [
-    187
-   ]
+   "test": "backend/tests/test_fno_restart.py::test_an_open_paper_option_is_restored_as_an_option_not_as_cash, backend/tests/test_fno_restart.py::test_kite_flat_drops_it_and_sends_nothing, backend/tests/test_fno_restart.py::test_reconciliation_verifies_it_and_does_not_call_it_untracked"
   },
   {
    "id": "SCN-01",
@@ -992,10 +961,7 @@
    "config": "SCANNER.live_feed = True",
    "verify": "Screener page: 'Prices are live from Kite as of HH:MM'; /api/scanner feed",
    "source": "README §101",
-   "test": "backend/tests/test_scanner_live_feed.py::test_with_kite_connected_the_scan_describes_today_before_the_delayed_feed_has_a_bar",
-   "issues": [
-    193
-   ]
+   "test": "backend/tests/test_scanner_live_feed.py::test_with_kite_connected_the_scan_describes_today_before_the_delayed_feed_has_a_bar"
   },
   {
    "id": "SCN-02",
@@ -1175,11 +1141,7 @@
    "config": null,
    "verify": "Pre-market page: 'Ranked on the <date> close'; /api/premarket result.daily",
    "source": "README §100",
-   "test": "backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched",
-   "issues": [
-    192,
-    196
-   ]
+   "test": "backend/tests/test_scanner_guards.py::test_a_missing_last_session_is_added_and_nothing_else_is_touched"
   },
   {
    "id": "SCN-22",
@@ -1227,10 +1189,7 @@
    "config": "nse_feed.INDEX_HISTORY_SESSIONS = 60, INDEX_HISTORY_MAX_DOWNLOADS = 60",
    "verify": "/api/scanner sector_trends_unavailable is empty and sector_history_from_nse names the indices built from NSE's files; the Screener shows no 'Sector trend unavailable' line",
    "source": "README §107",
-   "test": "backend/tests/test_sector_index_history.py::test_a_scan_takes_the_trend_from_nses_history_and_names_what_it_could_not_work_out",
-   "issues": [
-    197
-   ]
+   "test": "backend/tests/test_sector_index_history.py::test_a_scan_takes_the_trend_from_nses_history_and_names_what_it_could_not_work_out"
   },
   {
    "id": "SCN-26",
@@ -1698,12 +1657,7 @@
    "config": null,
    "verify": "Parity test against the repaired panel of research/nse_prices.py; on the real cache the two panels have 0 differences; the page footer 'corporate-actions file from ...'; state.data.corporate_actions_refreshed",
    "source": "README §82, §97, §113",
-   "test": "backend/tests/test_momentum_book.py::test_the_panel_is_the_research_loaders_repaired_panel",
-   "issues": [
-    159,
-    177,
-    178
-   ]
+   "test": "backend/tests/test_momentum_book.py::test_the_panel_is_the_research_loaders_repaired_panel"
   },
   {
    "id": "MOM-12",
@@ -1727,10 +1681,7 @@
    "config": null,
    "verify": "momentum_book.log lines 'daily done code=N' and any warning before them; state.last_processed advances; state.data.problem is null; the Momentum Book page shows no 'stopped early' line",
    "source": "README §83, §113; docs/research/prereg-3i-momentum-corrected-data.md (third note on the forward paper book)",
-   "test": "backend/tests/test_momentum_book_data.py::test_the_book_waits_at_a_day_whose_download_failed; backend/tests/test_momentum_book_data.py::test_a_day_that_failed_is_fetched_again_after_a_later_day_succeeded; backend/tests/test_momentum_book_data.py::test_an_empty_month_end_ranking_stops_the_job_and_leaves_the_book_as_it_was; backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed",
-   "issues": [
-    159
-   ]
+   "test": "backend/tests/test_momentum_book_data.py::test_the_book_waits_at_a_day_whose_download_failed; backend/tests/test_momentum_book_data.py::test_a_day_that_failed_is_fetched_again_after_a_later_day_succeeded; backend/tests/test_momentum_book_data.py::test_an_empty_month_end_ranking_stops_the_job_and_leaves_the_book_as_it_was; backend/tests/test_momentum_book.py::test_evening_job_is_skipped_once_today_is_processed"
   },
   {
    "id": "MOM-14",
@@ -1742,10 +1693,7 @@
    "config": null,
    "verify": "On the real bhavcopy cache the book's panel equals the research loader's repaired panel row for row (0 differences, 2026-09-28)",
    "source": "README §97; docs/research/results-universe-width.md",
-   "test": "backend/tests/test_momentum_book.py::test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for",
-   "issues": [
-    175
-   ]
+   "test": "backend/tests/test_momentum_book.py::test_a_holding_in_trade_for_trade_is_valued_and_sold_at_what_it_traded_for"
   },
   {
    "id": "MOM-15",
@@ -1757,10 +1705,7 @@
    "config": "BUY_CARRY = 5; BANDS = 2%, 5%, 10%, 20%",
    "verify": "Momentum Book page: 'Orders waiting', and the Note column of Recent trades. Run over 2010 to 2025 the book equals trial 126 month by month (largest difference 7e-16)",
    "source": "docs/research/prereg-universe-width.md (rules H1 to H5); README §99",
-   "test": "backend/tests/test_momentum_book.py::test_the_book_is_trial_126s_simulator_month_by_month",
-   "issues": [
-    180
-   ]
+   "test": "backend/tests/test_momentum_book.py::test_the_book_is_trial_126s_simulator_month_by_month"
   },
   {
    "id": "JEV-01",
@@ -1832,10 +1777,7 @@
    "config": null,
    "verify": "Jev Book page 'Jev unavailable' pill and error; for a round stopped part-way, the line 'Today's round stopped after N of M stocks'; state days[date].interrupted; typesafe_key.py status",
    "source": "README §86, §113; docs/research/prereg-jev-book.md (Clarification 9)",
-   "test": "backend/tests/test_jev_book.py::test_no_key_records_unavailable_and_trades_nothing; backend/tests/test_jev_book.py::test_a_round_typesafe_interrupts_keeps_its_decisions_and_closes_them",
-   "issues": [
-    158
-   ]
+   "test": "backend/tests/test_jev_book.py::test_no_key_records_unavailable_and_trades_nothing; backend/tests/test_jev_book.py::test_a_round_typesafe_interrupts_keeps_its_decisions_and_closes_them"
   },
   {
    "id": "JEV-07",
@@ -1859,10 +1801,7 @@
    "config": null,
    "verify": "Jev Book page 'No live prices' pill and explanation",
    "source": "docs/research/prereg-jev-book.md (Clarifications 3 and 9); README §113",
-   "test": "backend/tests/test_jev_book.py::test_no_live_prices_skips_the_day_without_asking_jev; backend/tests/test_jev_book.py::test_the_live_price_gate_knows_the_0600_expiry; backend/tests/test_jev_book.py::test_a_kite_session_that_dies_mid_round_stops_asking_jev",
-   "issues": [
-    158
-   ]
+   "test": "backend/tests/test_jev_book.py::test_no_live_prices_skips_the_day_without_asking_jev; backend/tests/test_jev_book.py::test_the_live_price_gate_knows_the_0600_expiry; backend/tests/test_jev_book.py::test_a_kite_session_that_dies_mid_round_stops_asking_jev"
   },
   {
    "id": "JEV-09",
