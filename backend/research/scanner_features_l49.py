@@ -2,7 +2,8 @@
 reversal, rank the next intraday move past cost?
 
 Pre-registered: docs/research/prereg-scanner-features.md (commit dc06a10), before this
-file was written; amendment 1 (6baae5a) before it was committed. The harness is L40's (kronos_feature_ic), unchanged and called, not
+file was written; amendment 1 (6baae5a) before it was committed; amendment 2 (2e3eeba)
+after stage 0 run 1 halted at check 4. The harness is L40's (kronos_feature_ic), unchanged and called, not
 copied: its sample (build_samples), targets (target_bp), control (m60_bp), per-session
 statistics (session_stats), summaries (summarise), gate and Benjamini-Hochberg. What
 this file adds is five features and their stage 0.
@@ -16,7 +17,10 @@ this file adds is five features and their stage 0.
 Order, as the prereg fixes it: stage 0 (nine checks, no feature compared with any
 return) -> committed and pushed -> independent review -> ONE measurement pass.
 
-Data, all read-only: the Kite 5-minute cache (SQLite mode=ro, rows before 2026-01-02
+The previous close is NSE's official close put on the cache's price basis by the median
+of three same-day ratios, Kite over NSE, of the open, the high and the low (amendment 2).
+
+Data, all read-only: the Kite 5-minute cache (SQLite mode=ro, rows dated 2025 or earlier
 only), NSE's 2025 bhavcopies, NSE's 2025 corporate-actions file, NSE's symbol-change
 file and research/data/l49_industries.csv. kite_history is not imported: it imports
 config, which touches credential files. No Kite call is made.
@@ -70,7 +74,7 @@ TESTS["gap_reversal_f60"] = ("gap_reversal", "f60")
 N_TESTS = 13
 RVOL_SESSIONS = 20
 REGULAR_OPEN = "09:15"
-CUTOFF = splits.HELD_OUT_START                      # nothing on or after 2026-01-02 is read
+CUTOFF = "2026-01-01"          # nothing dated 2026 is loaded (amendment 2); held-out starts 2026-01-02
 BHAV_START = "2025-08-01"                           # the earliest bhavcopy a check needs
 CONTROL_START, CONTROL_END = "2025-05-01", "2025-08-29"
 ALIGN_TOL_BP = 5.0
@@ -272,9 +276,20 @@ def prev_session(ctx, d):
     return ctx.calendar[i - 1] if i > 0 else None
 
 
+def kite_factor(ctx, s, e):
+    """F(s, e), Kite's price basis on session e against NSE's raw prices: the median of
+    Kite's first open / OPEN, highest high / HIGH and lowest low / LOW (amendment 2).
+    None when a bar or a positive NSE price is missing."""
+    bars, row = ctx.bars(s, e), ctx.bhav.get((s, e))
+    if not bars or not row or not (row["open"] > 0 and row["high"] > 0 and row["low"] > 0):
+        return None
+    return sorted([bars[0]["open"] / row["open"], max(b["high"] for b in bars) / row["high"],
+                   min(b["low"] for b in bars) / row["low"]])[1]
+
+
 def prev_close(ctx, s, d):
     """(pc, reason): NSE's official close of the previous session on the cache's price
-    basis, K_last x CLOSE / LAST, all three from the previous session (prereg §3)."""
+    basis, CLOSE(d-) x F(d-), both from the previous session (prereg §3, amendment 2)."""
     key = (s, d)
     if key not in ctx._pc:
         ctx._pc[key] = _prev_close(ctx, s, d)
@@ -282,9 +297,10 @@ def prev_close(ctx, s, d):
 
 
 def _prev_close(ctx, s, d):
-    if d in ctx.ca_dates.get(s, ()):
-        return None, "ca_exdate"
     dm = prev_session(ctx, d)
+    ex = ctx.ca_dates.get(s, ())
+    if d in ex or (dm is not None and dm in ex):
+        return None, "ca_exdate"
     if dm is None:
         return None, "missing:no_previous_session"
     bars = ctx.bars(s, dm)
@@ -293,9 +309,9 @@ def _prev_close(ctx, s, d):
     row = ctx.bhav.get((s, dm))
     if row is None:
         return None, "missing:no_bhavcopy_row"
-    if not (row["close"] > 0 and row["last"] > 0 and bars[-1]["close"] > 0):
+    if not (row["close"] > 0 and row["open"] > 0 and row["high"] > 0 and row["low"] > 0):
         return None, "missing:nonpositive_price"
-    return bars[-1]["close"] * row["close"] / row["last"], None
+    return row["close"] * kite_factor(ctx, s, dm), None
 
 
 def _decision(ctx, s, d, hhmm):
@@ -510,7 +526,8 @@ class Hand:
             self._zip_cache[day] = rows
         for r in self._zip_cache[day]:
             if r.get("SctySrs") == "EQ" and self._newest(r.get("TckrSymb", "")) == sym:
-                return {"close": float(r["ClsPric"]), "last": float(r["LastPric"])}
+                return {key: float(r[col]) for key, col in (("open", "OpnPric"), ("high", "HghPric"),
+                                                            ("low", "LwPric"), ("close", "ClsPric"))}
         return None
 
     def _ca(self, sym):
@@ -539,14 +556,16 @@ class Hand:
         return (datetime.strptime(hhmm, "%H:%M") - timedelta(minutes=5)).strftime("%H:%M")
 
     def pc(self, sym, d):
-        if d in self._ca(sym)[0]:
-            return None
         dm = self._prev_day(d)
+        if d in self._ca(sym)[0] or dm in self._ca(sym)[0]:
+            return None
         bars = self._bars(sym, dm) if dm else []
         row = self._bhav_row(sym, dm) if dm else None
-        if not bars or not row or row["last"] <= 0 or row["close"] <= 0:
+        if not bars or not row or min(row.values()) <= 0:
             return None
-        return bars[-1]["close"] * row["close"] / row["last"]
+        ratios = sorted([bars[0]["open"] / row["open"], max(b["high"] for b in bars) / row["high"],
+                         min(b["low"] for b in bars) / row["low"]])
+        return row["close"] * ratios[1]
 
     def close_at(self, sym, d, hhmm):
         start = self._start(hhmm)
@@ -612,35 +631,47 @@ def hand_check(ctx, hand, picks):
     return rows
 
 
-# ---- alignment of Kite's last bar with NSE's last price (stage 0 check 4) -------------
+# ---- Kite's price basis carried from d- to d (stage 0 check 4, amendment 2) ----------
 
 def alignment(ctx, stock_days):
-    """For stock-days (s, e) whose last bar enters a previous close: r(e) = K_last / LAST,
-    and its move from the stock's previous session, on pairs with no ex-date on e."""
-    moves, open_gaps, skipped = [], [], Counter()
-    for s, e in sorted(stock_days):
-        pe = prev_session(ctx, e)
-        be, bp = ctx.bars(s, e), ctx.bars(s, pe) if pe else None
-        re_, rp = ctx.bhav.get((s, e)), ctx.bhav.get((s, pe)) if pe else None
-        if not be or not bp or not re_ or not rp or re_["last"] <= 0 or rp["last"] <= 0:
-            skipped["missing"] += 1
+    """For stock-days (s, d) whose previous close is used: F(s, d) against F(s, d-), on
+    days where neither is an ex-date. F(s, d) reads day d's whole session: an audit of
+    the data, not a feature. Run 1's anchor (Kite's last close over NSE's LAST) is
+    reported on the same pairs as information."""
+    moves, last_moves, spread, skipped = [], [], [], Counter()
+    for s, d in sorted(stock_days):
+        dm = prev_session(ctx, d)
+        ex = ctx.ca_dates.get(s, ())
+        if dm is None:
+            skipped["no_previous_session"] += 1
             continue
-        r_e, r_p = be[-1]["close"] / re_["last"], bp[-1]["close"] / rp["last"]
-        if be[0]["time"][11:16] == REGULAR_OPEN and re_["open"] > 0:
-            open_gaps.append(abs((be[0]["open"] / re_["open"]) / r_e - 1) * 1e4)
-        if e in ctx.ca_dates.get(s, ()):
+        if d in ex or dm in ex:
             skipped["ex_date"] += 1
             continue
-        moves.append((abs(r_e / r_p - 1) * 1e4, s, pe, e))
-    vals = sorted(m[0] for m in moves)
+        fd, fm = kite_factor(ctx, s, d), kite_factor(ctx, s, dm)
+        if fd is None or fm is None:
+            skipped["missing"] += 1
+            continue
+        moves.append((abs(fd / fm - 1) * 1e4, s, dm, d, fm, fd))
+        bd, bm, rd, rm = ctx.bars(s, d), ctx.bars(s, dm), ctx.bhav[(s, d)], ctx.bhav[(s, dm)]
+        if rd["last"] > 0 and rm["last"] > 0:
+            last_moves.append(abs((bd[-1]["close"] / rd["last"]) / (bm[-1]["close"] / rm["last"]) - 1) * 1e4)
+        three = [bm[0]["open"] / rm["open"], max(b["high"] for b in bm) / rm["high"],
+                 min(b["low"] for b in bm) / rm["low"]]
+        spread.append((max(three) / min(three) - 1) * 1e4)
+    vals = sorted(mv[0] for mv in moves)
     share = sum(v <= ALIGN_TOL_BP for v in vals) / len(vals) if vals else 0.0
-    og = sorted(open_gaps)
+    lm, sp = sorted(last_moves), sorted(spread)
     return {"pairs": len(vals), "share_within_tol": share, "tol_bp": ALIGN_TOL_BP, "min_share": ALIGN_MIN_SHARE,
             "median_bp": _q(vals, 0.5), "p95_bp": _q(vals, 0.95), "max_bp": vals[-1] if vals else None,
-            "worst": [{"symbol": s, "from": p, "to": e, "move_bp": m} for m, s, p, e in sorted(moves, reverse=True)[:15]],
+            "worst": [{"symbol": sy, "from": a, "to": b, "move_bp": mv, "factor_from": f1, "factor_to": f2}
+                      for mv, sy, a, b, f1, f2 in sorted(moves, reverse=True)[:15]],
             "skipped": dict(skipped),
-            "open_vs_last_information": {"n": len(og), "median_bp": _q(og, 0.5), "p95_bp": _q(og, 0.95),
-                                         "share_within_tol": (sum(v <= ALIGN_TOL_BP for v in og) / len(og)) if og else None},
+            "run1_anchor_last_information": {
+                "pairs": len(lm), "median_bp": _q(lm, 0.5), "p95_bp": _q(lm, 0.95),
+                "share_within_tol": (sum(v <= ALIGN_TOL_BP for v in lm) / len(lm)) if lm else None},
+            "same_day_spread_of_three_ratios_information": {
+                "n": len(sp), "median_bp": _q(sp, 0.5), "p95_bp": _q(sp, 0.95), "max_bp": sp[-1] if sp else None},
             "passes": share >= ALIGN_MIN_SHARE}
 
 
@@ -835,7 +866,7 @@ def stage0():
     rec["2_data"] = {"fetch_runs": runs, "latest_bar_read": info["latest_bar_read"],
                      "symbols_loaded": info["symbols_loaded"], "bhav_files": info["bhav_files"],
                      "corporate_actions_file": os.path.basename(CA_FILE), "industries_file": INDUSTRIES,
-                     "passes": (len(runs) == 1 and info["latest_bar_read"][:10] < CUTOFF
+                     "passes": (len(runs) == 1 and info["latest_bar_read"][:4] == "2025"
                                 and (info["bhav_files"]["last"] or "") < CUTOFF
                                 and os.path.basename(CA_FILE) == "ca_2025.csv")}
     if len(runs) != 1:
@@ -866,16 +897,11 @@ def stage0():
         _halt(rec, 3, "L40's sample is not reproduced: %s" % got)
 
     ctx = data["ctx"]
-    # 4. Kite's last bar and NSE's last price are the same trade
-    used = set()
-    for d in sessions:
-        dm = prev_session(ctx, d)
-        for s in data["members_by_date"][d]:
-            if s in ctx.sessions_by_sym and dm:
-                used.add((s, dm))
+    # 4. Kite's price basis on d is the one measured on d- (amendment 2)
+    used = {(s, d) for d in sessions for s in data["members_by_date"][d] if s in ctx.sessions_by_sym}
     rec["4_alignment"] = alignment(ctx, used)
     if not rec["4_alignment"]["passes"]:
-        _halt(rec, 4, "only %.2f%% of consecutive stock-days keep K_last / LAST within %.0f bp"
+        _halt(rec, 4, "only %.2f%% of stock-days keep F(d) / F(d-) within %.0f bp"
               % (100 * rec["4_alignment"]["share_within_tol"], ALIGN_TOL_BP))
     print("stage 0: alignment %.4f within %.0f bp over %d pairs" % (rec["4_alignment"]["share_within_tol"],
                                                                     ALIGN_TOL_BP, rec["4_alignment"]["pairs"]), flush=True)

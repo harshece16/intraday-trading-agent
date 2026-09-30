@@ -54,8 +54,10 @@ def _ctx(days, symbols=("A", "B", "C", "T"), industry=None, bhav=None, ca=None, 
         bhav = {}
         for s in symbols:
             for d in days:
-                last = sbs[s][d][-1]["close"]
-                bhav[(s, d)] = {"open": sbs[s][d][0]["open"], "high": 0, "low": 0, "close": last * 1.001, "last": last}
+                b = sbs[s][d]
+                bhav[(s, d)] = {"open": b[0]["open"], "high": max(x["high"] for x in b),
+                                "low": min(x["low"] for x in b), "close": b[-1]["close"] * 1.001,
+                                "last": b[-1]["close"]}
     members = {d: set(symbols) for d in days}
     return m.Ctx(sbs, sorted(days), bhav, ca or {}, unit or {}, industry, members, {})
 
@@ -96,10 +98,23 @@ def test_previous_close_is_the_official_close_on_kite_s_basis():
     days = _weekdays("2025-10-01", 3)
     ctx = _ctx(days)
     d, dm = days[2], days[1]
-    k_last = ctx.sessions_by_sym["A"][dm][-1]["close"]
-    ctx.bhav[("A", dm)] = {"open": 0, "high": 0, "low": 0, "close": 99.0, "last": 110.0}
+    b = ctx.sessions_by_sym["A"][dm]
+    # NSE's raw prices are Kite's over 0.98 (Kite adjusted this day down by 2%); LAST is junk
+    ctx.bhav[("A", dm)] = {"open": b[0]["open"] / 0.98, "high": max(x["high"] for x in b) / 0.98,
+                           "low": min(x["low"] for x in b) / 0.98, "close": 99.0, "last": 1.0}
+    assert m.kite_factor(ctx, "A", dm) == pytest.approx(0.98, rel=1e-12)
     pc, why = m.prev_close(ctx, "A", d)
-    assert why is None and pc == pytest.approx(k_last * 99.0 / 110.0, rel=1e-15)
+    assert why is None and pc == pytest.approx(99.0 * 0.98, rel=1e-12)
+
+
+def test_kite_factor_is_the_median_so_one_bad_price_cannot_move_it():
+    days = _weekdays("2025-10-01", 2)
+    ctx = _ctx(days)
+    row = ctx.bhav[("A", days[1])]
+    row["high"] *= 1.03                                        # a bad high on NSE's side
+    assert m.kite_factor(ctx, "A", days[1]) == pytest.approx(1.0, abs=1e-12)
+    row["open"] = 0
+    assert m.kite_factor(ctx, "A", days[1]) is None
 
 
 def test_previous_close_is_undefined_on_an_ex_date_or_without_nse_s_row():
@@ -108,18 +123,27 @@ def test_previous_close_is_undefined_on_an_ex_date_or_without_nse_s_row():
     assert m.prev_close(ctx, "A", days[2]) == (None, "ca_exdate")
     del ctx.bhav[("B", days[1])]
     assert m.prev_close(ctx, "B", days[2]) == (None, "missing:no_bhavcopy_row")
-    ctx.bhav[("C", days[1])]["last"] = 0
+    ctx.bhav[("C", days[1])]["low"] = 0
     assert m.prev_close(ctx, "C", days[2]) == (None, "missing:nonpositive_price")
-    assert m.prev_close(ctx, "A", days[0]) == (None, "missing:no_previous_session")
+    assert m.prev_close(ctx, "B", days[0]) == (None, "missing:no_previous_session")
+
+
+def test_previous_close_is_undefined_the_session_after_an_ex_date():
+    # Kite can place a demerger's step on the session after NSE's ex-date (amendment 2)
+    days = _weekdays("2025-10-01", 3)
+    ctx = _ctx(days, ca={"A": {days[1]}})
+    assert m.prev_close(ctx, "A", days[2]) == (None, "ca_exdate")
+    assert m.prev_close(ctx, "B", days[2])[1] is None
 
 
 def test_previous_session_is_the_market_s_even_when_it_is_a_special_session():
     days = _weekdays("2025-10-20", 3)
     muhurat = _session(days[1], start="13:45", n=12, base=150.0)
     ctx = _ctx(days, special={("A", days[1]): muhurat})
-    pc, _ = m.prev_close(ctx, "A", days[2])
-    row = ctx.bhav[("A", days[1])]
-    assert pc == pytest.approx(muhurat[-1]["close"] * row["close"] / row["last"])
+    ctx.bhav[("A", days[1])] = {"open": muhurat[0]["open"], "high": max(x["high"] for x in muhurat),
+                                "low": min(x["low"] for x in muhurat), "close": 151.3, "last": 0}
+    pc, why = m.prev_close(ctx, "A", days[2])
+    assert why is None and pc == pytest.approx(151.3)
 
 
 def test_gap_is_the_0915_open_against_the_previous_close():
@@ -325,15 +349,19 @@ def test_coverage_halts_on_missing_data_but_not_on_registered_reasons():
     assert any("does not name" in w for w in why)
 
 
-def test_alignment_passes_when_kite_s_last_bar_is_nse_s_last_price():
+def test_alignment_compares_kite_s_basis_on_d_with_the_one_on_d_minus():
     days = _weekdays("2025-10-01", 6)
     ctx = _ctx(days)
     used = {(s, d) for s in ("A", "B") for d in days[1:]}
     out = m.alignment(ctx, used)
     assert out["passes"] and out["share_within_tol"] == 1.0 and out["pairs"] == len(used)
-    ctx.bhav[("A", days[3])]["last"] *= 1.01                  # a 100 bp disagreement on one day
+    for key in ("open", "high", "low"):                       # NSE's day 3 on another basis
+        ctx.bhav[("A", days[3])][key] *= 1.01
     out = m.alignment(ctx, used)
-    assert out["worst"][0]["symbol"] == "A" and out["worst"][0]["move_bp"] > 90
+    assert {(w["from"], w["to"]) for w in out["worst"][:2]} == {(days[2], days[3]), (days[3], days[4])}
+    assert out["worst"][0]["move_bp"] > 90
+    ctx = _ctx(days, ca={"A": {days[3]}})
+    assert m.alignment(ctx, used)["skipped"] == {"ex_date": 2}
 
 
 # ---- loaders: read-only, and never 2026 ----------------------------------------------------------
@@ -357,7 +385,8 @@ def _cache_db(path, series):
 
 def test_load_candles_stops_before_2026_and_cannot_write(tmp_path):
     db = tmp_path / "cache.db"
-    _cache_db(db, {"A": _session("2025-12-31") + _session("2026-01-02"), "B": _session("2025-12-31")})
+    _cache_db(db, {"A": _session("2025-12-31") + _session("2026-01-01") + _session("2026-01-02"),
+                   "B": _session("2025-12-31")})
     conn = m.connect_ro(str(db))
     out, latest = m.load_candles(conn, ["A", "B", "Z"])
     assert list(out) == ["A", "B"] and latest.startswith("2025-12-31")
@@ -368,11 +397,15 @@ def test_load_candles_stops_before_2026_and_cannot_write(tmp_path):
 
 
 def _udiff_zip(path, day, rows):
+    """rows: (symbol, series, open, close, last) or (symbol, series, open, high, low, close, last)."""
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["TradDt", "TckrSymb", "SctySrs", "OpnPric", "HghPric", "LwPric", "ClsPric", "LastPric"])
-    for sym, series, o, c, last in rows:
-        w.writerow([day, sym, series, o, max(o, c), min(o, c), c, last])
+    for r in rows:
+        if len(r) == 5:
+            sym, series, o, c, last = r
+            r = (sym, series, o, max(o, c), min(o, c), c, last)
+        w.writerow([day] + list(r))
     with zipfile.ZipFile(path, "w") as z:
         z.writestr("BhavCopy.csv", buf.getvalue())
 
@@ -380,6 +413,7 @@ def _udiff_zip(path, day, rows):
 def test_bhavcopies_map_old_symbols_and_never_list_2026(tmp_path):
     _udiff_zip(tmp_path / "20251013.zip", "2025-10-13", [("TATAMOTORS", "EQ", 1, 2, 2.1), ("X", "BE", 1, 1, 1)])
     _udiff_zip(tmp_path / "20251027.zip", "2025-10-27", [("TMPV", "EQ", 3, 4, 4.1)])
+    _udiff_zip(tmp_path / "20260101.zip", "2026-01-01", [("TMPV", "EQ", 5, 6, 6.1)])
     _udiff_zip(tmp_path / "20260102.zip", "2026-01-02", [("TMPV", "EQ", 5, 6, 6.1)])
     files = m.bhav_files(str(tmp_path), "2025-01-01", end="2027-01-01")
     assert [d for d, _ in files] == ["2025-10-13", "2025-10-27"]
@@ -423,13 +457,16 @@ def test_hand_path_agrees_with_the_module_through_the_loaders(tmp_path, monkeypa
     data = tmp_path / "data"
     (data / "bhav_daily").mkdir(parents=True)
     (data / "corp_actions").mkdir()
+    factor = {"AAA": 1.0, "BBB": 0.99, "CCC": 0.995, "TTT": 1.0}   # Kite's basis against NSE's raw prices
     for d in days:
         rows = []
         for sym, bars in series.items():
             day = [b for b in bars if b["time"][:10] == d]
+            f = factor[sym]
             name = "OLDB" if sym == "BBB" and d < days[15] else sym
-            rows.append((name, "EQ", day[0]["open"], round(day[-1]["close"] * (1 + rng.gauss(0, 0.001)), 2),
-                         day[-1]["close"]))
+            rows.append((name, "EQ", day[0]["open"] / f, max(b["high"] for b in day) / f,
+                         min(b["low"] for b in day) / f,
+                         round(day[-1]["close"] / f * (1 + rng.gauss(0, 0.001)), 2), 0.0))
         _udiff_zip(data / "bhav_daily" / (d.replace("-", "") + ".zip"), d, rows)
     (data / "bhav_daily" / "symbolchange.csv").write_text("SM_NAME,SM_KEY_SYMBOL,SM_NEW_SYMBOL,SM_APPLICABLE_FROM\n"
                                                           "B Ltd,OLDB,BBB,%s\n" % days[15])
