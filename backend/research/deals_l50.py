@@ -180,15 +180,17 @@ def parse_symbol_changes(text):
 
 def canon(symbol, on_date, changes):
     """Today's symbol for a stock that traded as `symbol` on `on_date`: follow every
-    change applicable AFTER that date (a change that took effect on or before it means
-    the symbol was already someone else's name, so it is not followed)."""
-    seen = set()
+    change applicable AFTER the date the stock took its current symbol (a change that
+    took effect on or before it belongs to an earlier holder of that symbol, so it is
+    not followed). The first step compares with the deal date; each later step with
+    the previous rename's effective date."""
+    seen, since = set(), on_date
     while symbol in changes and symbol not in seen:
         seen.add(symbol)
-        later = [(d, new) for d, new in changes[symbol] if d > on_date]
+        later = [(d, new) for d, new in changes[symbol] if d > since]
         if not later:
             break
-        symbol = later[0][1]
+        since, symbol = later[0]
     return symbol
 
 

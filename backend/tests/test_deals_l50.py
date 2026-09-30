@@ -95,6 +95,17 @@ def test_symbol_changes_follow_chains_applicable_after_the_deal_date_only():
     assert L.canon("RELIANCE", "2024-10-01", ch) == "RELIANCE"
 
 
+def test_a_chain_step_ignores_a_rename_by_an_earlier_holder_of_the_new_symbol():
+    # AAA traded on 2024-10-01, became BBB on 2025-06-01. A different company had held
+    # BBB until it renamed to ZZZ on 2025-01-15: after the deal, but before AAA took BBB.
+    ch = L.parse_symbol_changes("A Co,AAA,BBB,01-JUN-2025\nOld B Co,BBB,ZZZ,15-JAN-2025\n")
+    assert L.canon("AAA", "2024-10-01", ch) == "BBB"
+    # a genuine later rename of the new holder is still followed
+    ch2 = L.parse_symbol_changes("A Co,AAA,BBB,01-JUN-2025\nOld B Co,BBB,ZZZ,15-JAN-2025\n"
+                                 "A Co,BBB,CCC,01-MAR-2026\n")
+    assert L.canon("AAA", "2024-10-01", ch2) == "CCC"
+
+
 # ---- events ------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("b,s,side", [
