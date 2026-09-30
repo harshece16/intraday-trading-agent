@@ -50,3 +50,31 @@ def max_loss(premium: float, lots: int, lot_size: int) -> float:
     """The one number that matters before placing the order: the entire
     amount this trade can lose, no matter what the underlying does."""
     return round(premium * lots * lot_size, 2)
+
+
+def mwpl_block_reason(underlying: str, ban, today_iso: str, index_underlyings=()):
+    """Why a new option BUY on `underlying` must not be placed under NSE's
+    Market Wide Position Limit ban, or None if it may.
+
+    `ban` is nse_feed.fno_ban_list()'s value, the same list the scanner's
+    ban guard reads: {"trade_date": "YYYY-MM-DD", "symbols": set} or None.
+
+    None means the ban status is UNKNOWN, as it does for the scanner, and so
+    does a list published for another trade date. The scanner lets an unknown
+    list exclude nothing, because trading a stock's shares in its ban period is
+    not penalised. Increasing a position in its derivatives is (NISM Series
+    VIII: ₹5,000 to ₹1,00,000), so here an unknown status blocks stock
+    options, and the reason says the status is unknown rather than that the
+    stock is banned. Index options are exempt: the ban covers single-stock
+    derivatives only, and index derivatives are never on the list."""
+    if underlying.upper() in {u.upper() for u in index_underlyings}:
+        return None
+    if ban is None:
+        return "NSE's F&O ban list could not be read, so the ban status is unknown; no stock option is bought"
+    if ban.get("trade_date") != today_iso:
+        return (f"NSE's F&O ban list is for {ban.get('trade_date')}, not today ({today_iso}), "
+                "so the ban status is unknown; no stock option is bought")
+    if underlying.upper() in ban.get("symbols", set()):
+        return (f"In NSE's F&O ban for {today_iso}: market-wide positions are above 95% of the limit, "
+                "and a new position is penalised")
+    return None
