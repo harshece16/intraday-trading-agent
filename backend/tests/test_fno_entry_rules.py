@@ -2,7 +2,7 @@
 open-position cap and the confidence gate. It now also passes the cash
 entry rules that make sense for an option on the underlying: one entry per
 stock per day (shared with cash), the market bias (a call is a LONG, a put
-a SHORT), the scanner's exclusion and side, the sector cap (cash and
+a SHORT), the scanner's exclusion and short limits, the sector cap (cash and
 options counted together), an untracked Kite position in the stock or in
 any contract on it, and a spread-and-depth check on the contract's own book.
 It acts on the edge-triggered signal, not on long_ok/short_ok every tick."""
@@ -74,13 +74,13 @@ def test_market_bias_blocks_calls_in_risk_off_and_puts_in_risk_on(monkeypatch, b
         assert "market is " + bias in _blocked_reasons(e)[0]
 
 
-def test_the_scanners_exclusion_and_side_apply_to_the_underlying(monkeypatch):
+def test_the_scanners_exclusion_and_short_limits_apply_to_the_underlying(monkeypatch):
     e = engine(monkeypatch)
-    e.state.scanner = {"rows": [{"symbol": "ACME", "excluded": "turnover below ₹50 cr"},
-                                {"symbol": "BETA", "side": "SHORT"}], "active": []}
+    e.state.scanner = {"rows": [{"symbol": "ACME", "excluded": "turnover below ₹50 cr"}], "active": []}
     assert _enter(e) is False and "turnover below" in _blocked_reasons(e)[0]
-    assert _enter(e, "BETA", "LONG") is False and "scanner favours SHORT" in _blocked_reasons(e)[0]
-    assert _enter(e, "BETA", "SHORT") is True
+    monkeypatch.setitem(config.SCANNER, "allow_shorts", False)
+    assert _enter(e, "BETA", "SHORT") is False and "shorts are switched off" in _blocked_reasons(e)[0]
+    assert _enter(e, "BETA", "LONG") is True
 
 
 def _sector_scan(e):

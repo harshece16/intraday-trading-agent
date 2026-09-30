@@ -340,3 +340,50 @@ decision was priced live at both ends (clarification 3).
 **Unchanged:** the list, the snapshot, the three questions, fills from Kite
 only, the cost, the comparison with the scanner's side, the pass rule and the
 kill rule.
+
+---
+
+# Clarification 10 — 2026-09-30, written before the change is deployed
+
+**What had been seen:** no fill, verdict or score of this book was read in
+writing this.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §115, the scanner audit's rule 3.8
+(`scanner-audit-2026-09-28.md`).
+
+The scanner no longer sets a side. It still scores every stock as a long and
+as a short and still works out the stronger of the two, but the engine no
+longer refuses an entry on the other side: the checklist's own reading picks
+the side. The scanner row carries the stronger side as `score_side`, and its
+`side` is empty.
+
+**What this does to the book: nothing in its inputs or its rules.**
+
+- **What Jev sees.** The snapshot's `side` is filled from `score_side`, under
+  the same key, so it holds the same value as before: the stronger of the old
+  score's two readings, worked out the same way. The scanner row gains new
+  fields (the shadow inputs of README §115), and the scan's market summary
+  gains the NIFTY's opening value. None of them is among the fields the
+  snapshot copies. A test builds the snapshot from the same stock-time as the
+  scanner wrote it before and after the change and finds them identical
+  (`test_jevs_snapshot_is_the_same_as_before_the_change`).
+- **The baseline.** Pass rule 3 scores "the scanner's own side" on the same
+  stock-days. That is the same side, read the same way (`jev_book.scanner_side`),
+  so the baseline is scored exactly as before.
+- The list, the three questions, the fills from Kite only, the cost, the pass
+  rule and the kill rule are unchanged.
+
+**What stops being true.** The protocol calls the baseline "what the engine
+would do without Jev". From this change the engine does not act on that side.
+The baseline keeps its definition, the old score's stronger side, because
+replacing it part-way through would change pass rule 3. Rule 3 therefore reads
+from now on: Jev must beat the old score's side on the same stock-days. What
+the engine itself would do without Jev is nothing: the confidence gate has
+stopped every automatic entry since README §70. That is always-skip, which the
+protocol already reports as 0.
+
+**How the record is read:** unchanged. Rounds before and after the change are
+shown the same snapshot fields and scored against the same baseline. The change
+was not made to move Jev's score; it follows from the audit's finding that the
+old score carries no information.

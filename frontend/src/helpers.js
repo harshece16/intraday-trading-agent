@@ -14,9 +14,19 @@ export function analysisFor(s, sym) {
   if (r && r.brain) return { b: r.brain, live: false };
   return null;
 }
+// The scanner sets no side (README section 115): the checklist's own reading
+// picks it. A side that passes comes first, then the checklist's lean. A
+// long-only stock (fixed price band) is never read as a short.
+export function checklistSide(r, b) {
+  const longOnly = !!(r && r.long_only);
+  if (!b) return "long";
+  if (b.long_ok) return "long";
+  if (b.short_ok && !longOnly) return "short";
+  return b.bias === "short" && !longOnly ? "short" : "long";
+}
 export function isReady(s, r) {
   const a = analysisFor(s, r.symbol);
-  return r.status === "ACTIVE" && a && (r.side === "SHORT" ? a.b.short_ok : a.b.long_ok);
+  return r.status === "ACTIVE" && !!a && (a.b.long_ok || (a.b.short_ok && !r.long_only));
 }
 
 export function sentiment(score) {
@@ -42,7 +52,7 @@ export function shortSource(source) {
 export function primaryRule(r) {
   if (r.swing_patterns && r.swing_patterns.length) return `Bulkowski: ${r.swing_patterns[0].name}`;
   if (r.brain && r.brain.checklist) {
-    const cl = r.brain.checklist[(r.side || "LONG").toLowerCase()];
+    const cl = r.brain.checklist[checklistSide(r, r.brain)];
     const hit = cl && cl.items.find((i) => i.ok && i.key === "pattern");
     if (hit) return `${shortSource(hit.source)}: ${cl.pattern || hit.detail}`;
     const any = cl && cl.items.find((i) => i.ok);

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
-import { SidePill } from "../components/Pill";
 import { RuleTag } from "../components/RuleBook";
 import RuleBook from "../components/RuleBook";
 import { fixedText, GuardNotes, SectorTrendNote } from "../components/ListNotes";
@@ -38,7 +37,7 @@ function OppRow({ s, r, held, expanded, onToggle }) {
         <span className="opp-score" title="Scan score">{r.excluded ? "—" : r.final_score?.toFixed(0)}</span>
         <span>
           <span className="opp-name">
-            {r.symbol} {r.excluded ? <span className="pill neutral">Skipped</span> : <SidePill side={r.side} />} {flag}
+            {r.symbol} {r.excluded ? <span className="pill neutral">Skipped</span> : null} {flag}
             {r.long_only && !r.excluded ? <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span> : null}
             <RuleTag text={rule} />
           </span>
@@ -87,8 +86,8 @@ export default function Screener({ state: s }) {
   const byLiquidity = s.scanner?.selection?.mode === "liquidity";
   const intro = {
     trading: byLiquidity
-      ? `${s.scanner.selection.rule} ${fixedText(s.scanner.selection)} Trader Sahab checks these for entries every 30 seconds.`
-      : "Trader Sahab checks these for entries every 30 seconds.",
+      ? `${s.scanner.selection.rule} ${fixedText(s.scanner.selection)} Trader Sahab checks these for entries every 30 seconds, and the checklist picks the side.`
+      : "Trader Sahab checks these for entries every 30 seconds, and the checklist picks the side.",
     watch: byLiquidity
       ? "Eligible stocks outside today's list. They are scored and shown, but not watched for entries."
       : "Ranked candidates that didn't make the active list.",
@@ -105,7 +104,7 @@ export default function Screener({ state: s }) {
   return (
     <>
       <h2 className="h">Screener</h2>
-      <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} Click a row to expand its rule book inline.</p>
+      <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} The score is the old selection score, shown for information: it sets no side. Click a row to expand its rule book inline.</p>
       <GuardNotes guards={s.scanner?.guards} feed={s.scanner?.feed} />
       <SectorTrendNote scanner={s.scanner} />
       <div className="tabs">

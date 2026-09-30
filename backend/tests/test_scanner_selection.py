@@ -12,8 +12,10 @@ import scanner  # noqa: E402
 
 
 def _row(sym, turnover, score=50.0, side="SHORT", trend="down"):
+    """`side` is the old score's stronger side, which a scan row carries as
+    score_side; the row's own side is empty (README section 115)."""
     return {"symbol": sym, "turnover_cr": turnover, "score": score, "final_score": score,
-            "side": side, "daily_trend": trend, "excluded": None}
+            "side": None, "score_side": side, "daily_trend": trend, "excluded": None}
 
 
 CFG = {"active_count": 3, "selection": "liquidity", "freeze_min_coverage": 0.9,

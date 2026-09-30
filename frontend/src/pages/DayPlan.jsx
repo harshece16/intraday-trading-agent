@@ -31,6 +31,10 @@ function PlanTable({ candidates }) {
           ))}
         </tbody>
       </table>
+      {candidates.some((c) => c.side_basis !== "checklist") && (
+        <p className="muted">The day's list sets no side. The side is the checklist's reading where it has read the stock;
+          otherwise the long case is shown. A short has the same size and risk, with the stop and target mirrored.</p>
+      )}
     </div>
   );
 }
