@@ -128,4 +128,5 @@ def test_the_ban_check_comes_before_any_contract_lookup_or_order():
     body = ast.get_source_segment(src, fn)
     assert "fno_risk.mwpl_block_reason(" in body and "nse_feed.fno_ban_list()" in body
     at = body.index("mwpl_block_reason(")
-    assert at < body.index("nearest_expiry(") < body.index("find_contract(") < body.index("place_fno_order(")
+    # the live order goes out through _live_fno_fill(), which reads Kite's fill (#186)
+    assert at < body.index("nearest_expiry(") < body.index("find_contract(") < body.index("_live_fno_fill(")

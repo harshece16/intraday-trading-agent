@@ -22,6 +22,19 @@ never discovered later via a margin call.
 """
 
 import math
+import re
+
+# The volatility a paper option is priced at, and repriced with (#154): there
+# is no paper feed for premiums, so a paper buy is a Black-Scholes price.
+PAPER_VOL = 0.20
+
+
+def contract_on(tradingsymbol: str, underlying: str) -> bool:
+    """Whether an NFO tradingsymbol is a contract on `underlying`: the name,
+    then the two-digit year every NSE derivative symbol carries next
+    (RELIANCE26OCT1400CE, NIFTY2610624500PE). "NIFTY" is not a contract on
+    "NIFTYNXT50", and "M&M" is not one on "M&MFIN"."""
+    return bool(re.match(re.escape(underlying) + r"\d{2}", tradingsymbol or ""))
 
 
 def lots_to_buy(capital: float, max_premium_risk_pct: float, premium: float, lot_size: int) -> int:

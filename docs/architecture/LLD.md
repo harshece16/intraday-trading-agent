@@ -98,11 +98,11 @@ duration apart.
    3. `_check_stop_take()`. If it exits, stop here.
    4. Attach news and fundamentals and run the strategy function on the finished bars.
    5. Store the state and indicators. Journal the read to `checklist_evals`.
-   6. Record the signal.
+   6. Record the signal. An entry signal is also left in `_fno_signals` for `_process_fno()`.
    7. Exits the brain asks for.
    8. Entries: `_try_enter()`. If blocked, give the day's entry back.
    9. If flat and the review queue is on: `_offer_near_misses()`.
-4. `_process_fno()`: options stops, then options entries.
+4. `_process_fno()`: stops of open options positions, whether or not F&O is switched on, then options entries on this tick's entry signals.
 5. If a kill switch left anything open: `_square_off_all(reason="kill_switch")`.
 6. `stop_watcher.sync()`.
 
@@ -131,7 +131,7 @@ the API and the WebSocket read it through `snapshot()`.
 | `watchlist`, `candles` | Watched symbols; last 200 candles each |
 | `strategy_state`, `indicators` | Per-symbol checklist state, including `entries_today` |
 | `positions` | `{quantity, avg_price, entry_atr, stop_price, target_price, initial_risk, position_id, charges}` per symbol |
-| `fno_positions` | Open option positions |
+| `fno_positions` | Open option positions, keyed by underlying; each carries `live`, `entry_lots` and `realized_so_far` |
 | `review_queue`, `scanner`, `market`, `premarket` | Read models for the dashboard |
 | `activity` | Newest first, capped at 300 |
 | `trades`, `signals_log` | Today's trades; last 100 signals |
@@ -143,7 +143,7 @@ the API and the WebSocket read it through `snapshot()`.
 | `record_trade(...)` | Writes the in-memory list and the `trades` table |
 | `log(kind, message, symbol, level)` | Writes `activity` in memory and in the database, then hands the line to Telegram. A Telegram failure never breaks the log |
 | `snapshot()` | The dashboard's view of everything |
-| `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts and open positions from the journal |
+| `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts, open positions and open option positions from the journal |
 
 ### 2.4 Restart recovery
 
@@ -155,6 +155,15 @@ Entry charges are carried over.
 A restart always comes back in Paper. A restored live position keeps
 `live: True`, so its exit is a real order, and `_verify_live_position()`
 checks it against Kite's positions before any order is sent.
+
+Open option positions come back through `_rehydrate_fno_positions()` (#187):
+every `fno_trades` row opened today with no exit, rebuilt with its entry leg
+in `trades` (mode, entry charges, "stop X, target Y") and the quantity its
+exit legs left open. Their legs are kept out of `_rehydrate_open_positions()`,
+which used to restore one as a cash position in the option's tradingsymbol,
+and `_rehydrate_entry_counts()` counts them on the underlying. A restored live
+option is checked against Kite's day book by `_verify_live_fno()` before any
+order is sent.
 
 The day's list is read back too (#198). `Scanner.__init__` loads the latest
 row of `day_lists`, so the scanner holds what it held before the restart, with
@@ -396,29 +405,35 @@ The slippage figure is an assumption that has never been measured
 
 ## 6. Options path
 
-Switched off (`FNO.enabled = False`). When on, it runs only in the open
-phase and only with Kite credentials.
+Switched off (`FNO.enabled = False`). When on, entries run only in the open
+phase and only with Kite credentials. The switch is in memory, so a restart
+turns it off; open option positions are watched and squared off either way.
 
 | Step | Behaviour | Module |
 | --- | --- | --- |
 | Side | A call on a long read, a put on a short read. Buying only | `_try_enter_fno` |
-| Gate | Confidence at least 60; one contract per underlying; shared position and loss limits | `_try_enter_fno` |
+| Signal | The same edge-triggered entry signal as cash, left by `_process_symbol` | `_process_fno` |
+| Entry rules | One entry per stock per day, shared with cash; then every `_entry_block_reason` rule on the underlying (pause, untracked position, scanner exclusion and short limits, market bias, loss limit, position cap, sector cap counting cash and options); and no untracked Kite position in a contract on it | `_fno_entry_block_reason`, `fno_risk.contract_on` |
+| Gate | Confidence at least 60; one contract per underlying, an unconfirmed order counting as one | `_try_enter_fno` |
 | Ban | No stock-option buy in a stock on NSE's F&O ban list for the day. An unreadable list, or one for another date, is unknown and refuses stock options, and the reason says when the last fetch failed (`nse_feed.failure_text`); index options are exempt | `fno_risk.mwpl_block_reason`, `nse_feed.fno_ban_list`, `nse_feed.last_failure` |
 | Expiry | Nearest monthly expiry 5 to 35 days out | `fno_instruments.nearest_expiry` |
 | Strike | The strike whose delta is nearest 0.45, priced at a fixed 20% volatility | `fno_instruments.find_contract` |
 | Size | `floor(20% × ₹10,000 ÷ (premium × lot size))` lots | `fno_risk.lots_to_buy` |
-| Exits | Premium −40% or +80%; every position closed at 15:08 | `_check_fno_stop_take`, `_close_fno` |
+| Liquidity | The contract's own book: spread at most 2% of the mid premium, the order fills within five levels at most 1% from the mid, both sides hold 3× the order. No book: paper goes ahead, live is refused | `liquidity.check_option`, `assess_option` |
+| Order | Live: `place_fno_order`, then `wait_for_fill`; booked at Kite's executed premium and quantity, with stop, target and max loss from the premium paid. Rejected: nothing booked. Part filled: what filled. Unconfirmed: held in `_unconfirmed_orders` and booked when Kite answers | `_live_fno_fill`, `_book_fno_entry`, `_book_fno_exit` |
+| Exits | Premium −40% or +80%; every position closed at 15:08. A live position's close is a real order whatever the mode; one close at a time per position | `_check_fno_stop_take`, `_close_fno`, `_claim_fno_exit` |
 | Pricing | Black-Scholes-Merton price, Greeks and an implied-volatility solve by bisection | `options_pricing` |
 
 In paper the premium is a model price, repriced each tick by
-`_paper_fno_premium` from the underlying's live price.
+`_paper_fno_premium` from the underlying's live price. An index is read
+under its quote name: `NSE:NIFTY 50` / `NSE:NIFTY BANK` from Kite
+(`data_provider.kite_quote_key`, the table `kite_broker.INDEX_QUOTE_SYMBOLS`),
+`^NSEI` / `^NSEBANK` from yfinance (#189).
 
-Known gaps: the entry path skips several cash rules
-([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)),
-live orders book at the quoted premium
-([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)),
-and open positions are not restored after a restart
-([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)).
+The entry rules, the liquidity check, the live order booking and the restart
+recovery were added in README §110 (#157, #186, #187). Two cash rules are not
+applied to options: `trader_brain.recheck_plan` (an option's exits are on the
+premium) and cash sizing (FNO-05 sizes it).
 
 ## 7. Scanner
 

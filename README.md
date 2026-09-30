@@ -3998,6 +3998,40 @@ Each was tested as a pre-registered measurement (`docs/research/prereg-3h-breadt
 
 The one new input left untested is the order book being recorded since §71. Breadth stays on the dashboard as context. Details: `docs/research/results-3h-breadth-intermarket.md`. This was a measurement (look L48; run on 2026-09-25 under the label L35, which main had meanwhile given to the NSE-filings event study), not a trial, so trials stay at **117**.
 
+### 110. F&O: the cash entry rules, Kite's real fills, and positions that survive a restart (#157, #186, #187, #189)
+
+F&O is still **off** (`FNO.enabled = False`), and switching it on from the dashboard lasts only until the next restart. Nothing below changes what the running engine does until F&O is switched on. These are the four defects found on the F&O path while mapping the engine (2026-09-28), fixed before anyone turns it on.
+
+**Option buys pass the cash entry rules (#157).** An option buy used to check only the pause, the daily loss limit, the open-position cap and its own confidence gate. It now also passes:
+
+- **One entry per stock per day**, counted on the underlying and shared with cash. A cash trade in a stock today blocks an option on it today, and the other way round. The count is rebuilt after a restart.
+- **The market bias.** A call counts as a long and a put as a short: no calls in a risk-off market, no puts in a risk-on one.
+- **The scanner's exclusion** for the underlying, and its short limits: with `SCANNER.allow_shorts = False`, no puts. The scanner no longer sets a side (§115), so there is no side to disagree with.
+- **The sector cap**, which now counts open cash and option positions together. This applies to cash entries too, so an open option also blocks a cash entry in its sector.
+- **An untracked Kite position** in the stock, or in any contract on it.
+- **A spread and depth check on the contract's own order book**, the last gate before the order. The cash rule (a spread of at most twice the modelled slippage) would refuse every option, because the option tariff models no slippage. The cap is 2% of the mid premium (`FNO.max_spread_pct_of_premium`). Filling the order may move the price at most half that from the mid, and both sides must hold 3× the order across five levels. A market order pays about half the spread on each leg, so a round trip costs about one spread, and 2% is a twentieth of the 40% premium stop. As for cash, a paper buy goes ahead when no book can be read (journaled as unchecked) and a live one is refused.
+- It acts on the **edge-triggered** entry signal, as cash does, not on the checklist's `long_ok`/`short_ok` every tick.
+
+Two cash rules are not applied. The checklist's re-check of its stop and target at the live price doesn't apply because an option's exits are set on the premium (−40% / +80%), not on chart levels. The cash position sizing doesn't apply because an option's size comes from the ring-fenced ₹10,000 F&O allocation (FNO-05).
+
+**Live option orders are booked from Kite's report (#186).** This is what #155 did for cash (§98). The engine waits for Kite's answer, books the executed premium and quantity, and works out the premium stop, target, maximum loss and Greeks from the premium actually paid.
+- A rejected buy books nothing and doesn't spend the day's entry.
+- A rejected sale leaves the position open and watched, and the next tick tries again.
+- A part fill books what filled.
+- An order Kite never confirms books nothing, blocks further option orders on that underlying, and is booked when Kite answers.
+
+Each live leg records the quoted premium and Kite's order id. Closing an option now takes a claim, so the kill switch and the square-off can't both sell the same contract.
+
+**Open option positions survive a restart (#187).** They were held in memory only. Found while fixing it: the entry leg in `trades` came back as a **cash** position in the option's tradingsymbol. Checked on main: an open `RELIANCE26OCT1400CE` came back as a cash position of 500 with stop 12 and target 36, and no option position. A live one would have been squared off with an NSE cash order for an NFO symbol.
+
+A restart now rebuilds today's open option positions from `fno_trades` and their legs: the quantity still open, the entry charges, and the premium stop and target. It keeps them out of the cash restore and counts each against its underlying's entry for the day. As for cash (#156), a position carries whether it is real money. A live one restored in Paper is still closed with a real order, once Kite's day book confirms it is still open. If Kite is flat, it is dropped and no order is sent. Kite's NFO positions that the engine holds are no longer reported as untracked, which would have blocked going live. Open option positions are watched whether or not F&O is switched on, because the switch resets with the restart.
+
+**Paper index options reprice (#189).** A paper option is repriced from its underlying's price (§98, #154). For NIFTY that asked Kite for `NSE:NIFTY` and yfinance for `NIFTY.NS`, and neither exists, so a paper index option never repriced. It now asks Kite for `NSE:NIFTY 50` / `NSE:NIFTY BANK`, from the same table as the PCR read, and yfinance for `^NSEI` / `^NSEBANK`. No Kite call was made for this change. The Kite key is the one the scanner's live quotes have used since §101, and the tests stand in for Kite.
+
+Tests: `test_fno_entry_rules.py` (23), `test_fno_live_fills.py` (10), `test_fno_restart.py` (11) and `test_fno_index_quote.py` (4). Two existing tests were changed for the new order path. No real Kite order was placed.
+
+Files: `backend/trading_engine.py`, `backend/state.py`, `backend/database.py`, `backend/liquidity.py`, `backend/data_provider.py`, `backend/fno_risk.py`, `backend/config.py`, the four test files above and `backend/tests/fno_kit.py`, `docs/architecture/rules.json` (and the generated `RULES.md`, `rules.html`), `docs/architecture/LLD.md`.
+
 ### 111. An approval is held to the R:R floor at the live price, and a failed NSE file is not fetched again for 3 minutes (#211, #212)
 
 **1. The R:R floor is checked again when you approve (#211).** Since §105 the review queue offers a card blocked on reward-to-risk only if its R:R after costs, at the offer, is at least `REVIEW_QUEUE["min_net_rrr"]` (1.0). Approval did not check it again. A card offered at 1.05 could be approved minutes later, after the price had moved toward the target, at a fill where the same trade netted well under 1.0.

@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import config
 import data_provider
 import database
+import fno_risk
 import telegram_alerts
 
 ACTIVITY_LIMIT = 300
@@ -68,6 +69,9 @@ class AppState:
         # {"tradingsymbol", "underlying", "is_call", "lots", "lot_size", "entry_premium",
         #  "stop_premium", "target_premium", "ltp", "unrealized_pnl", "confidence", "position_id",
         #  "strike", "expiry", "entry_iv"}  (the last three reprice a paper position, #154)
+        # plus "live" (real money or not, as for a cash position, #156/#187), "entry_lots"
+        # and "realized_so_far" (a part-filled exit leaves the rest open, #186).
+        # Rebuilt from today's journal on a restart (_rehydrate_fno_positions).
         self.fno_positions = {}
         self.set_watchlist(watchlist)
         # review_queue.ReviewQueue, attached by TradingEngine. Kept here only so
@@ -114,12 +118,22 @@ class AppState:
             todays_trades = database.trades_between(start_of_day)
         except Exception:
             return
+        try:
+            fno_rows = database.fno_trades_since(start_of_day)
+        except Exception:
+            fno_rows = []
         self.trades = list(reversed(todays_trades))  # newest first, matching record_trade()'s insert(0, ...)
         self.realized_pnl_today = sum(t["realized"] for t in self.trades if t.get("realized"))
-        self._rehydrate_entry_counts(todays_trades)
-        self.restored_positions = self._rehydrate_open_positions(todays_trades)
+        # F&O legs are in `trades` too, under the option's tradingsymbol. Before
+        # #187 an open one was restored as a CASH position in that symbol.
+        fno_underlying = {r["position_id"]: r["underlying"] for r in fno_rows}
+        fno_pids = set(fno_underlying) | {t["position_id"] for t in todays_trades
+                                          if t.get("position_id") and (t.get("reason") or "").startswith("fno_")}
+        self._rehydrate_entry_counts(todays_trades, fno_underlying)
+        self.restored_positions = self._rehydrate_open_positions(todays_trades, skip=fno_pids)
+        self.restored_fno_positions = self._rehydrate_fno_positions(fno_rows, todays_trades)
 
-    def _rehydrate_open_positions(self, todays_trades):
+    def _rehydrate_open_positions(self, todays_trades, skip=()):
         """A restart used to drop open positions: they lived only in memory, so
         a position opened today (paper or live) was left with no stop, target
         or square-off watching it. Found 2026-09-25 09:50, when a deploy
@@ -133,10 +147,12 @@ class AppState:
         real order. Stop and target come from the entry note
         ("Stop X, target Y", the last such pair: every entry path writes it);
         the entry leg's charges carry over so the close is still net of both
-        legs. Returns the restored symbols, for the engine and the log."""
+        legs. Positions in `skip` (F&O legs) are left to
+        _rehydrate_fno_positions. Returns the restored symbols, for the engine
+        and the log."""
         legs = {}
         for t in todays_trades:  # oldest first
-            if t.get("position_id"):
+            if t.get("position_id") and t["position_id"] not in skip:
                 legs.setdefault(t["position_id"], []).append(t)
         restored = []
         for pid, ls in legs.items():
@@ -163,23 +179,87 @@ class AppState:
                 restored.append(entry["symbol"])
         return restored
 
-    def _rehydrate_entry_counts(self, todays_trades):
+    def _rehydrate_entry_counts(self, todays_trades, fno_underlying=None):
         """Issue #22: the one-entry-per-stock-per-day count lives in
         strategy_state, which a restart emptied, so a stock already traded
         (and maybe stopped out) today could be entered again. Rebuild it from
         today's journal: one entry per position, counted from its first leg.
         A legacy fill with no position_id counts on its own, so the error is
-        towards refusing a trade, never allowing an extra one."""
+        towards refusing a trade, never allowing an extra one. An option
+        position counts against its underlying (`fno_underlying`: position_id
+        -> underlying), as it does while the engine runs (#157)."""
         today = datetime.now(IST).date().isoformat()
+        fno_underlying = fno_underlying or {}
         seen, counts = set(), {}
         for t in todays_trades:  # oldest first
             key = t.get("position_id") or t["id"]
             if key in seen:
                 continue
             seen.add(key)
-            counts[t["symbol"]] = counts.get(t["symbol"], 0) + 1
+            symbol = fno_underlying.get(t.get("position_id")) or t["symbol"]
+            counts[symbol] = counts.get(symbol, 0) + 1
         for symbol, n in counts.items():
             self.strategy_state[symbol] = {"entries_today": n, "entry_day": today}
+
+    def _rehydrate_fno_positions(self, fno_rows, todays_trades):
+        """#187: an open option position lived only in memory, so a restart
+        left it with no stop, no target and no 15:08 square-off, and a live
+        one to Zerodha's auto square-off. Rebuild every F&O position opened
+        today whose fno_trades row has no exit: the contract from fno_trades;
+        the mode, the entry charges and the premium stop and target ("stop X,
+        target Y" in the entry note) from its entry leg in `trades`; the
+        quantity still open from its legs, so a part-filled exit restores
+        only the rest. Same mode rule as a cash position: paper legs when the
+        engine is in Paper, live legs always, and a live one keeps "live":
+        True so it is closed with a real order. Returns the underlyings."""
+        legs = {}
+        for t in todays_trades:
+            if t.get("position_id"):
+                legs.setdefault(t["position_id"], []).append(t)
+        restored = []
+        for row in fno_rows:
+            if row.get("exit_ts") is not None:
+                continue
+            ls = legs.get(row["position_id"]) or []
+            entry = next((t for t in ls if t["side"] == "BUY"), None)
+            if entry is None:
+                continue
+            live = entry.get("mode") == "live"
+            if not (live or self.paper_mode):
+                continue
+            underlying = row["underlying"]
+            if not live and (self.fno_positions.get(underlying) or {}).get("live"):
+                continue
+            lot = int(row.get("lot_size") or 0)
+            bought = int(entry["quantity"])
+            open_qty = bought - sum(int(t["quantity"]) for t in ls if t["side"] == "SELL")
+            if lot <= 0 or open_qty < lot:
+                continue
+            premium = float(row["entry_premium"])
+            m = _STOP_TARGET_RE.findall(entry.get("note") or "")
+            if m:
+                stop, target = float(m[-1][0]), float(m[-1][1])
+            else:
+                exits = fno_risk.stop_and_target_premium(premium, config.FNO["stop_loss_pct_of_premium"],
+                                                         config.FNO["target_pct_of_premium"])
+                stop, target = exits["stop_premium"], exits["target_premium"]
+            iv = (row.get("entry_iv_pct") or 0) / 100 or (None if live else fno_risk.PAPER_VOL)
+            self.fno_positions[underlying] = {
+                "tradingsymbol": row["tradingsymbol"], "underlying": underlying, "is_call": bool(row["is_call"]),
+                "strike": row["strike"], "expiry": row["expiry"], "lots": open_qty // lot, "lot_size": lot,
+                "entry_lots": bought // lot, "entry_premium": premium, "stop_premium": stop,
+                "target_premium": target, "ltp": premium, "unrealized_pnl": 0.0,
+                "confidence": {"score": row.get("confidence_score"), "label": row.get("confidence_label")},
+                "entry_greeks": {"iv_pct": row.get("entry_iv_pct"), "delta": row.get("entry_delta"),
+                                 "theta": row.get("entry_theta"), "vega": row.get("entry_vega")},
+                "entry_charges": float(entry.get("charges") or 0.0) * (open_qty // lot * lot) / bought,
+                "entry_iv": iv, "max_loss": round(premium * (open_qty // lot * lot), 2),
+                "position_id": row["position_id"], "live": live,
+                "realized_so_far": sum(t.get("realized") or 0.0 for t in ls if t["side"] == "SELL"),
+            }
+            if underlying not in restored:
+                restored.append(underlying)
+        return restored
 
     def set_watchlist(self, symbols):
         with self.lock:

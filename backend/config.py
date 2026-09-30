@@ -509,6 +509,12 @@ FNO = {
     "stop_loss_pct_of_premium": 40.0,   # exit if premium held falls this % from entry
     "target_pct_of_premium": 80.0,      # exit if premium held rises this % from entry
     "risk_free_rate_pct": 7.0,      # for the Black-Scholes IV solve — approx. India 91-day T-bill
+    # Liquidity gate on the contract's own book before a buy (#157, liquidity.check_option).
+    # The option tariff models no slippage, so the cash rule (spread <= 2x modelled
+    # slippage) would refuse every option. A market order pays about half the spread
+    # on each leg, so a round trip costs about one spread: 2% of the premium is 1/20
+    # of the 40% premium stop. The depth rule is LIQUIDITY["min_depth_multiple"].
+    "max_spread_pct_of_premium": 2.0,
 }
 
 # Approximate retail intraday-equity (MIS) cost structure, modeled on

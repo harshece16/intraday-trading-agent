@@ -440,6 +440,17 @@ def record_fno_exit(position_id, exit_premium, exit_reason, realized, r_multiple
         )
 
 
+def fno_trades_since(start_ts: float):
+    """Every F&O position opened at or after `start_ts`, open or closed,
+    oldest first. A restart rebuilds today's open option positions from
+    these (#187), and tells an F&O leg in `trades` from a cash one by its
+    position_id."""
+    with _conn() as c:
+        rows = c.execute("SELECT * FROM fno_trades WHERE entry_ts >= ? ORDER BY entry_ts ASC",
+                         (start_ts,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 def fno_journal_summary(min_pairs=10):
     """The F&O-equivalent of journal_summary(): how much evidence exists,
     and — once there's enough of it — whether the confidence score has
