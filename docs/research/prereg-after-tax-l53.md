@@ -213,3 +213,13 @@ Listed for the reviewer, so each can be challenged before any number exists:
 9. **The bootstrap resamples months, not trades**, block 12, percentile interval at 95%.
 10. **P1's shrinkage uses the index's backtest-to-live ratio against the book's own benchmark**, not the book's own recent mean, because the book's recent months are in-sample for it.
 11. **Turnover diagnostics ignore the fill rules** and count names, not rupees, so that no position is valued; the fill rules' effect is shown on trial 126's own configuration.
+
+## Amendments
+
+1. **2026-10-01, about 01:05 IST, after stage 0 run 1 (`data/l53_stage0_run1.json`, commit `b7a9c30`) passed all eight checks, and before any after-tax figure, fund value, fund comparison or turnover split existed.** Stage 0 computes none of them.
+
+   **The artefact.** Section 5 harvests each fund on the book's March point, the first session of March. The funds are bought at the book's first point, **2010-03-02** (run 1, check 2). The FY 2010-11 March point is **2011-03-01**, when that lot has been held less than 12 months, so it is not long-term (section 4) and the year's harvest would be lost. The same happens to a lot reinvested at one harvest whenever the next year's first session of March falls on or before its anniversary (2012-03-01 to 2013-03-01, for example) and the older lots are used up. That is a property of the date, not something an investor who harvests would do, and it works against the funds.
+
+   **Changed.** On the March point, if the oldest lot is not yet long-term, the harvest runs on **the first later day in the fund's own series (the TRI's dates for (a) and (b), the NAV's for (c)) on which it is, if that day is still in the same financial year**; otherwise there is no harvest that year. A harvest on a later day comes after the March point's liquidation value is taken and before the April point. Units are sold and reinvested at that day's TRI-based NAV (or NAV), with the same charges. Nothing else in section 5, and nothing in sections 2 to 4 or 6 to 10, changes.
+
+   Stage 0 is run again as **run 2** (`data/l53_stage0.json`); run 1's record is kept. The check that runs the tests now includes a case for this rule.

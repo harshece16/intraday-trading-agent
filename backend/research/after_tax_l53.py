@@ -2,7 +2,7 @@
 after Indian costs and taxes, against the funds the owner could buy instead.
 
 Pre-registered: docs/research/prereg-after-tax-l53.md (commit ec7cb12), before this
-file was written. Every rule here is a transcription of it.
+file was written, with amendment 1 (the harvest day). Every rule here is a transcription of them.
 
     1  trial 126's own trade list, replayed with FIFO tax lots (TaxBook, a subclass of
        momentum_width.Book inside momentum_width.simulate, called unchanged)
@@ -482,8 +482,9 @@ class FundAccount(object):
     (with rules) harvested every March point and taxed like the book."""
     NAME = "F"
 
-    def __init__(self, nav, rules, capital, fmv_date="2018-01-31"):
+    def __init__(self, nav, rules, capital, fmv_date="2018-01-31", calendar=None):
         self.nav, self.rules, self.capital = nav, rules, capital
+        self.calendar = list(calendar) if calendar else []
         self.lots = tx.Lots()
         self.ledger = tx.TaxLedger(rules or tx.ForwardRules())
         self.cash, self.units, self.open_fy = capital, 0.0, None
@@ -520,8 +521,32 @@ class FundAccount(object):
                 self._pay(d, self.open_fy)
                 self.open_fy += 1
             if harvest:
-                self._harvest(d)
+                h = self._harvest_day(d)
+                if h == d:
+                    self._harvest(d)
+                elif h is not None:
+                    self._mark(d)                   # the harvest comes after this point's value (amendment 1)
+                    self._harvest(h)
+                    return
         self._mark(d)
+
+    def _harvest_day(self, d):
+        """The March point if the oldest lot is long-term on it; else the first later
+        day of the fund's own series on which it is, inside the same financial year
+        (amendment 1); else None."""
+        lots = self.lots.by_name.get(self.NAME)
+        if not lots:
+            return None
+        acq = lots[0][2]
+        if tx.is_long_term(acq, d):
+            return d
+        fy = tx.fy_of(d)
+        i = bisect.bisect_right(self.calendar, d)
+        while i < len(self.calendar) and tx.fy_of(self.calendar[i]) == fy:
+            if tx.is_long_term(acq, self.calendar[i]):
+                return self.calendar[i]
+            i += 1
+        return None
 
     def _pay(self, d, fy):
         tax = self.ledger.settle(fy)
@@ -580,8 +605,8 @@ class FundAccount(object):
                            "liquidation_after_tax": pre - liability})
 
 
-def run_fund(nav, dates, capital, rules):
-    acct = FundAccount(nav, rules, capital)
+def run_fund(nav, dates, capital, rules, calendar=None):
+    acct = FundAccount(nav, rules, capital, calendar=calendar)
     for i, d in enumerate(dates):
         acct.step(d, first=(i == 0), harvest=(i > 0 and d[5:7] == "03"))
     return acct
@@ -782,7 +807,13 @@ def environment():
     return {"python": platform.python_version(), "platform": platform.platform(), "commit": _git("rev-parse", "HEAD"),
             "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
             "sahab_research_data": os.environ.get("SAHAB_RESEARCH_DATA"),
-            "sahab_db_path": os.environ.get("SAHAB_DB_PATH")}
+            "sahab_db_path": os.environ.get("SAHAB_DB_PATH"), "code_sha256": code_sha256()}
+
+
+def code_sha256():
+    """The harness, the tax engine and the tests, as run: the pass refuses if they changed after stage 0."""
+    return {os.path.basename(p): _sha256(p) for p in (os.path.abspath(__file__), os.path.join(HERE, "india_tax.py"),
+                                                       TESTS)}
 
 
 class Halt(Exception):
@@ -1146,6 +1177,11 @@ def refusals(rerun_reason=None):
             why.append("%s is not committed" % rel)
         elif _git("status", "--porcelain", rel):
             why.append("%s differs from its commit" % rel)
+    if os.path.exists(STAGE0_OUT):
+        with open(STAGE0_OUT) as f:
+            ran = json.load(f)["stage0"]["environment"].get("code_sha256")
+        if ran != code_sha256():
+            why.append("the harness, the tax engine or the tests differ from the code stage 0 ran")
     if os.path.exists(RESULT_OUT) and not rerun_reason:
         why.append("%s exists: one run only (prereg section 12)" % RESULT_OUT)
     return why
@@ -1219,15 +1255,16 @@ def measure(review_note, rerun_reason=None):
     # 2. the funds
     navs = {"a_nifty100": tri_fund_nav(tri["n100"], TD_A, dates[0]),
             "b_nifty200_momentum30": tri_fund_nav(tri["m30"], TD_B, dates[0])}
+    calendars = {"a_nifty100": list(tri["n100"]), "b_nifty200_momentum30": list(tri["m30"]), "c_uti": list(uti)}
     funds, pre_funds = {}, {}
     for cap in CAPITALS:
         for fn, nav in navs.items():
-            pre_funds[(cap, fn)] = run_fund(nav, dates, cap, None)
+            pre_funds[(cap, fn)] = run_fund(nav, dates, cap, None, calendars[fn])
             for rn, r in rules.items():
-                funds[(cap, fn, rn)] = run_fund(nav, dates, cap, r)
-        pre_funds[(cap, "c_uti")] = run_fund(plain_nav(uti), dates[c_start:], cap, None)
+                funds[(cap, fn, rn)] = run_fund(nav, dates, cap, r, calendars[fn])
+        pre_funds[(cap, "c_uti")] = run_fund(plain_nav(uti), dates[c_start:], cap, None, calendars["c_uti"])
         for rn, r in rules.items():
-            funds[(cap, "c_uti", rn)] = run_fund(plain_nav(uti), dates[c_start:], cap, r)
+            funds[(cap, "c_uti", rn)] = run_fund(plain_nav(uti), dates[c_start:], cap, r, calendars["c_uti"])
 
     after_tax = OrderedDict()
     for cap in CAPITALS:

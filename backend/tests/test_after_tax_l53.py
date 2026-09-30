@@ -329,6 +329,25 @@ def test_a_losing_old_lot_is_sold_in_the_harvest_and_its_loss_carried():
     assert acct.harvests and acct.ledger.carry and acct.ledger.carry[0]["term"] == "lt"
 
 
+def test_a_harvest_waits_for_the_first_long_term_day_in_the_same_year():
+    """Amendment 1: bought on 2010-03-02, the lot is not long-term on the 2011-03-01 point;
+    the harvest runs on 2011-03-03, the first day after the anniversary."""
+    dates = ["2010-03-02", "2010-04-01", "2011-03-01", "2011-04-01"]
+    d, cal = datetime.date(2010, 3, 1), []
+    while d <= datetime.date(2011, 4, 30):
+        if d.weekday() < 5:
+            cal.append(d.isoformat())
+        d += datetime.timedelta(days=1)
+    nav = _growing(0.03, first="2010-03-02")
+    acct = l53.run_fund(nav, dates, 1e6, FWD, cal)
+    assert [h["date"] for h in acct.harvests] == ["2011-03-03"]
+    assert acct.harvests[0]["lt_after_setoff"] == pytest.approx(125000.0, abs=0.01)
+    assert len(acct.marks) == len(dates) and 2010 in acct.ledger.items
+    assert l53.run_fund(nav, dates, 1e6, FWD).harvests == []                  # without the day rule, lost
+    late = ["2010-03-31", "2010-04-30", "2011-03-01", "2011-04-01"]         # anniversary after 31 March: none
+    assert l53.run_fund(_growing(0.03, first="2010-03-31"), late, 1e6, FWD, cal).harvests == []
+
+
 def test_stamp_duty_only_from_july_2020():
     a = l53.FundAccount(lambda d: 10.0, None, 1e6)
     a._buy("2020-06-30", 1000.0)
