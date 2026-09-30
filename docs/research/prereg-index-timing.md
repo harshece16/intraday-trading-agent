@@ -188,4 +188,20 @@ A correction to the header: this text was committed at 20:13 IST (769c21c), so "
      - the dropped sessions are exactly 2024-11-01 (no regular-hours bars), 2025-10-21 (60 index minutes) and 2026-01-01 (no index bars);
      - the stock cache's sessions up to 2025-12-31 equal the index database's, counting any minute of the day.
    - Every other condition of §9.1 is unchanged.
+5. **2026-09-30, 20:50 IST, after stage-0 run 2 halted at §9.7 (`data/l51_stage0_run2.json`, head e5ed55d). No scoring-sample target has been read.**
+   - **Checks 1 to 6 passed** in run 2:
+     - coverage (78 scoring sessions, 39 per half, 85 to 94 members a session);
+     - alignment (correlation 0.888 at lag 0, |r| < 0.02 at lags ±1 and ±2);
+     - characteristics and factors by hand, and scale invariance: no mismatch;
+     - the look-ahead proof: 240 of 240 bit-identical;
+     - the purge: every gap 5 sessions; the latest training session of any stage-0 fit is 2025-07-24.
+   - **The negative control passed** (0 trades at either horizon).
+   - **The positive control failed at 30 minutes.** With a planted correlation of 0.51, the pipeline's forecast had an IC of 0.38 with the realised return over 2025-03 to 2025-08, and made 365 trades. They netted +2.1 bp a trade, with a t of 1.24 and a second half of −0.75 bp. At 60 minutes it passed: IC 0.39, 143 trades, +7.0 bp, t 2.87, DSR 0.998.
+   - **Why:** amendment 1's calculation assumed a 30-minute standard deviation of 20 to 30 bp, but that was not measured. Measured before the scoring sample, the 30-minute target's standard deviation is 19.1 bp in the first training window and 15.2 bp over 2025-03 to 2025-08. The 60-minute target's is 26.4 and 22.5 bp. Only 52% of realised 30-minute moves over 2025-03 to 2025-08 exceed 6.95 bp at all, so even a perfect forecast would trade barely half the time.
+   - **The failure is economic, not mechanical.** An IC of 0.38 on the pseudo-out-of-sample months, from a planted correlation of 0.51, shows that the sign and timing of forecasts, targets and trades are right. A misaligned target or a flipped sign would give an IC near zero or negative.
+   - **Change:**
+     - the positive control's planted correlation is raised to **0.7** (noise 1.02 times the target's standard deviation, seed 51). This is chosen after seeing run 2, and it calibrates a check of the machinery: can a strong enough forecast pass the gate? It is not a test of the hypothesis;
+     - the 0.5 control is kept and reported every run as **information on the design's power**, not as a halt;
+     - the halt rule otherwise stands: at 0.7 the control must pass both horizons, and the negative control must pass neither.
+   - **What run 2 already says about L51, before any scoring target is read:** a forecast needs an IC of roughly 0.4 with the realised return just to break even on 6.95 bp at 30 minutes. The paper's R² of 0.2% corresponds to an IC of about 0.045. The first-window cross-validation picked α = 100 at 30 minutes and α = 31.6 at 60 minutes. Their validation MSE is 0.02% and 0.12% below the intercept-only level, so the 92 predictors add almost nothing there. L51 is expected to fail on the trade count, and its IC is the informative number.
 
