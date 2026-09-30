@@ -8,7 +8,11 @@ What must hold, because an approval can place a real order:
 - approving overrides only that gate — every risk limit is re-checked;
 - live mode never places an order without explicit confirmation;
 - an expired or already-decided card can't be approved;
-- every card and decision is journaled.
+- every card and decision is journaled;
+- a card blocked on reward-to-risk is offered only at or above the R:R floor;
+  below it the near-miss is held back, journaled and replayed (#166);
+- a later, closer near-miss can replace an expired card (#166);
+- every card states its money after costs, and says when it can't break even.
 """
 import sys
 from datetime import datetime
@@ -308,7 +312,7 @@ def test_engine_saves_the_outcome_for_unapproved_cards_only(engine, monkeypatch)
     assert engine.review_queue.snapshot()["shadow_summary"]["trades"] == 1
 
     # An approved card is a real position, not a hypothetical one.
-    engine.review_queue.cards.clear(); engine.review_queue._seen.clear()
+    engine.review_queue.cards.clear()
     engine.state.strategy_state.clear()
     [card2] = offer(engine)
     assert engine.approve_review(card2["id"])["status"] == "approved"
@@ -347,3 +351,173 @@ def test_provisional_and_legacy_outcomes_stay_candidates_final_ones_do_not(engin
     q.set_shadow(card["id"], {"status": "stopped", "final": True, "net_rs": -2.0, "r": -1.0})
     assert q.shadow_candidates() == []
     assert q.snapshot()["shadow_summary"]["provisional"] == 0
+
+
+# ---- #166: the R:R floor, the money on the card, and replacing an expired card ----
+
+# Net R:R at 100 with the stop at 98, after the checklist's 0.1663% round trip:
+# a target of 101 nets 0.38, 102.34 nets 1.003, 102.3 nets 0.985, 103 nets 1.31.
+COST = trading_engine.trader_brain.DEFAULTS["cost_pct"]
+
+
+def later_now(monkeypatch, hh, mm):
+    monkeypatch.setattr(review_queue, "now_ist", lambda: datetime(2026, 9, 24, hh, mm, tzinfo=IST))
+
+
+def test_card_states_what_a_hit_target_makes_and_a_stop_loses_after_costs():
+    card = review_queue.build_card(SYMBOL, "LONG", plan(), {"key": "volume", "label": "l", "detail": "d"},
+                                   100.0, 0.166, 10, now=datetime(2026, 9, 24, 10, 20, tzinfo=IST))
+    assert card["cost_rs"] == 1.66
+    assert card["target_net_rs"] == 58.34 and card["stop_net_rs"] == -21.66
+    # The two rupee figures divide back to the card's net R:R, so the break-even follows from them.
+    assert round(card["target_net_rs"] / -card["stop_net_rs"], 2) == card["net_rrr"]
+    assert card["can_break_even"] is True
+    assert "makes ₹58.34 after ₹1.66 of charges and slippage" in card["money"]
+    assert "the stop is hit it loses ₹21.66" in card["money"]
+    assert f"breaks even only if {card['breakeven_win_rate']:.0%} of trades like this win" in card["money"]
+
+
+def test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even():
+    card = review_queue.build_card(SYMBOL, "LONG", plan(target=100.1), {"key": "rrr", "label": "l", "detail": "d"},
+                                   100.0, 0.166, 10)
+    assert card["net_rrr"] < 0 and card["breakeven_win_rate"] is None and card["can_break_even"] is False
+    assert card["target_net_rs"] == -0.66
+    assert "If the target is hit it still loses ₹0.66" in card["money"]
+    assert "It cannot break even at any win rate." in card["money"]
+
+
+def test_floor_reason_applies_to_reward_to_risk_only(monkeypatch):
+    rrr_miss = {"key": "rrr"}
+    assert review_queue.floor_reason(rrr_miss, 0.99) is not None
+    assert review_queue.floor_reason(rrr_miss, 1.0) is None
+    assert review_queue.floor_reason({"key": "volume"}, -0.5) is None
+    assert "0.996" in review_queue.floor_reason(rrr_miss, 0.996)        # not shown as "1.00, under 1"
+    monkeypatch.setitem(config.REVIEW_QUEUE, "min_net_rrr", None)
+    assert review_queue.floor_reason(rrr_miss, -3.0) is None
+
+
+def test_progress_is_the_share_of_the_failed_items_bar_reached():
+    assert review_queue.progress({"key": "rrr", "need": 1.5}, net_rrr=1.2) == 0.8
+    assert review_queue.progress({"key": "rrr"}, net_rrr=-0.3) == 0.0              # clamped; default need 1.5
+    assert review_queue.progress({"key": "rrr", "need": 1.5}, net_rrr=2.0) == 1.0
+    assert review_queue.progress({"key": "volume", "value": 0.7, "need": 1.0}) == 0.7
+    assert review_queue.progress({"key": "confidence", "value": 45, "need": 60}) == 0.75
+    assert review_queue.progress({"key": "dow"}) == 0.0                             # pass/fail, no measure
+
+
+def test_the_checklist_records_the_measure_behind_volume_rrr_and_cost():
+    import math
+    from datetime import timedelta
+    import trader_brain
+    start = datetime(2026, 9, 23, 9, 15, tzinfo=IST)
+    bars = []
+    for i in range(150):
+        t = start + timedelta(minutes=5 * (i % 75)) + timedelta(days=i // 75)
+        c = 100 + 3 * math.sin(i / 9) + i * 0.02
+        bars.append({"time": t.isoformat(), "open": c - 0.2, "high": c + 0.6, "low": c - 0.6, "close": c,
+                     "volume": 1000 + (i % 7) * 150})
+    _, st = trader_brain.trader_brain_signal(bars)
+    items = [i for side in ("long", "short") for i in (st["checklist"].get(side) or {}).get("items", [])]
+    vol = [i for i in items if i["key"] == "volume"]
+    assert vol and all(i["need"] == 1.0 and isinstance(i["value"], float) for i in vol)
+    assert all("value" not in i for i in items if i["key"] in ("pattern", "sr", "dow"))
+
+
+@pytest.mark.parametrize("target,offered", [(101.0, False), (102.3, False), (102.34, True), (103.0, True)])
+def test_an_rrr_card_is_offered_only_at_or_above_the_floor(engine, target, offered):
+    cards = offer(engine, plan(target=target))
+    assert (len(cards) == 1) is offered
+    rows = database.reviews_on("2026-09-24")
+    assert len(rows) == 1                                       # journaled either way
+    assert rows[0]["status"] == ("pending" if offered else "withheld")
+    if not offered:
+        assert "under the queue's floor of 1" in rows[0]["withheld_reason"]
+        assert engine.review_queue.snapshot()["withheld_summary"]["count"] == 1
+
+
+def test_the_floor_leaves_cards_blocked_on_other_items_alone(engine):
+    [card] = offer(engine, plan(failing=("volume",), target=101.0))
+    assert card["blocker"]["key"] == "volume" and card["net_rrr"] < 1 and card["status"] == "pending"
+
+
+def test_the_floor_is_read_from_config(engine, monkeypatch):
+    monkeypatch.setitem(config.REVIEW_QUEUE, "min_net_rrr", 0.3)
+    assert len(offer(engine, plan(target=101.0))) == 1
+
+
+def test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved(engine, monkeypatch):
+    assert offer(engine, plan(target=101.0)) == []
+    assert offer(engine, plan(target=101.2), bar_time="2026-09-24T10:20:00+05:30") == []
+    [row] = database.reviews_on("2026-09-24")                 # once per stock, side and session
+    assert row["status"] == "withheld" and 0 < row["net_rrr"] < 1 and row["target_net_rs"] > 0
+
+    engine.state.candles[SYMBOL] = [bar("10:25", 100, 101.2, 99.9, 101)]
+    engine._update_review_shadows(later("10:30"), min_interval=0)
+    [row] = database.reviews_on("2026-09-24")
+    assert row["shadow"]["status"] == "target"
+    # The replay books the target within a rupee of what the card said it would make.
+    assert abs(row["shadow"]["net_rs"] - row["target_net_rs"]) < 1
+    snap = engine.review_queue.snapshot()
+    assert snap["cards"] == [] and snap["shadow_summary"]["trades"] == 0
+    assert snap["withheld_summary"]["trades"] == 1 and snap["withheld"][0]["shadow"]["status"] == "target"
+
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
+    result = engine.approve_review(row["id"])
+    assert not result["ok"] and result["status"] == "withheld"
+    assert engine.state.positions[SYMBOL]["quantity"] == 0
+
+
+def test_a_held_back_near_miss_does_not_take_the_stocks_card(engine):
+    assert offer(engine, plan(target=101.0)) == []
+    [card] = offer(engine, plan(target=103.0), bar_time="2026-09-24T10:20:00+05:30")
+    assert card["status"] == "pending" and card["net_rrr"] >= 1
+
+
+def test_a_later_closer_near_miss_replaces_an_expired_card(engine, monkeypatch):
+    [first] = offer(engine, plan(target=102.8))                 # net R:R 1.22
+    later_now(monkeypatch, 10, 26)                              # past its 5 minutes, unanswered
+    cards = offer(engine, plan(target=103.0), bar_time="2026-09-24T10:20:00+05:30")
+    assert [c["status"] for c in cards] == ["pending", "expired"]
+    assert cards[0]["net_rrr"] > first["net_rrr"] and cards[0]["progress"] > first["progress"]
+    assert [r["status"] for r in database.reviews_on("2026-09-24")] == ["expired", "pending"]
+
+
+def test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss(engine, monkeypatch):
+    """The TCS case from #166: a 0.7x volume card at 09:50 expired, and the
+    10:40 near-miss at R:R 1.40, 93% of the 1.5 it needed, was never offered."""
+    vol_plan = plan(failing=("volume",), target=103.0)
+    next(i for i in vol_plan["items"] if i["key"] == "volume").update({"value": 0.7, "need": 1.0})
+    [first] = offer(engine, vol_plan)
+    assert first["progress"] == 0.7
+    later_now(monkeypatch, 10, 26)
+    rrr_plan = plan(target=103.2)
+    next(i for i in rrr_plan["items"] if i["key"] == "rrr")["need"] = 1.5
+    cards = offer(engine, rrr_plan, bar_time="2026-09-24T10:20:00+05:30")
+    assert [c["blocker"]["key"] for c in cards] == ["rrr", "volume"]
+    assert cards[0]["status"] == "pending" and cards[0]["progress"] > 0.9
+
+
+@pytest.mark.parametrize("case", ["still_pending", "not_closer", "same_bar", "rejected"])
+def test_no_new_card_unless_the_last_one_expired_and_this_one_is_later_and_closer(engine, monkeypatch, case):
+    [first] = offer(engine, plan(target=102.8))
+    closer, bar_time = plan(target=103.0), "2026-09-24T10:20:00+05:30"
+    if case == "rejected":
+        engine.reject_review(first["id"])
+    if case != "still_pending":
+        later_now(monkeypatch, 10, 26)
+    if case == "not_closer":
+        closer = plan(target=102.6)
+    elif case == "same_bar":
+        bar_time = "2026-09-24T10:15:00+05:30"
+    cards = offer(engine, closer, bar_time)
+    assert [c["id"] for c in cards] == [first["id"]]
+
+
+def test_a_restart_remembers_the_slot_and_the_held_back_near_miss(engine):
+    offer(engine, plan(target=103.0))
+    engine.state.positions["OTHERCO"] = _new_position()
+    engine._offer_near_misses("OTHERCO", 100.0, BARS, analysis(plan(target=101.0)))
+    fresh = review_queue.ReviewQueue()                          # a restart: rebuilt from the journal
+    assert fresh.can_offer(SYMBOL, "LONG", 1.0, "2026-09-24T10:20:00+05:30") is False
+    assert fresh.held_back("OTHERCO", "LONG") is True
+    assert fresh.held_back(SYMBOL, "LONG") is False

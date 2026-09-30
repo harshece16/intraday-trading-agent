@@ -237,9 +237,15 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
     price = window[-1]["close"]
     items = []
 
-    def item(key, label, ok, detail, required=True):
-        items.append({"key": key, "label": label, "ok": bool(ok), "detail": detail, "required": required,
-                     "source": CHECKLIST_SOURCES[key]})
+    def item(key, label, ok, detail, required=True, value=None, need=None):
+        entry = {"key": key, "label": label, "ok": bool(ok), "detail": detail, "required": required,
+                 "source": CHECKLIST_SOURCES[key]}
+        # The measured value and the bar it had to reach, for the items that
+        # have one. The review queue uses them to tell whether a later
+        # near-miss came closer to passing than an earlier one (#166).
+        if value is not None and need is not None:
+            entry.update({"value": round(value, 3), "need": need})
+        items.append(entry)
 
     candidates = sorted((x for x in patterns if x["bias"] == bias), key=lambda x: -x["strength"])
     pattern = candidates[0] if candidates else None
@@ -300,13 +306,15 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         item("cost", f"Stop is at least {p['min_stop_to_cost']:g}× the round trip's cost",
              stop_pct >= floor,
              f"Stop is {stop_pct:.3f}% away and a round trip costs {p['cost_pct']:g}%, so the stop is {ratio}"
-             + ("" if stop_pct >= floor else f" — under {p['min_stop_to_cost']:g}×, costs decide the trade, not the setup"))
+             + ("" if stop_pct >= floor else f" — under {p['min_stop_to_cost']:g}×, costs decide the trade, not the setup"),
+             value=stop_pct / p["cost_pct"] if p["cost_pct"] else None, need=p["min_stop_to_cost"])
     else:
         item("cost", f"Stop is at least {p['min_stop_to_cost']:g}× the round trip's cost", False,
              "Needs a stop to compare against costs")
 
     item("volume", "Above-average volume", vol10 is not None and vol10 > 1.0,
-         f"Volume is {vol10:.1f}× its {p['volume_lookback']}-candle average" if vol10 is not None else "No volume data")
+         f"Volume is {vol10:.1f}× its {p['volume_lookback']}-candle average" if vol10 is not None else "No volume data",
+         value=vol10, need=1.0)
 
     always_in_side = "long" if s > 0 else "short"
     brooks_ok = always_in == always_in_side
@@ -367,7 +375,8 @@ def _checklist(side, window, patterns, levels, atr_v, vol10, htf_trend, structur
         if target is not None:
             rrr = _net_rrr(price, stop, target, p["cost_pct"])
             item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", rrr >= p["min_rrr"],
-                 f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs")
+                 f"Target {target:.2f} ({source}), stop {stop:.2f}: {rrr:.2f} after costs",
+                 value=rrr, need=p["min_rrr"])
         else:
             item("rrr", f"Reward-to-risk at least {p['min_rrr']:g}", False,
                  f"No {level_word2} beyond the entry to aim a target at")
