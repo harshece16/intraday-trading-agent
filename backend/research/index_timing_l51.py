@@ -18,13 +18,16 @@ Two modes:
   --stage0   the seven halts of prereg §9. Reads no target dated on or after
              2025-09-01 and pairs no forecast with any realised return except in
              the planted controls, which use 2025-03..2025-08 only.
-  --score    the one scoring pass (prereg §10). Refuses without the main session's
-             go-ahead (--go), a committed stage 0 with no halt, and an absent
-             result file.
+  --score    the one scoring pass (prereg §10, amendment 6). Refuses without the main
+             session's go-ahead (--go), a committed stage 0 with no halt whose module
+             hash is this file's, a clean module and pre-registration, and an absent
+             result file. Commits its STARTED record before building any target, then
+             writes l51_decisions.csv (one row per grid decision, 2025-03-03..2025-12-23)
+             and l51_models.json (every monthly model), hashed into l51_result.json.
 
 Measurement only: no strategy, no trial (the count stays at 202). Nothing in the
 live path imports this. Never imports app, reads no key, calls no broker. The two
-databases are opened read-only.
+databases are opened read-only, and no row dated in 2026 is read (amendment 6, N5).
 
 Run from backend/ with the main checkout's data (a worktree has none):
     SAHAB_RESEARCH_DATA=/path/to/main/backend/data \\
@@ -60,8 +63,10 @@ from research import splits  # noqa: E402
 
 PREREG = "docs/research/prereg-index-timing.md"
 PREREG_COMMIT = "769c21c"
-HELD_OUT_START = splits.HELD_OUT_START          # "2026-01-02": nothing on or after it is read
+HELD_OUT_START = splits.HELD_OUT_START          # "2026-01-02", the project's held-out boundary
+DATA_END = "2026-01-01"                         # amendment 6 (N5): no row dated in 2026 is read
 SCORING_START = k.SELECTION_START               # "2025-09-01"
+LAST_SCORING_SESSION = "2025-12-23"             # amendment 6 (N5): no target or forecast after it
 FIRST_MONTH, LAST_MONTH = "2025-03", "2025-12"
 PSEUDO_OOS_END = "2025-08-31"
 FIRST_SESSION = "2024-09-20"
@@ -117,6 +122,11 @@ SECTOR_CSV = os.path.join(BACKEND, "data", "nifty100.csv")
 OUT_DIR = os.path.join(REPO, "docs", "research", "data")
 STAGE0_OUT = os.path.join(OUT_DIR, "l51_stage0.json")
 RESULT_OUT = os.path.join(OUT_DIR, "l51_result.json")
+DECISIONS_OUT = os.path.join(OUT_DIR, "l51_decisions.csv")      # amendment 6 (B1)
+MODELS_OUT = os.path.join(OUT_DIR, "l51_models.json")            # amendment 6 (B1)
+MODULE_PATH = os.path.abspath(__file__)
+PREREG_PATH = os.path.join(REPO, PREREG)
+FORECAST_REPRO_TOL_BP = 1e-9
 
 IST = timezone(timedelta(hours=5, minutes=30))
 EPOCH_ORDINAL = date(1970, 1, 1).toordinal()
@@ -175,11 +185,11 @@ def _ro(path):
     return sqlite3.connect("file:%s?mode=ro" % path, uri=True)
 
 
-def _cut_epoch(day=HELD_OUT_START):
+def _cut_epoch(day=DATA_END):
     return int(datetime.fromisoformat(day).replace(tzinfo=IST).timestamp())
 
 
-def load_stock_bars(path=KITE_DB, start=FIRST_SESSION, end=HELD_OUT_START):
+def load_stock_bars(path=KITE_DB, start=FIRST_SESSION, end=DATA_END):
     """(dates, symbols, O, C, info): open and close of every five-minute bar, arrays of
     shape (sessions, 75, symbols), NaN where the cache has no bar. Rows on or after
     `end` are excluded in the SQL and the latest timestamp read is asserted."""
@@ -239,7 +249,7 @@ def aggregate_index_minutes(minute_rows):
     return {d: (v[0], v[1], v[2]) for d, v in out.items()}
 
 
-def load_index_bars(path=INDEX_DB, start=FIRST_SESSION, end=HELD_OUT_START):
+def load_index_bars(path=INDEX_DB, start=FIRST_SESSION, end=DATA_END):
     """{date: (opens, closes, minutes)} for the NIFTY 50, from Kite one-minute bars."""
     con = _ro(path)
     rows = con.execute("SELECT ts, open, close FROM bars WHERE symbol=? AND ts >= ? AND ts < ? ORDER BY ts",
@@ -280,7 +290,7 @@ def load_panel(symbols):
     np = _np()
     from research import nse_prices
     pdates, chains, meta, _events = nse_prices.load(wide=True)
-    assert pdates[-1] < HELD_OUT_START, "the panel holds a held-out session"
+    assert pdates[-1] < DATA_END, "the panel holds a session dated in 2026"
     T, N = len(pdates), len(symbols)
     arr = {key: np.full((T, N), np.nan) for key in ("close", "val", "high", "low")}
     missing = []
@@ -787,11 +797,15 @@ def refit_plan(sessions, first=FIRST_MONTH, last=LAST_MONTH):
     return plan
 
 
-def walk_forward(ds, h, alpha, Y, first=FIRST_MONTH, last=LAST_MONTH, X=None, keep_models=False):
+def walk_forward(ds, h, alpha, Y, first=FIRST_MONTH, last=LAST_MONTH, X=None, keep_models=False, until=None):
     """Refit monthly and forecast the scoring grid. Returns decisions [(session idx, bar,
-    forecast)] and per-month training facts."""
+    forecast)] and per-month training facts. `until`: forecast no session after it."""
     decisions, facts, models = [], [], {}
     for mo, train, fc in refit_plan(ds.sessions, first, last):
+        if until is not None:
+            fc = [x for x in fc if ds.sessions[x] <= until]
+            if not fc:
+                continue
         Xt, yt, _s, _i = training_rows(ds, train, h, Y, X)
         m = fit_ridge(Xt, yt, alpha)
         Xf, _yf, ss, ii = rows(ds, fc, GRID[h], None, X)
@@ -885,10 +899,9 @@ class Halt(Exception):
     pass
 
 
-EXPECTED_DROPPED = {  # amendment 4
+EXPECTED_DROPPED = {  # amendments 4 and 6 (N5: the loaders stop before 2026-01-01)
     "2024-11-01": "no index bars",       # Muhurat, 18:00-19:00 IST: no regular-hours bar in either database
     "2025-10-21": "index has 60 minutes",  # Muhurat, 13:45-14:45 IST
-    "2026-01-01": "no index bars",       # in the stock cache (before HELD_OUT_START); the index database ends 2025-12-31
 }
 
 
@@ -919,8 +932,8 @@ def check_coverage(ds, st0):
     st0["coverage"] = cov
     ok = (dropped == EXPECTED_DROPPED and cov["cache_equals_index_dates_to_2025_12_31"] and len(scoring) == 78
           and min(len(first), len(second)) >= 30
-          and ds.info["stock_cache"]["max_ts_ist"] < HELD_OUT_START
-          and ds.info["index_db"]["last"] < HELD_OUT_START and ds.info["panel"]["last"] < HELD_OUT_START)
+          and ds.info["stock_cache"]["max_ts_ist"] < DATA_END
+          and ds.info["index_db"]["last"] < DATA_END and ds.info["panel"]["last"] < DATA_END)
     if not ok:
         raise Halt("coverage: %s" % json.dumps({k_: cov[k_] for k_ in ("dropped", "cache_equals_index_dates_to_2025_12_31",
                                                                        "dates_only_in_cache", "dates_only_in_index",
@@ -1343,13 +1356,21 @@ def check_controls(ds, st0, Y):
                       {h: out["negative"][h]["passes"] for h in HORIZONS}))
 
 
+def pseudo_oos_forecasts(ds, Y, alphas):
+    """{horizon: (decisions, facts, models)} over 2025-03..2025-08, each month from a model
+    trained before it. Needs no target after the training rows."""
+    return {h: walk_forward(ds, h, alphas[h], Y[h], FIRST_MONTH, PSEUDO_OOS_END[:7], keep_models=True)
+            for h in HORIZONS}
+
+
 def feasibility(ds, st0, Y, alphas):
     """Information: the real forecast's size on the scoring grid over 2025-03..2025-08, from
-    models trained before each month. No realised return is compared with it."""
+    models trained before each month, and how much of it is the monthly intercept
+    (amendment 6, B2). No realised return is compared with it. Every forecast is recorded
+    so the scoring pass can show it reproduces them (amendment 6, N7)."""
     np = _np()
-    out = {}
-    for h in HORIZONS:
-        dec, facts, _m = walk_forward(ds, h, alphas[h], Y[h], FIRST_MONTH, PSEUDO_OOS_END[:7])
+    out, inter, listed = {}, {}, {}
+    for h, (dec, facts, models) in pseudo_oos_forecasts(ds, Y, alphas).items():
         f = np.array([x[2] for x in dec])
         share = float((np.abs(f) > COST_BP).mean())
         out[h] = {"decisions": len(f), "abs_forecast_bp_pct": {q: float(np.percentile(np.abs(f), q))
@@ -1358,7 +1379,19 @@ def feasibility(ds, st0, Y, alphas):
                   "share_above_cost": share,
                   "expected_trades_in_78_sessions": share * 78 * len(GRID[h]),
                   "refits": facts}
+        months = [ds.sessions[x[0]][:7] for x in dec]
+        ybar = np.array([models[m]["ybar"] for m in months])
+        xb = f - ybar
+        inter[h] = {"monthly_intercept_bp": {m: models[m]["ybar"] for m in sorted(models)},
+                    "forecast_var": float(f.var()), "intercept_var": float(ybar.var()), "xb_var": float(xb.var()),
+                    "intercept_share_of_forecast_var": float(ybar.var() / f.var()) if f.var() > 0 else None,
+                    "share_of_forecasts_negative": float((f < 0).mean()),
+                    "corr_forecast_intercept": float(np.corrcoef(f, ybar)[0, 1]),
+                    "corr_forecast_xb": float(np.corrcoef(f, xb)[0, 1])}
+        listed[h] = [[ds.sessions[x[0]], int(x[1]), float(x[2])] for x in dec]
     st0["feasibility_information"] = out
+    st0["intercept_information"] = inter
+    st0["pseudo_oos_forecasts"] = listed
     vol = {}
     window, _j = first_window(ds.sessions)
     pseudo = [n for n, d in enumerate(ds.sessions) if FIRST_MONTH <= d[:7] and d <= PSEUDO_OOS_END]
@@ -1368,6 +1401,115 @@ def feasibility(ds, st0, Y, alphas):
         vol[h] = {"first_window_sd_bp": float(a.std()), "pseudo_oos_grid_sd_bp": float(b.std()),
                   "pseudo_oos_share_abs_target_above_cost": float((np.abs(b) > COST_BP).mean())}
     st0["target_volatility_information"] = vol
+
+
+# ---- the predictor part of the forecast (amendment 6, B2) -----------------------------------
+
+def clustered_ic(x, r, groups):
+    """Pearson IC of x with r and its session-clustered t: the no-intercept slope of the
+    standardised r on standardised x (which is the IC), with the cluster-robust variance
+    over sessions scaled by G/(G-1) x (N-1)/(N-2)."""
+    np = _np()
+    x, r = np.asarray(x, dtype=float), np.asarray(r, dtype=float)
+    n = len(x)
+    if n < 3 or x.std() == 0 or r.std() == 0:
+        return {"n": n, "ic": None, "t_clustered": None, "clusters": len(set(groups))}
+    zx = (x - x.mean()) / x.std()
+    zr = (r - r.mean()) / r.std()
+    ic = float((zx * zr).mean())
+    e = zr - ic * zx
+    per = defaultdict(float)
+    for g, v in zip(groups, zx * e):
+        per[g] += v
+    G = len(per)
+    if G < 2:
+        return {"n": n, "ic": ic, "t_clustered": None, "clusters": G}
+    var = (G / (G - 1)) * ((n - 1) / (n - 2)) * sum(v * v for v in per.values()) / float((zx * zx).sum()) ** 2
+    return {"n": n, "ic": ic, "t_clustered": ic / math.sqrt(var) if var > 0 else None, "clusters": G}
+
+
+def xb_stats(rows_, sample_sessions):
+    """rows_: [(session, xb, target)] over one sample. The headline statistics of
+    amendment 6: the xb IC with its clustered t, in each half, the mean per-session IC,
+    and sign statistics on xb, plus the fixed reading rule."""
+    np = _np()
+    if not rows_:
+        return {"n": 0, "reading": "no decisions"}
+    sess = [r_[0] for r_ in rows_]
+    xb = np.array([r_[1] for r_ in rows_])
+    y = np.array([r_[2] for r_ in rows_])
+    out = {"pooled": clustered_ic(xb, y, sess)}
+    first, second = splits.halves(sorted(sample_sessions))
+    halves = []
+    for part in (set(first), set(second)):
+        m = np.array([d in part for d in sess])
+        halves.append(clustered_ic(xb[m], y[m], [d for d, keep in zip(sess, m) if keep]) if m.sum() >= 3 else
+                      {"n": int(m.sum()), "ic": None})
+    out["halves"] = halves
+    by = defaultdict(list)
+    for d, a, b in rows_:
+        by[d].append((a, b))
+    per_ic, per_sign = [], []
+    for d in sorted(by):
+        a = np.array([p[0] for p in by[d]])
+        b = np.array([p[1] for p in by[d]])
+        if len(a) >= 3 and a.std() > 0 and b.std() > 0:
+            per_ic.append(float(np.corrcoef(a, b)[0, 1]))
+        per_sign.append(float((np.sign(a) * b).mean()))
+    m_ic, t_ic, _se = k.tstat(per_ic)
+    m_sg, t_sg, _se2 = k.tstat(per_sign)
+    nz = (np.sign(xb) != 0) & (np.sign(y) != 0)
+    out["mean_per_session_ic"] = {"mean": m_ic, "t": t_ic, "sessions": len(per_ic)}
+    out["hit_rate_sign_xb"] = float((np.sign(xb[nz]) == np.sign(y[nz])).mean()) if nz.any() else None
+    out["sign_xb_rule_gross_bp"] = {"mean_of_session_means": m_sg, "t": t_sg, "sessions": len(per_sign)}
+    ic, t = out["pooled"]["ic"], out["pooled"]["t_clustered"]
+    if ic is not None and t is not None and t > 2 and all(hh.get("ic") is not None and hh["ic"] > 0 for hh in halves):
+        out["reading"] = "direction present"
+    elif t is not None and t < -2:
+        out["reading"] = "anti-predictive"
+    else:
+        out["reading"] = "no direction"
+    return out
+
+
+POWER_30 = ("The 30-minute gate cannot be passed at any plausible IC: a planted forecast with an IC of 0.38 over "
+            "2025-03 to 2025-08 made +2.10 bp a trade, t 1.24; the same strength gave t 2.87 at 60 minutes.")
+POWER_CAVEAT = ("Stage 0's positive control was strengthened from a correlation of 0.5 to 0.7 after run 2 had failed "
+                "at 30 minutes (amendment 5), so the halt it provides is weaker than first promised; the 0.5 figures "
+                "are what a forecast of that strength earns.")
+HORIZON_WORDS = {"h30": "30 minutes", "h60": "60 minutes"}
+
+
+def verdict(result):
+    """The wording amendment 6 fixed in advance."""
+    lines = []
+    for h in HORIZONS:
+        r_ = result[h]
+        if r_["passes"]:
+            lines.append("L51 clears at %s: every check of the section 8 gate holds." % HORIZON_WORDS[h])
+        elif r_["trades"] < MIN_TRADES:
+            lines.append("L51 does not clear at %s: the forecast exceeded the 6.95 bp round trip on %d of %d decisions."
+                         % (HORIZON_WORDS[h], r_["trades"], r_["decisions"]))
+            if h == "h30":
+                lines.append(POWER_30)
+        else:
+            failed = [c for c, ok in r_["checks"].items() if not ok]
+            lines.append("L51 does not clear at %s: failed %s." % (HORIZON_WORDS[h], ", ".join(failed)))
+    lines.append(POWER_CAVEAT)
+    for h in HORIZONS:
+        x = result[h]["xb_headline"]
+        p = x.get("pooled", {})
+        hv = [hh.get("ic") for hh in x.get("halves", [])]
+        lines.append("Direction from the predictors at %s: %s (xb IC %s, clustered t %s, halves %s)."
+                     % (HORIZON_WORDS[h], x.get("reading"), _fmt(p.get("ic")), _fmt(p.get("t_clustered")),
+                        " / ".join(_fmt(v) for v in hv)))
+    lines.append("The IC is measured on the index, whose stale constituent prices make it an upper bound on what "
+                 "a futures position could capture.")
+    return lines
+
+
+def _fmt(v):
+    return "n/a" if v is None else "%.3f" % v
 
 
 # ---- run records ---------------------------------------------------------------------------------
@@ -1430,6 +1572,7 @@ def stage0(args):
     np = _np()
     st0 = {"look": "L51", "prereg": PREREG, "prereg_commit": PREREG_COMMIT, "mode": "stage0",
            "started": datetime.now().isoformat(), "argv": sys.argv[1:], "environment": environment(),
+           "module_sha256": sha256_file(MODULE_PATH), "prereg_sha256": sha256_file(PREREG_PATH),
            "cost": cost_record(), "factors": None, "status": "RUNNING"}
     rng = np.random.default_rng(CONTROL_SEED)
     try:
@@ -1468,55 +1611,154 @@ def stage0(args):
 
 # ---- the one scoring pass -------------------------------------------------------------------------
 
-def scoring_refusals(go, rescore_reason=None, stage0_path=STAGE0_OUT, result_path=RESULT_OUT):
-    """Reasons the scoring pass must not start (prereg §10); empty when it may."""
+def sha256_file(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def default_paths():
+    return {"stage0": STAGE0_OUT, "result": RESULT_OUT, "decisions": DECISIONS_OUT, "models": MODELS_OUT,
+            "module": MODULE_PATH, "prereg": PREREG_PATH}
+
+
+def _tracked_and_clean(path):
+    rel = os.path.relpath(path, REPO)
+    tracked = _git("ls-files", "--error-unmatch", rel)
+    dirty = _git("status", "--porcelain", "--", rel)
+    return bool(tracked) and not dirty
+
+
+def scoring_refusals(go, rescore_reason=None, paths=None, clean=_tracked_and_clean):
+    """Reasons the scoring pass must not start (prereg §10, amendment 6 N7); empty when it may."""
+    paths = paths or default_paths()
     why = []
     if not go:
         why.append("no --go: the main session's go-ahead is required")
-    if not os.path.exists(stage0_path):
+    if not os.path.exists(paths["stage0"]):
         why.append("no stage 0 record")
     else:
-        with open(stage0_path) as f:
+        with open(paths["stage0"]) as f:
             s0 = json.load(f)
         if s0.get("status") != "STAGE0_DONE" or s0.get("halted_at"):
             why.append("stage 0 status is %s" % s0.get("status"))
-        rel = os.path.relpath(stage0_path, REPO)
-        tracked = _git("ls-files", "--error-unmatch", rel)
-        dirty = _git("status", "--porcelain", "--", rel)
-        if not tracked or dirty:
-            why.append("stage 0 record is not committed as is")
-    if os.path.exists(result_path) and not rescore_reason:
-        why.append("%s exists: the scoring pass runs once" % os.path.basename(result_path))
+        if s0.get("module_sha256") != sha256_file(paths["module"]):
+            why.append("the module differs from the one the stage-0 run of record ran")
+        if "pseudo_oos_forecasts" not in s0:
+            why.append("stage 0 recorded no pseudo-out-of-sample forecasts to reproduce")
+    for key in ("stage0", "module", "prereg"):
+        if os.path.exists(paths[key]) and not clean(paths[key]):
+            why.append("%s is not committed as is" % os.path.basename(paths[key]))
+    if os.path.exists(paths["result"]) and not rescore_reason:
+        why.append("%s exists: the scoring pass runs once" % os.path.basename(paths["result"]))
     return why
 
 
-def score(args):
+COMMIT_TRAILER = ("\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n"
+                  "Claude-Session: https://claude.ai/code/session_01V2k73xMEMjT2jTwtBRWL3E")
+
+
+def commit_paths(paths_, message):
+    """git add + commit exactly these files; raises if the commit fails."""
+    rels = [os.path.relpath(x, REPO) for x in paths_]
+    r1 = subprocess.run(["git", "-C", REPO, "add", "--"] + rels, capture_output=True, text=True)
+    r2 = subprocess.run(["git", "-C", REPO, "commit", "-m", message + COMMIT_TRAILER, "--"] + rels,
+                        capture_output=True, text=True)
+    if r1.returncode or r2.returncode:
+        raise RuntimeError("commit failed: %s %s" % (r1.stderr[-300:], r2.stderr[-300:]))
+    return _git("rev-parse", "HEAD")
+
+
+DECISION_COLUMNS = ["horizon", "session", "bar", "decision_close", "refit_month", "sample", "half", "forecast_bp",
+                    "intercept_bp", "xb_bp", "target_bp", "index_entry", "index_exit", "side", "gross_bp", "net_bp",
+                    "net_bp_2025"]
+
+
+def decision_rows(ds, h, dec, models, Y, pseudo, scoring):
+    """One row per grid decision (amendment 6, B1), for the pseudo-out-of-sample and
+    scoring sessions only."""
+    kb = HORIZONS[h]
+    halves = {}
+    for label, sample in (("pseudo_oos", pseudo), ("scoring", scoring)):
+        first, second = splits.halves(sorted(sample))
+        halves.update({d: (label, 1) for d in first})
+        halves.update({d: (label, 2) for d in second})
+    out = []
+    for s_, i, f in dec:
+        d = ds.sessions[s_]
+        if d not in halves:
+            continue
+        label, half = halves[d]
+        m = models[d[:7]]
+        IO, IC = ds.index_arrays(d)
+        tgt = float(Y[s_, i])
+        side = (1 if f > 0 else -1) if abs(f) > COST_BP else 0
+        gross = side * tgt
+        out.append({"horizon": h, "session": d, "bar": i, "decision_close": bar_close_hhmm(i), "refit_month": d[:7],
+                    "sample": label, "half": half, "forecast_bp": f, "intercept_bp": m["ybar"],
+                    "xb_bp": f - m["ybar"], "target_bp": tgt, "index_entry": float(IO[i + 1]),
+                    "index_exit": float(IC[i + kb]), "side": side, "gross_bp": gross,
+                    "net_bp": gross - COST_BP if side else 0.0, "net_bp_2025": gross - COST_BP_2025 if side else 0.0})
+    return out
+
+
+def write_decisions(path, rows_):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=DECISION_COLUMNS)
+        w.writeheader()
+        for r_ in rows_:
+            w.writerow({c: (repr(r_[c]) if isinstance(r_[c], float) else r_[c]) for c in DECISION_COLUMNS})
+    os.replace(tmp, path)
+
+
+def model_record(models, facts):
+    by_month = {f_["month"]: f_ for f_ in facts}
+    return {mo: {"alpha": m["alpha"], "n": m["n"], "train_first": by_month[mo]["train_first"],
+                 "train_last": by_month[mo]["train_last"], "ybar": m["ybar"], "winsor": list(m["winsor"]),
+                 "mu": [float(v) for v in m["mu"]], "sd": [float(v) for v in m["sd"]],
+                 "b": [float(v) for v in m["b"]]} for mo, m in models.items()}
+
+
+def check_reproduces_stage0(ds, h, dec, s0):
+    """Amendment 6 (N7): the 2025-03..2025-08 forecasts equal stage 0's."""
+    ref = {(d, int(i)): f for d, i, f in s0["pseudo_oos_forecasts"][h]}
+    got = {(ds.sessions[s_], int(i)): f for s_, i, f in dec if ds.sessions[s_] <= PSEUDO_OOS_END}
+    assert set(ref) == set(got), "the pseudo-out-of-sample decisions differ from stage 0's"
+    diff = max(abs(got[x] - ref[x]) for x in ref) if ref else 0.0
+    assert diff <= FORECAST_REPRO_TOL_BP, "pseudo-out-of-sample forecasts differ from stage 0's by %g bp" % diff
+    return diff
+
+
+def run_scoring(ds, s0, rec, paths):
+    """Everything after the STARTED record: targets to 2025-12-23, refits, rows, models,
+    statistics, verdict. Writes the rows, models and DONE result; returns the record."""
     np = _np()
-    why = scoring_refusals(args.go, args.owner_approved_rescore)
-    if why:
-        print("REFUSED:", "; ".join(why))
-        sys.exit(3)
-    with open(STAGE0_OUT) as f:
-        s0 = json.load(f)
-    s0_hash = hashlib.sha256(open(STAGE0_OUT, "rb").read()).hexdigest()
-    rec = {"look": "L51", "prereg": PREREG, "mode": "score", "status": "STARTED", "go": args.go,
-           "owner_approved_rescore": args.owner_approved_rescore, "started": datetime.now().isoformat(),
-           "environment": environment(), "stage0_sha256": s0_hash, "cost": cost_record()}
-    _write(RESULT_OUT, rec)
-    ds = load_all()
+    for src in ("stock_cache", "index_db"):
+        assert ds.info[src]["rows"] == s0["data"][src]["rows"], "%s rows differ from stage 0's" % src
     scoring = [d for d in k.selection_sessions(ds.all_dates) if d in set(ds.sessions)]
-    assert len(scoring) == s0["coverage"]["scoring_sessions"]
-    Y = ds.build_targets(before=None)
-    result = {"scoring_sample": [scoring[0], scoring[-1], len(scoring)]}
+    assert len(scoring) == s0["coverage"]["scoring_sessions"] and scoring[-1] == LAST_SCORING_SESSION
+    pseudo = pseudo_sessions(ds)
+    Y = ds.build_targets(before=_next_day(LAST_SCORING_SESSION))
+    result = {"scoring_sample": [scoring[0], scoring[-1], len(scoring)],
+              "pseudo_oos_sample": [pseudo[0], pseudo[-1], len(pseudo)]}
+    all_rows, models_out = [], {}
     for h in HORIZONS:
         a, _curve, _folds = choose_alpha(ds, h, Y[h])
         assert a == s0["alpha"][h]["alpha"], "the α differs from stage 0's"
-        dec, facts, models = walk_forward(ds, h, a, Y[h], keep_models=True)
+        dec, facts, models = walk_forward(ds, h, a, Y[h], keep_models=True, until=LAST_SCORING_SESSION)
+        repro = check_reproduces_stage0(ds, h, dec, s0)
+        rows_h = decision_rows(ds, h, dec, models, Y[h], pseudo, scoring)
+        all_rows += rows_h
+        models_out[h] = model_record(models, facts)
         trades, decisions, targets = score_decisions(ds, dec, Y[h], scoring)
         res = judge(trades, scoring)
+        res["decisions"] = len(decisions)
         f = [x[2] for x in decisions]
         r = [targets[(x[0], x[1])] for x in decisions]
         res["forecast_stats"] = forecast_stats(f, r)
+        sc = [x for x in rows_h if x["sample"] == "scoring"]
+        res["xb_headline"] = xb_stats([(x["session"], x["xb_bp"], x["target_bp"]) for x in sc], scoring)
         by_time = defaultdict(lambda: {"trades": 0, "net_sum": 0.0})
         by_side = defaultdict(lambda: {"trades": 0, "net_sum": 0.0})
         for t in trades:
@@ -1528,11 +1770,12 @@ def score(args):
         res["by_side"] = dict(by_side)
         res["net_at_2025_tariff_bp_per_trade"] = (st.mean([t["gross"] - COST_BP_2025 for t in trades])
                                                   if trades else None)
-        pseudo = pseudo_sessions(ds)
         tr_p, dec_p, tg_p = score_decisions(ds, dec, Y[h], pseudo)
-        res["pseudo_oos_information"] = {"judge": judge(tr_p, pseudo),
-                                         "forecast_stats": forecast_stats([x[2] for x in dec_p],
-                                                                          [tg_p[(x[0], x[1])] for x in dec_p])}
+        ps = [x for x in rows_h if x["sample"] == "pseudo_oos"]
+        res["pseudo_oos_information"] = {
+            "judge": judge(tr_p, pseudo),
+            "forecast_stats": forecast_stats([x[2] for x in dec_p], [tg_p[(x[0], x[1])] for x in dec_p]),
+            "xb": xb_stats([(x["session"], x["xb_bp"], x["target_bp"]) for x in ps], pseudo)}
         dm = models.get(LAST_MONTH)
         if dm is not None:
             order = np.argsort(-np.abs(dm["b"]))[:10]
@@ -1540,15 +1783,45 @@ def score(args):
                                                 for j in order]
         res["alpha"] = a
         res["refits"] = facts
+        res["pseudo_oos_forecast_max_abs_diff_vs_stage0_bp"] = repro
         result[h] = res
     result["l51_clears"] = any(result[h]["passes"] for h in HORIZONS)
-    rec.update({"status": "DONE", "finished": datetime.now().isoformat(), "result": result})
-    _write(RESULT_OUT, rec)
-    for h in HORIZONS:
-        r_ = result[h]
-        print("%s: trades %d, net %s bp/trade, t %s, halves %s / %s, DSR %s, IC %s -> passes %s"
-              % (h, r_["trades"], r_["mean_net_bp_per_trade"], r_["t"], r_["half1_bp"], r_["half2_bp"], r_["dsr"],
-                 r_["forecast_stats"].get("ic"), r_["passes"]))
+    result["verdict"] = verdict(result)
+    write_decisions(paths["decisions"], all_rows)
+    _write(paths["models"], {"look": "L51", "predictors": PREDICTORS, "models": models_out})
+    rec.update({"status": "DONE", "finished": datetime.now().isoformat(), "result": result,
+                "decisions_rows": len(all_rows), "decisions_sha256": sha256_file(paths["decisions"]),
+                "models_sha256": sha256_file(paths["models"])})
+    _write(paths["result"], rec)
+    return rec
+
+
+def _next_day(d):
+    return (date.fromisoformat(d) + timedelta(days=1)).isoformat()
+
+
+def score(args, load=None, paths=None, commit=None, refusals=None):
+    """The one scoring pass. The keyword arguments exist for the synthetic end-to-end test."""
+    paths = paths or default_paths()
+    commit = commit or commit_paths
+    why = (refusals or scoring_refusals)(args.go, args.owner_approved_rescore, paths)
+    if why:
+        print("REFUSED:", "; ".join(why))
+        sys.exit(3)
+    with open(paths["stage0"]) as f:
+        s0 = json.load(f)
+    rec = {"look": "L51", "prereg": PREREG, "mode": "score", "status": "STARTED", "go": args.go,
+           "owner_approved_rescore": args.owner_approved_rescore, "started": datetime.now().isoformat(),
+           "environment": environment(), "stage0_sha256": sha256_file(paths["stage0"]),
+           "module_sha256": sha256_file(paths["module"]), "prereg_sha256": sha256_file(paths["prereg"]),
+           "cost": cost_record()}
+    _write(paths["result"], rec)
+    rec["started_commit"] = commit([paths["result"]], "research: L51 scoring pass STARTED")
+    ds = (load or load_all)()
+    rec = run_scoring(ds, s0, rec, paths)
+    commit([paths["result"], paths["decisions"], paths["models"]], "research: L51 scoring pass DONE")
+    for line in rec["result"]["verdict"]:
+        print(line)
     return rec
 
 

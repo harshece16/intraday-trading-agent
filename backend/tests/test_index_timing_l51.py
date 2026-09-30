@@ -61,15 +61,16 @@ def test_load_stock_bars_places_bars_and_excludes_the_held_out_window(tmp_path):
     rows = [("AAA", "5m", _epoch("2025-12-31", "09:15"), 10, 0, 0, 11, 1),
             ("AAA", "5m", _epoch("2025-12-31", "15:25"), 12, 0, 0, 13, 1),
             ("BBB", "5m", _epoch("2025-12-31", "09:20"), 20, 0, 0, 21, 1),
+            ("AAA", "5m", _epoch("2026-01-01", "09:15"), 98, 0, 0, 98, 1),
             ("AAA", "5m", _epoch("2026-01-02", "09:15"), 99, 0, 0, 99, 1)]
     con.executemany("INSERT INTO candles VALUES (?,?,?,?,?,?,?,?)", rows)
     con.commit()
     con.close()
     before = os.path.getmtime(db)
-    dates, syms, O, C, info = L.load_stock_bars(db, start="2025-12-01", end="2026-01-02")
-    assert dates == ["2025-12-31"] and syms == ["AAA", "BBB"]
+    dates, syms, O, C, info = L.load_stock_bars(db, start="2025-12-01")      # default end: 2026-01-01 (N5)
+    assert dates == ["2025-12-31"] and syms == ["AAA", "BBB"] and L.DATA_END == "2026-01-01"
     assert O[0, 0, 0] == 10 and C[0, 0, 0] == 11 and C[0, 74, 0] == 13 and O[0, 1, 1] == 20
-    assert np.isnan(O[0, 1, 0]) and info["rows"] == 3 and info["max_ts_ist"] < "2026-01-02"
+    assert np.isnan(O[0, 1, 0]) and info["rows"] == 3 and info["max_ts_ist"] < "2026-01-01"
     assert os.path.getmtime(db) == before
 
 
@@ -295,7 +296,7 @@ def test_fit_ridge_standardises_on_training_rows_and_shrinks():
 def _business_days(first="2024-09-20", last="2025-12-31"):
     d, out = date.fromisoformat(first), []
     while d.isoformat() <= last:
-        if d.weekday() < 5:
+        if d.weekday() < 5 and d.isoformat() != "2025-12-25":
             out.append(d.isoformat())
         d += timedelta(days=1)
     return out
@@ -397,16 +398,194 @@ def test_derangement_has_no_fixed_point():
 
 # ---- one-run guard and isolation ------------------------------------------------------------------
 
+def _paths(tmp_path):
+    return {"stage0": str(tmp_path / "s0.json"), "result": str(tmp_path / "res.json"),
+            "decisions": str(tmp_path / "dec.csv"), "models": str(tmp_path / "models.json"),
+            "module": L.MODULE_PATH, "prereg": L.PREREG_PATH}
+
+
 def test_scoring_refuses_without_go_stage0_or_with_a_result(tmp_path):
-    s0 = tmp_path / "s0.json"
-    res = tmp_path / "res.json"
-    why = L.scoring_refusals(None, stage0_path=str(s0), result_path=str(res))
+    paths = _paths(tmp_path)
+    why = L.scoring_refusals(None, paths=paths, clean=lambda p: True)
     assert any("--go" in w for w in why) and any("no stage 0" in w for w in why)
-    s0.write_text(json.dumps({"status": "HALTED", "halted_at": "x"}))
-    res.write_text("{}")
-    why = L.scoring_refusals("main session, 2026-10-01", stage0_path=str(s0), result_path=str(res))
+    with open(paths["stage0"], "w") as f:
+        json.dump({"status": "HALTED", "halted_at": "x", "module_sha256": "not this module"}, f)
+    with open(paths["result"], "w") as f:
+        f.write("{}")
+    why = L.scoring_refusals("main session, 2026-10-01", paths=paths, clean=lambda p: False)
     assert any("HALTED" in w for w in why) and any("runs once" in w for w in why)
-    assert any("not committed" in w for w in why)
+    assert any("module differs" in w for w in why) and any("no pseudo-out-of-sample" in w for w in why)
+    assert sum("not committed" in w for w in why) == 3          # stage 0 record, module, prereg
+
+
+# ---- the scoring pass, end to end, on a synthetic dataset (amendment 6, B1) ------------------------
+
+def _fake_dataset(strength, seed=5, P=3):
+    rng = np.random.default_rng(seed)
+    ds = L.Dataset()
+    ds.sessions = ds.all_dates = _business_days()
+    ds.index_bars = {}
+    for d in ds.sessions:
+        closes = 20000 + np.cumsum(rng.standard_normal(L.BARS) * 10)
+        opens = np.concatenate([[20000.0], closes[:-1]]) + rng.standard_normal(L.BARS)
+        ds.index_bars[d] = (list(opens), list(closes), L.INDEX_MINUTES)
+    ds.info = {"stock_cache": {"rows": 1234}, "index_db": {"rows": 5678}}
+    true = ds.build_targets(before=None)
+    S = len(ds.sessions)
+    X = rng.standard_normal((S, L.BARS, P))
+    if strength:
+        X[:, :, 0] = np.nan_to_num(true["h30"]) + rng.standard_normal((S, L.BARS)) * 2
+        X[:, :, 1] = np.nan_to_num(true["h60"]) + rng.standard_normal((S, L.BARS)) * 3
+    X[0] = np.nan
+    X[:, :L.FIRST_DECISION_BAR] = np.nan
+    ds.X = X
+    return ds
+
+
+def _stage0_for(ds, path):
+    """What stage 0 would record for this dataset: no target from 2025-09-01 on."""
+    Y0 = ds.build_targets(before=L.SCORING_START)
+    alphas = {h: L.choose_alpha(ds, h, Y0[h])[0] for h in L.HORIZONS}
+    po = L.pseudo_oos_forecasts(ds, Y0, alphas)
+    scoring = [d for d in L.k.selection_sessions(ds.all_dates) if d in set(ds.sessions)]
+    s0 = {"status": "STAGE0_DONE", "module_sha256": L.sha256_file(L.MODULE_PATH),
+          "coverage": {"scoring_sessions": len(scoring)}, "alpha": {h: {"alpha": alphas[h]} for h in L.HORIZONS},
+          "data": {"stock_cache": {"rows": 1234}, "index_db": {"rows": 5678}},
+          "pseudo_oos_forecasts": {h: [[ds.sessions[x[0]], x[1], x[2]] for x in po[h][0]] for h in L.HORIZONS}}
+    with open(path, "w") as f:
+        json.dump(s0, f)
+    return s0, scoring
+
+
+class _Args:
+    go = "synthetic test"
+    owner_approved_rescore = None
+
+
+def _run_score(ds, tmp_path):
+    paths = _paths(tmp_path)
+    s0, scoring = _stage0_for(ds, paths["stage0"])
+    commits = []
+
+    def commit(files, message):
+        commits.append((message, [json.load(open(x)).get("status") if x.endswith(".json") and "res" in x else None
+                                  for x in files]))
+        return "fake%d" % len(commits)
+
+    rec = L.score(_Args(), load=lambda: ds, paths=paths, commit=commit,
+                  refusals=lambda go, rr, p: L.scoring_refusals(go, rr, p, clean=lambda x: True))
+    return rec, paths, commits, scoring
+
+
+def _read_rows(path):
+    import csv
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def test_score_end_to_end_zero_trades(tmp_path):
+    ds = _fake_dataset(strength=0)
+    rec, paths, commits, scoring = _run_score(ds, tmp_path)
+    assert [c[0] for c in commits] == ["research: L51 scoring pass STARTED", "research: L51 scoring pass DONE"]
+    assert commits[0][1] == ["STARTED"] and rec["started_commit"] == "fake1"
+    res = rec["result"]
+    assert rec["status"] == "DONE" and res["h30"]["trades"] == 0 and res["h60"]["trades"] == 0
+    assert not res["l51_clears"] and res["scoring_sample"][2] == len(scoring)
+    v = " ".join(res["verdict"])
+    assert "L51 does not clear at 30 minutes: the forecast exceeded the 6.95 bp round trip on 0 of %d decisions" \
+        % (len(scoring) * 11) in v
+    assert L.POWER_30 in v and L.POWER_CAVEAT in v and "Direction from the predictors at 60 minutes" in v
+    rows_ = _read_rows(paths["decisions"])
+    pseudo = L.pseudo_sessions(ds)
+    assert len(rows_) == rec["decisions_rows"] == (len(pseudo) + len(scoring)) * 16
+    assert rec["decisions_sha256"] == L.sha256_file(paths["decisions"])
+    assert rec["models_sha256"] == L.sha256_file(paths["models"])
+    assert {r["session"] for r in rows_} <= set(pseudo) | set(scoring)
+    assert max(r["session"] for r in rows_) == L.LAST_SCORING_SESSION
+    assert all(r["side"] == "0" and float(r["net_bp"]) == 0.0 for r in rows_)
+    # every forecast is recomputable from the models file and the predictors
+    models = json.load(open(paths["models"]))["models"]
+    assert sorted(models["h30"]) == L.months_between("2025-03", "2025-12")
+    srow = {d: n for n, d in enumerate(ds.sessions)}
+    for r in rows_[:: max(1, len(rows_) // 40)]:
+        m = models[r["horizon"]][r["refit_month"]]
+        mm = {"ybar": m["ybar"], "mu": np.array(m["mu"]), "sd": np.array(m["sd"]), "b": np.array(m["b"])}
+        f = L.predict(mm, ds.X[srow[r["session"]], int(r["bar"])][None, :])[0]
+        assert f == pytest.approx(float(r["forecast_bp"]), abs=1e-9)
+        assert float(r["xb_bp"]) == pytest.approx(float(r["forecast_bp"]) - m["ybar"], abs=1e-12)
+        kb = L.HORIZONS[r["horizon"]]
+        assert float(r["target_bp"]) == pytest.approx(
+            (float(r["index_exit"]) / float(r["index_entry"]) - 1) * 1e4, rel=1e-12)
+        assert r["decision_close"] == L.bar_close_hhmm(int(r["bar"])) and kb in (6, 12)
+    # the one-run rule: a second pass refuses
+    with pytest.raises(SystemExit):
+        L.score(_Args(), load=lambda: ds, paths=paths, commit=lambda *a: None,
+                refusals=lambda go, rr, p: L.scoring_refusals(go, rr, p, clean=lambda x: True))
+
+
+def test_score_end_to_end_with_trades(tmp_path):
+    ds = _fake_dataset(strength=1)
+    rec, paths, commits, scoring = _run_score(ds, tmp_path)
+    res = rec["result"]
+    rows_ = _read_rows(paths["decisions"])
+    for h in L.HORIZONS:
+        sc = [r for r in rows_ if r["horizon"] == h and r["sample"] == "scoring"]
+        traded = [r for r in sc if r["side"] != "0"]
+        assert res[h]["trades"] == len(traded) > 0
+        assert res[h]["mean_net_bp_per_trade"] == pytest.approx(np.mean([float(r["net_bp"]) for r in traded]))
+        assert all(float(r["net_bp_2025"]) == pytest.approx(float(r["gross_bp"]) - L.COST_BP_2025) for r in traded)
+        assert res[h]["xb_headline"]["reading"] == "direction present"
+        assert {r["half"] for r in sc} == {"1", "2"}
+
+
+def test_scoring_stops_if_stage0_forecasts_do_not_reproduce(tmp_path):
+    ds = _fake_dataset(strength=0)
+    paths = _paths(tmp_path)
+    s0, _scoring = _stage0_for(ds, paths["stage0"])
+    s0["pseudo_oos_forecasts"]["h30"][3][2] += 1e-6
+    with open(paths["stage0"], "w") as f:
+        json.dump(s0, f)
+    with pytest.raises(AssertionError, match="differ from stage 0"):
+        L.score(_Args(), load=lambda: ds, paths=paths, commit=lambda *a: "x",
+                refusals=lambda go, rr, p: [])
+
+
+def test_walk_forward_until_stops_forecasting():
+    ds = _fake_dataset(strength=0)
+    Y = ds.build_targets(before=None)
+    dec, facts, _m = L.walk_forward(ds, "h60", 10.0, Y["h60"], until=L.LAST_SCORING_SESSION)
+    assert max(ds.sessions[x[0]] for x in dec) == L.LAST_SCORING_SESSION
+
+
+# ---- the predictor part of the forecast (amendment 6, B2) ------------------------------------------
+
+def test_clustered_ic_is_the_pearson_ic_and_widens_with_clustering():
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal(600)
+    r = 0.2 * x + rng.standard_normal(600)
+    single = L.clustered_ic(x, r, list(range(600)))
+    assert single["ic"] == pytest.approx(np.corrcoef(x, r)[0, 1])
+    # the same data duplicated inside clusters: same IC, the clustered t does not grow
+    x2, r2 = np.repeat(x, 5), np.repeat(r, 5)
+    dup = L.clustered_ic(x2, r2, list(np.repeat(np.arange(600), 5)))
+    assert dup["ic"] == pytest.approx(single["ic"]) and dup["t_clustered"] == pytest.approx(single["t_clustered"],
+                                                                                                rel=0.01)
+    assert L.clustered_ic([1, 1, 1], [1, 2, 3], [0, 1, 2])["ic"] is None
+
+
+def test_xb_reading_rule():
+    rng = np.random.default_rng(4)
+    ses = ["2025-09-%02d" % d for d in range(1, 29)] + ["2025-10-%02d" % d for d in range(1, 29)]
+    rows_ = []
+    for d in ses:
+        for _ in range(11):
+            a = rng.standard_normal()
+            rows_.append((d, a, 0.5 * a + rng.standard_normal()))
+    assert L.xb_stats(rows_, ses)["reading"] == "direction present"
+    flipped = [(d, -a, b) for d, a, b in rows_]
+    assert L.xb_stats(flipped, ses)["reading"] == "anti-predictive"
+    half_only = [(d, a, b if d < "2025-10" else -b) for d, a, b in rows_]
+    assert L.xb_stats(half_only, ses)["reading"] == "no direction"
 
 
 def test_module_imports_nothing_live():
