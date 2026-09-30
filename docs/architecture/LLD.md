@@ -79,7 +79,7 @@ duration apart.
 4. `_check_preopen_kite()`: once per trading day between 08:45 and the close.
 5. Holiday notice, once per date.
 6. Session summary, once, on a trading day at or after 15:30.
-7. If closed: `momentum_book.maybe_start_evening_job`.
+7. If closed: `momentum_book.maybe_start_evening_job`, then `momentum_alerts.check` (§10.1), which never raises, so it cannot keep the job from starting.
 8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails. Each read first logs an error if the year has no NSE holiday list; start-up logs the same.
 9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
@@ -604,6 +604,10 @@ trial 126 month by month.
 | `update_bhavcopies()`, `download_bhavcopy()` | Ask NSE for every day of the last 31 without a file (#159). Each answer is fetched, no file (404: no session, or not out yet) or failed |
 | `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out, 4 when the data is incomplete: it stops before a past day whose download failed, or before a month turn with an empty ranking, and keeps what it processed before it. Logs a failed corporate-actions refresh. Writes `data` to the state |
 | `maybe_start_evening_job()` | The engine hook. Never raises |
+| `monthly_report(state)` | Read side. One row per completed month, from one rebalance close to the next: book and benchmark returns, excess, cumulative excess (the band's own sum), one-sided turnover and costs of the trades inside it; the opening rebalance apart. No row before the first month completes |
+| `band_status(state)` | Read side. Months counted, expected cumulative excess, the floor from month 6, and `not_active`, `inside`, `below` or `switched_off` |
+| `next_rebalance(day)` | Read side. The first session of the month after `day`'s, holidays skipped; flagged when the year has no holiday list |
+| `summary()` | Read side, for `/api/momentum-book`. Adds `months`, `opening_rebalance`, `band`, `month_to_date`, `next_rebalance`, `since_start` to the state's figures |
 
 ```mermaid
 sequenceDiagram
@@ -660,6 +664,26 @@ data         {corporate_actions_refreshed, corporate_actions_as_of,
 
 `status` is `waiting_for_month_end`, `active` or `switched_off`. Once
 switched off, nothing turns the book back on.
+
+**Alerts (`momentum_alerts.py`, README §116).** On each closed-phase tick,
+after `maybe_start_evening_job`, `check(now, holiday, log)` reads what the job
+did. It holds its own reference to each job it saw start, so a job replaced by
+a retry is still read, and it re-reads the state file only when its mtime
+changes.
+
+| Seen | Line (kind `momentum`) | Once per |
+| --- | --- | --- |
+| A new date in `month_points` | The rebalance: month, bought, sold, waiting, the month just ended against the benchmark, since the start, the band, the next rebalance. Level `info`, `warn` if the book switched off | Rebalance. With no record, only the latest |
+| A job ended with a code other than 0, 3 or 4, or a signal | The code, the last line of `momentum_book.log`, where the book stands. Level `error` | Reason a day |
+| `data.problem` in a state saved today | The job's reason. Level `warn` | Reason a day |
+| 23:30 or later on a weekday, not a holiday, a run today, `last_processed` not today, no problem, not switched off | The day was not processed; tomorrow's run catches up. Level `warn` | Day |
+
+Lines go through `AppState.log`, so to the journal and, since `momentum` is
+in `telegram_alerts.ALWAYS`, to Telegram when it is configured and switched
+on. The record `backend/data/momentum_book_alerts.json` (`rebalance`,
+`problems`, `window_closed`) is written only here, atomically, before the line
+is logged: an alert can be lost, never repeated. `check` catches every
+exception.
 
 ### 10.2 Jev book (`jev_book.py`)
 
@@ -908,7 +932,7 @@ Every route needs the `X-Api-Key` header except `/kite/callback`.
 | GET | `/api/journal/blocked-signals`, `/api/journal/blocker-stats` | Why entries were blocked |
 | GET | `/api/journal/session-summary` | Why a session traded what it did |
 | GET | `/api/journal/liquidity-checks`, `/api/journal/depth-samples` | Order-book records |
-| GET | `/api/momentum-book`, `/api/jev-book` | The paper books |
+| GET | `/api/momentum-book`, `/api/jev-book` | The paper books. The momentum book's includes its monthly report, band status and next rebalance |
 | GET | `/api/kronos`, `/api/kronos/day/{date}` | The Kronos space: L40's records and the shadow's forecasts, from `kronos.db`. Display only |
 | GET, POST | `/api/review-queue`, `/enable`, `/{id}/approve`, `/{id}/reject` | The review queue |
 | POST | `/api/mode` | Paper or Live. Live needs a readiness check, else 409 |
@@ -987,6 +1011,7 @@ start-up sets any credential file other accounts can read to 0600
 | `backend/.telegram.json` | The Telegram bot token and chat id, written by hand | 0600 from start-up |
 | `backend/data/sahab_journal.db` | The journal | |
 | `backend/data/momentum_book_state.json`, `jev_book_state.json` | Book state, written atomically | |
+| `backend/data/momentum_book_alerts.json` | What the momentum alerts have said (README §116), written atomically by the engine only | |
 | `backend/data/kronos.db` | The Kronos store: the shadow's forecasts and L40's records, ingested from the files below | |
 | `backend/data/kronos_shadow_<date>.json`, `..._summary.json` | The shadow's day and summary, written atomically by `research/kronos_shadow.py` | |
 | `backend/data/bhav_daily/`, `bhav_daily_2026_heldout/`, `bhav_live/` | Bhavcopies: selection, held-out, and the book's evening downloads | |
@@ -1050,7 +1075,7 @@ clears the stored key and asks again.
 
 | Page | Route | Shows | Actions that change state |
 | --- | --- | --- | --- |
-| Overview | `/` | Kite alert, review cards, market headline, top picks, activity, positions | Pause, kill switch, go live, Telegram, scan, reconnect Kite, review decisions |
+| Overview | `/intraday` (`/overview` redirects) | Kite alert, review cards, market headline, top picks, activity, positions | Pause, kill switch, go live, Telegram, scan, reconnect Kite, review decisions |
 | Pre-Market | `/premarket` | The morning read and watchlist | Refresh |
 | Day Plan | `/day-plan` | Risk plan at a capital figure; today's outcome | None |
 | Screener | `/screener` | Trading, watching and skipped rows | None |
@@ -1058,7 +1083,7 @@ clears the stored key and asks again.
 | Technical Analysis | `/technical-analysis` | Every method, from live constants | Headline scoring on and off |
 | Portfolio | `/portfolio` | Margins, holdings, positions | Options on and off |
 | Holdings diagnostic | `/portfolio/diagnostic` | A technical read of real holdings | None |
-| Momentum Book | `/momentum-book` | Status, NAV against the benchmark, holdings, trades | None |
+| Momentum Book, the front page | `/` (`/momentum-book` redirects) | Status, value, cumulative excess and next rebalance; the monthly report against the benchmark; the band; NAV against the benchmark; holdings, waiting orders, trades | None |
 | Jev Book | `/jev-book` | Status, Jev against the scanner, the latest session | None |
 | Kronos | `/kronos` | L40's stage 0 records and result, the latest shadow day one time at a time, one row per day | None |
 | Journal | `/journal` | Scorecard, blocks, trade record, IC | None |
@@ -1080,7 +1105,7 @@ forecast.
 
 ## 18. Tests and CI
 
-`backend/tests/` holds 53 test files. `conftest.py` has one autouse fixture
+`backend/tests/` holds 84 test files. `conftest.py` has one autouse fixture
 that points the database at a temporary file, blanks the Telegram
 credentials and resets the rejected-token cache.
 
@@ -1091,7 +1116,7 @@ credentials and resets the rejected-token cache.
 | Engine, state and operations | 11 | Engine lock, entry rollback, position restore, stop watcher, kill switch, fault injection, review queue, session summary, depth sampler |
 | Kite connectivity | 5 | Session status, tunnel, alert back-off, fallback, pre-open check |
 | Security, alerts and LLM services | 4 | Auth, Telegram, self-review, research desk |
-| Paper books | 2 | Momentum book, Jev book |
+| Paper books | 4 | Momentum book, its evening job's data, its alerts and monthly report, Jev book |
 | Design documents | 1 | `test_rules_catalogue.py`: every rule points at code that exists, and the generated pages are current |
 
 **CI** (`.github/workflows/tests.yml`): one job, on every pull request to

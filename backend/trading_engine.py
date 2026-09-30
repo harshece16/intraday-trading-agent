@@ -25,6 +25,7 @@ import confidence
 import costs
 import data_provider
 import depth_sampler
+import momentum_alerts
 import momentum_book
 import chaywanaprash
 import jev_book
@@ -2106,6 +2107,10 @@ class TradingEngine:
         if phase == "closed" and momentum_book.maybe_start_evening_job(now, holiday):
             self.state.log("system", "Momentum book: evening job started (fetch today's bhavcopy, mark to market, "
                                      "rebalance on the first session of a month)")
+        if phase == "closed":
+            # After the job hook, never before it, and it never raises: nothing
+            # here can keep the job from starting (README section 116).
+            momentum_alerts.check(now, holiday, self.state.log)
 
         if phase == "closed" and chaywanaprash.maybe_start_review(now, holiday, self.state.log):
             self.state.log("system", "Chaywanaprash: reviewing the last two weeks of trading and every change "

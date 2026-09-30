@@ -132,7 +132,7 @@ export default function PreMarket({ state: s }) {
         <div className="tax" style={{ marginBottom: 16 }}>
           The live intraday scanner has since run and updated today's actual picks — this page still shows last
           night's pre-market read, which won't change again until tomorrow.{" "}
-          <button className="more" onClick={() => navigate("/")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+          <button className="more" onClick={() => navigate("/intraday")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
             See today's current picks on Overview →
           </button>
         </div>

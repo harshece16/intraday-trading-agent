@@ -6,15 +6,16 @@ import { heldSymbols, scanRows, sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
-// Ten pages in one flat row read as a wall of links. Grouped by the question
-// each answers: what's happening today, what the market offers, which
-// strategies are running, and what you actually hold and did.
+// Grouped by what each page is for. The momentum book is the strategy and
+// leads (README section 116). The intraday engine's pages follow as its paper
+// record, then the intraday research, then the Kite account.
 const NAV = [
-  ["Today", [["/", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"]]],
-  ["Market", [["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"]]],
-  ["Strategies", [["/momentum-book", "Momentum book"], ["/jev-book", "Jev book"]]],
-  ["Research", [["/kronos", "Kronos"]]],
-  ["Your book", [["/portfolio", "Portfolio", "held"], ["/trades", "Trades"], ["/journal", "Journal"]]],
+  ["The strategy", [["/", "Momentum book"]]],
+  ["Intraday paper record", [["/intraday", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"],
+    ["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"], ["/trades", "Trades"],
+    ["/journal", "Journal"]]],
+  ["Intraday research", [["/jev-book", "Jev book"], ["/kronos", "Kronos"]]],
+  ["Account", [["/portfolio", "Portfolio", "held"]]],
 ];
 
 async function setMode(paperMode) {
@@ -136,7 +137,7 @@ export default function StatusBar({ state }) {
       <div className="stat"><small>Open P&amp;L</small><strong className={tone(state?.unrealized_pnl)}>{money(state?.unrealized_pnl)}</strong></div>
       <div className="statusbar-right">
         {state?.entries_paused && (
-          <span className="kite-chip kite-chip--warn" title={`No new positions will open. Stops, targets and the ${state?.square_off_time || "15:08"} square-off still run. Resume from Overview.`}>
+          <span className="kite-chip kite-chip--warn" title={`No new positions will open. Stops, targets and the ${state?.square_off_time || "15:08"} square-off still run. Resume from the intraday Overview.`}>
             <span className="dot" aria-hidden="true"></span>
             Entries paused
           </span>

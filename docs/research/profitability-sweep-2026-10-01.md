@@ -1,6 +1,6 @@
 # Profitability sweep, 2026-10-01: how the project could make money, and what current technology does for an individual
 
-**Written 2026-10-01, after midnight IST.** On 2026-09-30 the owner made the monthly momentum book the core of Trader Sahab and stopped the search for an intraday edge (PR #228). 202 trials and looks L40 to L51 had found none that pays the ~16.6 bp round trip. The owner then asked how to make the project profitable, from many sources and as deeply as possible, and how people use current technology to make money. Four research agents searched in parallel:
+**Written 2026-10-01, after midnight IST.** On 2026-09-30 the owner made the monthly momentum book the core of Trader Sahab and stopped the search for an intraday edge (`decisions/decision-2026-09-30-momentum-core.md`, README §116). 202 trials and looks L40 to L51 had found none that pays the ~16.6 bp round trip. The owner then asked how to make the project profitable, from many sources and as deeply as possible, and how people use current technology to make money. Four research agents searched in parallel:
 
 | Part | Scope | Report in `data/profitability-sweep/` |
 | --- | --- | --- |

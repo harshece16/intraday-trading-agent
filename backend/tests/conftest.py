@@ -22,6 +22,7 @@ import pytest
 import config
 import data_provider
 import database
+import momentum_alerts
 import telegram_alerts
 
 
@@ -35,6 +36,13 @@ def isolated_db(tmp_path, monkeypatch):
     # Tests that drive the engine tick past the close must not start a real
     # Chaywanaprash review (an LLM call); test_chaywanaprash.py turns it back on.
     monkeypatch.setattr(config, "CHAYWANAPRASH", {**config.CHAYWANAPRASH, "review_every_days": 0})
+    # The momentum alert check runs on every closed-phase tick. A test that
+    # drives the tick must not read the real book's state, nor write the real
+    # record of what was alerted, which would swallow a real alert (README
+    # section 116).
+    monkeypatch.setattr(momentum_alerts, "ALERTS_PATH", str(tmp_path / "momentum_book_alerts.json"))
+    monkeypatch.setattr(momentum_alerts.momentum_book, "STATE_PATH", str(tmp_path / "momentum_book_state.json"))
+    momentum_alerts.reset()
     monkeypatch.setattr(database, "DB_PATH", tmp_path / "test_journal.db")
     database._local.conn = None
     yield

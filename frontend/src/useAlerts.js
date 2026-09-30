@@ -3,7 +3,8 @@ import { enabled, fire } from "./notifications";
 
 const FLAT_THRESHOLD_PCT = 1.5; // used when a symbol's real ATR% isn't known yet
 
-/** Fires a browser notification for every NEW trade fill and risk warning in
+/** Fires a browser notification for every NEW trade fill, risk warning and
+ * momentum-book line (a rebalance, or its evening job failing) in
  * the activity log (state.activity, already pushed over the WebSocket every
  * page reads), and for a real price move on a watched/held symbol past a
  * threshold derived from that symbol's own real ATR% (half a day's typical
@@ -29,6 +30,8 @@ export function useAlerts(state) {
       for (const a of fresh.slice().reverse()) {
         if (a.kind === "trade") {
           fire(a.symbol ? `${a.symbol} — trade` : "Trade", a.message, `trade-${a.ts}`);
+        } else if (a.kind === "momentum") {
+          fire("Trader Sahab — momentum book", a.message, `momentum-${a.ts}`);
         } else if (a.level === "warn" || a.level === "error") {
           fire("Trader Sahab — risk alert", a.message, `risk-${a.ts}`);
         }

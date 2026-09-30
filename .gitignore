@@ -42,6 +42,9 @@ backend/data/nse_deals/
 backend/data/bhav_live/
 backend/data/momentum_book_state.json
 backend/data/momentum_book.log
+# What the momentum alerts have said (README section 116), written by the engine
+backend/data/momentum_book_alerts.json
+backend/data/momentum_book_alerts.json.tmp
 backend/data/jev_book_state.json
 backend/.typesafe_key.json
 
