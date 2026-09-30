@@ -2,7 +2,8 @@
 after Indian costs and taxes, against the funds the owner could buy instead.
 
 Pre-registered: docs/research/prereg-after-tax-l53.md (commit ec7cb12), before this
-file was written, with amendment 1 (the harvest day). Every rule here is a transcription of them.
+file was written, with amendment 1 (the harvest day) and amendment 2 (e0b2e98: set-off order,
+interest, tax paid by one fraction of the whole book, check 9). Every rule here is a transcription of them.
 
     1  trial 126's own trade list, replayed with FIFO tax lots (TaxBook, a subclass of
        momentum_width.Book inside momentum_width.simulate, called unchanged)
@@ -75,7 +76,10 @@ KEEP_BANDS, REBALANCE_EVERY = (30, 45, 60), (1, 3, 6)
 NEAR_MISS_DAYS = 30
 BAND_EXPECTED, BAND_SD = 0.0071, 0.0389      # the paper book's band, unchanged by this look
 BAND_FLOOR_MONTHS = (6, 12, 24, 36, 60)
-FUND_STT_REDEEM, FUND_STAMP_BUY, FUND_STAMP_FROM = 0.00001, 0.00005, "2020-07-01"
+FUND_STT_REDEEM, FUND_STAMP_BUY = 0.00001, 0.00005      # stamp on every purchase, every year (amendment 2, N7)
+TD_B_SENSITIVITY = 0.003                     # information: fund (b) at -0.3 pp a year (amendment 2, N6)
+SURCHARGE_INCOME = 5_000_000.0               # flag a year whose realised income alone exceeds Rs 50 lakh (N8)
+NOT_ADVICE = "a measurement for the owner's decision, not investment advice"
 EXPECTED_POINTS, EXPECTED_RETURNS = 190, 189
 MAX_SUBSTITUTIONS, MAX_STALE_DAYS = 3, 5
 MIN_TRI_ROWS_A_YEAR = 240
@@ -305,8 +309,9 @@ class TaxBook(mw.Book):
         self.lots = tx.Lots()
         self.ledger = tx.TaxLedger(ctx.rules or tx.ForwardRules())
         self._s, self._events_through, self.open_fy = None, -1, None
-        self.paid = OrderedDict()
+        self.paid, self.interest = OrderedDict(), OrderedDict()
         self.prorata, self.marks, self.event_log, self.fill_log = [], [], [], []
+        self.last_detail = None
         self.opened, self.closed = {}, []
         self.stt_paid = self.dividends_total = self.realised_total = 0.0
         self.lot_dev = 0.0
@@ -323,7 +328,7 @@ class TaxBook(mw.Book):
             self._apply_events(chains, s)
             self._events_through = s
         super().work(chains, s, sessions, side)
-        if side == "sell" and self.rules is not None:
+        if side == "buy" and self.rules is not None:          # after the session's orders (amendment 2, B3)
             fy = tx.fy_of(sessions[s])
             while self.open_fy < fy:
                 self._pay(chains, s, self.open_fy)
@@ -393,36 +398,44 @@ class TaxBook(mw.Book):
 
     # -- the year's tax, paid from the account ------------------------------------------------
     def _pay(self, chains, s, fy):
+        """Amendment 2 (B2, B3): the year's tax, with interest if it reached the
+        advance-tax threshold, is paid after the session's orders by taking one
+        fraction x of the whole book: x of the cash, x of every holding (sold at the
+        close) and x of every open buy order. Every name and relative weight is kept."""
         tax = self.ledger.settle(fy)
-        self.paid[fy] = tax
-        if tax <= 0:
+        interest = tx.interest_on(tax)
+        self.paid[fy], self.interest[fy] = tax, interest
+        due = tax + interest
+        if due <= 0:
             return
         d = self.ctx.sessions[s]
-        if self.cash < tax:
-            short = tax - self.cash
-            dp = m3.DP_PER_SELL if self.dp else 0.0
-            vals = OrderedDict((n, q * (m3.close_on_or_before(chains[n], s) or 0.0)) for n, q in self.pos.items())
-            rate = m3.STT + m3.NSE_TXN + m3.SEBI + m3.GST * (m3.NSE_TXN + m3.SEBI) + self.ctx.slip
-            gross = sum(vals.values())
-            x = min(1.0, (short + dp * len(vals)) / (gross * (1 - rate))) if gross > 0 else 0.0
-            raised = 0.0
-            for n, v in vals.items():
-                q_sold, v_sold = self.pos[n] * x, v * x
-                charges, stt = _sell_charges(v_sold, self.ctx.slip, dp)
-                items = self.lots.sell(n, q_sold, v_sold - charges, d, self.ctx.fmv(n))
-                self.ledger.add_items(tx.fy_of(d), items)
-                self.realised_total += sum(it["gain"] for it in items)
-                self.stt_paid += stt
-                self.pos[n] -= q_sold
-                if x >= 1.0 or self.pos[n] <= 0:
-                    self.pos.pop(n)
-                    self.closed.append({"name": n, "opened": self.opened.pop(n, None), "closed": d})
-                self.cash += v_sold - charges - stt
-                self.cost += charges + stt
-                raised += v_sold - charges - stt
-            self.prorata.append({"date": d, "fy_paid": fy, "tax": tax, "shortfall": short, "fraction_sold": x,
-                                 "raised": raised})
-        self.cash -= tax
+        dp = m3.DP_PER_SELL if self.dp else 0.0
+        vals = OrderedDict((n, q * (m3.close_on_or_before(chains[n], s) or 0.0)) for n, q in self.pos.items())
+        rate = m3.STT + m3.NSE_TXN + m3.SEBI + m3.GST * (m3.NSE_TXN + m3.SEBI) + self.ctx.slip
+        base = self.cash + sum(v * (1 - rate) for v in vals.values())
+        x = min(1.0, (due + dp * len(vals)) / base) if base > 0 else 1.0
+        cash_before, raised = self.cash, 0.0
+        for n, v in vals.items():
+            q_sold, v_sold = self.pos[n] * x, v * x
+            charges, stt = _sell_charges(v_sold, self.ctx.slip, dp)
+            items = self.lots.sell(n, q_sold, v_sold - charges, d, self.ctx.fmv(n))
+            self.ledger.add_items(tx.fy_of(d), items)
+            self.realised_total += sum(it["gain"] for it in items)
+            self.stt_paid += stt
+            self.pos[n] -= q_sold
+            if x >= 1.0:
+                self.pos.pop(n)
+                self.closed.append({"name": n, "opened": self.opened.pop(n, None), "closed": d})
+            self.cash += v_sold - charges - stt
+            self.cost += charges + stt
+            raised += v_sold - charges - stt
+        for o in self.orders:
+            if o["side"] == "buy":
+                o["amount"] *= (1 - x)
+        self.cash -= due
+        self.prorata.append({"date": d, "fy_paid": fy, "tax": tax, "interest": interest, "fraction": x,
+                             "from_cash": x * cash_before, "from_holdings": raised,
+                             "cash_after_over_before": (self.cash / cash_before) if cash_before > 0 else None})
 
     # -- the liquidation value at a month point ----------------------------------------------
     def _mark(self, chains, idx, value):
@@ -440,7 +453,10 @@ class TaxBook(mw.Book):
             extra += self.lots.preview_sell(n, q, v - charges, d, self.ctx.fmv(n))
             dev = abs(self.lots.units(n) - q) / q if q else 0.0
             self.lot_dev = max(self.lot_dev, dev)
-        liability = self.ledger.preview(fy, extra)[0] if self.rules is not None else 0.0
+        liability = 0.0
+        if self.rules is not None:
+            liability, detail = self.ledger.preview(fy, extra)
+            self.last_detail = dict(detail, income=self.ledger.income(fy, extra))
         self.marks.append({"idx": idx, "date": d, "value": value, "liquidation_pre_tax": net,
                            "liability": liability, "liquidation_after_tax": net - liability,
                            "liquidation_gain": sum(it["gain"] for it in extra), "liquidation_stt": stt_all})
@@ -469,6 +485,15 @@ def run_book(panel, unis, capital, rules, by_session=None):
     return series, strat, bench, holdings
 
 
+def names_differ(holdings, recorded):
+    """Months whose names differ from trial 126's (amendment 2, B3)."""
+    rec = {h["month"]: h["holdings"] for h in recorded}
+    out = [h["month"] for h in holdings if rec.get(h["month"]) != h["holdings"]]
+    if [h["month"] for h in holdings] != [h["month"] for h in recorded]:
+        out.append("month lists differ")
+    return out
+
+
 def liquidation_path(book, capital, key="liquidation_after_tax"):
     """The account's value path for the headline: the capital at the first point,
     the liquidation value at every later point."""
@@ -488,7 +513,8 @@ class FundAccount(object):
         self.lots = tx.Lots()
         self.ledger = tx.TaxLedger(rules or tx.ForwardRules())
         self.cash, self.units, self.open_fy = capital, 0.0, None
-        self.marks, self.paid, self.harvests = [], OrderedDict(), []
+        self.marks, self.paid, self.interest, self.harvests = [], OrderedDict(), OrderedDict(), []
+        self.last_detail = None
         self.fmv_date = fmv_date
 
     def _fmv(self):
@@ -497,7 +523,7 @@ class FundAccount(object):
     def _buy(self, d, amount):
         if amount <= 0:
             return
-        stamp = amount * FUND_STAMP_BUY if d >= FUND_STAMP_FROM else 0.0
+        stamp = amount * FUND_STAMP_BUY
         u = (amount - stamp) / self.nav(d)
         self.lots.add(self.NAME, u, amount, d)
         self.units += u
@@ -550,11 +576,13 @@ class FundAccount(object):
 
     def _pay(self, d, fy):
         tax = self.ledger.settle(fy)
-        self.paid[fy] = tax
-        if tax > self.cash:
-            need = tax - self.cash
+        interest = tx.interest_on(tax)
+        self.paid[fy], self.interest[fy] = tax, interest
+        due = tax + interest
+        if due > self.cash:
+            need = due - self.cash
             self._redeem(d, min(self.units, need / (self.nav(d) * (1 - FUND_STT_REDEEM))))
-        self.cash -= tax
+        self.cash -= due
 
     def _harvest(self, d):
         """Sell long-term units oldest first until the year's long-term gain after
@@ -599,7 +627,10 @@ class FundAccount(object):
         nav = self.nav(d)
         value = self.units * nav
         extra = self.lots.preview_sell(self.NAME, self.units, value, d, self._fmv()) if self.units > 0 else []
-        liability = self.ledger.preview(tx.fy_of(d), extra)[0] if self.rules is not None else 0.0
+        liability = 0.0
+        if self.rules is not None:
+            liability, detail = self.ledger.preview(tx.fy_of(d), extra)
+            self.last_detail = dict(detail, income=self.ledger.income(tx.fy_of(d), extra))
         pre = self.cash + value * (1 - FUND_STT_REDEEM)
         self.marks.append({"date": d, "nav": nav, "liquidation_pre_tax": pre, "liability": liability,
                            "liquidation_after_tax": pre - liability})
@@ -691,6 +722,32 @@ def compare(path_book, path_fund, first_half=HALF_FIRST, info_blocks=BOOT_BLOCKS
                 v = "TIES"
             out["verdict"] = v
     return out
+
+
+def block_means(xs, block_len=BOOT_BLOCK, n=BOOT_N, rng=None):
+    """Circular moving-block bootstrap of a series' mean (numpy)."""
+    import numpy as np
+    a = np.asarray(xs, float)
+    T = len(a)
+    k = int(math.ceil(T / float(block_len)))
+    starts = rng.integers(0, T, size=(n, k))
+    idx = (starts[:, :, None] + np.arange(block_len)[None, None, :]).reshape(n, -1)[:, :T] % T
+    return a[idx].mean(axis=1)
+
+
+def shrink_interval(back, live):
+    """Amendment 2, N12: P1's s = mean(live) / mean(backtest), each window bootstrapped
+    on its own; stated in advance to be close to uninformative."""
+    import numpy as np
+    rng = np.random.default_rng(BOOT_SEED)
+    mb, ml = block_means(back, rng=rng), block_means(live, rng=rng)
+    ok = mb > 0
+    ratio = ml[ok] / mb[ok]
+    clipped = np.clip(ratio, 0.0, 1.0)
+    return {"draws": BOOT_N, "share_backtest_mean_not_positive": float((~ok).mean()),
+            "ci95_unclipped": [float(np.percentile(ratio, q)) for q in (CI_LO, CI_HI)] if ok.any() else None,
+            "ci95_clipped": [float(np.percentile(clipped, q)) for q in (CI_LO, CI_HI)] if ok.any() else None,
+            "reading": "close to uninformative (amendment 2, N12)"}
 
 
 def pearson(x, y):
@@ -1143,6 +1200,18 @@ def stage0():
                         "fund_b_live_returns": sum(1 for m in ret_labels if m >= LIVE_FROM_LABEL),
                         "fund_c_returns": len(dates) - 1 - c_start},
             "positions_closed": len(book10.closed), "lots_open_at_end": sum(len(v) for v in book10.lots.by_name.values())}
+
+        # 9. names unchanged with tax on (amendment 2, B3): only months compared and months that differ are written
+        c9 = OrderedDict()
+        for cap in CAPITALS:
+            for rn, r in (("tax_off", None), ("forward", tx.ForwardRules()), ("historical", tx.HistoricalRules())):
+                _, _, _, h = run_book(panel, unis, cap, r, by_session)
+                c9["%d_%s" % (cap, rn)] = {"months_compared": len(h), "months_differing": names_differ(h, base["holdings"])}
+        rec["9_names_unchanged_with_tax_on"] = c9
+        _check(rec, "9_names_unchanged_with_tax_on",
+               all(v["months_compared"] == EXPECTED_POINTS and not v["months_differing"] for v in c9.values()),
+               "a replay's holdings differ from trial 126's names")
+        print("stage 0: 9 names unchanged with tax on - ok (%.0f s)" % (time.time() - t0), flush=True)
         status = "STAGE0_DONE"
     except Halt as h:
         rec["halted_at"] = str(h)
@@ -1182,9 +1251,29 @@ def refusals(rerun_reason=None):
             ran = json.load(f)["stage0"]["environment"].get("code_sha256")
         if ran != code_sha256():
             why.append("the harness, the tax engine or the tests differ from the code stage 0 ran")
+    try:
+        bad = check_inputs()["bad"]
+        if bad:
+            why.append("prepared inputs differ from the manifest or hold 2026: %s" % bad)
+    except Exception as e:  # noqa: BLE001  any failure to read them is a refusal
+        why.append("prepared inputs unreadable: %s" % e)
+    if not os.path.exists(nse_prices.cache_file(False, True)):
+        why.append("the repaired panel's cache is missing")
     if os.path.exists(RESULT_OUT) and not rerun_reason:
         why.append("%s exists: one run only (prereg section 12)" % RESULT_OUT)
     return why
+
+
+def income_flags(ledger, last_detail):
+    """Amendment 2, N8: the largest settled year's realised income and the terminal year's."""
+    by_fy = {fy: ledger.income(fy) for fy in ledger.settled}
+    largest = max(by_fy.items(), key=lambda kv: kv[1]) if by_fy else (None, 0.0)
+    terminal = last_detail["income"] if last_detail else None
+    over = [str(fy) for fy, v in by_fy.items() if v > SURCHARGE_INCOME]
+    if terminal is not None and terminal > SURCHARGE_INCOME:
+        over.append("terminal")
+    return {"largest_settled_year": {"fy": largest[0], "income": largest[1]}, "terminal_year_income": terminal,
+            "years_over_50_lakh": over}
 
 
 def book_summary(book, capital, pre_path):
@@ -1198,7 +1287,10 @@ def book_summary(book, capital, pre_path):
             "carry_at_end": book.ledger.carry, "prorata_sales": book.prorata,
             "dividends_total": book.dividends_total,
             "events_on_held_positions": dict(Counter(e["kind"] for e in book.event_log)),
-            "going_concern_value_at_end": book.marks[-1]["value"]}
+            "going_concern_value_at_end": book.marks[-1]["value"],
+            "interest_by_fy": {str(k): v for k, v in book.interest.items()},
+            "interest_total": sum(book.interest.values()), "income": income_flags(book.ledger, book.last_detail),
+            "carried_losses_valued_at_zero_at_end": sum(c["amount"] for c in book.ledger.carry)}
 
 
 def fund_summary(acct, pre_acct):
@@ -1208,7 +1300,8 @@ def fund_summary(acct, pre_acct):
             "terminal_after_tax": path[-1], "terminal_pre_tax_liquidated": pre[-1],
             "terminal_liability": acct.marks[-1]["liability"],
             "tax_paid_by_fy": {str(k): v for k, v in acct.paid.items()}, "tax_paid_total": sum(acct.paid.values()),
-            "harvests": acct.harvests, "carry_at_end": acct.ledger.carry}
+            "harvests": acct.harvests, "carry_at_end": acct.ledger.carry,
+            "interest_total": sum(acct.interest.values()), "income": income_flags(acct.ledger, acct.last_detail)}
 
 
 def measure(review_note, rerun_reason=None):
@@ -1218,7 +1311,8 @@ def measure(review_note, rerun_reason=None):
     t0 = time.time()
     started = {"look": "L53", "status": "STARTED", "started": datetime.datetime.now(IST).isoformat(),
                "review_note": review_note, "rerun_reason": rerun_reason, "stage0_sha256": _sha256(STAGE0_OUT),
-               "prereg_commit": PREREG_COMMIT, "environment": environment()}
+               "prereg_commit": PREREG_COMMIT, "amendments": ["2550a00", "e0b2e98"], "note": NOT_ADVICE,
+               "environment": environment()}
     _write(RESULT_OUT, started)                    # before any tax is replayed
     c1 = check_inputs()
     if c1["bad"]:
@@ -1236,17 +1330,24 @@ def measure(review_note, rerun_reason=None):
     rules = OrderedDict([("forward", tx.ForwardRules()), ("historical", tx.HistoricalRules())])
 
     # 1. the book, tax off (pre-tax liquidation) and under each rule set, both sizes
-    books, pre_books, series_by_cap = {}, {}, {}
+    books, pre_books, series_by_cap, names = {}, {}, {}, OrderedDict()
     for cap in CAPITALS:
-        ser, book, _, _ = run_book(panel, unis, cap, None, by_session)
+        ser, book, _, h = run_book(panel, unis, cap, None, by_session)
         if cap == CAPITALS[0] and (len(ser) != len(recd["values"]["strategy"]) or max(
                 _rel(s[2], r) for s, r in zip(ser, recd["values"]["strategy"])) > REL_TOL_REPRO):
             raise SystemExit("the tax-off replay no longer reproduces trial 126")
         pre_books[cap], series_by_cap[cap] = book, ser
+        names["%d_tax_off" % cap] = names_differ(h, recd["holdings"])
         for rn, r in rules.items():
-            _, bk, _, _ = run_book(panel, unis, cap, r, by_session)
+            _, bk, _, h = run_book(panel, unis, cap, r, by_session)
             books[(cap, rn)] = bk
+            names["%d_%s" % (cap, rn)] = names_differ(h, recd["holdings"])
         print("book replayed at %d (%.0f s)" % (cap, time.time() - t0), flush=True)
+    if any(names.values()):                        # amendment 2, B3: halt before any figure is written
+        _write(RESULT_OUT, dict(started, status="HALTED", finished=datetime.datetime.now(IST).isoformat(),
+                                halted="the tax-on book's names differ from trial 126's",
+                                months_differing=names))
+        raise SystemExit("HALTED: names differ from trial 126's: %s" % {k: v[:5] for k, v in names.items() if v})
     series = series_by_cap[CAPITALS[0]]
     dates = [s[1] for s in series]
     labels = [s[0] for s in series][1:]
@@ -1256,6 +1357,7 @@ def measure(review_note, rerun_reason=None):
     navs = {"a_nifty100": tri_fund_nav(tri["n100"], TD_A, dates[0]),
             "b_nifty200_momentum30": tri_fund_nav(tri["m30"], TD_B, dates[0])}
     calendars = {"a_nifty100": list(tri["n100"]), "b_nifty200_momentum30": list(tri["m30"]), "c_uti": list(uti)}
+    nav_b_sens = tri_fund_nav(tri["m30"], TD_B_SENSITIVITY, dates[0])
     funds, pre_funds = {}, {}
     for cap in CAPITALS:
         for fn, nav in navs.items():
@@ -1281,7 +1383,7 @@ def measure(review_note, rerun_reason=None):
                 fs = fund_summary(acct, pre_funds[(cap, fn)])
                 fs["tax_drag_pp"] = (fs["cagr_pre_tax_liquidated"] - fs["cagr_after_tax"]) * 100
                 block_out["funds"][fn] = fs
-                cmpd = compare(bpath, fund_path(acct))
+                cmpd = compare(bpath, fund_path(acct), verdict=(cap == CAPITALS[0] and rn == "forward"))
                 cmpd["break_even_pre_tax_margin_pp"] = b_drag - fs["tax_drag_pp"]
                 cmpd["pre_tax_liquidated_difference_pp"] = (block_out["book"]["cagr_pre_tax_liquidated"]
                                                             - fs["cagr_pre_tax_liquidated"]) * 100
@@ -1299,10 +1401,23 @@ def measure(review_note, rerun_reason=None):
             cpath = fund_path(acct_c)
             bslice = bpath[c_start:]
             fb = fund_path(funds[(cap, "b_nifty200_momentum30", rn)])[c_start:]
+            fresh_b = run_fund(navs["b_nifty200_momentum30"], dates[c_start:], cap, rules[rn],
+                               calendars["b_nifty200_momentum30"])            # amendment 2, N4
+            fbp = fund_path(fresh_b)
+            block_out["funds"]["b_fresh_from_2021_04_information"] = {
+                "cagr_after_tax": cagr(fbp[0], fbp[-1], len(fbp) - 1), "terminal_liability": fresh_b.marks[-1]["liability"]}
             block_out["comparisons"]["c_uti"] = {
                 "window": [dates[c_start], dates[-1]],
-                "book_minus_c": compare(bslice, cpath, first_half=0),
-                "b_slice_minus_c": compare(fb, cpath, first_half=0)}
+                "book_minus_c": compare(bslice, cpath, first_half=0, verdict=False),
+                "b_slice_minus_c": compare(fb, cpath, first_half=0, verdict=False),
+                "b_fresh_from_2021_04_minus_c": compare(fbp, cpath, first_half=0, verdict=False),
+                "book_minus_b_fresh_from_2021_04": compare(bslice, fbp, first_half=0, verdict=False)}
+            if rn == "forward":                                                 # amendment 2, N6
+                sens = run_fund(nav_b_sens, dates, cap, rules[rn], calendars["b_nifty200_momentum30"])
+                sp = fund_path(sens)
+                block_out["comparisons"]["b_td_minus_0_3pp_information"] = dict(
+                    compare(bpath, sp, verdict=False), cagr_fund_after_tax=cagr(sp[0], sp[-1], len(sp) - 1),
+                    tracking_difference=-TD_B_SENSITIVITY)
             after_tax["%d_%s" % (cap, rn)] = block_out
     print("after-tax replay done (%.0f s)" % (time.time() - t0), flush=True)
 
@@ -1333,7 +1448,8 @@ def measure(review_note, rerun_reason=None):
                                                              "book_minus_fund_a": ex(r_book, r_fa, live)}}}
     m30_ew_back, m30_ew_live = ex(r_m30, r_ew, back), ex(r_m30, r_ew, live)
     p1 = {"n200m30_minus_ew200_backtest_2010_03_to_2020_08": m30_ew_back,
-          "n200m30_minus_ew200_live_2020_09_to_2025_11": m30_ew_live}
+          "n200m30_minus_ew200_live_2020_09_to_2025_11": m30_ew_live,
+          "s_interval": shrink_interval([r_m30[i] - r_ew[i] for i in back], [r_m30[i] - r_ew[i] for i in live])}
     if m30_ew_back["mean"] > 0:
         s = max(0.0, min(1.0, m30_ew_live["mean"] / m30_ew_back["mean"]))
         p1.update({"s": s, "s_unclipped": m30_ew_live["mean"] / m30_ew_back["mean"],
@@ -1389,7 +1505,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--prepare-data", action="store_true", help="copy the downloads, cut before 2026")
-    mode.add_argument("--stage0", action="store_true", help="the eight checks; computes no after-tax figure")
+    mode.add_argument("--stage0", action="store_true", help="the nine checks; writes no after-tax figure")
     mode.add_argument("--measure", action="store_true", help="the ONE measurement pass, after the review of stage 0")
     ap.add_argument("--raw-dir", default=None, help="R1's research-r1 directory (with --prepare-data)")
     ap.add_argument("--review-note", default=None, help="who approved stage 0, and when (required with --measure)")

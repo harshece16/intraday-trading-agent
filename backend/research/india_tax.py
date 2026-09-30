@@ -25,6 +25,8 @@ LOSS_CARRY_YEARS = 8
 GRANDFATHER_ACQ_BEFORE = "2018-02-01"
 GRANDFATHER_SALE_FROM = "2018-04-01"
 BUDGET_2024 = "2024-07-23"          # new short- and long-term rates apply to transfers on or after this date
+ADVANCE_TAX_THRESHOLD = 10000.0     # a year's tax at or above this needed advance tax (amendment 2, B2)
+LATE_INTEREST = 0.0605              # 234C 1% x (3x15% + 3x45% + 3x75% + 1x100%) = 5.05%, plus 234B 1% for April
 
 
 # ---- dates ------------------------------------------------------------------------
@@ -162,24 +164,31 @@ def compute_fy_tax(fy, items, dividends, carry, rules):
             st_loss -= g
         else:
             lt_loss -= g
-    st_keys = sorted(gains, key=lambda k: -k[1])                     # any bucket, highest rate first
-    lt_keys = [k for k in st_keys if k[0] == "lt"]
+    by_rate = sorted(gains, key=lambda k: -k[1])                     # highest rate first
+    st_keys = [k for k in by_rate if k[0] == "st"]
+    lt_keys = [k for k in by_rate if k[0] == "lt"]
 
-    # current-year set-off (section 70): short-term losses against anything, long-term only against long-term
+    # current-year set-off (section 70), amendment 2's order: ST loss against ST gain,
+    # LT loss against LT gain, then what is left of the ST loss against LT gain
     st_loss_left = _consume(gains, st_keys, st_loss)
     lt_loss_left = _consume(gains, lt_keys, lt_loss)
+    st_loss_left = _consume(gains, lt_keys, st_loss_left)
 
-    # brought-forward losses (sections 72/74), oldest first; lapse after 8 years
-    lapsed, used_bf, new_carry = 0.0, 0.0, []
+    # brought-forward losses (sections 72/74), oldest first within each step; lapse after 8 years
+    lapsed, used_bf = 0.0, 0.0
+    live = []
     for c in sorted(carry, key=lambda c: (c["fy"], c["term"])):
         if fy - c["fy"] > LOSS_CARRY_YEARS:
             lapsed += c["amount"]
-            continue
-        keys = st_keys if c["term"] == "st" else lt_keys
-        left = _consume(gains, keys, c["amount"])
-        used_bf += c["amount"] - left
-        if left > 1e-9:
-            new_carry.append({"fy": c["fy"], "term": c["term"], "amount": left})
+        else:
+            live.append(dict(c))
+    for term, keys in (("st", st_keys), ("lt", lt_keys), ("st", lt_keys)):
+        for c in live:
+            if c["term"] == term and c["amount"] > 0:
+                left = _consume(gains, keys, c["amount"])
+                used_bf += c["amount"] - left
+                c["amount"] = left
+    new_carry = [c for c in live if c["amount"] > 1e-9]
     if st_loss_left > 1e-9:
         new_carry.append({"fy": fy, "term": "st", "amount": st_loss_left})
     if lt_loss_left > 1e-9:
@@ -204,6 +213,12 @@ def compute_fy_tax(fy, items, dividends, carry, rules):
     return tax, detail, new_carry
 
 
+def interest_on(tax):
+    """Interest under sections 234B and 234C on a year's tax paid in April with no
+    advance tax (amendment 2, B2): 6.05% of it, if it reached the advance-tax threshold."""
+    return tax * LATE_INTEREST if tax >= ADVANCE_TAX_THRESHOLD else 0.0
+
+
 class TaxLedger:
     """Realised items and dividends by financial year, and the losses carried."""
 
@@ -222,6 +237,14 @@ class TaxLedger:
 
     def add_dividend(self, fy, amount):
         self.dividends[fy] = self.dividends.get(fy, 0.0) + amount
+
+    def income(self, fy, extra_items=()):
+        """A year's realised income for the surcharge flag (amendment 2, N8): net
+        short- and long-term gains (not below zero) and dividends."""
+        items = self.items.get(fy, []) + list(extra_items)
+        st_net = sum(i["gain"] for i in items if i["term"] == "st")
+        lt_net = sum(i["gain"] for i in items if i["term"] == "lt")
+        return max(0.0, st_net) + max(0.0, lt_net) + self.dividends.get(fy, 0.0)
 
     def preview(self, fy, extra_items=()):
         """(tax, detail) of fy as if extra_items were also realised; changes nothing."""

@@ -100,6 +100,22 @@ def test_short_term_loss_goes_to_short_term_gains_first_then_long_term():
     assert d["lt_after_setoff"] == pytest.approx(120e3) and tax == 0.0 and carry == []
 
 
+def test_the_reviews_case_long_term_loss_meets_long_term_gain_first():
+    """Amendment 2, B1: FY2025 ST loss 1L, LT gain 1L, LT loss 1L; FY2026 ST gain 1L -> no tax."""
+    tax, d, carry = _tax(2025, [_item(-100e3, "st", sale="2025-06-01"), _item(100e3, "lt", sale="2025-07-01"),
+                                _item(-100e3, "lt", sale="2025-08-01")])
+    assert tax == 0.0 and carry == [{"fy": 2025, "term": "st", "amount": pytest.approx(100e3)}]
+    assert _tax(2026, [_item(100e3, "st", sale="2026-06-01")], carry=carry)[0] == 0.0
+
+
+def test_brought_forward_long_term_losses_meet_long_term_gains_before_short_term_losses_do():
+    carry = [{"fy": 2018, "term": "st", "amount": 100e3}, {"fy": 2019, "term": "lt", "amount": 100e3}]
+    tax, d, left = _tax(2020, [_item(100e3, "lt", sale="2020-06-01")], carry=carry)
+    assert tax == 0.0 and left == [{"fy": 2018, "term": "st", "amount": pytest.approx(100e3)}]
+    tax, d, left = _tax(2020, [_item(250e3, "lt", sale="2020-06-01")], carry=carry)
+    assert left == [] and d["lt_after_setoff"] == pytest.approx(50e3) and tax == 0.0
+
+
 def test_a_long_term_loss_cannot_touch_a_short_term_gain():
     tax, d, carry = _tax(2021, [_item(100e3, "st"), _item(-80e3, "lt")])
     assert tax == pytest.approx(100e3 * 0.20 * 1.04)
@@ -256,28 +272,76 @@ def test_with_tax_on_the_year_is_paid_at_the_first_april_fill_and_trades_keep_th
     assert all(m["liquidation_after_tax"] <= m["liquidation_pre_tax"] + 1e-6 for m in book.marks)
 
 
-def test_a_tax_bill_larger_than_cash_is_paid_by_a_pro_rata_sale():
+def test_the_tax_is_paid_by_one_fraction_of_the_whole_book_after_the_orders():
+    """Amendment 2, B2 and B3: tax plus 6.05% interest, taken as the same fraction of
+    cash, of every holding and of every open buy order; no name is dropped."""
     sessions, chains = _panel()
     ctx = l53.Ctx(sessions, chains, {}, FWD, 0.0005)
     book = l53.TaxBook(1e6, True, ctx=ctx)
     book.work(chains, 300, sessions, "buy")                    # sets the session and the open year
     for n in ("S01", "S02"):
         book._bought(n, chains[n]["close"][300], 400000.0, 0.0005)
+    book.order("buy", "S03", 0.0005, placed=300, amount=100000.0)
     book.open_fy = tx.fy_of(sessions[300])
     book.ledger.add_item(book.open_fy, _item(2e6, "st", sale=sessions[300]))
     tax_due = book.ledger.preview(book.open_fy)[0]
     cash_before = book.cash
     s = next(i for i in range(301, 700) if tx.fy_of(sessions[i]) > book.open_fy)
     units_before = {n: book.pos[n] for n in book.pos}
+    book.orders[0]["placed"] = s                                # keep the open order alive for this session
+    chains["S03"]["val"][s] = 0.0                               # and unfilled: no trade that day
     book.work(chains, s, sessions, "sell")
-    assert book.paid[tx.fy_of(sessions[300])] == pytest.approx(tax_due)
-    assert book.cash == pytest.approx(0.0, abs=1e-6)
+    assert tx.fy_of(sessions[300]) not in book.paid             # not before the session's buys
+    book.work(chains, s, sessions, "buy")
+    fy = tx.fy_of(sessions[300])
+    assert book.paid[fy] == pytest.approx(tax_due)
+    assert book.interest[fy] == pytest.approx(tax_due * 0.0605)
     p = book.prorata[0]
-    assert p["shortfall"] == pytest.approx(tax_due - cash_before)
+    x = p["fraction"]
+    assert 0 < x < 1 and set(book.pos) == set(units_before)
+    assert book.cash == pytest.approx(cash_before * (1 - x))
+    assert book.orders[0]["amount"] == pytest.approx(100000.0 * (1 - x))
     for n in units_before:
-        assert book.pos[n] == pytest.approx(units_before[n] * (1 - p["fraction_sold"]))
+        assert book.pos[n] == pytest.approx(units_before[n] * (1 - x))
         assert book.lots.units(n) == pytest.approx(book.pos[n])
+    assert p["from_cash"] + p["from_holdings"] == pytest.approx(tax_due * 1.0605)
     assert tx.fy_of(sessions[s]) in book.ledger.items          # the sale's gains fall in the new year
+
+
+def test_interest_only_from_the_advance_tax_threshold():
+    assert tx.interest_on(9999.0) == 0.0
+    assert tx.interest_on(10000.0) == pytest.approx(605.0)
+    assert tx.LATE_INTEREST == pytest.approx(0.01 * (3 * 0.15 + 3 * 0.45 + 3 * 0.75 + 1 * 1.00) + 0.01)
+
+
+def test_a_large_tax_bill_never_changes_the_books_names(monkeypatch):
+    """The review's forcing case (amendment 2, B3): a huge bill in one year; with the
+    whole-book payment the month-by-month names equal the tax-off replay's."""
+    sessions, chains = _panel(n_stocks=45)
+    unis = mw.universes(sessions, chains)
+    panel = (sessions, chains, {}, [])
+    orig = l53.TaxBook._pay
+    forced = {}
+
+    def pay(self, chains_, s, fy):
+        if not forced:
+            forced["fy"] = fy
+            self.ledger.add_item(fy, _item(2.5 * self.capital, "st", sale="%d-06-01" % fy, acq="%d-01-01" % fy))
+        return orig(self, chains_, s, fy)
+    monkeypatch.setattr(l53.TaxBook, "_pay", pay)
+    for cap in (1e6, 1e5):
+        _, _, _, h_off = l53.run_book(panel, unis, cap, None)
+        forced.clear()
+        _, book, _, h_on = l53.run_book(panel, unis, cap, FWD)
+        assert book.prorata and max(p["fraction"] for p in book.prorata) > 0.3
+        assert l53.names_differ(h_on, h_off) == []
+        assert all(len(h["holdings"]) == len(g["holdings"]) for h, g in zip(h_on, h_off))
+
+
+def test_names_differ_lists_the_months():
+    a = [{"month": "2020-01", "holdings": ["X", "Y"]}, {"month": "2020-02", "holdings": ["X"]}]
+    b = [{"month": "2020-01", "holdings": ["X", "Y"]}, {"month": "2020-02", "holdings": ["X", "Z"]}]
+    assert l53.names_differ(a, a) == [] and l53.names_differ(a, b) == ["2020-02"]
 
 
 # --- the funds -----------------------------------------------------------------------------------
@@ -303,7 +367,8 @@ def test_a_fund_with_tax_off_is_its_nav_less_the_redemption_stt():
     nav = _growing()
     acct = l53.run_fund(nav, dates, 1e6, None)
     for m in acct.marks:
-        assert m["liquidation_pre_tax"] == pytest.approx(1e6 * nav(m["date"]) / nav(dates[0]) * (1 - l53.FUND_STT_REDEEM))
+        assert m["liquidation_pre_tax"] == pytest.approx(
+            1e6 * (1 - l53.FUND_STAMP_BUY) * nav(m["date"]) / nav(dates[0]) * (1 - l53.FUND_STT_REDEEM))
 
 
 def test_the_harvest_realises_the_exemption_exactly_and_the_fund_pays_no_tax():
@@ -348,11 +413,11 @@ def test_a_harvest_waits_for_the_first_long_term_day_in_the_same_year():
     assert l53.run_fund(_growing(0.03, first="2010-03-31"), late, 1e6, FWD, cal).harvests == []
 
 
-def test_stamp_duty_only_from_july_2020():
+def test_stamp_duty_on_every_purchase_in_every_year():
     a = l53.FundAccount(lambda d: 10.0, None, 1e6)
-    a._buy("2020-06-30", 1000.0)
+    a._buy("2012-06-30", 1000.0)
     a._buy("2020-07-01", 1000.0)
-    assert [lot[0] for lot in a.lots.by_name["F"]] == [pytest.approx(100.0), pytest.approx(99.995)]
+    assert [lot[0] for lot in a.lots.by_name["F"]] == [pytest.approx(99.995), pytest.approx(99.995)]
 
 
 # --- statistics ----------------------------------------------------------------------------------
