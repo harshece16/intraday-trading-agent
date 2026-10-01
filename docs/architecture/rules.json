@@ -1,6 +1,6 @@
 {
  "title": "Trader Sahab rules catalogue",
- "as_of": "2026-09-30",
+ "as_of": "2026-10-01",
  "note": "Source of truth for docs/architecture/RULES.md and rules.html. Edit this file, then run tools/build_rules_docs.py.",
  "interactive_url": "https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK",
  "statuses": {
@@ -131,19 +131,19 @@
    "id": "ENT-01",
    "area": "entry",
    "status": "active",
-   "rule": "An automatic cash entry needs a confidence score of at least 60/100 (local setup score x Scorecard system multiplier); below it the signal is blocked and logged.",
-   "why": "A clean checklist pass means nothing statistically until the system has shown a real edge; the same gate F&O uses.",
-   "enforced_in": "backend/trading_engine.py:_try_enter",
-   "config": "RISK.min_confidence_to_trade = 60",
-   "verify": "activity kind 'blocked' with 'confidence N/100 below the 60 bar'; GET /api/journal/blocked-signals",
-   "source": "README §19, §70",
-   "test": "backend/tests/test_confidence.py::test_perfect_setup_still_blocked_when_scorecard_fails"
+   "rule": "An automatic cash entry needs a confidence score (local setup score x Scorecard system multiplier) of at least the bar for the engine's mode at the moment of the entry: 60/100 in Live, 0 in Paper. Below it the signal is blocked and logged. Every entry's score is journaled on its trade row, with the bar applied and whether the live bar of 60 would have blocked it.",
+   "why": "A clean checklist pass means nothing statistically until the system has shown a real edge; the same gate F&O uses. In Paper the owner asked for automatic trades (2026-10-01), and with the live bar every one was blocked, so the paper bar is 0 and the score is kept as evidence instead.",
+   "enforced_in": "backend/trading_engine.py:_try_enter; backend/config.py:cash_confidence_bar",
+   "config": "RISK.min_confidence_to_trade = 60 (Live); RISK.paper_min_confidence_to_trade = 0 (Paper)",
+   "verify": "Live: activity kind 'blocked' with 'confidence N/100 below the 60 bar', GET /api/journal/blocked-signals. Paper: trades.confidence_json on each entry (paper_bar_let_through, live_bar_would_block)",
+   "source": "README §19, §70, §118",
+   "test": "backend/tests/test_confidence.py::test_perfect_setup_still_blocked_when_scorecard_fails; backend/tests/test_paper_auto_entries.py::test_live_blocks_below_the_bar_exactly_as_before_and_offers_a_card; backend/tests/test_paper_auto_entries.py::test_paper_enters_below_the_live_bar_and_journals_the_score"
   },
   {
    "id": "ENT-02",
    "area": "entry",
    "status": "active",
-   "rule": "The Scorecard's 'Backtest evidence for the live rule set' row fails when net R < 0 with t <= -2 (committed evidence: -0.356R over 201 trades, t = -3.59). Any failing row sets the multiplier to 0.25x, so confidence tops out at 25 and no automatic entry (cash or F&O, paper or live) can pass 60.",
+   "rule": "The Scorecard's 'Backtest evidence for the live rule set' row fails when net R < 0 with t <= -2 (committed evidence: -0.356R over 201 trades, t = -3.59). Any failing row sets the multiplier to 0.25x, so confidence tops out at 25 and no automatic entry can pass the bar of 60: every cash entry in Live and every F&O entry. In Paper the cash bar is 0 (ENT-01, README §118), so paper cash entries are taken.",
    "why": "Two years of backtests show the live rule set loses; the gate must know it.",
    "enforced_in": "backend/evaluation.py:backtest_evidence_row + backend/confidence.py:_system_multiplier",
    "config": "backend/backtest_evidence.json applies_to = {sahab_dimaag, checklist, 5m}",
@@ -395,7 +395,7 @@
    "id": "ENT-23",
    "area": "entry",
    "status": "active",
-   "rule": "A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked. It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share. When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.",
+   "rule": "A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked (in Live; in Paper the bar is 0, so such a setup is entered, not carded). It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share. When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.",
    "why": "Only put setups in front of the user that could actually be taken. Of 39 replayed R:R cards, all under 1.0, the mean was -0.78R (t -5.42) and 21 of the 25 that hit their target still lost money (#166).",
    "enforced_in": "backend/trading_engine.py:_offer_near_misses, _offer_review; backend/review_queue.py:single_blocker, floor_reason, build_card, ReviewQueue.hold",
    "config": "REVIEW_QUEUE.min_net_rrr = 1.0",
@@ -450,6 +450,18 @@
    "verify": "manual_reviews.shadow_json; 'If approved' column on Overview; the 'Held back today' list and its total",
    "source": "README §68, §105, issue #102",
    "test": "backend/tests/test_review_queue.py::test_stop_is_assumed_first_when_one_bar_touches_both; backend/tests/test_review_queue.py::test_a_held_back_near_miss_is_journaled_once_replayed_and_cannot_be_approved"
+  },
+  {
+   "id": "ENT-28",
+   "area": "entry",
+   "status": "active",
+   "rule": "The cash confidence bar is read from the engine's mode at each entry, so a switch to Live restores the bar of 60 for the very next entry. Just before the order the mode is read once more: if it is now Live, the live bar is applied again and the order goes to the mode just read. A position opened in Paper keeps its paper flag and is never closed with a real order.",
+   "why": "The paper bar of 0 must never let a real order through: a switch to Live during an entry, or a paper position open at the switch, could otherwise put real money behind a setup only the paper bar allowed.",
+   "enforced_in": "backend/trading_engine.py:_try_enter, _execute; backend/config.py:cash_confidence_bar",
+   "config": "RISK.paper_min_confidence_to_trade = 0; RISK.min_confidence_to_trade = 60",
+   "verify": "trades.confidence_json.mode equals trades.mode on every engine entry; no live trade row with live_bar_would_block true",
+   "source": "README §118, #156",
+   "test": "backend/tests/test_paper_auto_entries.py::test_a_switch_to_live_restores_the_bar_for_the_next_entry; backend/tests/test_paper_auto_entries.py::test_a_switch_to_live_during_the_entry_cannot_send_a_real_order"
   },
   {
    "id": "RSK-01",
@@ -2359,7 +2371,7 @@
    "id": "RES-24",
    "area": "research",
    "status": "active",
-   "rule": "Setting min_confidence_to_trade to 0 is a research-run override only. The live default and the gate are not changed by research.",
+   "rule": "Setting min_confidence_to_trade to 0 is a research-run override only. The live default and the gate are not changed by research. The paper bar of 0 (RISK.paper_min_confidence_to_trade, ENT-01) is the owner's product decision of 2026-10-01, not a research result; the live bar stays 60.",
    "why": "The gate's cold-start behaviour is a design choice, not a bug to fix from a backtest.",
    "enforced_in": "docs/research/report-2026-09-20.md §8 amendment 8; research scripts pass scorecard=[]",
    "config": "min_confidence_to_trade = 0 (research runs only)",
@@ -3214,12 +3226,12 @@
    "id": "UI-04",
    "area": "ui",
    "status": "active",
-   "rule": "The Momentum Book is the dashboard's front page (/). The navigation leads with it, then groups the intraday engine's pages as the intraday paper record, the intraday research (Jev book, Kronos), and the account. The intraday Overview is at /intraday; /momentum-book and /overview still open their pages, query string kept. Every intraday page opens with a banner: a paper record, no intraday edge found (with its sources), and the strategy is the momentum book. The banner is text only and changes nothing the engine does.",
+   "rule": "The Momentum Book is the dashboard's front page (/). The navigation leads with it, then groups the intraday engine's pages as the intraday paper record, the intraday research (Jev book, Kronos), and the account. The intraday Overview is at /intraday; /momentum-book and /overview still open their pages, query string kept. Every intraday page opens with a banner: a paper record, no intraday edge found (with its sources), the strategy is the momentum book, and the paper engine takes its trades automatically, the confidence gate applying in Live only (§118). The banner is text only and changes nothing the engine does.",
    "why": "The owner's decision of 2026-09-30: the momentum book is the core of Trader Sahab, and the intraday engine is kept in paper as a record, not as the strategy.",
    "enforced_in": "frontend/src/App.jsx:AppRoutes; frontend/src/components/Header.jsx:NAV; frontend/src/components/IntradayRecordBanner.jsx:IntradayRecordBanner",
    "config": null,
    "verify": "Open the dashboard: / shows the Momentum Book; /intraday, /screener and the other intraday pages show the paper-record banner; /momentum-book lands on /",
-   "source": "README §116",
+   "source": "README §116, §118",
    "test": null
   },
   {

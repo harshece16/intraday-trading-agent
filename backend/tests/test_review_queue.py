@@ -126,12 +126,16 @@ def test_no_card_when_another_rule_would_stop_it_anyway(engine):
 
 
 def test_confidence_gate_block_is_offered_as_a_card(engine, monkeypatch):
+    # In Live; in Paper the bar is 0 and the setup is entered (README section 118,
+    # test_paper_auto_entries.py).
+    engine.state.paper_mode = False
     monkeypatch.setattr(database, "journal_summary",
                         lambda: {"scorecard": [{"criterion": "x", "status": "fail", "detail": ""}]})
     entered = engine._try_enter(SYMBOL, "LONG", 100.0, BARS, analysis(plan(failing=())))
     assert entered is False
     [card] = engine.review_queue.snapshot()["cards"]
     assert card["blocker"]["key"] == "confidence"
+    assert card["mode"] == "live" and card["confidence"]["bar"] == config.RISK["min_confidence_to_trade"]
 
 
 # ---- deciding ---------------------------------------------------------------

@@ -391,3 +391,43 @@ was not made to move Jev's score; it follows from the audit's finding that the
 old score carries no information.
 
 **Live from the session of 2026-10-01.** The backend was restarted with this change on 2026-09-30 at 21:05 IST, after the close, with no position open. The restart read the day's list for 2026-09-30 back from the journal (#207) instead of choosing it again; the session of 2026-10-01 fixes its own before the open.
+
+---
+
+# Clarification 11 — 2026-10-01, written before the change is deployed
+
+**What had been seen:** no fill, verdict or score of this book was read in
+writing this.
+
+**The change**, from the first backend restart after it is merged (the date is
+added below once it is live). README §118, the owner's instruction of
+2026-10-01: "let it take automatic trades in paper mode".
+
+The engine's cash confidence gate keeps its bar of 60 in Live and has a bar of
+0 in Paper (`RISK["paper_min_confidence_to_trade"]`). In paper the engine
+therefore takes its own checklist entries automatically, where before the gate
+stopped every one.
+
+**What stops being true.** Clarification 10 says "What the engine itself would
+do without Jev is nothing: the confidence gate has stopped every automatic
+entry since README §70. That is always-skip." From this deploy that is no
+longer true in paper: the engine takes paper trades of its own. In Live it
+stays true.
+
+**What this does to the book: nothing.**
+
+- **Jev's inputs.** Jev sees the scanner's row, the market summary, the time,
+  the exit rule and the cost, never positions (Protocol). Nothing in the
+  snapshot reads the engine's trades or positions, and nothing in it changes.
+- **Jev's fills and score.** The book opens and closes its own paper positions
+  from Kite's prices and keeps them in its own state file
+  (`backend/data/jev_book_state.json`). It never reads the engine's trades.
+- **The pass rule.** Rules 1 and 2 score Jev's own decisions. Rule 3 compares
+  Jev with the scanner's side on the same stock-days, as Clarification 10
+  fixed it, and does not use the engine's trades either. The kill rule is
+  unchanged. Always-skip is still reported as 0.
+
+So the scoring, the pass rule and the kill rule are unchanged; the only thing
+that changes is the sentence about what the engine would do without Jev, which
+in paper is now "take the checklist's own entries", recorded in the engine's
+journal and not part of this test.

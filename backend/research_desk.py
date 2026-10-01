@@ -420,7 +420,7 @@ def _plain(obj):
     return json.loads(json.dumps(obj, default=str))
 
 
-def _rules():
+def _rules(paper_mode=True):
     p = {**trader_brain.DEFAULTS, **config.STRATEGY_PARAMS.get(config.STRATEGY, {})}
     bar_minutes = int(config.CANDLE_INTERVAL.rstrip("m")) if config.CANDLE_INTERVAL.endswith("m") else None
     return {
@@ -438,7 +438,9 @@ def _rules():
         "max_open_positions": config.RISK["max_open_positions"],
         "max_positions_per_sector": config.RISK.get("max_positions_per_sector"),
         "max_position_notional_pct": config.RISK.get("max_position_notional_pct"),
-        "min_confidence_to_trade": config.RISK.get("min_confidence_to_trade"),
+        # The cash gate's bar in the mode the engine is in now (README section 118).
+        "min_confidence_to_trade": config.cash_confidence_bar(paper_mode),
+        "live_min_confidence_to_trade": config.cash_confidence_bar(False),
         "stop_to_cost_min": STOP_TO_COST_MIN,
     }
 
@@ -512,7 +514,7 @@ def _news(symbol, name):
                           for h in (n.get("headlines") or [])[:8]]}
 
 
-def _risk(analysis, tech, scan_section, market, rows, positions):
+def _risk(analysis, tech, scan_section, market, rows, positions, paper_mode=True):
     open_positions = {s: p for s, p in positions.items() if p.get("quantity")}
     industries = {r.get("symbol"): r.get("industry") for r in rows}
     industry = scan_section.get("industry")
@@ -528,7 +530,8 @@ def _risk(analysis, tech, scan_section, market, rows, positions):
     if analysis:
         conf = confidence.score_trade(analysis, side, scorecard)
         out["confidence_gate"] = {"side": side, "score": conf["score"], "label": conf["label"],
-                                  "bar": config.RISK.get("min_confidence_to_trade", 60),
+                                  "bar": config.cash_confidence_bar(paper_mode),
+                                  "live_bar": config.cash_confidence_bar(False),
                                   "explanation": conf["explanation"]}
     cl = tech.get("checklist") or {}
     entry, stop = cl.get("entry"), cl.get("stop")
@@ -560,6 +563,7 @@ def build_snapshot(state, symbol, now=None):
         scan = dict(state.scanner or {})
         market = dict(state.market or scan.get("market") or {})
         positions = {s: dict(p) for s, p in state.positions.items()}
+        paper_mode = state.paper_mode
     rows = list(scan.get("rows") or [])
     row = next((r for r in rows if r.get("symbol") == sym), None)
     if live.get("bull_score") is not None:
@@ -573,7 +577,7 @@ def build_snapshot(state, symbol, now=None):
     scan_section = _scanner(row, scan)
     market_section = {k: market.get(k) for k in ("bias", "score", "reasons", "session_date", "nifty", "vix",
                                                   "vix_high", "breadth", "fii_dii", "real_market_breadth")}
-    risk = _risk(analysis, tech, scan_section, market_section, rows, positions)
+    risk = _risk(analysis, tech, scan_section, market_section, rows, positions, paper_mode)
     position = positions.get(sym) or {}
     if position.get("quantity"):
         risk["this_position"] = {k: position.get(k) for k in ("quantity", "avg_price", "stop_price", "target_price")}
@@ -581,7 +585,7 @@ def build_snapshot(state, symbol, now=None):
         "meta": {"symbol": sym, "as_of": now.isoformat(timespec="seconds"), "as_of_hhmm": now.strftime("%H:%M"),
                  "session_date": scan.get("session_date") or market.get("session_date"),
                  "technical_source": source, "time_horizon": TIME_HORIZON},
-        "rules": _rules(),
+        "rules": _rules(paper_mode),
         "technical": tech,
         "scanner": scan_section,
         "fundamentals": _fundamentals(sym),
@@ -641,6 +645,10 @@ def deterministic_flags(snapshot):
         add("low", f"The confidence gate would block this {gate['side'].lower()} right now "
                    f"({gate['score']} vs a bar of {gate['bar']}).",
             "risk.confidence_gate.score", "risk.confidence_gate.bar")
+    elif gate and gate["score"] < gate.get("live_bar", gate["bar"]):
+        add("low", f"Paper mode takes this {gate['side'].lower()} automatically, but the live confidence gate "
+                   f"would block it ({gate['score']} vs a bar of {gate['live_bar']}).",
+            "risk.confidence_gate.score", "risk.confidence_gate.live_bar")
     return flags
 
 

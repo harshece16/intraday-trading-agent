@@ -20,8 +20,19 @@ import swing_patterns  # noqa: F401 — same
 import trader_brain
 
 
-def get_methods():
+def get_methods(paper_mode=True):
+    """`paper_mode` is the engine's mode now: the cash confidence bar the risk
+    note names is the one in force in that mode (README section 118)."""
     p = trader_brain.DEFAULTS
+    live_bar = config.cash_confidence_bar(False)
+    if paper_mode:
+        gate_txt = (f"In Live, a checklist pass alone can't fire an order below {live_bar}/100 confidence, "
+                    f"same bar as F&O. The engine is in Paper now, where the bar is "
+                    f"{config.cash_confidence_bar(True)}: it takes checklist passes automatically and journals "
+                    f"each one's score and whether the live bar would have blocked it. ")
+    else:
+        gate_txt = (f"The engine is in Live: a checklist pass alone can't fire an order below {live_bar}/100 "
+                    f"confidence, same bar as F&O. ")
     return {
         "checklist": {
             "title": "The Varsity Grand Checklist — decides WHEN to trade",
@@ -120,8 +131,7 @@ def get_methods():
         "risk": {
             "title": "Position sizing and evaluation",
             "note": f"The confidence.py gate (system-evidence multiplier from the Dimaag Scorecard) applies to "
-                    f"cash equity too, not just F&O — a checklist pass alone can't fire an order below "
-                    f"{config.RISK.get('min_confidence_to_trade', 60)}/100 confidence, same bar as F&O. Added "
+                    f"cash equity too, not just F&O. {gate_txt}The gate was added "
                     f"after a review found cash equity was firing on checklist-pass alone while F&O correctly "
                     f"gated on proven system-wide edge — the same evidence, inconsistently applied.",
             "rules": [

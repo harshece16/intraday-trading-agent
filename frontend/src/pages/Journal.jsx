@@ -78,8 +78,8 @@ function JournalBody({ j, fj, blocked, blockerStats }) {
           <p className="muted" style={{ margin: "0 0 10px", fontSize: 13 }}>
             {blockerStats.total_evaluations} checklist reads in the last {blockerStats.window_hours}h. Near misses
             below are evaluations where exactly one required item was the sole blocker — the closest calls to a
-            real trade. A setup clearing the checklist still has to pass the confidence gate (table below) before
-            it trades.
+            real trade. In Live, a setup clearing the checklist still has to pass the confidence gate (table below)
+            before it trades; in Paper it is taken automatically.
           </p>
           {Object.keys(blockerStats.near_misses_by_lone_blocker || {}).length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>

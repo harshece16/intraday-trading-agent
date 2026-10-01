@@ -325,6 +325,10 @@ class AppState:
                 "last_update_ts": self.last_update_ts,
                 "last_error": self.last_error,
                 "risk_total_capital": config.RISK["total_capital"],
+                # The cash confidence bar in force in this mode, and the live
+                # one, so a page can say the gate applies in Live only (§118).
+                "confidence_bar": config.cash_confidence_bar(self.paper_mode),
+                "live_confidence_bar": config.cash_confidence_bar(False),
                 "real_capital": self.real_capital,
                 "capital_sync": self.capital_sync,
                 "kite_connected": kite["connected"],
@@ -390,7 +394,7 @@ class AppState:
 
     def record_trade(self, symbol, side, quantity, price, mode, reason=None, note=None, realized=None,
                      charges=None, position_id=None, initial_risk=None, r_multiple=None, checklist_snapshot=None,
-                     realized_gross=None, signal_price=None, order_id=None):
+                     realized_gross=None, signal_price=None, order_id=None, confidence=None):
         """`realized` is net of both legs' charges; `realized_gross` is the same
         figure before them, and `charges` stays this one leg's own charges, so
         summing the column over every row still gives the day's total (#21)."""
@@ -403,6 +407,8 @@ class AppState:
             "initial_risk": initial_risk, "r_multiple": r_multiple,
             "signal_price": signal_price, "order_id": order_id,
         }
+        if confidence is not None:
+            trade["confidence"] = confidence
         with self.lock:
             self.trades.insert(0, trade)
         database.record_trade(trade, checklist_snapshot=checklist_snapshot)

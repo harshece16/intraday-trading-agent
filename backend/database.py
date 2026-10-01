@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS trades (
     id TEXT PRIMARY KEY, position_id TEXT, ts REAL NOT NULL, symbol TEXT NOT NULL,
     side TEXT, quantity INTEGER, price REAL, mode TEXT, reason TEXT, note TEXT,
     realized REAL, charges REAL, initial_risk REAL, r_multiple REAL, checklist_json TEXT,
-    realized_gross REAL, signal_price REAL, order_id TEXT
+    realized_gross REAL, signal_price REAL, order_id TEXT, confidence_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_trades_position ON trades(position_id);
 CREATE TABLE IF NOT EXISTS signals (
@@ -183,6 +183,11 @@ def _migrate(conn):
     for col, kind in (("signal_price", "REAL"), ("order_id", "TEXT")):
         if col not in cols:
             conn.execute(f"ALTER TABLE trades ADD COLUMN {col} {kind}")
+    # An engine entry's confidence record (README section 118): its score, the
+    # bar applied in that mode, and whether the live bar would have blocked it.
+    # Exits, manual approvals and rows from before this read NULL.
+    if "confidence_json" not in cols:
+        conn.execute("ALTER TABLE trades ADD COLUMN confidence_json TEXT")
     # The bar a checklist read was judged on (#82): the entry window is a rule
     # about the bar's time, and the row's ts is when the read ran, which can be
     # minutes later (closed bars, or delayed yfinance data).
@@ -489,12 +494,13 @@ def record_trade(trade, checklist_snapshot=None):
     with _conn() as c:
         c.execute(
             "INSERT INTO trades (id, position_id, ts, symbol, side, quantity, price, mode, reason, note, "
-            "realized, charges, initial_risk, r_multiple, checklist_json, realized_gross, signal_price, order_id) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "realized, charges, initial_risk, r_multiple, checklist_json, realized_gross, signal_price, order_id, "
+            "confidence_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (trade["id"], trade.get("position_id"), trade["ts"], trade["symbol"], trade["side"],
              trade["quantity"], trade["price"], trade["mode"], trade.get("reason"), trade.get("note"),
              trade.get("realized"), trade.get("charges"), trade.get("initial_risk"), trade.get("r_multiple"),
-             _j(checklist_snapshot), trade.get("realized_gross"), trade.get("signal_price"), trade.get("order_id")),
+             _j(checklist_snapshot), trade.get("realized_gross"), trade.get("signal_price"), trade.get("order_id"),
+             _j(trade.get("confidence"))),
         )
 
 
@@ -715,6 +721,7 @@ def recent_trades(limit=200):
     for r in rows:
         d = dict(r)
         d["checklist"] = json.loads(d.pop("checklist_json")) if d.get("checklist_json") else None
+        d["confidence"] = json.loads(d.pop("confidence_json")) if d.get("confidence_json") else None
         out.append(d)
     return out
 
@@ -732,6 +739,7 @@ def trades_between(start_ts: float, end_ts: float | None = None):
     for r in rows:
         d = dict(r)
         d["checklist"] = json.loads(d.pop("checklist_json")) if d.get("checklist_json") else None
+        d["confidence"] = json.loads(d.pop("confidence_json")) if d.get("confidence_json") else None
         out.append(d)
     return out
 

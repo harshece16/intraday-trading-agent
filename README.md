@@ -11,7 +11,8 @@ dashboard's front page ([§116](#116-the-momentum-book-is-the-strategy-the-intra
 of paper results and the owner's decision.
 
 The intraday engine still runs, in paper, as a record: no intraday edge was
-found. It keeps its live scans of the NIFTY 100,
+found. Since 2026-10-01 it takes its paper trades automatically; the
+confidence gate applies in Live only ([§118](#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only)). It keeps its live scans of the NIFTY 100,
 the checklist's labels, a review queue where you decide, risk-based sizing,
 and a plain-language explanation of every decision with a link to its
 source. Everything runs in **paper mode** by default. The code can route real
@@ -25,13 +26,13 @@ going live is the owner's decision alone.
 [Knowledge graph](docs/architecture/KNOWLEDGE_GRAPH.md) ·
 [Interactive rulebook](https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK)
 
-## What it runs today (2026-09-30)
+## What it runs today (2026-10-01)
 
 | Book | What it does | Evidence | Status |
 | --- | --- | --- | --- |
 | **Momentum book** ([§83](#83-the-paper-momentum-book), [§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)): **the strategy**, and the dashboard's front page, with a monthly report against its benchmark and an alert at each rebalance | Holds the 15 of NSE's 200 most-traded stocks with the strongest volatility-adjusted 6- and 12-month returns, in delivery, with ₹10 lakh of paper capital. It rebalances at the close of each month's first session, lets an order wait when a stock is locked at its price band, and switches itself off if it falls below a band fixed in advance | Passed its pre-registered test over 2010–2025: +0.82% a month over its own universe after every delivery charge (t 2.91). Re-run on repaired prices with orders that wait, which is what the book now runs: **+0.71% a month** (t 2.51; 20.6% a year against 11.9%), a narrow pass ([§96](#96-should-the-first-pick-come-from-more-stocks-tested-the-running-book-holds-up-a-wider-one-is-not-shown-to-be-better), [§99](#99-the-paper-momentum-book-runs-what-was-tested-orders-wait-and-the-band-expects-071-a-month)). Confirmed on 200 stocks never read before and on the unseen first eight months of 2026 (+1.28% a month, t 1.08); see [§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026) | Paper. First trades at the **1 October 2026** close |
 | **Jev book** ([§86](#86-the-jev-book-an-llm-judge-on-the-daily-shortlist-tested-in-paper)), on the *Jev Book* page | Each trading day after 09:45, TypeSafe Jev (an LLM judgment service, called through its official API) says buy, short or skip for each stock on the scanner's shortlist, up to 15. Paper positions close at 15:08 and are compared with the scanner's own side | None yet. It is a pre-registered forward test (trial 123), judged after 300 trades or 60 sessions. The research found no LLM trader with an edge after costs | Paper. Running since **28 September 2026** |
-| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries off** ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). The checklist no longer decides trades. A paper record, not the strategy, since 2026-09-30 ([§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)) |
+| **Intraday scanner and review queue** ([§64](#64-the-review-queue-near-misses-come-to-you-and-nothing-is-placed-unless-you-approve), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Scans the NIFTY 100 and shortlists setups. The Varsity checklist labels them, and you decide | Every intraday price rule tested came out at zero before costs ([§51](#51-the-strategy-was-measured-over-495-sessions-and-it-does-not-work), [§69](#69-a-76-configuration-strategy-search-the-varsity-checklist-included-nothing-passes-and-the-entries-are-zero-before-costs)) | **Automatic entries in paper only** ([§118](#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only)): the confidence gate's bar is 0 in Paper and 60 in Live, where it blocks every entry ([§70](#70-the-confidence-gate-now-knows-what-the-backtests-measured-and-it-stops-automatic-entries)). Each paper entry journals its score and whether 60 would have blocked it. A paper record, not the strategy, since 2026-09-30 ([§116](#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record)) |
 | **Order-book test** ([§71](#71-recording-the-order-book-every-tick--the-data-for-the-next-brain), [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line)) | Records Kite's five-level order book for the watchlist on every tick | Pre-registered; it runs once 15 full sessions are recorded, about **19 October 2026** | Collecting. Needs Kite connected every trading day |
 
 ## ⚠️ Read this first
@@ -126,7 +127,8 @@ going live is the owner's decision alone.
 
 > This section describes the **intraday engine**. Since [§75](#75-the-varsity-checklist-is-retired-as-the-decision-maker-the-order-book-is-the-one-open-line) the
 > Varsity checklist only labels setups for the review queue, and automatic
-> entries are off. The paper books in [What it runs today](#what-it-runs-today-2026-09-28)
+> entries are off in Live. In Paper they are taken since [§118](#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only).
+> The paper books in [What it runs today](#what-it-runs-today-2026-10-01)
 > run beside it and are described in their own sections.
 
 ### 1. Market context (every scan)
@@ -3303,6 +3305,8 @@ The Scorecard has a fourth row, **"Backtest evidence for the live rule set"**. I
 
 **Effect:** the row is a FAIL, so the gate multiplier is **0.25×**. The highest confidence any setup can reach is 25, under the 60 bar, so **the engine takes no automatic entries**, paper or live, and the same goes for F&O. That is the honest reading of the evidence. **Trades can still happen through the review queue (§64)**, where you approve each one yourself with the full numbers in front of you.
 
+*2026-10-01: in Paper this no longer holds. By the owner's instruction the paper bar is 0, so the paper engine takes its entries automatically and journals each score ([§118](#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only)). In Live the bar stays 60 and this section still applies, as it does to F&O.*
+
 Backtests and the parameter tuner still judge a new rule set on its own trades (`journal_summary(include_backtest_evidence=False)`), so the old verdict never vetoes a new candidate. When a new rule set passes pre-registered selection and the held-out look, its evidence replaces this file, and the gate opens on its own.
 
 ### 71. Recording the order book every tick — the data for the next brain
@@ -3353,7 +3357,7 @@ So a results rule for an intraday cash account has nothing to trade; earning the
 
 ### 75. The Varsity checklist is retired as the decision-maker; the order book is the one open line
 
-By the owner's decision (2026-09-25) the checklist no longer decides when to trade. It was measured every way it could be (§51, §57, §61, §69) and lost every time, like every other price-bar rule. It stays in the code only as the **review queue's describer** (§64): it labels setups and their numbers, and you decide. Automatic entries are off through the evidence gate (§70).
+By the owner's decision (2026-09-25) the checklist no longer decides when to trade. It was measured every way it could be (§51, §57, §61, §69) and lost every time, like every other price-bar rule. It stays in the code only as the **review queue's describer** (§64): it labels setups and their numbers, and you decide. Automatic entries are off through the evidence gate (§70). *(2026-10-01: in Live only; the paper engine takes automatic entries, §118.)*
 
 There is **no proven replacement today**, and none is being wired in. Filings and results numbers were tested (§73, §74): the results direction is real but is priced in the overnight gap, before anyone can act. The only information this account can reach that no test has used is the **order book** (§71, collecting since 2026-09-25). Its test is pre-registered now, before the data exists (`docs/research/prereg-orderbook.md`), to run after 15 sessions. If it clears, that becomes the new brain, tested and confirmed before paper. If it doesn't, the remaining questions are capital, horizon and instrument, not the rule.
 
@@ -3363,7 +3367,7 @@ The owner asked (2026-09-25) for a sweep of everything — Reddit, GitHub, paper
 
 The one rewire the evidence supported — a **slow, long-only momentum book in delivery**, the idea behind NSE's own NIFTY200 Momentum 30 index — was pre-registered as 3h (`docs/research/prereg-3h-slow-momentum-delivery.md`) and run the same evening on 4,215 sessions of NSE's daily bhavcopies, 2009–2025, with every stock that ever traded (no survivorship). **Result (`results-3h-slow-momentum-delivery.md`): FAIL on the pre-registered rule.** It passed four of five gates — net excess over its own equal-weighted universe +0.72%/month with t 2.48, positive in both halves, 18.4% vs 9.6% CAGR net of every delivery charge, 523 round trips — and failed the Deflated Sharpe gate at the project's 119-trial count (0.24 vs 0.95). That gate asks a monthly factor tilt to show an excess Sharpe near 1.2; the strategy's is 0.62, which is what the literature says momentum delivers. The rule was written in advance and stands: **no engine work, the 2026 held-out window stays unspent**, and the reviewer is asked three specific questions in the results file. The run also exposed that NSE's bhavcopy never adjusts PREVCLOSE for splits, that weekend special sessions exist, and that ETFs sit in the EQ series — all recorded, with the fix, in #130. A later review (2026-09-26, #135) found the run itself had a look-ahead — its ₹20 price floor was applied to split-adjusted prices, which changed the universe in 103 of 190 months — so trial 119's numbers are contaminated; the FAIL stands.
 
-**What changes in the product: nothing in the engine.** The evidence gate (§70) still holds automatic entries at zero; the review queue is the trading path; the order-book test (§75) is still the one open intraday line. What changed is the honest framing of the question: at this capital the agent's job cannot be stock selection at any horizon, and at ₹1 lakh the only measured net-positive result in the project's history is a monthly one that its own multiple-testing gate declines to certify.
+**What changes in the product: nothing in the engine.** The evidence gate (§70) still holds automatic entries at zero *(2026-10-01: in Live; in Paper they are taken, §118)*; the review queue is the trading path; the order-book test (§75) is still the one open intraday line. What changed is the honest framing of the question: at this capital the agent's job cannot be stock selection at any horizon, and at ₹1 lakh the only measured net-positive result in the project's history is a monthly one that its own multiple-testing gate declines to certify.
 
 ### 77. The Deflated Sharpe gate could never pass; fixed
 
@@ -3469,7 +3473,7 @@ The owner asked for the system to be presented at design level, with its rules a
 
 The rules live in one file, `docs/architecture/rules.json`. `tools/build_rules_docs.py` builds the GitHub page and the interactive page from it, and a test in CI fails when a rule names code that no longer exists or when a built page is stale. Of the 227 rules, 208 are enforced now, 15 are switched off or pending, 4 are retired and kept on record, and 133 are covered by an automated test. Those figures are from 2026-09-28. The catalogue changes with the code, and `RULES.md` always gives the current count: 250 rules on 2026-09-30.
 
-**Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
+**Mapping the system turned up ten defects, all confirmed in code and filed** (#154 to #163). None affects today's paper operation, because automatic entries are off, options are off and no live order has been placed *(as of 2026-09-28; paper entries are automatic since §118)*. Three must be fixed before going live: live fills are booked at the modelled price and never read Kite's executed price (#155), a live position is unwatched after a restart (#156), and slippage has never been measured (#66). The README's own drift was corrected in the same change: the square-off is at 15:08, not 15:15, and the scanner does keep refreshing on holidays.
 
 ### 90. The Jev Book page shows an open round: its status and a live mark
 
@@ -4165,7 +4169,7 @@ Rules: INT-07, INT-08, SEC-06, SEC-07, SEC-15 (new), OPS-13, SCN-05. Files: `bac
 - **The dashboard follows.** The Screener, the Overview's cards and the Stock page no longer show a Long or Short pill for the scanner. The chart cards and the Stock page show the checklist's side ("Long plan", "Waiting to buy"). The Stock page says the score is information and sets no side. The Pre-market note names the list without sides. The Day plan sizes each pick on the checklist's side; without that it would have gone empty, because it skipped rows without a side.
 - The research desk now flags a short lean on a long-only stock, and reads the market-bias flag from the checklist's side. Its flag "the engine refuses trades against the scanner's side" is gone, because that is no longer true. The Kronos shadow (§102) records `score_side` where it recorded the side, so its record keeps the same values.
 
-**What this changes in paper mode.** Automatic entries stay off: the confidence gate stops every one (§70). The review queue changes: a near-miss card can now be offered on either side of a listed stock, where before only the score's side could reach one.
+**What this changes in paper mode.** Automatic entries stay off: the confidence gate stops every one (§70). *(2026-10-01: no longer in paper, §118.)* The review queue changes: a near-miss card can now be offered on either side of a listed stock, where before only the score's side could reach one.
 
 **2. The shadow log** (audit rule 5.3, and section 6: run passes 1 to 3 in shadow, log candidates, place no orders).
 
@@ -4247,6 +4251,77 @@ The note is `docs/research/profitability-sweep-2026-10-01.md`; the agents' repor
 - **Defence.** SEBI's retail algo rules (from 2026-04-01) apply before any real order. The engine already sends market protection on market orders; a static IP is still needed. No track record anyone sells can be SEBI-verified before May 2026.
 
 The agents read 2026 index and fund data. `trials.md` lists it, so a later 2026 check of these strategy families is known to be partly seen.
+
+### 118. The paper engine takes automatic trades; the confidence gate applies in Live only
+
+**The owner's instruction, 2026-10-01:** "let it take automatic trades in paper mode". Earlier the same night he had said "we should not have stopped intraday, keep it running in paper too". It was never stopped: it has run in paper throughout, unchanged ([decision record, addendum](docs/research/decisions/decision-2026-09-30-momentum-core.md)). **This is a gate change, in paper only.** It does not mean the intraday engine has an edge. It has none (§51, §69, §88). The paper trades are a record, not evidence for going live.
+
+**Why nothing traded.** Every checklist pass met the confidence gate (§70). The Scorecard's multiplier is 0.25 while any row fails, so no score can pass 60. Each one was blocked, and became a review card if the queue was on. Over the last two weeks that was 0 to 4 stocks a day.
+
+**What changes.**
+
+- **Two bars, chosen by the mode at the moment of the entry.**
+  - Paper: `config.RISK["paper_min_confidence_to_trade"] = 0`.
+  - Live: `config.RISK["min_confidence_to_trade"] = 60`, as before.
+  - `config.cash_confidence_bar(paper_mode)` returns the bar for a mode, and `_try_enter` reads it with `state.paper_mode` at each entry. A switch to Live restores 60 for the very next entry.
+  - Just before the order the mode is read once more. If it has switched to Live, the 60 bar is applied again, and the order goes to the mode just read. So a switch during an entry can't send a real order that only the paper bar allowed.
+  - A position opened in paper keeps its paper flag after a switch to Live, and its exit sends no real order (#156).
+- **The evidence is kept.** The score is still computed for every entry. Each engine entry's trade row gets a `confidence_json` column (an idempotent migration adds it), with:
+  - `score`, `label`, `local_setup` and `multiplier`;
+  - `mode`, `bar_applied` and `live_bar`;
+  - `paper_bar_let_through`: the score cleared only because the paper bar is lower;
+  - `live_bar_would_block`: the score is under 60.
+
+  The trade note says it too ("below the live bar of 60: taken under the paper bar of 0"). The paper record can then be split into what the live bar would have taken and what it wouldn't: `SELECT ... FROM trades WHERE json_extract(confidence_json, '$.live_bar_would_block')`.
+- **The review queue.** In paper, a setup stopped only by the confidence gate is now entered, so it is not also offered as a card. Cards for a single failed checklist item are offered as before, and in paper they show the bar in force (0). **In Live nothing about the queue changes.**
+- **What reports the bar** now reports the one in force for the current mode:
+  - the review card's `confidence.bar`;
+  - `/api/state` (`confidence_bar`, `live_confidence_bar`);
+  - `/api/methods`' risk note;
+  - the research desk's `rules.min_confidence_to_trade` and `risk.confidence_gate.bar` (with `live_bar` beside it, and a flag when Paper takes a setup the live gate would block).
+- **The dashboard.** The intraday banner and the Overview's paper panel say the paper engine takes its trades automatically and the confidence gate applies in Live only. The Go-live confirmation says the 60 bar applies from the next entry and open paper positions stay paper. The Journal's blocked-signals note says the gate blocks in Live.
+
+**What does not change.** Every other entry rule, in the same order:
+- the pause and the untracked-position check;
+- the scanner's exclusions and the market bias;
+- the 2% daily loss, 3 open positions and 1 per sector;
+- the plan re-check at the live price, sizing (1% risk, 33% notional cap) and the liquidity check.
+
+Stops, targets, the trailing stop, the 15:08 square-off and every cost are unchanged too. The live bar stays 60. **F&O stays off**, and its own bar (`config.FNO["min_confidence_to_trade"] = 60`) is unchanged. No real money: the engine stays in paper. The Jev book is unaffected (prereg Clarification 11): Jev never reads the engine's trades, and its scoring and pass rule don't use them.
+
+**The Scorecard reads paper trades, and it decides the live gate.** `database.trade_stats()` (the expectancy row) and the Deflated Sharpe row read every closed trade in the journal, paper and live together. All 13 closed trades so far are paper. On a copy of the live journal (2026-10-01) the Scorecard is:
+
+| Row | Status |
+| --- | --- |
+| Expectancy | FAIL: −1.17R over 13 trades |
+| Deflated Sharpe | FAIL: 0.00 |
+| Information Coefficient | not enough data |
+| Backtest evidence | FAIL |
+
+So the multiplier is 0.25. **From now on paper results feed the live gate's evidence in larger numbers.** They cannot open it on their own: the backtest-evidence row is a FAIL, and any FAIL holds the multiplier at 0.25 whatever the trades show. They would matter only if that row stopped failing, for example if the live configuration changed and the row went to "not enough data". Separating paper from live in the Scorecard was left alone on purpose. It changes how the live gate is computed, and that is the owner's call.
+
+**Checked.**
+- `backend/tests/test_paper_auto_entries.py`, 17 tests:
+  - Paper below 60 enters, and the trade row and in-memory trade carry the confidence record with both flags.
+  - A paper entry at 60 or more is marked as one the live bar would also take.
+  - Live below 60 is blocked with the same message as before (`/api/journal/blocked-signals` still parses it, bar 60), no order is placed, and a card is offered.
+  - Paper then a switch to Live: the next entry is blocked, and the paper position keeps `live = False`.
+  - A switch to Live during the entry (between the gate and the order) is blocked at 60, and no Kite call is made.
+  - In paper a confidence-only near-miss is entered, not carded; a single-item near-miss is still carded, with bar 0.
+  - Paused entries, risk-off, max positions, the daily loss limit, size 0, liquidity and a passed stop each still block in paper.
+  - The state snapshot and `/api/methods` report the bar for each mode.
+  - An old journal gains the column with its rows intact.
+- Three existing tests that assumed the gate blocks in paper now run in Live: the confidence card, the entries-today rollback, and the research desk's fake state.
+- Mutation checks: with the re-check before the order removed, the switch-during-entry test fails; with the paper bar set back to 60, six of the new tests fail.
+- Full backend suite, `npm run lint` and `npm run build`.
+- The banner and the Overview panel, in the browser against a mock API, in paper and live.
+- **Not checked live.** The first automatic paper entries come at the first session after this is deployed.
+
+Rules: ENT-28 new; ENT-01, ENT-02, ENT-23, RES-24 and UI-04 changed. Files:
+- `backend/config.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/paper_broker.py`, `backend/state.py`, `backend/research_desk.py`, `backend/methods.py`, `backend/app.py`;
+- `backend/tests/test_paper_auto_entries.py` (new), `backend/tests/test_review_queue.py`, `backend/tests/test_entries_today_rollback.py`, `backend/tests/test_research_desk.py`;
+- `frontend/src/components/IntradayRecordBanner.jsx`, `frontend/src/pages/Overview.jsx`, `frontend/src/pages/Journal.jsx`;
+- `docs/architecture/` (HLD, LLD, rules), `docs/research/decisions/decision-2026-09-30-momentum-core.md`, `docs/research/prereg-jev-book.md` (Clarification 11), `docs/research/prereg-kronos-feature-ic.md` (dated note).
 
 ## Backtest results
 
@@ -4531,7 +4606,7 @@ key on each call, so no restart is needed.
 ## Known limitations
 
 - Every intraday rule, in cash equity or F&O, is net-negative in backtests. The one pass is the monthly delivery momentum book ([§82](#82-the-first-strategy-to-pass-slow-momentum-in-delivery-on-corrected-data-confirmed-on-unseen-stocks-and-on-2026)), and it runs in paper only.
-- **Known gaps, filed while the design was mapped (2026-09-28).** None affects today's paper operation with automatic entries off.
+- **Known gaps, filed while the design was mapped (2026-09-28).** None stops today's paper operation, which takes automatic entries since [§118](#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only); paper fills use the assumed slippage (#66).
   - Before going live: slippage has never been measured from real fills ([#66](https://github.com/harshece16/intraday-trading-agent/issues/66); a first reading from the order book is in §98). Live fills booked at the modelled price and a live position unwatched after a restart were fixed in §98, untested against a real order.
   - Before enabling options: options entries skip several cash rules ([#157](https://github.com/harshece16/intraday-trading-agent/issues/157)); live option orders book at the quoted premium ([#186](https://github.com/harshece16/intraday-trading-agent/issues/186)); open option positions are not restored after a restart ([#187](https://github.com/harshece16/intraday-trading-agent/issues/187)); paper index options probably never reprice ([#189](https://github.com/harshece16/intraday-trading-agent/issues/189)).
   - For the paper books: [#158](https://github.com/harshece16/intraday-trading-agent/issues/158) (Jev book) and [#159](https://github.com/harshece16/intraday-trading-agent/issues/159) (momentum book).

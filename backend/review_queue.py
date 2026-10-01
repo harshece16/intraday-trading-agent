@@ -7,6 +7,8 @@ A card is offered when, for one side of one stock:
 - exactly one **required** checklist item failed (R:R, volume, trend, S/R,
   pattern or cost), and the plan still has a stop and a target; or
 - every checklist item passed and the **confidence gate** alone stopped it.
+  That happens in Live only: in Paper the gate's bar is 0 (README section
+  118), so such a setup is entered automatically and never carded.
 
 When the failed item is reward-to-risk, the card is offered only if its R:R
 after costs at the offer is at least `config.REVIEW_QUEUE["min_net_rrr"]`
