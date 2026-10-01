@@ -431,3 +431,5 @@ So the scoring, the pass rule and the kill rule are unchanged; the only thing
 that changes is the sentence about what the engine would do without Jev, which
 in paper is now "take the checklist's own entries", recorded in the engine's
 journal and not part of this test.
+
+**Live from 2026-10-01 at 12:18 IST.** The owner asked for the deploy during the session, and the backend was restarted then, in paper, with no position open. Jev's round for 2026-10-01 had already been recorded at 09:45 as `no_live_prices` (Kite had no live session when the round was due), so no Jev decision of that day falls on either side of the change. The first full session under it is 2026-10-02.
