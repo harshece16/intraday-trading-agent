@@ -4315,7 +4315,7 @@ So the multiplier is 0.25. **From now on paper results feed the live gate's evid
 - Mutation checks: with the re-check before the order removed, the switch-during-entry test fails; with the paper bar set back to 60, six of the new tests fail.
 - Full backend suite, `npm run lint` and `npm run build`.
 - The banner and the Overview panel, in the browser against a mock API, in paper and live.
-- **Not checked live.** The first automatic paper entries come at the first session after this is deployed.
+- **Deployed 2026-10-01 at 12:18 IST**, during the session, at the owner's request: paper mode, no position open, the review queue switched back on, the day's list of 25 read back from the journal. After the restart `/api/state` reported a paper bar of 0 and a live bar of 60. Automatic paper entries can start that afternoon; the first full session under it is 2026-10-02.
 
 Rules: ENT-28 new; ENT-01, ENT-02, ENT-23, RES-24 and UI-04 changed. Files:
 - `backend/config.py`, `backend/trading_engine.py`, `backend/database.py`, `backend/paper_broker.py`, `backend/state.py`, `backend/research_desk.py`, `backend/methods.py`, `backend/app.py`;
