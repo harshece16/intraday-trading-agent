@@ -41,6 +41,7 @@ class FakeState:
                         "session_date": "2026-09-17", "market": MARKET}
         self.market = MARKET
         self.positions = {}
+        self.paper_mode = True
 
 
 def point(text, *citations):

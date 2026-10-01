@@ -39,7 +39,9 @@ def test_blocked_entry_rolls_back_entries_today(monkeypatch):
     state.strategy_state[symbol] = {"entries_today": 1, "entry_day": "2026-01-01"}
 
     # Force the confidence gate to block — same as a real day where the
-    # Dimaag Scorecard hasn't proven an edge yet.
+    # Dimaag Scorecard hasn't proven an edge yet. The gate blocks in Live;
+    # Paper's bar is 0 (README section 118), so this runs in Live.
+    state.paper_mode = False
     monkeypatch.setattr(database, "journal_summary", lambda: {"scorecard": [
         {"criterion": "x", "status": "fail", "detail": ""},
     ]})

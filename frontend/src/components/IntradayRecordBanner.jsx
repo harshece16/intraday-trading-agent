@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 const README = "https://github.com/harshece16/intraday-trading-agent/blob/main/README.md";
 const REPO = "https://github.com/harshece16/intraday-trading-agent/blob/main";
 
-// The README sections that record the intraday verdict, and the decision
-// that followed it (README section 116).
+// The README sections that record the intraday verdict, the decision that
+// followed it (README section 116), and automatic paper trades (section 118).
 const SOURCES = [
   ["§88", `${README}#88-what-should-decide-when-to-trade-now-the-checklist-is-retired-intraday-nothing-clears-costs-positional-how-much-momentum-to-hold`],
   ["§104", `${README}#104-the-night-of-2026-09-29-eight-forecasting-models-and-75-combinations-tested-none-pays`],
   ["§109", `${README}#109-market-breadth-and-intermarket-moves-measured-run-2026-09-25-merged-2026-09-30-neither-predicts-the-session-by-enough-to-trade`],
   ["§116", `${README}#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record`],
+  ["§118", `${README}#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only`],
   ["trial log", `${REPO}/docs/research/trials.md`],
 ];
 
@@ -21,7 +22,7 @@ export default function IntradayRecordBanner() {
       <p>
         <strong>Intraday paper record.</strong> No intraday edge was found: 202 strategy trials and research
         looks L40 to L51 found nothing that pays the ~16.6 bp round trip. The intraday engine keeps running in
-        paper, unchanged, as a record.
+        paper as a record, and takes its trades automatically: the confidence gate applies in Live only.
         {" "}The strategy is the monthly <Link to="/">momentum book</Link>.
       </p>
       <p className="record-banner-src">

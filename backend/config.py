@@ -350,7 +350,18 @@ RISK = {
     # configs tried on a 55-day/100-stock backtest — still DSR 6.2%, well
     # under the 95% bar this codebase requires, so this is the current
     # default because nothing tried beat it, not because it's proven.
+    # This is the LIVE bar. Paper uses paper_min_confidence_to_trade below.
     "min_confidence_to_trade": 60,
+    # The bar for a cash entry while the engine is in Paper (README section
+    # 118). 0: the paper engine takes every checklist pass that clears every
+    # other rule, because the owner asked for automatic paper trades and the
+    # live bar blocked all of them (the Scorecard's 0.25x multiplier caps
+    # every score at 25). The score is still computed and journaled on each
+    # entry, with whether the live bar would have blocked it. Read through
+    # cash_confidence_bar() at the moment of the entry, so a switch to Live
+    # restores min_confidence_to_trade for the very next one. F&O has its own
+    # bar (FNO["min_confidence_to_trade"]) and is not affected.
+    "paper_min_confidence_to_trade": 0,
     # Fallback only — overwritten in-process by trading_engine._sync_capital()
     # with the real Kite equity live_balance whenever Kite is connected (see
     # sync_capital_with_kite below), so position sizing is never computed
@@ -586,6 +597,17 @@ CORS_ALLOWED_ORIGINS = (
     os.environ["CORS_ALLOWED_ORIGINS"].split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else
     ["http://localhost:5500", "http://127.0.0.1:5500"]
 )
+
+
+def cash_confidence_bar(paper_mode: bool):
+    """The confidence.py score a cash-equity entry must reach in this mode:
+    RISK["paper_min_confidence_to_trade"] in Paper, RISK["min_confidence_to_trade"]
+    in Live (README section 118). Every place that applies or reports the
+    cash gate's bar reads it here, with the mode at that moment."""
+    live_bar = RISK.get("min_confidence_to_trade", 60)
+    if paper_mode:
+        return RISK.get("paper_min_confidence_to_trade", live_bar)
+    return live_bar
 
 
 def save_kite_session(access_token: str) -> None:

@@ -23,9 +23,10 @@ a book of its own. Since 2026-09-30 it is the core of the system, by the
 owner's decision (`docs/research/decisions/decision-2026-09-30-momentum-core.md`):
 the dashboard opens on it, with a monthly report against its benchmark, and
 each rebalance is alerted. The intraday engine still scans, labels setups and
-enforces risk, in paper, as a record: no intraday edge was found, its
-automatic entries are switched off by the evidence gate, and no new intraday
-look is started.
+enforces risk, in paper, as a record: no intraday edge was found, and no new
+intraday look is started. Since 2026-10-01 it takes its entries automatically
+in paper: the confidence gate's bar is 0 in Paper and 60 in Live, where it
+still blocks every automatic entry (README §118).
 
 No real-money order has ever been placed.
 
@@ -156,8 +157,8 @@ flowchart TB
 | **Engine core** | Tick loop, phases, the only order path, square-off, kill switch | `trading_engine`, `state`, `engine_lock`, `stop_watcher` | Running |
 | **Scanner** | Score the NIFTY 100, set the market bias, fix the day's 25 most-traded eligible stocks as the watchlist, and journal every stock of every scan for the shadow log. It sets no side: the checklist picks it (README §115) | `scanner`, `universe`, `sectoral_indices`, `seasonality` | Running |
 | **Setup describer** | Build a plan (entry, stop, target, reward-to-risk) from the Varsity checklist | `trader_brain`, `indicators`, `candlestick_patterns`, `market_structure` | Describes only; no longer decides |
-| **Gates** | Confidence, risk, sector, market bias, liquidity | `confidence`, `evaluation`, `risk_manager`, `liquidity`, `costs` | Confidence gate blocks every automatic entry |
-| **Review queue** | Offer near-miss setups to the owner; replay what approval would have done | `review_queue` | Off until switched on; the only entry route that can fill |
+| **Gates** | Confidence, risk, sector, market bias, liquidity | `confidence`, `evaluation`, `risk_manager`, `liquidity`, `costs` | Confidence gate: bar 0 in Paper (taken automatically, score journaled), 60 in Live (blocks every automatic entry; README §118) |
+| **Review queue** | Offer near-miss setups to the owner; replay what approval would have done | `review_queue` | Off until switched on; in Live the only entry route that can fill. In Paper a confidence-only near-miss is entered, not carded |
 | **Brokers** | Paper fills and Kite orders | `paper_broker`, `kite_broker` | Paper |
 | **F&O** | Buy calls and puts, never write | `fno_instruments`, `options_pricing`, `fno_risk` | Off |
 | **Market data** | One interface over Kite and yfinance; Kite session lifecycle | `data_provider`, `kite_tunnel`, `kite_history` | Kite when connected, else delayed |
@@ -237,8 +238,8 @@ flowchart TD
     B3 -->|yes| Blk
     B3 -->|no| B4{"Daily loss at 2%?<br/>3 positions open?<br/>Sector already held?"}
     B4 -->|yes| Blk
-    B4 -->|no| CG{"Confidence at least 60?"}
-    CG -->|"no: always, today"| Blk
+    B4 -->|no| CG{"Confidence at least the bar?<br/>Paper 0, Live 60"}
+    CG -->|"no: always in Live, today"| Blk
     CG -->|yes| RC{"Plan still valid at the live price?<br/>stop at least 1x cost, net R:R at least 1.5"}
     RC -->|no| Blk
     RC -->|yes| SZ{"Size at least 1 share?<br/>1% risk, 33% notional cap"}
@@ -257,7 +258,12 @@ The confidence score is the setup's local score (out of 100) times a system
 multiplier. The multiplier is 0.25 while any Scorecard row fails. The
 committed backtest evidence row fails (−0.356R a trade, t −3.59), so the
 score tops out at 25 and no automatic entry can pass 60. That is the
-designed behaviour, not a fault.
+designed behaviour, not a fault. The bar of 60 is the Live bar. In Paper the
+bar is 0 (`RISK["paper_min_confidence_to_trade"]`, README §118, by the
+owner's instruction of 2026-10-01), so every setup that reaches the gate
+passes it, and its trade row records the score and whether 60 would have
+blocked it. The bar is read at each entry: a switch to Live restores 60 for
+the next one, and a paper position stays paper.
 
 ### 6.4 Market data and its fallbacks
 
@@ -391,7 +397,8 @@ journal (`SAHAB_DB_PATH`), or the engine lock refuses to start it.
 ## 12. Known gaps
 
 Found while this design was mapped, confirmed in code, and filed. None
-affects today's paper operation with automatic entries off.
+stops today's paper operation, which takes automatic entries since README
+§118; paper fills use the assumed slippage (#66).
 
 | Issue | Gap | Matters when |
 | --- | --- | --- |

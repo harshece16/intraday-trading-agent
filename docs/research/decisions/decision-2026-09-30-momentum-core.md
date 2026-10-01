@@ -56,10 +56,24 @@ L41 was the data gate for the universe-width tests and L42 a momentum confirmati
 - **No real money.** The engine starts in paper and stays there; F&O stays off. Nothing here sets a date or a threshold for real money. The band can say something from month 6 at the earliest, the rebalance at the first session of April 2027. Moving any money is a separate decision for the owner, after months of paper results have been compared with the backtest.
 - **The book's rule.** Its universe, signal, portfolio, fills, costs, benchmark and band are unchanged. The band stays n × 0.71% − 2 × 3.89% × √n from month 6 (−14.8% at six months, −18.4% at twelve); below it the book switches itself off and nothing turns it back on. The parity tests in `backend/tests/test_momentum_book.py` are unchanged and pass.
 - **The benchmark** stays the pre-registered one, the equal-weighted 200: the same 200 most-traded NSE stocks, equal-weighted, with the same percentage costs. The monthly report is against that benchmark, which is what the band measures. It is not a NIFTY index.
-- **The intraday engine** keeps running in paper with every rule, gate and order path as it was. Its automatic entries stay blocked by the confidence gate; the review queue stays off unless the owner turns it on.
+- **The intraday engine** keeps running in paper with every rule, gate and order path as it was. Its automatic entries stay blocked by the confidence gate; the review queue stays off unless the owner turns it on. *(2026-10-01: no longer true in paper; the paper engine takes automatic trades. See the addendum below and README §118.)*
 - **L52** (the five newest forecasting models, forward, [`prereg-2026-models-forward.md`](../prereg-2026-models-forward.md)) stays pre-registered and on hold. It is scored only if the owner asks, after its 60th session (about late December 2026). Nothing needs to run daily for it: its bars are fetched after the 60th session.
 - **The Kronos shadow** stays display-only (README §102), unchanged: the engine does not read it.
 
 ## Open for the owner
 
 Two tests registered before this decision are not intraday-edge searches started after it, and this record leaves them as registered: the Jev book (trial 123, a forward paper test judged after 300 trades or 60 sessions) and the order-book test (its one pre-registered analysis is due after 15 full sessions, about 19 October 2026). Whether either should stop, or run when due, like L52 only on request, is the owner's call.
+
+## Addendum — 2026-10-01: automatic trades in the paper engine (README §118)
+
+Two later messages from the owner, the same night, after this decision:
+
+> "we should not have stopped intraday, keep it running in paper too"
+
+> "let it take automatic trades in paper mode"
+
+The first needed no change: the intraday engine was never stopped. It has run in paper throughout, as this record says above. The second changes one line of "What does not change": **"Its automatic entries stay blocked by the confidence gate" stops being true in paper.**
+
+- **What changes.** The cash confidence gate has two bars. In Paper the bar is `RISK["paper_min_confidence_to_trade"] = 0`, so the paper engine takes every checklist pass that clears every other rule. In Live it stays `RISK["min_confidence_to_trade"] = 60`. The bar is read at the moment of each entry, so a switch to Live restores 60 for the very next entry, and a position opened in paper stays a paper position. Every paper entry journals its confidence score, the bar applied, and whether the live bar would have blocked it (`trades.confidence_json`).
+- **What does not change.** No real money: the engine stays in paper and F&O stays off (its own bar, `FNO["min_confidence_to_trade"] = 60`, is unchanged). Every other entry rule, risk limit, sizing, stop, square-off and cost is as it was. The momentum book is still the strategy; nothing here says the intraday engine has an edge (it has none: §51, §69, §88). The paper trades are a record, not evidence for going live.
+- **A trade-off the owner should know.** The Dimaag Scorecard, which sets the live gate's multiplier, reads every closed trade in the journal, paper and live together (`database.trade_stats()` and the Deflated Sharpe row). Paper results now feed the live gate's evidence. Today this cannot open the live gate: the backtest-evidence row is a FAIL, and any FAIL holds the multiplier at 0.25 whatever the trades say. It would matter only if that row stopped failing. Left as is tonight; see README §118.

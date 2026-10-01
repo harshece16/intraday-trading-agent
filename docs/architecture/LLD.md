@@ -222,7 +222,9 @@ and limited to bars that start between 09:30 and 14:30. If both sides pass,
 neither is taken. A news score at or beyond ∓0.5 vetoes the side.
 
 Since README §75 this function only describes setups. Its signals still
-reach `_try_enter`, where the confidence gate stops every one.
+reach `_try_enter`, where in Live the confidence gate stops every one. In
+Paper its bar is 0 (README §118), so they are entered if every other check
+passes.
 
 ### 3.2 Blocks, in order
 
@@ -238,13 +240,16 @@ reach `_try_enter`, where the confidence gate stops every one.
 | 6 | Daily loss limit reached | `_entry_block_reason` |
 | 7 | Three positions already open | `_entry_block_reason` |
 | 8 | A position already open in the same industry | `_entry_block_reason` |
-| 9 | Confidence below 60 | `confidence.score_trade` |
+| 9 | Confidence below the bar in force: `config.cash_confidence_bar(paper_mode)`, 0 in Paper, 60 in Live (README §118). Re-checked against the Live bar just before the order if the mode switched to Live during the entry | `confidence.score_trade` |
 | 10 | The plan no longer holds at the live price | `trader_brain.recheck_plan` |
 | 11 | Size rounds to zero shares | `RiskManager.position_size` |
 | 12 | The order book can't take the trade | `liquidity.check` |
 
 Every block writes a `blocked` activity row with its reason and gives the
-day's entry back.
+day's entry back. An entry that passes writes its confidence record on the
+trade row (`trades.confidence_json`): score, label, local score, multiplier,
+mode, `bar_applied`, `live_bar`, `paper_bar_let_through` and
+`live_bar_would_block`.
 
 ### 3.3 Confidence (`confidence.py`)
 
@@ -300,7 +305,7 @@ With no order book to read, a paper entry proceeds and is recorded as
 
 | Piece | Behaviour |
 | --- | --- |
-| Offer | A card is offered when exactly one required item failed, or when only the confidence gate blocked. When the failed item is R:R, its net R:R at the offer must be at least `REVIEW_QUEUE.min_net_rrr` (1.0, #166) |
+| Offer | A card is offered when exactly one required item failed, or when only the confidence gate blocked (in Live; in Paper its bar is 0, so such a setup is entered, not carded, README §118). When the failed item is R:R, its net R:R at the offer must be at least `REVIEW_QUEUE.min_net_rrr` (1.0, #166) |
 | Held back | An R:R near-miss under the floor is not offered. `hold()` journals the first one per stock, side and session as status `withheld`; it is replayed, never approvable, and doesn't take the stock's card |
 | One at a time | One card per stock, side and session while it is pending or decided. `add()` lets a later near-miss replace an EXPIRED card only if it is read on a later bar and its `progress()` (share of the failed item's bar reached, from the item's `value`/`need`) is higher |
 | Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost, and `money`: a hit target and a stop after costs (`target_net_rs`, `stop_net_rs`), and the break-even rate or "cannot break even at any win rate" |
@@ -1032,7 +1037,7 @@ start-up sets any credential file other accounts can read to 0600
 | `STRATEGY`, `STRATEGY_PARAMS` | The setup describer | `sahab_dimaag`; window 09:30 to 14:30; 1 entry a day; min R:R 1.5 |
 | `SCANNER` | What to watch | 25 active; every 5 and 60 minutes; min price ₹100; min turnover ₹50 crore; min ATR 1.2% |
 | `MARKET_FILTER` | Bias blocks and VIX sizing | VIX 20; size × 0.5 |
-| `RISK` | Sizing and limits | 1% a trade; 3 positions; 1 per sector; 33% notional; 2% daily loss; confidence 60; paper capital ₹1,00,000 |
+| `RISK` | Sizing and limits | 1% a trade; 3 positions; 1 per sector; 33% notional; 2% daily loss; confidence 60 in Live, 0 in Paper (§118); paper capital ₹1,00,000 |
 | `LIQUIDITY` | Pre-entry order-book check | On; depth multiple 3.0 |
 | `REVIEW_QUEUE` | Manual review | Off; 300 s expiry |
 | `FNO` | Options | Off; ₹10,000 |

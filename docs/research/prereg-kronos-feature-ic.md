@@ -2,7 +2,7 @@
 
 **Written 2026-09-28, before any Kronos forecast has been computed on project data.** Background and sources: `research/kronos-research-2026-09-28.md`. This fixes the model, data, features, targets, statistics and gate so the measurement cannot be shaped by its result. It runs at the user's direction ("let's go with Kronos", 2026-09-28); the independent reviewer reads this draft before code is written.
 
-**What it is not.** Not a strategy, not a backtest, not a trial. No order path, no config, no gate changes. The Varsity checklist stays retired (§75); the evidence gate stays at zero automatic entries (§70).
+**What it is not.** Not a strategy, not a backtest, not a trial. No order path, no config, no gate changes. The Varsity checklist stays retired (§75); the evidence gate stays at zero automatic entries (§70). *(Note, 2026-10-01: from README §118 the paper engine takes automatic entries, with a paper bar of 0; the live bar of 60 is unchanged. This look reads only Kronos forecasts and cached bars, never the engine's trades, so nothing in it changes.)*
 
 ## 1. Hypothesis
 

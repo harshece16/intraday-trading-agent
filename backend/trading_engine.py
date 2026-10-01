@@ -674,13 +674,14 @@ class TradingEngine:
                 logger.exception(f"Couldn't resolve the unconfirmed order in {symbol}")
 
     def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
-                position_id=None, initial_risk=None, confirmed=None, live=None):
+                position_id=None, initial_risk=None, confirmed=None, live=None, confidence=None):
         """`confirmed` is a fill Kite has already reported, as (quantity,
         price, order id); it is booked as a live fill and no order is sent.
         `live` says where the order goes; None follows the engine's mode. An
         exit passes the position's own flag, so real money is closed with a
         real order and a paper position never sends one, whatever the mode
-        has been switched to since it opened (#156)."""
+        has been switched to since it opened (#156). `confidence` is the
+        entry's confidence record, journaled on its trade row (README §118)."""
         if live is None:
             live = not self.state.paper_mode
         # backtester.py has always applied costs.apply_slippage() to every
@@ -697,13 +698,14 @@ class TradingEngine:
             charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
                                        charges=charges, checklist_snapshot=checklist_snapshot,
-                                       position_id=position_id, initial_risk=initial_risk, signal_price=price)
+                                       position_id=position_id, initial_risk=initial_risk, signal_price=price,
+                                       confidence=confidence)
         else:
             # Live: the quantity and price are Kite's, not the model's (#155).
             qty, fill_price, order_id = confirmed or self._live_fill(
                 symbol, side, qty, price,
                 {"reason": reason, "note": note, "checklist_snapshot": checklist_snapshot,
-                 "position_id": position_id, "initial_risk": initial_risk})
+                 "position_id": position_id, "initial_risk": initial_risk, "confidence": confidence})
             charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = self.state.apply_fill(symbol, side, qty, fill_price, charges=charges)
             r_multiple = (fill["net"] / (initial_risk * qty)) if initial_risk and qty else None
@@ -713,7 +715,8 @@ class TradingEngine:
             self.state.record_trade(symbol, side, qty, fill_price, mode="live", reason=reason, note=note,
                                     realized=fill["net"], realized_gross=fill["gross"], charges=charges,
                                     position_id=position_id, initial_risk=initial_risk, r_multiple=r_multiple,
-                                    checklist_snapshot=checklist_snapshot, signal_price=price, order_id=order_id)
+                                    checklist_snapshot=checklist_snapshot, signal_price=price, order_id=order_id,
+                                    confidence=confidence)
         with self.state.lock:
             if self.state.positions[symbol]["quantity"] != 0:
                 self.state.positions[symbol]["live"] = bool(confirmed or live)
@@ -993,9 +996,16 @@ class TradingEngine:
         # statistically until the Dimaag Scorecard has shown a real, proven edge. Before
         # this, cash equity fired on checklist-pass alone while F&O correctly didn't —
         # the same evidence, gating one instrument and not the other.
+        # The bar depends on the mode at this moment (README section 118): Paper
+        # uses RISK["paper_min_confidence_to_trade"] (0), Live keeps
+        # RISK["min_confidence_to_trade"] (60). The score is computed either
+        # way and journaled on the entry, so the paper record can be split
+        # into what the live bar would and wouldn't have taken.
         scorecard = database.journal_summary().get("scorecard", [])
         conf = confidence.score_trade(analysis, side, scorecard)
-        min_conf = config.RISK.get("min_confidence_to_trade", 60)
+        paper = self.state.paper_mode
+        min_conf = config.cash_confidence_bar(paper)
+        live_bar = config.cash_confidence_bar(False)
         if conf["score"] < min_conf:
             reason = f"confidence {conf['score']}/100 below the {min_conf} bar ({conf['explanation']})"
             if self.review_queue.enabled() and analysis.get("entry_mode") == "checklist":
@@ -1046,21 +1056,40 @@ class TradingEngine:
         if not liq_ok:
             return self._blocked(symbol, setup, f"liquidity: {liq_reason}")
 
+        # The order goes where the mode says now, and the bar is checked again
+        # against that same mode: a switch to Live after the gate above can't
+        # send a real order that only the paper bar let through.
+        order_live = not self.state.paper_mode
+        if order_live and conf["score"] < live_bar:
+            return self._blocked(symbol, setup, f"confidence {conf['score']}/100 below the {live_bar} bar "
+                                                f"({conf['explanation']})")
+        bar_applied = live_bar if order_live else min_conf
+        conf_record = {
+            "score": conf["score"], "label": conf["label"],
+            "local_setup": (conf.get("local_setup") or {}).get("score"),
+            "multiplier": (conf.get("system_evidence") or {}).get("multiplier"),
+            "mode": "live" if order_live else "paper", "bar_applied": bar_applied, "live_bar": live_bar,
+            # True when the score cleared only because the paper bar is lower.
+            "paper_bar_let_through": (not order_live) and conf["score"] < live_bar,
+            "live_bar_would_block": conf["score"] < live_bar,
+        }
+        conf_txt = f"confidence {conf['score']}/100 ({conf['label']})"
+        if conf_record["paper_bar_let_through"]:
+            conf_txt += f", below the live bar of {live_bar}: taken under the paper bar of {bar_applied}"
         if plan:
             bar = (analysis.get("bar_time") or "")[11:16]
             note = (f"Varsity checklist passed on the {bar} candle: stop {plan['stop']:.2f}, target {plan['target']:.2f}, "
-                    f"reward-to-risk {live['rrr']:.2f} at the entry price, {size_factor:.0%} size, "
-                    f"confidence {conf['score']}/100 ({conf['label']})")
+                    f"reward-to-risk {live['rrr']:.2f} at the entry price, {size_factor:.0%} size, {conf_txt}")
         else:
             key = "reasons" if side == "LONG" else "bear_reasons"
             why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
             note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}, " \
-                   f"confidence {conf['score']}/100 ({conf['label']})" if "bull_score" in analysis else \
-                   f"confidence {conf['score']}/100 ({conf['label']})"
+                   f"{conf_txt}" if "bull_score" in analysis else conf_txt
         position_id = database.new_position_id()
         try:
             self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
-                          checklist_snapshot=analysis.get("checklist"), position_id=position_id)
+                          checklist_snapshot=analysis.get("checklist"), position_id=position_id,
+                          live=order_live, confidence=conf_record)
         except OrderNotFilled as exc:
             return self._blocked(symbol, setup, str(exc))
         except OrderUnconfirmed:
@@ -1138,7 +1167,7 @@ class TradingEngine:
         card = review_queue.build_card(
             symbol, side, plan, blocker, ltp, params["cost_pct"], qty,
             setup=plan.get("pattern") or analysis.get("setup"),
-            confidence={"score": conf["score"], "bar": config.RISK.get("min_confidence_to_trade", 60),
+            confidence={"score": conf["score"], "bar": config.cash_confidence_bar(self.state.paper_mode),
                         "local": conf["local_setup"]["score"],
                         "multiplier": conf["system_evidence"]["multiplier"]},
             mode="paper" if self.state.paper_mode else "live", bar_time=analysis.get("bar_time"))

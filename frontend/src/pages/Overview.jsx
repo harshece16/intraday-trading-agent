@@ -140,6 +140,8 @@ function AutonomyCard({ s }) {
       `Real capital right now: ₹${(realCapital ?? capital)?.toLocaleString("en-IN") ?? "—"} (synced from your Kite account` +
       `${usingPaperFigure ? " — NOT the paper figure below, sizing snaps to this the moment you go live" : ""}).\n` +
       `F&O (options): ${fno?.enabled ? "ON" : "OFF"} — turn it on separately from Portfolio if you want option trades too.\n\n` +
+      `The confidence gate (${s.live_confidence_bar ?? 60}/100) applies from the next entry; in Paper it is off. ` +
+      `Open paper positions stay paper.\n\n` +
       `Turn it back to Paper any time from this same control — that takes effect immediately, no confirmation needed.\n\n` +
       `Go live now?`;
     if (!confirm(msg)) return;
@@ -203,7 +205,9 @@ function AutonomyCard({ s }) {
           <div className="detail" style={{ marginTop: 2 }}>
             {live
               ? "The engine places real orders on its own rules, with no per-trade confirmation."
-              : "Every order is simulated. Going live hands the engine real orders with no per-trade confirmation."}
+              : `Every order is simulated. The paper engine takes its trades automatically; the confidence gate ` +
+                `(${s.live_confidence_bar ?? 60}/100) applies in Live only. Going live hands the engine real orders ` +
+                `with no per-trade confirmation.`}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

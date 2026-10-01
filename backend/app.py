@@ -187,7 +187,7 @@ def get_methods():
     """Every technique Sahab's Dimaag actually trades on, assembled from the
     real constants those modules use — not a hand-written page that could
     drift out of sync with the code."""
-    return methods.get_methods()
+    return methods.get_methods(paper_mode=state.paper_mode)
 
 
 class FnoUpdate(BaseModel):
