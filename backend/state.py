@@ -413,6 +413,23 @@ class AppState:
             self.trades.insert(0, trade)
         database.record_trade(trade, checklist_snapshot=checklist_snapshot)
 
+    def roll_trades_to_today(self):
+        """At the day change: keep only today's legs in the blotter (#247).
+        self.trades was rebuilt from the journal only at process start, so a
+        backend that ran across midnight kept earlier days' legs, and
+        _tax_summary() and the Trades page counted them as today's. Rebuilt
+        from today's journal rows, as at start-up; on a journal failure the
+        in-memory list is filtered to today instead."""
+        start_of_day = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        try:
+            todays = list(reversed(database.trades_between(start_of_day)))
+        except Exception:
+            with self.lock:
+                todays = [t for t in self.trades if (t.get("ts") or 0) >= start_of_day]
+        with self.lock:
+            self.trades = todays
+            self.realized_pnl_today = sum(t["realized"] for t in todays if t.get("realized"))
+
     def _tax_summary(self):
         """Intraday equity is speculative business income (Varsity Markets & Taxation ch 3-6).
         Trade-wise turnover is the sum of the absolute profit or loss of each closed

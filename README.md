@@ -4323,6 +4323,39 @@ Rules: ENT-28 new; ENT-01, ENT-02, ENT-23, RES-24 and UI-04 changed. Files:
 - `frontend/src/components/IntradayRecordBanner.jsx`, `frontend/src/pages/Overview.jsx`, `frontend/src/pages/Journal.jsx`;
 - `docs/architecture/` (HLD, LLD, rules), `docs/research/decisions/decision-2026-09-30-momentum-core.md`, `docs/research/prereg-jev-book.md` (Clarification 11), `docs/research/prereg-kronos-feature-ic.md` (dated note).
 
+### 119. Dashboard safety and correctness: the kill switch can't be locked out, one go-live warning, a Trades history
+
+Four read-only audits of the dashboard on 2026-10-05 (web interface guidelines, React composition, React performance, UI writing) found sixteen confirmed bugs (#233–#248). This section fixes them; the performance work follows in §120.
+
+**Controls that can't lock each other out (#233, #234, #235).**
+
+- Pause entries, Stop & close all and Go live each have their own busy state. Stop & close all is disabled only by its own request, so a hung Pause or Go live can no longer disable it.
+- Every request gives up after 10 seconds (`apiFetch` in `api.js`), 45 seconds for Stop & close all, 30 for a review-queue approval. A timeout says the backend may still be working ("check Open positions", "check Trades before trying again"), since the request may still finish on the backend.
+- The header's Live button runs the same warning as the Overview card's Go live, through one `useEngineControls` hook. The warning reads the Dimaag Scorecard and F&O state at the click, and says the real Kite balance, or that it hasn't synced yet.
+- The kill switch says how many positions it will close, or that none is open, and that the momentum book isn't affected. A failed close says "Still in Live. Close these in Kite now." only in Live; in Paper it says nothing was sent to Kite. A line under the buttons says what happened.
+
+**No silent failures, no endless loading (#236, #237, #238).**
+
+- One POST path (`postJson`) and a `useAction` hook that always clears busy (`finally`) and shows the backend's reason. Review queue Approve and Turn on/off, the Portfolio F&O switch, the LLM sentiment switch, Telegram on/off and test, and the CSV export now say why they failed.
+- Pre-market, Portfolio's F&O section, the LLM sentiment panel, the research desk and the Overview card's facts show the error with Try again instead of "Loading…" forever.
+- A crash inside one page now shows an error in that page; the header, the Paper/Live switch, the sidebar and the live log stay up.
+
+**State and storage (#239, #240).** The `/api/state` backup poll runs only after 8 seconds without a WebSocket message, ignores error responses and never replaces a newer snapshot with an older one (`server_ts`). Blocked site storage no longer white-screens the page.
+
+**Kite (#241).** Connect / Reconnect shows "Opening Kite…" and, when the pop-up is blocked, says to allow pop-ups for the dashboard's address. The window-focus Kite probe runs at most once a minute. The header chip reads "Kite: live prices" or "Kite: delayed prices", not "Kite live", which read as live trading in Paper.
+
+**Readable controls and figures (#242, #243, #244).**
+
+- The pressed Live segment is 6.6:1 in dark mode (was 2.64:1) and the pressed Paper segment has an edge. The Day plan capital input is readable in the light theme. The live log keeps its dark palette's colours in both themes.
+- Balances and limits no longer carry a "+" (`inr()`), which is kept for P&L (`money()`). Every clock is IST, 24-hour, like the engine's own "15:08"; times shown on their own say "IST".
+- Screener and Pre-market rows are buttons a keyboard can expand; stock names, pick cards and "Open full page" are real links.
+
+**Text that said something false (#245, #246).** Paper screens no longer say "live" or "real trade"; the paper ₹1,00,000 is labelled Paper capital. The Day plan no longer claims the 3-position cap keeps risk under the 2% daily loss cap (3 × 1% can be at risk together, and the cap only stops new entries). The momentum book's "Book value −₹…" is the change since the start; its switch-off rule is no longer called a "band", which also meant a price band. Browser notifications name review cards and the Kite pre-open login instead of calling every warning a "risk alert". The delayed feed is called delayed, not "about 15 minutes late" (it was measured not to be).
+
+**Trades page (#247, #248).** The Trades page shows every trade in the journal by day, newest first: one row per round trip with side, quantity, entry and exit, why, gross, charges, net, R and a Paper/Live tag. Today's live blotter stays at the top. In the backend, `state.trades` was rebuilt from the journal only at start-up, so a backend running across midnight kept earlier days' legs, and the tax box counted them as today's (on 2026-10-04 23:57 it still held the 2026-10-01 APOLLOHOSP legs, net −₹204). At the day change `state.roll_trades_to_today()` now rebuilds the blotter and `realized_pnl_today` from today's journal rows. **This part needs a backend restart to go live**; the dashboard filters its today blotter to today's IST date meanwhile.
+
+Left for the owner to decide: replacing the browser's `confirm()` with an in-page dialog, serving the built bundle instead of the dev server, a "connection lost" banner, the phone status-bar layout, and labelling the status bar's figures "Intraday".
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,

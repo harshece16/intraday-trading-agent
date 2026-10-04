@@ -13,22 +13,33 @@ export function supported() {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
+// Storage can be blocked (privacy settings, some embedded views); reading it
+// unguarded on every state push white-screened the page (#240).
+let flagInMemory = null; // the choice, for this tab, when storage is blocked
+function readFlag() {
+  try { return localStorage.getItem(ENABLED_KEY) ?? flagInMemory; } catch { return flagInMemory; }
+}
+function writeFlag(v) {
+  flagInMemory = v;
+  try { localStorage.setItem(ENABLED_KEY, v); } catch { /* storage blocked: kept in memory */ }
+}
+
 export function enabled() {
-  return supported() && localStorage.getItem(ENABLED_KEY) === "1" && Notification.permission === "granted";
+  return supported() && readFlag() === "1" && Notification.permission === "granted";
 }
 
 export async function enable() {
   if (!supported()) return false;
   const perm = await Notification.requestPermission();
   if (perm === "granted") {
-    localStorage.setItem(ENABLED_KEY, "1");
+    writeFlag("1");
     return true;
   }
   return false;
 }
 
 export function disable() {
-  localStorage.setItem(ENABLED_KEY, "0");
+  writeFlag("0");
 }
 
 export function fire(title, body, tag) {
