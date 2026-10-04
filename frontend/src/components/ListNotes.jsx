@@ -1,17 +1,16 @@
-import { clock, dateLabel, joinWords } from "../format";
+import { clock, clockIST, dateLabel, istDay, joinWords } from "../format";
 
 // Where the scan's prices came from. The delayed feed is named as such, with the reason.
 export function feedText(feed) {
   if (!feed) return "";
   if (feed.prices === "live") {
-    const when = feed.quotes_at ? new Date(feed.quotes_at) : null;
-    const day = when && when.toDateString() !== new Date().toDateString()
-      ? `${when.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}, ` : "";
-    const at = when ? ` as of ${day}${when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
+    const when = feed.quotes_at || null;
+    const day = when && istDay(when) !== istDay(new Date()) ? `${dateLabel(istDay(when))}, ` : "";
+    const at = when ? ` as of ${day}${clockIST(when)}` : "";
     const mixed = feed.rows_delayed ? ` (${feed.rows_delayed} ${feed.rows_delayed === 1 ? "stock is" : "stocks are"} on the delayed feed)` : "";
     return `Prices are live from Kite${at}${mixed}.`;
   }
-  return `Prices are from the delayed feed, about 15 minutes late. ${feed.why_delayed || ""}`.trim();
+  return `Prices are from the delayed feed. ${feed.why_delayed || ""}`.trim();
 }
 
 // When the day's list was fixed, in words. Empty until it is fixed.

@@ -2097,7 +2097,11 @@ class TradingEngine:
         self._sync_capital()
         if self._last_day != now.date():
             self.risk.reset_day()
-            self.state.realized_pnl_today = 0.0
+            # Drops earlier days' legs from the blotter and the tax summary
+            # (#247); realized_pnl_today and the daily-loss counter come from
+            # today's journal rows, which are none at midnight.
+            self.state.roll_trades_to_today()
+            self.risk.daily_realized_pnl = self.state.realized_pnl_today
             self._last_day = now.date()
 
         phase = market_phase(now)

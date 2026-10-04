@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../api";
+import { postJson, useAction } from "../api";
 import { clock, money, num, tone } from "../format";
 import { SidePill } from "./Pill";
 import SymLink from "./SymLink";
@@ -7,15 +7,9 @@ import SymLink from "./SymLink";
 // Manual review queue (backend/review_queue.py). The engine offers setups that
 // missed its entry by exactly one gate; nothing is placed until you approve.
 
-async function post(path, body) {
-  const res = await apiFetch(path, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}),
-  });
-  let data = null;
-  try { data = await res.json(); } catch { /* non-JSON error */ }
-  if (!res.ok) return { ok: false, reason: data?.detail || `HTTP ${res.status}` };
-  return data;
-}
+// One POST path (api.js postJson): a network error or a timeout now clears
+// the button and shows its reason; it used to leave Approve on "…" (#236).
+const post = (path, body) => postJson(path, body || {}, { timeoutMs: 30000 });
 
 const pct0 = (x) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 
@@ -53,8 +47,10 @@ function Countdown({ expiresTs }) {
 }
 
 function PendingCard({ c, live }) {
-  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const approveAction = useAction((body) => post(`/api/review-queue/${c.id}/approve`, body));
+  const rejectAction = useAction(() => post(`/api/review-queue/${c.id}/reject`));
+  const busy = approveAction.busy || rejectAction.busy;
 
   async function approve() {
     let body = {};
@@ -69,20 +65,26 @@ function PendingCard({ c, live }) {
       if (!ok) return;
       body = { confirm_live: true };
     }
-    setBusy(true);
-    const r = await post(`/api/review-queue/${c.id}/approve`, body);
-    setBusy(false);
+    setMsg(null);
+    const res = await approveAction.run(body);
+    if (!res.ok) {
+      setMsg({ tone: "down", text: res.error.timeout
+        ? `No answer: ${res.error.message}. It may still have been placed; check Trades before trying again.`
+        : `Not placed: ${res.error.message}.` });
+      return;
+    }
+    const r = res.value || {};
     // A refusal (a risk limit, or the R:R floor at the live price, #211) is
     // journaled with its reason; the card moves to the decided list with it.
-    setMsg(r.ok ? `Placed: ${r.qty} @ ${num(r.fill_price)} (R:R ${num(r.net_rrr_at_fill)} at the fill)`
-      : r.status === "refused" ? `Not placed: ${r.reason}.` : r.reason);
+    setMsg(r.ok ? { tone: "up", text: `Placed: ${r.qty} @ ${num(r.fill_price)} (R:R ${num(r.net_rrr_at_fill)} at the fill)` }
+      : { tone: "down", text: r.status === "refused" ? `Not placed: ${r.reason}.` : r.reason || "Not placed." });
   }
 
   async function reject() {
-    setBusy(true);
-    const r = await post(`/api/review-queue/${c.id}/reject`);
-    setBusy(false);
-    if (!r.ok) setMsg(r.reason);
+    setMsg(null);
+    const res = await rejectAction.run();
+    if (!res.ok) setMsg({ tone: "down", text: `Couldn't reject: ${res.error.message}.` });
+    else if (res.value && res.value.ok === false) setMsg({ tone: "down", text: res.value.reason || "Couldn't reject." });
   }
 
   const conf = c.confidence;
@@ -138,9 +140,11 @@ function PendingCard({ c, live }) {
         </p>
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <button className="btn primary" disabled={busy} onClick={approve}>{busy ? "…" : live ? "Approve — real order" : "Approve (paper)"}</button>
-        <button className="btn" disabled={busy} onClick={reject}>Reject</button>
-        {msg && <span className="detail">{msg}</span>}
+        <button className="btn primary" disabled={busy} onClick={approve}>
+          {approveAction.busy ? "Placing order…" : live ? "Approve — real order" : "Approve (paper)"}
+        </button>
+        <button className="btn" disabled={busy} onClick={reject}>{rejectAction.busy ? "Rejecting…" : "Reject"}</button>
+        <span className="detail" role="status" aria-live="polite">{msg && <span className={msg.tone}>{msg.text}</span>}</span>
       </div>
     </div>
   );
@@ -164,7 +168,7 @@ function DecidedRow({ c }) {
       <td className={c.status === "approved" ? "up" : c.status === "refused" || c.status === "failed" ? "down" : "muted"}>
         {STATUS_TEXT[c.status] || c.status}
       </td>
-      <td>{c.status === "approved" ? <span className="muted">real trade</span> : <ShadowText sh={c.shadow} />}</td>
+      <td>{c.status === "approved" ? <span className="muted">{o.mode === "live" ? "taken: real order" : "taken: paper"}</span> : <ShadowText sh={c.shadow} />}</td>
       <td className="detail">{detail}</td>
     </tr>
   );
@@ -190,7 +194,7 @@ function HeldBackRow({ c }) {
 
 export default function ReviewQueue({ s }) {
   const rq = s.review_queue;
-  const [busy, setBusy] = useState(false);
+  const toggleAction = useAction((enabled) => post("/api/review-queue/enable", { enabled }));
   if (!rq) return null;
   const live = !s.paper_mode;
   const pending = rq.cards.filter((c) => c.status === "pending");
@@ -210,9 +214,7 @@ export default function ReviewQueue({ s }) {
       );
       if (!ok) return;
     }
-    setBusy(true);
-    await post("/api/review-queue/enable", { enabled: !rq.enabled });
-    setBusy(false);
+    await toggleAction.run(!rq.enabled);
   }
 
   return (
@@ -233,8 +235,15 @@ export default function ReviewQueue({ s }) {
               : "Off: setups that fail a rule are skipped, as usual. Turn it on to decide on near-misses yourself."}
           </div>
         </div>
-        <button className="btn" disabled={busy} onClick={toggle}>{busy ? "…" : rq.enabled ? "Turn off" : "Turn on"}</button>
+        <button className="btn" disabled={toggleAction.busy} onClick={toggle}>
+          {toggleAction.busy ? (rq.enabled ? "Turning off…" : "Turning on…") : rq.enabled ? "Turn off" : "Turn on"}
+        </button>
       </div>
+      {toggleAction.error && (
+        <p className="down" role="alert" style={{ margin: "8px 0 0", fontSize: 13 }}>
+          Couldn't turn the review queue {rq.enabled ? "off" : "on"}: {toggleAction.error}.
+        </p>
+      )}
       {pending.map((c) => <PendingCard key={c.id} c={c} live={live} />)}
       {rq.enabled && !pending.length && <p className="empty" style={{ marginTop: 10 }}>Nothing waiting right now.</p>}
       {decided.length > 0 && (
@@ -249,7 +258,7 @@ export default function ReviewQueue({ s }) {
           </summary>
           <div className="table-wrap">
             <table className="datatable">
-              <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th>If approved</th><th></th></tr></thead>
+              <thead><tr><th>Time (IST)</th><th>Stock</th><th>Side</th><th>Failed</th><th>Decision</th><th>If approved</th><th></th></tr></thead>
               <tbody>{decided.map((c) => <DecidedRow key={c.id} c={c} />)}</tbody>
             </table>
           </div>
@@ -272,7 +281,7 @@ export default function ReviewQueue({ s }) {
           </summary>
           <div className="table-wrap">
             <table className="datatable">
-              <thead><tr><th>Time</th><th>Stock</th><th>Side</th><th>R:R after costs</th><th>Target hit / stop hit</th><th>If approved</th></tr></thead>
+              <thead><tr><th>Time (IST)</th><th>Stock</th><th>Side</th><th>R:R after costs</th><th>Target hit / stop hit</th><th>If approved</th></tr></thead>
               <tbody>{held.map((c) => <HeldBackRow key={c.id} c={c} />)}</tbody>
             </table>
           </div>

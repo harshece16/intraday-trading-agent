@@ -32,8 +32,12 @@ export function useAlerts(state) {
           fire(a.symbol ? `${a.symbol} — trade` : "Trade", a.message, `trade-${a.ts}`);
         } else if (a.kind === "momentum") {
           fire("Trader Sahab — momentum book", a.message, `momentum-${a.ts}`);
+        } else if (a.kind === "review") {
+          fire("Review queue: decision needed", a.message, `review-${a.ts}`);
+        } else if (a.kind === "kite_preopen") {
+          fire("Kite login needed", a.message, `kite-${a.ts}`);
         } else if (a.level === "warn" || a.level === "error") {
-          fire("Trader Sahab — risk alert", a.message, `risk-${a.ts}`);
+          fire("Trader Sahab: warning", a.message, `warn-${a.ts}`);
         }
       }
       lastActivityTs.current = Math.max(lastActivityTs.current, items[0].ts);

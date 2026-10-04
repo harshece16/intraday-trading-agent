@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { apiFetch, apiJson, explainRefusal, openKiteLogin, sendTelegramTest, setEntriesPaused, setTelegramEnabled, setTradingMode, stopAndCloseAll } from "../api";
-import { clock, dateLabel, money, num, pct, tone } from "../format";
+import { Link } from "react-router-dom";
+import { postJson } from "../api";
+import { clockIST, dateLabel, money, num, pct, tone } from "../format";
 import { analysisFor, checklistSide, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
-import { SidePill, StatusPill } from "../components/Pill";
+import { SidePill } from "../components/Pill";
 import SymLink from "../components/SymLink";
 import Feed from "../components/Feed";
 import Chart from "../components/Chart";
 import ReviewQueue from "../components/ReviewQueue";
+import AutonomyCard from "../components/AutonomyCard";
+import KiteConnectButton from "../components/KiteConnectButton";
 import { feedText, fixedText } from "../components/ListNotes";
-import { enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 
 const ONBOARD_KEY = "sahab_onboarding_dismissed";
@@ -40,7 +41,7 @@ function OnboardingBanner({ s }) {
         <div>
           <h2 className="h" style={{ fontSize: 16 }}>First time here? Three things before you start</h2>
           <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.9 }}>
-            <li><b>Connect Kite</b> — click "Connect Kite" in the bar at the top. Real prices, holdings and orders all need this; nothing trades without it.</li>
+            <li><b>Connect Kite</b>: click Connect Kite in the top bar. Live prices, your holdings and real orders need it. Without it, paper trading uses delayed prices.</li>
             <li><b>Confirm you're in Paper mode</b> — check the Paper/Live switch in the bar at the top. Paper is the safe default and simulates everything; Live places real orders.</li>
             <li><b>Read the Dimaag Scorecard on the Journal page</b> before ever considering Live — it shows, honestly, whether this system has actually proven a real edge yet.</li>
           </ol>
@@ -85,196 +86,9 @@ function KiteSessionAlert({ s }) {
             </p>
           )}
         </div>
-        <button
-          className="btn primary"
-          onClick={openKiteLogin}
-        >
-          {stalled ? "Try again" : "Reconnect"}
-        </button>
+        <KiteConnectButton className="btn primary" label={stalled ? "Try again" : "Reconnect"} />
       </div>
     </div>
-  );
-}
-
-function scorecardSummary(rows) {
-  if (!rows || !rows.length) return "Dimaag Scorecard: not loaded — check the Journal page before deciding.";
-  const fails = rows.filter((r) => r.status === "fail").map((r) => r.criterion);
-  const passes = rows.filter((r) => r.status === "pass").length;
-  const pending = rows.length - fails.length - passes;
-  if (fails.length) {
-    return `Dimaag Scorecard: FAILS on ${fails.join(" and ")} — this system has NOT shown a proven edge yet.`;
-  }
-  if (passes === rows.length) return "Dimaag Scorecard: all criteria currently pass.";
-  return `Dimaag Scorecard: ${passes}/${rows.length} pass, ${pending} not enough data yet — no proven edge confirmed yet.`;
-}
-
-function AutonomyCard({ s }) {
-  const [fno, setFno] = useState(null);
-  const [scorecard, setScorecard] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [telegram, setTelegram] = useState(null);
-
-  useEffect(() => {
-    let stopped = false;
-    function load() {
-      apiJson("/api/alerts/telegram").then((d) => !stopped && setTelegram(d)).catch(() => {});
-      apiJson("/api/fno/status").then((d) => !stopped && setFno(d)).catch(() => {});
-      apiJson("/api/journal/summary").then((d) => !stopped && setScorecard(d.scorecard)).catch(() => {});
-    }
-    load();
-    const id = setInterval(load, 20000);
-    return () => { stopped = true; clearInterval(id); };
-  }, []);
-
-  const live = !s.paper_mode;
-  const capital = s.risk_total_capital;      // whatever's actually sizing trades right now
-  const realCapital = s.real_capital;        // always the true Kite balance, regardless of mode
-  const usingPaperFigure = !live && realCapital != null && capital !== realCapital;
-
-  async function goLive() {
-    const msg =
-      `${scorecardSummary(scorecard)}\n\n` +
-      `This turns on real order placement — Trader Sahab will buy and sell on Zerodha automatically from now on, ` +
-      `every ~30 seconds, on its own rules, with no per-trade confirmation from you or anyone else. It runs whether ` +
-      `or not you're watching.\n\n` +
-      `Real capital right now: ₹${(realCapital ?? capital)?.toLocaleString("en-IN") ?? "—"} (synced from your Kite account` +
-      `${usingPaperFigure ? " — NOT the paper figure below, sizing snaps to this the moment you go live" : ""}).\n` +
-      `F&O (options): ${fno?.enabled ? "ON" : "OFF"} — turn it on separately from Portfolio if you want option trades too.\n\n` +
-      `The confidence gate (${s.live_confidence_bar ?? 60}/100) applies from the next entry; in Paper it is off. ` +
-      `Open paper positions stay paper.\n\n` +
-      `Turn it back to Paper any time from this same control — that takes effect immediately, no confirmation needed.\n\n` +
-      `Go live now?`;
-    if (!confirm(msg)) return;
-    setBusy(true);
-    try {
-      await setTradingMode(false);
-    } catch (e) {
-      if (!explainRefusal(e)) alert(`Couldn't go live: ${e.message}`);
-    }
-    setBusy(false);
-  }
-
-  async function goPaper() {
-    setBusy(true);
-    try { await setTradingMode(true); } catch (e) { alert(`Couldn't switch to Paper: ${e.message}`); }
-    setBusy(false);
-  }
-
-  async function toggleTelegram() {
-    try { setTelegram(await setTelegramEnabled(!telegram.enabled)); } catch (e) { alert(`Couldn't change phone alerts: ${e.message}`); }
-  }
-
-  async function testTelegram() {
-    const r = await sendTelegramTest().catch((e) => ({ ok: false, error: e.message }));
-    alert(r.ok ? "Test alert sent — check Telegram." : `Telegram test failed: ${r.error}`);
-  }
-
-  async function togglePause() {
-    setBusy(true);
-    try { await setEntriesPaused(!s.entries_paused); } catch (e) { alert(`Couldn't change the pause: ${e.message}`); }
-    setBusy(false);
-  }
-
-  const openCount = Object.values(s.positions || {}).filter((p) => p.quantity).length + Object.keys(s.fno_positions || {}).length;
-
-  async function killSwitch() {
-    const msg =
-      `Stop trading and close everything?\n\n` +
-      `This pauses new entries, closes all ${openCount} open position${openCount === 1 ? "" : "s"} at market ` +
-      `${live ? "with real orders on Zerodha" : "(paper fills)"}, and switches to Paper.`;
-    if (!confirm(msg)) return;
-    setBusy(true);
-    try {
-      const r = await stopAndCloseAll();
-      if (r.failed?.length) {
-        alert(`Couldn't close: ${r.failed.map((f) => `${f.symbol} (${f.error})`).join(", ")}.\n\nStill LIVE — close these in Kite now.`);
-      }
-    } catch (e) {
-      alert(`Kill switch failed: ${e.message}. Close positions in Kite directly.`);
-    }
-    setBusy(false);
-  }
-
-  return (
-    <section className="cardbox controls" style={{ borderColor: live ? "var(--short)" : undefined }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h2 className="h" style={{ fontSize: 17 }}>
-            {live ? "Trading is live, running on its own" : "Paper trading: no real orders"}
-          </h2>
-          <div className="detail" style={{ marginTop: 2 }}>
-            {live
-              ? "The engine places real orders on its own rules, with no per-trade confirmation."
-              : `Every order is simulated. The paper engine takes its trades automatically; the confidence gate ` +
-                `(${s.live_confidence_bar ?? 60}/100) applies in Live only. Going live hands the engine real orders ` +
-                `with no per-trade confirmation.`}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn" disabled={busy} onClick={togglePause}
-            title={`Stop opening new positions. Stops, targets and the ${s.square_off_time || "15:08"} square-off keep running.`}>
-            {s.entries_paused ? "Resume entries" : "Pause entries"}
-          </button>
-          <button className="btn danger" disabled={busy} onClick={killSwitch}
-            title="Pause entries, close every open position at market, switch to Paper">
-            Stop &amp; close all
-          </button>
-          <button className={`btn ${live ? "" : "primary"}`} disabled={busy} onClick={live ? goPaper : goLive}>
-            {busy ? "…" : live ? "Switch to Paper" : "Go live"}
-          </button>
-        </div>
-      </div>
-      {s.entries_paused && (
-        <p className="note" style={{ margin: "12px 0 0", background: "var(--wait-bg)", color: "var(--wait)" }}>
-          New entries are paused. Open positions still have their stops, targets and the {s.square_off_time || "15:08"} square-off.
-        </p>
-      )}
-      <dl className="facts controls-facts">
-        <div><dt>{usingPaperFigure ? "Paper capital" : "Real capital"}</dt><dd>₹{num(capital, 0)}</dd></div>
-        {usingPaperFigure && <div><dt>Real Kite balance</dt><dd>₹{num(realCapital, 0)}</dd></div>}
-        <div><dt>F&amp;O (options)</dt><dd>{fno ? (fno.enabled ? "On" : "Off") : "…"}</dd></div>
-        <div>
-          <dt>Phone alerts</dt>
-          <dd>
-            {!telegram ? "…" : !telegram.configured ? <span className="muted">Not set up</span> : (
-              <>
-                {telegram.enabled ? "On" : "Off"}{" "}
-                <button className="more inline" onClick={toggleTelegram}>{telegram.enabled ? "turn off" : "turn on"}</button>{" "}
-                <button className="more inline" onClick={testTelegram}>test</button>
-              </>
-            )}
-          </dd>
-          {telegram?.last_error && <dd className="down" style={{ fontSize: 12, fontWeight: 400 }}>Last send failed: {telegram.last_error}</dd>}
-        </div>
-        <div><dt>Browser alerts</dt><dd>{alertsSupported() ? (alertsEnabled() ? "On" : <span className="muted">Off</span>) : "—"}</dd></div>
-        {scorecard && (
-          <div>
-            <dt>Proven edge</dt>
-            <dd><StatusPill status={scorecard.some((r) => r.status === "fail") ? "fail" : scorecard.every((r) => r.status === "pass") ? "pass" : "pending"} /></dd>
-          </div>
-        )}
-      </dl>
-      {scorecard && scorecard.some((r) => r.status === "fail") && (
-        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-          {scorecardSummary(scorecard)}{" "}
-          <Link className="more" to="/journal">See the full Scorecard →</Link>
-        </p>
-      )}
-      {usingPaperFigure && (
-        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-          Paper mode is sizing against a fixed ₹{capital.toLocaleString("en-IN")} test figure
-          (config.RISK.paper_capital), not your real ₹{realCapital.toLocaleString("en-IN")} Kite balance — set this
-          up so simulated trades actually get sized. Going live snaps sizing back to the real balance immediately.
-        </p>
-      )}
-      {live && capital != null && capital < 2000 && (
-        <p className="muted" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-          At ₹{capital.toLocaleString("en-IN")}, the 1% risk model sizes most stocks to 0 shares — expect few or no
-          cash-equity trades until the account is funded further.{" "}
-          <Link className="more" to="/day-plan">See exactly which picks would size →</Link>
-        </p>
-      )}
-    </section>
   );
 }
 
@@ -307,12 +121,11 @@ function heroCopy(s) {
 }
 
 function PickCard({ s, r, held }) {
-  const navigate = useNavigate();
   const ready = isReady(s, r);
   const why = (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ");
   const rule = primaryRule(r);
   return (
-    <button className="pickcard" onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)}>
+    <Link className="pickcard" to={`/stock/${encodeURIComponent(r.symbol)}`}>
       <div className="row1">
         <span className="sym">{r.symbol}</span>
         {r.long_only ? <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span> : null}
@@ -321,12 +134,11 @@ function PickCard({ s, r, held }) {
       <div className="why">{why}</div>
       <RuleTag text={rule} />
       <div className="row2"><span>Score {num(r.final_score, 0)}</span><span className={tone(r.chg_pct)}>{pct(r.chg_pct)}</span></div>
-    </button>
+    </Link>
   );
 }
 
 function MiniChartCard({ s, r, held }) {
-  const navigate = useNavigate();
   const a = analysisFor(s, r.symbol);
   const b = a && a.b;
   const pos = s.positions[r.symbol];
@@ -348,9 +160,9 @@ function MiniChartCard({ s, r, held }) {
   }
 
   return (
-    <div className="cardbox mini-chart-card" onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)} style={{ cursor: "pointer" }}>
+    <div className="cardbox mini-chart-card">
       <div className="mini-chart-head">
-        <span className="sym">{r.symbol}</span>
+        <Link className="sym mini-chart-link" to={`/stock/${encodeURIComponent(r.symbol)}`}>{r.symbol}</Link>
         <span style={{ display: "flex", gap: 6 }}>
           {held.has(r.symbol) ? <span className="pill solid">Holding</span> : null}
           {b ? <SidePill side={side.toUpperCase()} suffix=" plan" /> : null}
@@ -358,6 +170,7 @@ function MiniChartCard({ s, r, held }) {
       </div>
       <Chart symbol={r.symbol} plan={plan} position={pos} patterns={b?.patterns} barTime={b?.bar_time} trades={s.trades} className="mini-chart" compact />
       <div className="mini-chart-plan">{planLine}</div>
+      <Link className="more" to={`/stock/${encodeURIComponent(r.symbol)}`}>Open {r.symbol} →</Link>
     </div>
   );
 }
@@ -370,11 +183,10 @@ export default function Overview({ state: s }) {
     setScanning(true);
     setScanLabel("Scanning…");
     try {
-      const res = await apiFetch(`/api/scan`, { method: "POST" });
-      const data = await res.json();
+      const data = await postJson("/api/scan");
       setScanLabel(data.started ? "Scan started" : "Already scanning");
     } catch (e) {
-      setScanLabel("Engine offline");
+      setScanLabel(`Couldn't scan: ${e.message}`);
     }
     setTimeout(() => { setScanning(false); setScanLabel("Scan now"); }, 8000);
   }
@@ -411,7 +223,7 @@ export default function Overview({ state: s }) {
           </dl>
           <div className="scan-cta">
             <button className="btn primary" disabled={scanning} onClick={triggerScan}>{scanLabel}</button>
-            <small>{sc ? `Scanned ${sc.scanned} stocks at ${clock(sc.ts)}` : ""}</small>
+            <small>{sc ? `Scanned ${sc.scanned} stocks at ${clockIST(sc.ts)}` : ""}</small>
           </div>
         </div>
       </section>
@@ -419,7 +231,7 @@ export default function Overview({ state: s }) {
       <AutonomyCard s={s} />
       <ReviewQueue s={s} />
 
-      <h2 className="h" style={{ marginTop: 40 }}>Today's picks</h2>
+      <h2 className="h" style={{ marginTop: 40 }}>Today's list</h2>
       <p className="sub">
         {sc?.selection?.mode === "liquidity"
           ? `Today's list is the most-traded eligible stocks, chosen once and kept all day. ${fixedText(sc.selection)} It is chosen for low trading cost, not as a prediction. Cards are ordered by scan score. ${feedText(sc.feed)} `
@@ -465,7 +277,7 @@ export default function Overview({ state: s }) {
           <h2 className="h">Live charts</h2>
           <p className="sub">
             Real candles, EMA 20/50 and the checklist's current plan for each pick — the entry, stop and target lines are
-            the same numbers a real order would use, never a projected price path. Click a chart to open its full page.
+            the same numbers a real order would use, never a projected price path. Open a stock for its full page.
           </p>
           <div className="mini-chart-grid">
             {picks.map((r) => <MiniChartCard key={r.symbol} s={s} r={r} held={held} />)}

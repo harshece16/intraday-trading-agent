@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { pct, tone } from "../format";
 import { analysisFor, heldSymbols, isReady, primaryRule, scanRows } from "../helpers";
 import { RuleTag } from "../components/RuleBook";
@@ -7,7 +7,7 @@ import RuleBook from "../components/RuleBook";
 import { fixedText, GuardNotes, SectorTrendNote } from "../components/ListNotes";
 
 const TABS = [
-  ["trading", "Trading"], ["watch", "Watching"], ["skipped", "Skipped"],
+  ["trading", "Today's list"], ["watch", "Not on today's list"], ["skipped", "Left out"],
 ];
 const SORT_OPTS = [["score", "Score"], ["chg_pct", "Change %"], ["symbol", "Symbol"]];
 
@@ -26,14 +26,14 @@ function sortRows(rows, sort) {
 }
 
 function OppRow({ s, r, held, expanded, onToggle }) {
-  const navigate = useNavigate();
   const why = r.excluded || (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ");
   const rule = primaryRule(r);
   const flag = held.has(r.symbol) ? <span className="pill solid">Holding</span> : isReady(s, r) ? <span className="pill solid">Ready</span> : null;
   const a = analysisFor(s, r.symbol);
   return (
     <>
-      <div className={`opp${expanded ? " expanded" : ""}`} onClick={() => onToggle(r.symbol)}>
+      {/* A real button, so a keyboard can reach and expand it (#244). */}
+      <button type="button" className={`opp${expanded ? " expanded" : ""}`} aria-expanded={expanded} onClick={() => onToggle(r.symbol)}>
         <span className="opp-score" title="Scan score">{r.excluded ? "—" : r.final_score?.toFixed(0)}</span>
         <span>
           <span className="opp-name">
@@ -41,17 +41,17 @@ function OppRow({ s, r, held, expanded, onToggle }) {
             {r.long_only && !r.excluded ? <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span> : null}
             <RuleTag text={rule} />
           </span>
-          <div className="opp-why">{why}</div>
+          <span className="opp-why">{why}</span>
         </span>
         <span className="opp-why">{r.name || ""}</span>
         <span className={`opp-chg ${tone(r.chg_pct)}`}>{pct(r.chg_pct)}</span>
-      </div>
+      </button>
       {expanded && (
         <div className="opp-detail">
           {<RuleBook r={r} b={a && a.b} />}
-          <button className="btn" style={{ marginTop: 10 }} onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)}>
+          <Link className="btn btn-link" style={{ marginTop: 10 }} to={`/stock/${encodeURIComponent(r.symbol)}`}>
             Open full page →
-          </button>
+          </Link>
         </div>
       )}
     </>
@@ -65,7 +65,7 @@ export default function Screener({ state: s }) {
   const [expanded, setExpanded] = useState(null);
 
   const rows = scanRows(s);
-  const held = useMemo(() => new Set(heldSymbols(s)), [s]);
+  const held = new Set(heldSymbols(s));
 
   const groups = {
     trading: rows.filter((r) => r.status === "ACTIVE" || held.has(r.symbol)),
@@ -104,7 +104,7 @@ export default function Screener({ state: s }) {
   return (
     <>
       <h2 className="h">Screener</h2>
-      <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} The score is the old selection score, shown for information: it sets no side. Click a row to expand its rule book inline.</p>
+      <p className="sub">All 100 NIFTY stocks Trader Sahab ranks every scan. {intro} The score is the old selection score, shown for information: it sets no side. Select a row to expand its rule book inline.</p>
       <GuardNotes guards={s.scanner?.guards} feed={s.scanner?.feed} />
       <SectorTrendNote scanner={s.scanner} />
       <div className="tabs">

@@ -1,6 +1,6 @@
 {
  "title": "Trader Sahab rules catalogue",
- "as_of": "2026-10-01",
+ "as_of": "2026-10-05",
  "note": "Source of truth for docs/architecture/RULES.md and rules.html. Edit this file, then run tools/build_rules_docs.py.",
  "interactive_url": "https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK",
  "statuses": {
@@ -3214,12 +3214,12 @@
    "id": "UI-03",
    "area": "ui",
    "status": "active",
-   "rule": "App state streams over the WebSocket every 3 s, with a /api/state poll every 10 s as backup and a reconnect 2 s after a close. The header's Kite status polls every 15 s and spends a real probe only on load and window focus.",
+   "rule": "App state streams over the WebSocket every 3 s, with a reconnect 2 s after a close. /api/state is polled only after 8 s without a WebSocket message; an error response or a snapshot older (server_ts) than the one shown is dropped. The header's Kite status polls every 15 s and spends a real probe on load and on window focus, at most once a minute.",
    "why": "Keeps the UI live without spending a Kite call on every poll.",
    "enforced_in": "frontend/src/api.js:useAppState; backend/app.py:websocket_endpoint; frontend/src/components/Header.jsx",
    "config": null,
-   "verify": "Browser network tab: /ws frames about every 3 s, /api/state every 10 s, /api/kite/status every 15 s",
-   "source": "README §53",
+   "verify": "Browser network tab: /ws frames about every 3 s and no /api/state while they arrive; stop the socket and /api/state appears about every 8 s; focusing the window twice within a minute sends one ?probe=true",
+   "source": "README §53, §119",
    "test": null
   },
   {
@@ -3232,6 +3232,18 @@
    "config": null,
    "verify": "Open the dashboard: / shows the Momentum Book; /intraday, /screener and the other intraday pages show the paper-record banner; /momentum-book lands on /",
    "source": "README §116, §118",
+   "test": null
+  },
+  {
+   "id": "UI-05",
+   "area": "ui",
+   "status": "active",
+   "rule": "Pause entries, Stop & close all and Go live each have their own busy state: Stop & close all is disabled only by its own request. Every dashboard request times out (10 s by default, 45 s for Stop & close all). The header's Live button and the Overview's Go live run the same warning, read at the click: the Dimaag Scorecard, the real Kite balance, F&O and the confidence bar.",
+   "why": "A hung Pause or Go live request used to disable the kill switch (#233), and the header's Live skipped the Overview's warning (#234).",
+   "enforced_in": "frontend/src/useEngineControls.js:useEngineControls, goLiveMessage; frontend/src/api.js:apiFetch, useAction",
+   "config": null,
+   "verify": "Against a mock backend whose /api/control/pause hangs: click Pause, then Stop & close all; Stop runs at once and Pause reports a timeout after 10 s",
+   "source": "README §119",
    "test": null
   },
   {

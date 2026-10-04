@@ -1,10 +1,6 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
+/** A stock's name as a real link: keyboard, middle-click and new tab work (#244). */
 export default function SymLink({ sym }) {
-  const navigate = useNavigate();
-  return (
-    <button className="symlink" onClick={() => navigate(`/stock/${encodeURIComponent(sym)}`)}>
-      {sym}
-    </button>
-  );
+  return <Link className="symlink" to={`/stock/${encodeURIComponent(sym)}`}>{sym}</Link>;
 }

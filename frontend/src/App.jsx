@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { API_BASE, useAppState } from "./api";
 import LoadState from "./components/LoadState";
+import PageErrorBoundary from "./components/PageErrorBoundary";
 import { useAlerts } from "./useAlerts";
 import StatusBar, { Sidebar } from "./components/Header";
 import LiveLog from "./components/LiveLog";
@@ -73,6 +74,7 @@ function AppRoutes({ state }) {
 
 function Shell() {
   const state = useAppState();
+  const { pathname } = useLocation();
   useAlerts(state);
   const [liveLogOpen, setLiveLogOpen] = useState(false);
   return (
@@ -80,7 +82,9 @@ function Shell() {
       <Sidebar state={state} liveLogOpen={liveLogOpen} onToggleLiveLog={() => setLiveLogOpen((v) => !v)} />
       <div className="app-main">
         <StatusBar state={state} />
-        <AppRoutes state={state} />
+        <PageErrorBoundary key={pathname}>
+          <AppRoutes state={state} />
+        </PageErrorBoundary>
       </div>
       <LiveLog state={state} open={liveLogOpen} onClose={() => setLiveLogOpen(false)} />
     </div>

@@ -10,7 +10,7 @@ const STATUS = {
   not_started: ["neutral", "Not started", "The first evening job hasn't run yet. It runs after 19:30 on trading days."],
   waiting_for_month_end: ["wait", "Waiting for its first rebalance", "The book buys its first 15 names at the close of the first session of a month."],
   active: ["long", "Active (paper)", "Holding 15 names; rebalanced on the first session of each month."],
-  switched_off: ["short", "Switched off", "The book fell below its pre-registered band and stopped itself."],
+  switched_off: ["short", "Switched off", "The book fell below its pre-registered switch-off floor and stopped itself."],
 };
 
 const WHY = { locked: "Locked at its price band", no_trade: "Did not trade" };
@@ -92,7 +92,7 @@ function MonthlyReport({ data }) {
           <thead>
             <tr>
               <th>Month</th><th className="num">Book</th><th className="num">Benchmark</th><th className="num">Excess</th>
-              <th className="num">Cumulative excess</th><th className="num">Band floor</th>
+              <th className="num">Cumulative excess</th><th className="num">Switch-off floor</th>
               <th className="num">Turnover</th><th className="num">Costs</th>
             </tr>
           </thead>
@@ -121,8 +121,8 @@ function MonthlyReport({ data }) {
       </div>
       <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
         A month runs from one rebalance close to the next. Returns are after every charge and 0.05% slippage a side,
-        including the rebalance that closes the month. Excess is the book's return minus the benchmark's; the
-        cumulative excess adds the months up, as the band does. Turnover is (bought + sold) ÷ 2 ÷ the book's value
+        including the rebalance that closes the month, before income tax. Excess is the book's return minus the benchmark's; the
+        cumulative excess adds the months up, as the switch-off rule does. Turnover is (bought + sold) ÷ 2 ÷ the book's value
         at the start of the month.
         {opening ? ` The opening rebalance on ${day(opening.date)} bought ${opening.bought} stocks for ₹${num(opening.costs, 0)} of charges and slippage, before the first month.` : ""}
       </p>
@@ -134,19 +134,20 @@ function Band({ data }) {
   const b = data.band;
   if (!b) return null;
   const says = {
-    not_active: `Not applied yet: the band starts at month ${b.from_month}. ${b.months ? `${b.months} month${b.months === 1 ? "" : "s"} counted so far.` : "No month counted yet."}`,
-    inside: `Inside the band, ${((b.cumulative_excess - b.floor) * 100).toFixed(2)} percentage points above the floor.`,
+    not_active: `Not applied yet: the rule starts at month ${b.from_month}. ${b.months ? `${b.months} month${b.months === 1 ? "" : "s"} counted so far.` : "No month counted yet."}`,
+    inside: `Above the floor by ${((b.cumulative_excess - b.floor) * 100).toFixed(2)} percentage points.`,
     below: "Below the floor.",
     switched_off: "The book fell below its floor and switched itself off. Nothing turns it back on.",
   }[b.state];
   return (
     <section className="mb-section">
-      <h3>Switch-off band</h3>
+      <h3>Switch-off rule</h3>
       <p className="lede muted" style={{ fontSize: 14 }}>
-        Fixed before the first rebalance (the pre-registration's notes on the forward paper book): after n months the
-        book is switched off if its cumulative excess falls below n × {plain(b.expected_monthly_excess)} − 2 ×{" "}
-        {plain(b.monthly_excess_sd)} × √n, from month {b.from_month}. That floor is {pctOf(b.floor_at_start, 1)} at month{" "}
-        {b.from_month}. The figures are trial 126's backtest.
+        The book stops itself if it falls too far behind its benchmark. From month {b.from_month}, it switches off when
+        its cumulative excess drops below a floor: the gain the backtest expects ({plain(b.expected_monthly_excess)} a
+        month) minus two standard deviations of its monthly swings ({plain(b.monthly_excess_sd)}). After n months the
+        floor is n × {plain(b.expected_monthly_excess)} − 2 × {plain(b.monthly_excess_sd)} × √n, which
+        is {pctOf(b.floor_at_start, 1)} at month {b.from_month}. The rule was set before the first trade, from trial 126.
       </p>
       <dl className="band-row">
         <div><dt>Months counted</dt><dd>{b.months}</dd></div>
@@ -245,7 +246,7 @@ export default function MomentumBook() {
         ) : <p className="empty">Nothing yet: the book holds cash until its first rebalance ({day(data.next_rebalance)} close).</p>}
         {data.holdings && data.holdings.length > 0 && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-            Cash not invested: ₹{num(data.cash, 0)}. Book value {money((data.book_value || 0) - (data.capital || 0))} on
+            Cash not invested: ₹{num(data.cash, 0)}. Change since the start: {money((data.book_value || 0) - (data.capital || 0))} on
             ₹{num(data.capital, 0)}.
           </p>
         )}
