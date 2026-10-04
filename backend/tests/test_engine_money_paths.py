@@ -376,6 +376,7 @@ def _paper_live_day(monkeypatch):
     monkeypatch.setitem(config.RISK, "total_capital", 100000.0)
     st = AppState(["AAA", "BBB"], paper_mode=True)
     eng = trading_engine.TradingEngine(st)
+    st.market = {"bias": "neutral", "reasons": []}
     eng._execute("AAA", "BUY", 100, 1000.0, reason="sig", position_id="p1", live=False)
     eng._execute("AAA", "SELL", 100, 1015.0, reason="take_profit", position_id="p1", initial_risk=10, live=False)
     paper = st.realized_by_mode["paper"]

@@ -744,11 +744,49 @@ def trades_between(start_ts: float, end_ts: float | None = None):
     return out
 
 
-def trade_stats():
-    """Win rate and expectancy over every closed leg with a known R-multiple —
-    the same metrics the backtester reports, now measured on live/paper fills."""
+def closed_trade_rs():
+    """One R-multiple per closed trade, oldest first: a position's closing
+    legs are summed by position_id (#257). A live exit Kite fills in several
+    parts writes one row per fill, each with its own R, and counting rows
+    made one trade several (a 1-share and a 99-share fill of one loser were
+    two losses). R = the position's total net / (initial risk x entry
+    quantity). A row without a position_id counts on its own, as before."""
     with _conn() as c:
-        rs = [r[0] for r in c.execute("SELECT r_multiple FROM trades WHERE r_multiple IS NOT NULL").fetchall()]
+        rows = c.execute(
+            "SELECT id, position_id, ts, quantity, realized, initial_risk, r_multiple FROM trades "
+            "WHERE r_multiple IS NOT NULL ORDER BY ts").fetchall()
+        pids = sorted({r["position_id"] for r in rows if r["position_id"]})
+        entry_qty = {}
+        for pid in pids:
+            e = c.execute("SELECT quantity FROM trades WHERE position_id = ? AND r_multiple IS NULL "
+                          "ORDER BY ts LIMIT 1", (pid,)).fetchone()
+            if e is not None:
+                entry_qty[pid] = e["quantity"]
+    groups, order = {}, []
+    for r in rows:
+        key = r["position_id"] or ("row", r["id"])
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+    out = []
+    for key in order:
+        legs = groups[key]
+        if len(legs) == 1:
+            out.append(legs[0]["r_multiple"])
+            continue
+        risk = next((l["initial_risk"] for l in legs if l["initial_risk"]), None)
+        qty = entry_qty.get(key) or sum(l["quantity"] for l in legs)
+        net = sum(l["realized"] or 0.0 for l in legs)
+        out.append(net / (risk * qty) if risk and qty else sum(l["r_multiple"] for l in legs))
+    return out
+
+
+def trade_stats():
+    """Win rate and expectancy over every closed trade with a known
+    R-multiple, one per position (closed_trade_rs, #257) — the same metrics
+    the backtester reports, now measured on live/paper fills."""
+    rs = closed_trade_rs()
     if not rs:
         return {"closed_trades": 0, "win_rate_pct": None, "expectancy_r": None, "kelly_pct": None}
     wins = [x for x in rs if x > 0]
@@ -1539,7 +1577,7 @@ def journal_summary(include_backtest_evidence=True):
         n_evals = c.execute("SELECT COUNT(*) FROM checklist_evals").fetchone()[0]
         n_trades = c.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
         first_ts = c.execute("SELECT MIN(ts) FROM scans").fetchone()[0]
-        rs = [r[0] for r in c.execute("SELECT r_multiple FROM trades WHERE r_multiple IS NOT NULL").fetchall()]
+    rs = closed_trade_rs()      # one per position, as trade_stats counts them (#257)
     ts, ic = trade_stats(), factor_ic("final_score")
     n_trials = evaluation.trial_count()
     dsr = evaluation.deflated_sharpe_ratio(rs, n_trials) if n_trials else \

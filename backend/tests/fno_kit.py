@@ -116,6 +116,7 @@ def engine(monkeypatch, paper=True, kite=None, depth=None):
     the_book = None if depth == "none" else (depth or book(19.9, 20.1))
     monkeypatch.setattr(liquidity, "_fetch_option_depth", lambda tradingsymbol: the_book)
     eng = trading_engine.TradingEngine(AppState(watchlist=[], paper_mode=paper))
+    eng.state.market = {"bias": "neutral", "reasons": []}     # the first scan has finished (#256)
     if kite is not None:
         use(eng, kite)
     return eng

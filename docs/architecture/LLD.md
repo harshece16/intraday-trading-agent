@@ -81,7 +81,7 @@ duration apart.
 6. Session summary, once, on a trading day at or after 15:30.
 7. If closed: `momentum_book.maybe_start_evening_job`, then `momentum_alerts.check` (§10.1), which never raises, so it cannot keep the job from starting.
 8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails. Each read first logs an error if the year has no NSE holiday list; start-up logs the same.
-9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed.
+9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed on a trading day, once on a weekend or holiday (#259). An off-day scan updates `state.market`/`state.scanner` but leaves the watchlist alone, and the pre-market read doesn't seed it then.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
 11. If open: `jev_book.maybe_decide`. If in the square-off window: `jev_book.maybe_close`.
 12. The phase branch, below.
@@ -100,7 +100,7 @@ duration apart.
    5. Store the state and indicators. Journal the read to `checklist_evals`.
    6. Record the signal. An entry signal is also left in `_fno_signals` for `_process_fno()`.
    7. Exits the brain asks for.
-   8. Entries: `_try_enter()`. If blocked, give the day's entry back.
+   8. Entries: `_try_enter()`. If blocked, give the day's entry back. Until the first scan since start has set `state.market`, `_entry_block_reason()` blocks every entry and card (#256).
    9. If flat and the review queue is on: `_offer_near_misses()`.
 4. `_process_fno()`: stops of open options positions, whether or not F&O is switched on, then options entries on this tick's entry signals.
 5. If a kill switch left anything open: `_square_off_all(reason="kill_switch")`. It stays pending until a pass leaves nothing open, and is dropped at the day change (#250).
@@ -153,7 +153,7 @@ the API and the WebSocket read it through `snapshot()`.
 | `apply_fill(symbol, side, qty, price, charges, mode)` | Averages the price when opening or adding. When closing, realizes P&L pro rata: net = gross − entry-charge share − exit charges, added to `mode`'s figure. Returns `{gross, charges_deducted, net}` |
 | `record_trade(...)` | Writes the in-memory list and the `trades` table. A failed table write is queued in `unjournaled`, logged, and never raised (#253) |
 | `log(kind, message, symbol, level)` | Writes `activity` in memory and in the database, then hands the line to Telegram. A failed database write or Telegram send never breaks the log, and never raises into the order path (#253) |
-| `snapshot()` | The dashboard's view of everything |
+| `snapshot()` | The dashboard's view of everything. Its `tax` box: `charges` are the closed trades' (so gross − charges = net), `open_charges` the entry charges of positions still open (#258) |
 | `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts, open positions and open option positions from the journal |
 
 ### 2.4 Restart recovery
@@ -1001,7 +1001,7 @@ migration that also rewrote rows, on purpose, is `trades.realized_gross`
 | `session_closes` | One row per session and stock (and `NIFTY 50`): Kite's last traded price at the 15:08 square-off, read once a session. First write stands | `record_session_closes` (from `_record_session_closes`) | `scan_candidates` |
 | `scan_candidates` (view) | The shadow log: `scan_rows` joined to `scans` and `session_closes`. Every stock of every scan with its inputs, `vwap_dist_bp`, `score_side` (from `side` on older rows) and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08 or without a close). Recreated when its definition changes | `_migrate` | `database.scan_candidates()`, research |
 | `checklist_evals` | Every checklist read, every tick | `record_checklist_eval` | `checklist_blocker_stats`, `session_summary` |
-| `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` |
+| `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` (one R per position via `closed_trade_rs`, #257) |
 | `signals` | Every signal | `record_signal` | Research only |
 | `activity` | Every log line | `record_activity` | Blocked-signal views, once-a-day guards |
 | `manual_reviews` | Review cards, held-back near-misses (status `withheld`), decisions and shadow outcomes | `review_queue` | `review_queue` |

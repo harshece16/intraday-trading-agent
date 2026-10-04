@@ -464,6 +464,18 @@
    "test": "backend/tests/test_paper_auto_entries.py::test_a_switch_to_live_restores_the_bar_for_the_next_entry; backend/tests/test_paper_auto_entries.py::test_a_switch_to_live_during_the_entry_cannot_send_a_real_order"
   },
   {
+   "id": "ENT-29",
+   "area": "entry",
+   "status": "active",
+   "rule": "No entry and no review card until the engine's first market scan has finished since it started: until then there is no market bias, no scan row (exclusions, long-only) and no VIX size multiplier for the rules to read. The block is logged as 'waiting for the first market scan since the engine started'.",
+   "why": "After the 2026-10-01 12:19 restart, 23 stocks were evaluated in the 28 s before the first scan finished, with no market filter and no exclusions (#256).",
+   "enforced_in": "backend/trading_engine.py:_entry_block_reason",
+   "config": null,
+   "verify": "activity kind 'blocked' with 'waiting for the first market scan' right after a restart",
+   "source": "README §122, issue #256",
+   "test": "backend/tests/test_engine_correctness.py::test_the_first_tick_after_a_restart_does_not_enter_before_the_first_scan; backend/tests/test_engine_correctness.py::test_no_review_card_before_the_first_scan"
+  },
+  {
    "id": "RSK-01",
    "area": "risk",
    "status": "active",
@@ -1003,13 +1015,13 @@
    "id": "SCN-03",
    "area": "scanner",
    "status": "active",
-   "rule": "The scanner runs every 5 minutes while the market phase is open or in the square-off window, and every 60 minutes otherwise. That includes nights, weekends and NSE holidays. The first tick after start always scans, and only one scan thread runs at a time; POST /api/scan triggers one manually.",
-   "why": "The dashboard shows a plan even while the market is closed.",
-   "enforced_in": "backend/scanner.py:Scanner.due; backend/trading_engine.py:_tick_impl, request_scan",
+   "rule": "The scanner runs every 5 minutes while the market phase is open or in the square-off window, and every 60 minutes otherwise on a trading day. On a weekend or an NSE holiday it runs once that date: the result updates the plan the dashboard shows, but not the tracked list, and logs no 'Now tracking' / 'Stopped tracking' lines. The first tick after start always scans, and only one scan thread runs at a time; POST /api/scan triggers one manually.",
+   "why": "The dashboard shows a plan even while the market is closed. On 2026-10-02..04 (a holiday and a weekend) it ran 44-49 scans a day, one of 4,940 s, and the list churned with nothing able to trade (#259).",
+   "enforced_in": "backend/scanner.py:Scanner.due; backend/trading_engine.py:_tick_impl, request_scan, _run_scan, _is_trading_day",
    "config": "SCANNER.interval_minutes_open = 5; SCANNER.interval_minutes_closed = 60",
    "verify": "scans table ts spacing; activity 'Scanning the NIFTY 100 universe…'",
-   "source": "README §2",
-   "test": null
+   "source": "README §2, §122, issue #259",
+   "test": "backend/tests/test_engine_correctness.py::test_an_off_day_scans_once_and_does_not_change_tracking; backend/tests/test_engine_correctness.py::test_a_trading_day_still_scans_on_its_cadence_and_tracks_the_picks"
   },
   {
    "id": "SCN-04",
@@ -1267,12 +1279,12 @@
    "id": "SCN-12",
    "area": "scanner",
    "status": "active",
-   "rule": "The pre-market ranking (daily bars only, before today) runs once per IST day on the first engine tick, holidays included. It also re-runs from GET /api/premarket when the result is more than 30 minutes old. It seeds the watchlist at most once a day, and only if no live scan has run yet that day.",
+   "rule": "The pre-market ranking (daily bars only, before today) runs once per IST day on the first engine tick, holidays included. It also re-runs from GET /api/premarket when the result is more than 30 minutes old. It seeds the watchlist at most once a day, only on a trading day, and only if no live scan has run yet that day.",
    "why": "Be watching a real shortlist from the open without fighting the live scanner.",
    "enforced_in": "backend/trading_engine.py:_tick_impl, _maybe_seed_watchlist_from_premarket; backend/app.py:get_premarket",
    "config": "SCANNER.active_count = 25 (shortlist size)",
    "verify": "GET /api/premarket result.watchlist; activity 'Pre-market shortlist seeded: ...'",
-   "source": "README §14",
+   "source": "README §14, §122, issue #259",
    "test": null
   },
   {
@@ -2668,6 +2680,18 @@
    "test": "backend/tests/test_factor_ic.py::test_one_session_of_many_stocks_is_not_enough"
   },
   {
+   "id": "EVL-17",
+   "area": "evaluation",
+   "status": "active",
+   "rule": "The Scorecard's expectancy, win rate and Deflated Sharpe count one trade per position: a position's closing legs are summed by position_id, and its R is the total net over initial risk x entry quantity. A row without a position_id counts on its own.",
+   "why": "A live exit Kite fills in parts writes one row per fill; counting rows turned one losing trade into several (#257).",
+   "enforced_in": "backend/database.py:closed_trade_rs, trade_stats, journal_summary",
+   "config": null,
+   "verify": "GET /api/journal/summary trade_stats.closed_trades equals the number of closed positions",
+   "source": "README §122, issue #257",
+   "test": "backend/tests/test_engine_correctness.py::test_a_partially_filled_exit_counts_as_one_trade; backend/tests/test_engine_correctness.py::test_a_row_without_a_position_id_still_counts_on_its_own"
+  },
+  {
    "id": "SEC-01",
    "area": "security",
    "status": "active",
@@ -2947,12 +2971,12 @@
    "id": "OPS-09",
    "area": "ops",
    "status": "active",
-   "rule": "The engine loop runs one tick, then sleeps 30 s. The scanner reruns every 5 min in market hours and every 60 min when closed; the premarket scan runs once per date.",
+   "rule": "The engine loop runs one tick, then sleeps 30 s. The scanner reruns every 5 min in market hours and every 60 min when closed on a trading day, and once on a weekend or holiday; the premarket scan runs once per date.",
    "why": "Cadence of decisions and plan refresh.",
    "enforced_in": "backend/trading_engine.py:run_forever, _tick_impl",
    "config": "POLL_INTERVAL_SECONDS = 30; SCANNER.interval_minutes_open = 5, interval_minutes_closed = 60",
    "verify": "/api/state last_update_ts; activity kind 'scan'",
-   "source": "README §2, §14",
+   "source": "README §2, §14, §122",
    "test": null
   },
   {
