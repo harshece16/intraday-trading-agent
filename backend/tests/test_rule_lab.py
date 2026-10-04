@@ -716,18 +716,60 @@ def test_discover_and_confirm_end_to_end_on_synthetic_bars(screen, tmp_path, mon
     monkeypatch.setattr(rls, "MIN_TRADES", 5)
     monkeypatch.setattr(rls, "MIN_SESSIONS", 3)
     monkeypatch.setattr(rls, "GREEDY_MIN_TRADES", 5)
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    s0 = tmp_path / "s0.json"
+    rls.stage0(db, str(s0), COHORT1, workers=1, log=lambda *a: None)
     out = tmp_path / "d.json"
-    rec = rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None)
+    rec = rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0))
     assert rec["sessions"][1] < "2026-01-01"
     assert 700 <= rec["family_size"] <= 1260
     assert rec["pbo"] is None or 0 <= rec["pbo"] <= 1
     assert len(rec["survivors"]) <= 5
     assert set(rec["rules"]) <= set(rule_lab.RULE_IDS)
-    rec["survivors"] = [{"side": "LONG", "exit": "H30", "conditions": ["R09"], "t": 1.0, "mean": 1.0, "n": 1}]
+    assert rec["provenance"]["commit"] == "abc123" and rec["provenance"]["dirty"] is False
+    assert rec["provenance"]["family_hash"] == rls.family_hash(COHORT1)
+    assert {r["origin"] for r in rec["top"]} <= {"enumerated", "greedy"}
+    assert all(r["origin"] == "enumerated" for r in rec["top"] if len(r["conditions"]) <= 3)
+    assert all("origin" in s for s in rec["survivors"])
+    rec["survivors"] = [{"side": "LONG", "exit": "H30", "conditions": ["R09"], "t": 1.0, "mean": 1.0, "n": 1,
+                         "origin": "enumerated"}]
     out.write_text(json.dumps(rec))
     c = rls.confirm_2026(db, str(out), str(tmp_path / "c.json"), COHORT1, workers=1,
                          log=lambda *a: None)
     assert c["window"][0] == "2026-01-01" and len(c["survivors"]) == 1
+    assert c["metadata_2026_read_before_bars"] == "MAX(ts) of candles only"
+    assert c["provenance"]["family_hash"] == rec["provenance"]["family_hash"]
+
+
+def test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_changed_family(screen, tmp_path,
+                                                                                            monkeypatch):
+    rls, db, days = screen
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    s0 = tmp_path / "s0.json"
+    rls.stage0(db, str(s0), COHORT1, workers=1, log=lambda *a: None)
+    out = tmp_path / "d.json"
+    out.write_text("{}")
+    with pytest.raises(rls.RefusedRun, match="exists"):
+        rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0))
+    out.unlink()
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", True))
+    with pytest.raises(rls.RefusedRun, match="uncommitted"):
+        rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0))
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    with pytest.raises(rls.RefusedRun, match="family hash"):
+        rls.discover(db, str(out), COHORT1[:-1], workers=1, log=lambda *a: None, stage0_path=str(s0))
+    assert not out.exists(), "a refused run writes nothing"
+    disc = tmp_path / "disc.json"
+    disc.write_text(json.dumps({"survivors": [{"side": "LONG", "exit": "H30", "conditions": ["R09"]}],
+                                "provenance": {"family_hash": "not-the-one"}}))
+    with pytest.raises(rls.RefusedRun, match="family hash"):
+        rls.confirm_2026(db, str(disc), str(tmp_path / "c.json"), COHORT1, workers=1, log=lambda *a: None)
+
+
+def test_committed_stage0_record_hashes_to_the_current_family():
+    import rule_lab_screen as rls
+    rec = json.load(open(rls.default_stage0()))
+    assert rls.stage0_family_hash(rec) == rls.family_hash(list(rule_lab.RULE_IDS))
 
 
 def test_catalog_rules_register_once_with_every_source(tmp_path, monkeypatch):
@@ -798,3 +840,76 @@ def test_shadow_lab_ignores_the_engines_shorts_switch(monkeypatch):
     lab.run(now, cm, list(cm))
     n = database._conn().execute("SELECT COUNT(*) FROM rule_lab_trades WHERE side='SHORT'").fetchone()[0]
     assert n > 0
+
+
+def _up_days(n, start_day_idx=0):
+    """n rising sessions before DAY, each a flat-ish day closing above the one before."""
+    days = ["2026-09-23", "2026-09-24", "2026-09-25", "2026-09-28", "2026-09-29", "2026-09-30"][-n:]
+    out = []
+    for i, d in enumerate(days):
+        base = 94.0 + i
+        spec = [(base + 0.2, base + 0.3, base - 0.3, base + 0.2 + (0.0 if j % 2 else 0.1), 1000) for j in range(74)]
+        spec.append((base + 0.9, base + 1.0, base + 0.8, base + 0.9, 1000))  # closes well up
+        out += bars(d, spec)
+    return out
+
+
+def _gap_up_short_fixture():
+    """Three up days; yesterday opened in the bottom 20% of its range and closed in the top 20%
+    (range 98-102); today gaps up past PDH + 0.3 x range, the first bar is green, the second red,
+    the third closes below the red bar's low and back below PDH: Y11S, O02S, O04S and O07S."""
+    hist = _up_days(3)
+    prev = bars(PREV, [(98.2, 98.6, 98.0, 98.4, 1000)] + [(98.4 + 0.05 * j, 98.6 + 0.05 * j, 98.2 + 0.05 * j,
+                                                           98.5 + 0.05 * j, 1000) for j in range(72)]
+                + [(101.6, 102.0, 101.4, 101.8, 1000), (101.8, 101.9, 101.6, 101.8, 1000)])
+    today = bars(DAY, [(103.5, 103.8, 103.4, 103.7, 1500), (103.7, 103.8, 103.1, 103.2, 1500),
+                       (103.2, 103.3, 101.4, 101.5, 1500)] + [(101.5, 101.7, 101.3, 101.5, 1000)] * 60)
+    return hist + prev + today
+
+
+def _gap_down_long_fixture():
+    """Yesterday opened in the top 20% and closed in the bottom quarter (range 98-102); today opens
+    below PDL - 0.3 x range, the first bar is red, the second closes back above PDL with a green body:
+    O02L, O04L and O07L."""
+    hist = _up_days(2)
+    prev = bars(PREV, [(101.8, 102.0, 101.5, 101.7, 1000)] + [(101.7 - 0.05 * j, 101.9 - 0.05 * j,
+                                                              101.5 - 0.05 * j, 101.6 - 0.05 * j, 1000) for j in range(72)]
+                + [(98.4, 98.6, 98.0, 98.2, 1000), (98.2, 98.4, 98.1, 98.2, 1000)])
+    today = bars(DAY, [(96.5, 96.6, 96.2, 96.3, 1500), (96.3, 98.6, 96.2, 98.5, 1500)]
+                 + [(98.5, 98.7, 98.3, 98.5, 1000)] * 60)
+    return hist + prev + today
+
+
+@pytest.mark.parametrize("fixture, expect", [
+    (_gap_up_short_fixture, {"Y11S", "O02S", "O04S", "O07S"}),
+    (_gap_down_long_fixture, {"O02L", "O04L", "O07L"}),
+])
+def test_rare_gap_conditions_fire_on_hand_built_bars_and_are_causal(fixture, expect):
+    c = fixture()
+    full = fires(c)
+    fired = set().union(*full.values())
+    assert expect <= fired, expect - fired
+    first = next(i for i, b in enumerate(c) if b["time"].startswith(DAY))
+    for pos in range(0, 6):
+        cut = c[:first + pos + 1]
+        assert set(rule_lab.signals_at(rule_lab.session_context(cut, DAY), pos)) == full[pos], pos
+
+
+def test_y15_fires_once_dema200_has_history_and_is_causal():
+    """Y15 needs about 400 bars; six sessions of a random walk give 450, and a Supertrend flip beyond
+    DEMA200 occurs for at least one seed."""
+    days = ("2026-09-24", "2026-09-25", "2026-09-28", "2026-09-29", PREV, DAY)
+    hit = None
+    for seed in range(30, 60):
+        c = _long_walk(seed, days=days)
+        full = fires(c)
+        if any(r in s for s in full.values() for r in ("Y15L", "Y15S")):
+            hit = (c, full)
+            break
+    assert hit is not None, "no seed produced a Y15 signal"
+    c, full = hit
+    first = len(c) - 75
+    for pos in range(0, 75, 3):
+        cut = c[:first + pos + 1]
+        got = set(rule_lab.signals_at(rule_lab.session_context(cut, DAY), pos))
+        assert got == full[pos], (pos, got ^ full[pos])

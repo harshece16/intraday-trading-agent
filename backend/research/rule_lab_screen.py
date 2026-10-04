@@ -312,6 +312,62 @@ class Panel:
 
 # ---- the search ----------------------------------------------------------------
 
+def git_state(repo_dir=None):
+    """(commit hash, dirty flag) of the working tree the search runs from. Monkeypatched in tests."""
+    import subprocess
+    repo_dir = repo_dir or os.path.dirname(os.path.abspath(__file__))
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, capture_output=True, text=True,
+                                check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=repo_dir,
+                                    capture_output=True, text=True, check=True).stdout.strip())
+    except Exception as e:  # not a git checkout: refuse, the record would have no provenance
+        raise RefusedRun(f"cannot read the git state ({e}); a run must come from a committed tree")
+    return commit, dirty
+
+
+class RefusedRun(RuntimeError):
+    """A run the prereg (correction of 2026-10-05, B2) does not allow: an existing result, a dirty
+    tree, or a family that is not the one stage 0 recorded."""
+
+
+def family_hash(conds):
+    """sha256 over the sorted condition ids with their sides and the family's size by part.
+    Stage 0 writes it; discover() must produce the same; confirm_2026() must match discover()'s."""
+    import hashlib
+    enum, greedy = max_family_size(conds)
+    desc = {"conditions": sorted((c, rule_lab.REGISTRY[c]["side"]) for c in conds),
+            "enumerated": enum, "greedy_max": greedy, "named": len(named_combinations(conds)) * len(EXITS),
+            "exits": list(EXITS)}
+    return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
+
+
+def stage0_family_hash(rec):
+    """The family hash of a stage 0 record, from its own fields when it predates the hash."""
+    if rec.get("family_hash"):
+        return rec["family_hash"]
+    import hashlib
+    desc = {"conditions": sorted((c, v["side"]) for c, v in rec["conditions"].items()),
+            "enumerated": rec["family"]["enumerated"], "greedy_max": rec["family"]["greedy_max"],
+            "named": rec["family"].get("named_combinations", 0), "exits": list(EXITS)}
+    return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
+
+
+def refuse_unless_allowed(out, conds, expected_hash, what):
+    """The three refusals of the prereg correction (B2). Returns the provenance to record."""
+    if os.path.exists(out):
+        raise RefusedRun(f"{out} exists: the prereg allows one {what} run; move the old record aside by hand "
+                         f"only for a crash before any statistic was written")
+    commit, dirty = git_state()
+    if dirty:
+        raise RefusedRun("the working tree has uncommitted changes; commit first so the record names the code")
+    got = family_hash(conds)
+    if expected_hash is not None and got != expected_hash:
+        raise RefusedRun(f"the family hash {got[:12]} is not the one on record ({str(expected_hash)[:12]}): "
+                         f"the condition list or the family changed since")
+    return {"commit": commit, "dirty": dirty, "family_hash": got}
+
+
 def side_conditions(conds):
     by = defaultdict(list)
     for rid in conds:
@@ -372,7 +428,7 @@ def run_search(panel, conds, log=print):
     import numpy as np
     evaluated = {}
 
-    def evaluate(side, x, combo):
+    def evaluate(side, x, combo, origin="enumerated"):
         key = (side, x, tuple(sorted(combo)))
         if key in evaluated:
             return evaluated[key]
@@ -380,7 +436,7 @@ def run_search(panel, conds, log=print):
         S, N, valid = panel.session_sums(taken, side, x)
         mean, t, n, g = stats_of(S, N)
         evaluated[key] = {"S": S.astype("float32"), "N": N.astype("float32"), "mean": mean, "t": t, "n": n,
-                          "sessions": g}
+                          "sessions": g, "origin": origin}
         return evaluated[key]
 
     family = enumerate_family(conds)
@@ -402,7 +458,7 @@ def run_search(panel, conds, log=print):
                     for c in cs:
                         if c in current:
                             continue
-                        r = evaluate(side, x, current + [c])
+                        r = evaluate(side, x, current + [c], origin="greedy")
                         if r["n"] >= GREEDY_MIN_TRADES and r["t"] is not None and r["t"] > cur_t and (
                                 best is None or r["t"] > best[1]):
                             best = (c, r["t"])
@@ -475,7 +531,8 @@ def judge(evaluated, days, alpha=rule_lab.ALPHA, b=rule_lab.BOOTSTRAP_B, log=pri
             if any(s["side"] == side and s["exit"] == x and set(s["conditions"]) <= set(combo) for s in survivors):
                 continue
             survivors.append({"side": side, "exit": x, "conditions": list(combo), "t": float(t_hat[i]),
-                              "mean": evaluated[keys[i]]["mean"], "n": evaluated[keys[i]]["n"]})
+                              "mean": evaluated[keys[i]]["mean"], "n": evaluated[keys[i]]["n"],
+                              "origin": evaluated[keys[i]].get("origin", "enumerated")})
             if len(survivors) >= MAX_SURVIVORS:
                 break
     return keys, t_hat, rej, crits, pbo, n_splits, dsr, survivors, best
@@ -558,6 +615,7 @@ def stage0(db, out, conds, workers, log=print):
         "memory_estimate_mb": round(panel.session.size * (8 + 8 + 4 * 8 * 2 + len(conds)) / 1e6
                                     + (enum + greedy_max) * len(panel.days) * 8 / 1e6
                                     + 500 * 4000 * 8 * 8 / 1e6, 0),
+        "family_hash": family_hash(conds),
         "halts": [],
     }
     if newest and newest >= "2026-01-01":
@@ -574,7 +632,18 @@ def stage0(db, out, conds, workers, log=print):
     return rec
 
 
-def discover(db, out, conds, workers, log=print):
+def default_stage0():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "docs", "research", "data",
+                        "l55_stage0.json")
+
+
+def discover(db, out, conds, workers, log=print, stage0_path=None):
+    """The one discovery run. Refuses (RefusedRun) when `out` exists, the tree is dirty, or the family is
+    not the one the stage 0 record names (prereg correction of 2026-10-05, B2)."""
+    stage0_path = stage0_path or default_stage0()
+    with open(stage0_path) as fh:
+        s0 = json.load(fh)
+    prov = refuse_unless_allowed(out, conds, stage0_family_hash(s0), "discovery")
     t0 = time.time()
     log("precomputing conditions and exits")
     results = build(db, conds, outcomes=True, workers=workers)
@@ -589,7 +658,7 @@ def discover(db, out, conds, workers, log=print):
         v = evaluated[k]
         rows.append({"side": k[0], "exit": k[1], "conditions": list(k[2]), "n": v["n"], "sessions": v["sessions"],
                      "mean": v["mean"], "t": None if math.isnan(t_hat[i]) else float(t_hat[i]),
-                     "halves": v.get("halves"), "rejected": bool(rej[i])})
+                     "halves": v.get("halves"), "rejected": bool(rej[i]), "origin": v.get("origin", "enumerated")})
     rows.sort(key=lambda r: -(r["t"] if r["t"] is not None else -1e9))
     singles = {}
     for r in rows:
@@ -602,7 +671,7 @@ def discover(db, out, conds, workers, log=print):
            "sessions": [panel.days[0], panel.days[-1], len(panel.days)], "family_size": len(keys),
            "romano_wolf_critical_values": crits, "pbo": pbo, "cscv_splits": n_splits, "dsr_best": dsr,
            "best": rows[0] if rows else None, "survivors": survivors, "top": rows[:50], "rules": singles,
-           "wall_s": round(time.time() - t0, 1)}
+           "provenance": {**prov, "stage0": os.path.basename(stage0_path)}, "wall_s": round(time.time() - t0, 1)}
     with open(out, "w") as fh:
         json.dump(rec, fh, indent=1)
     log(json.dumps({k: rec[k] for k in ("family_size", "pbo", "dsr_best", "survivors", "wall_s")}, indent=1,
@@ -620,7 +689,9 @@ def confirm_2026(db, discovery_path, out, conds, workers, log=print):
         log("no survivors: nothing to confirm, 2026 not read")
         return None
     need = sorted({c for s in survivors for c in s["conditions"]})
+    prov = refuse_unless_allowed(out, conds, (disc.get("provenance") or {}).get("family_hash"), "confirmation")
     conn = connect(db)
+    # The only 2026 metadata read before any bar: the cache's newest timestamp (N9).
     last_ts = conn.execute("SELECT MAX(ts) FROM candles WHERE interval='5m'").fetchone()[0]
     conn.close()
     end_ts = last_ts + 1
@@ -645,7 +716,9 @@ def confirm_2026(db, discovery_path, out, conds, workers, log=print):
     for r, ok in zip(out_rows, rej):
         r["passed"] = bool(ok)
     rec = {"look": "L55", "mode": "confirm-2026", "written": datetime.now(IST).isoformat(timespec="seconds"),
-           "window": [first, last], "survivors": out_rows, "critical_values": crits}
+           "window": [first, last], "survivors": out_rows, "critical_values": crits,
+           "metadata_2026_read_before_bars": "MAX(ts) of candles only", "newest_ts": int(last_ts),
+           "provenance": {**prov, "discovery": os.path.basename(discovery_path)}}
     with open(out, "w") as fh:
         json.dump(rec, fh, indent=1)
     log(json.dumps(rec, indent=1, default=str))
@@ -663,6 +736,8 @@ def main(argv=None):
     ap.add_argument("--catalog-rules", action="append", default=[],
                     help="a committed JSON of catalog rules in rule_lab.spec_signal's format (amendment 2)")
     ap.add_argument("--discovery-result", help="--confirm-2026: the discovery run's result file")
+    ap.add_argument("--stage0-record", help="--discover: the stage 0 record whose family this run must match "
+                                             "(default docs/research/data/l55_stage0.json)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     args = ap.parse_args(argv)
     registered, skipped = load_catalog_rules(args.catalog_rules)
@@ -672,11 +747,17 @@ def main(argv=None):
     if args.stage0:
         stage0(args.db, args.out, conds, args.workers)
     elif args.discover:
-        discover(args.db, args.out, conds, args.workers)
+        try:
+            discover(args.db, args.out, conds, args.workers, stage0_path=args.stage0_record)
+        except RefusedRun as e:
+            sys.exit(f"REFUSED: {e}")
     else:
         if not args.discovery_result:
             ap.error("--confirm-2026 needs --discovery-result")
-        confirm_2026(args.db, args.discovery_result, args.out, conds, args.workers)
+        try:
+            confirm_2026(args.db, args.discovery_result, args.out, conds, args.workers)
+        except RefusedRun as e:
+            sys.exit(f"REFUSED: {e}")
 
 
 if __name__ == "__main__":

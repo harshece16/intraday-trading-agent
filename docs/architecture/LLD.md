@@ -810,7 +810,7 @@ Shadow paper books of single rules, research look L54 (`docs/research/prereg-rul
 | `record()` | `INSERT OR IGNORE` keyed by (rule, symbol, session, entry time); an open row is closed once; a closed row is never updated |
 | `evaluate()`, `page()` | Statuses from the journal: collecting until a cohort's 40th lab session (with no open trade in it), then the screen (`romano_wolf` over every registered rule, only the cohort can pass, α = 5% × 2^−cohort), then confirmation on the next 40. `GET /api/rule-lab` |
 
-L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`.
+L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`. `discover()` and `confirm_2026()` refuse to run on an existing result, a dirty tree or a family hash that differs from the stage 0 (or discovery) record; results carry commit, hash and each survivor's origin.
 
 ## 11. Research desk and holdings diagnostic
 

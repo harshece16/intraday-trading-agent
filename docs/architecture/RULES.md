@@ -3117,15 +3117,15 @@ A rule-lab rule is judged only at its pre-registered looks: the forward screen a
 <details>
 <summary><code>RES-37</code> <b>Pending</b> — L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite…</summary>
 
-L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite cache 2024-09-20 to 2025-12-31 only, over at most 116,746 combinations of the 107 conditions (amendment 4), judged by Romano-Wolf over every combination evaluated, with PBO by CSCV and the deflated Sharpe of the best. At most 5 survivors get one pass on 2026, only after an independent review; 2026 is otherwise read only as a row count.
+L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite cache 2024-09-20 to 2025-12-31 only, over at most 116,746 combinations of the 107 conditions (amendment 4), judged by Romano-Wolf over every combination evaluated, with PBO by CSCV and the deflated Sharpe of the best. At most 5 survivors get one pass on 2026, only after an independent review; 2026 is otherwise read only as a row count. discover() and confirm_2026() refuse to run when the output file exists, the working tree has uncommitted changes, or the family hash differs from the stage 0 (or discovery) record; each record carries the commit, the hash, and each survivor's origin (enumerated or greedy); the confirmation pass records that MAX(ts) was its only 2026 metadata read before loading bars.
 
 | | |
 | --- | --- |
 | **Why** | The owner asked for permutations and combinations backtested now; a search this wide needs a whole-family correction and an untouched confirmation. |
 | **Enforced in** | `backend/research/rule_lab_screen.py:discover` |
-| **How to check** | docs/research/data/l55_stage0.json: newest_bar_read before 2026-01-01, no return computed |
-| **Test** | `backend/tests/test_rule_lab.py::test_stage0_counts_without_returns` |
-| **Source** | docs/research/prereg-rule-lab.md amendment 3 |
+| **How to check** | docs/research/data/l55_stage0.json: newest_bar_read before 2026-01-01, no return computed; \`rule_lab_screen.py --discover\` against an existing result prints REFUSED and writes nothing |
+| **Test** | `backend/tests/test_rule_lab.py::test_stage0_counts_without_returns; backend/tests/test_rule_lab.py::test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_changed_family` |
+| **Source** | docs/research/prereg-rule-lab.md amendment 3, correction of 2026-10-05 |
 
 </details>
 
