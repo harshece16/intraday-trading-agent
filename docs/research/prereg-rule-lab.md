@@ -150,7 +150,7 @@ Sources: H. White, "A Reality Check for Data Snooping", *Econometrica* 68(5), 20
 | R20 | Pullback to a falling EMA20 | Short | the mirror: `EMA(i) < EMA(i − 3)`; `close(i − 1) < EMA(i − 1)`; `high(i) ≥ EMA(i) > close(i)` |
 
 - **Entry** as every rule: the next bar's open `E`, at or before 14:30.
-- **Stop** beyond the signal candle: `S = low(i)` for R19, `high(i)` for R20. Risk a share `r = |E − S|`. **No trade** if the entry opens at or past the stop, or if `r / E` is below the round trip of `costs.round_trip_pct` at the notional (16.60 bp), the engine's own floor that a stop must cover the cost (rule ENT-23).
+- **Stop** beyond the signal candle: `S = low(i)` for R19, `high(i)` for R20. Risk a share `r = |E − S|`. **No trade** if the entry opens at or past the stop, or if `r / E` is below the round trip of `costs.round_trip_pct` at the notional (16.60 bp), the engine's own floor that a stop must cover the cost (rule CST-01).
 - **Target** `E ± 3r` (3R).
 - **Exit**, walking the finished bars from the entry bar on: the first bar whose low reaches the stop (long; high for the short) exits at the stop, or at the bar's open if it opened past it (a gap); the first bar whose high reaches the target exits at the target, or the open if it opened past it. **When one bar reaches both, the stop is taken.** With neither by 15:05, the exit is the open of the 15:05 bar, like every rule. This is the engine's paper stop handling (`_check_stop_take`: the first price at or past the stop fills, then slippage) read on bars: inside a bar the order of its high and low is unknown, so the conservative order is assumed. Slippage and charges apply to both legs as in §2.
 - **One open trade per rule per stock**, as §2. The tradability guards apply.
@@ -166,3 +166,48 @@ Sources: H. White, "A Reality Check for Data Snooping", *Econometrica* 68(5), 20
 1. **Replay** = L55, the historical screen (discovery, then confirmation), or the forward screen (lab sessions 1–40).
 2. **Paper** = the forward confirmation on 40 untouched lab sessions.
 3. **Live, small first.** After the owner's explicit yes, and only through the existing live gate (§7.4), a confirmed rule would trade at **a quarter of the engine's normal risk, 0.25% of capital a trade instead of 1%**, for at least 20 sessions and 50 trades, before any increase; an increase is a second owner decision. The decay from each step to the next (replay → paper, paper → live) is reported in bp at each step. Nothing about this is automatic, and none of it is built now: the lab places no orders.
+
+## Amendment 2 — 2026-10-05, about 00:35 IST, before any code ran and before any data beyond §0's dates
+
+**Why.** The owner also asked to "scan every profitable strategy from YouTube, mix it and apply". A separate research agent is cataloguing testable rules from popular trading videos. So the lab must take new rules and combinations later without code churn, and its error control must cover every rule ever added.
+
+1. **Rules are data.** `rule_lab.REGISTRY` holds each rule as an id, a name, a side, a family, a signal function of the finished bar (or a declarative spec of the same features, `rule_lab.spec_signal`), an exit kind (30-minute horizon or the 3R exit of amendment 1) and its **cohort**, the amendment that added it. The twenty rules above are cohort 1. A combination is a rule that fires when all its parts fire on the same bar (`rule_lab.combination`).
+2. **A rule or combination is added only by a dated amendment**, committed before its first forward session and before any of its returns is read, stating its exact definition. Each amendment is a new cohort.
+3. **One error budget for the lab's whole life.** The family-wise error rate over every rule and combination ever added is held at 5% by spending it by cohort: cohort *k*'s looks are tested at **α_k = 5% × 2^−k** (cohort 1: 2.5%; cohort 2: 1.25%; ...). This replaces §4's and §6's 5% for the forward stages. At each forward look, **every rule ever registered enters the bootstrap's maximum**, and only the cohort under test can pass. A later cohort's forward screen runs on its own first 40 lab sessions after it was added.
+4. The family size reported at each look is the number of rules and combinations registered by then, with each cohort's size.
+
+## Amendment 3 — 2026-10-05, about 00:45 IST, before any code ran and before any return or any 2026 bar was read
+
+**Why.** The owner, 2026-10-05: *"if we are testing micro rules or permutation combinations of rules and backtest on 2025 and 2026 data we should come at a certain set of rules that are profitable — very basic rules or a combination of 20 or just 1 — use CPU computing power — all P&Cs coming from YouTube and apply and backtest."* This turns L55 from a screen of single rules into a **combinatorial search**, and it **authorises one use of the 2026 held-out window** for the search's survivors. It replaces §5 (the discovery and confirmation halves of 2024–25). §1–§4, §6 and §7 stand, with amendments 1 and 2.
+
+**1. Conditions.** Every registered rule's signal is a boolean **entry condition** with a side: today the 20 of cohort 1 (10 long, 10 short). The YouTube catalog's rules join as conditions only through a dated amendment (amendment 2), written before the search's run; the count below is then recomputed by stage 0 and the reviewer sees it.
+
+**2. Exits, a common set of two.** Every combination is tried with both:
+- **H30**: the next bar's open to the open 30 minutes later, or the 15:05 bar (§2);
+- **R3**: a stop beyond the signal bar and a 3R target (amendment 1, including the cost floor on the stop and "stop first" inside a bar).
+Same ₹50,000 notional, `config.COSTS` (MIS charges and 0.03% slippage a leg), one open trade per combination per stock.
+
+**3. The search space, bounded and fixed now.** All conditions combined with AND, same side only:
+- **all singles, all pairs, all triples** of conditions, × the 2 exits;
+- **greedy forward selection** for larger sets: for each side and each exit, start from each of the **5 triples** with the highest clustered *t* (among those with at least 200 trades); at each step add the one same-side condition that raises *t* the most while keeping at least 200 trades; stop when no condition raises it or the set has **20 conditions** (or every same-side condition). Every set the greedy step evaluates is counted.
+- With cohort 1 (10 conditions a side): 20 + 90 + 240 = 350 sets × 2 exits = **700 enumerated combinations**, plus at most 5 × 2 sides × 2 exits × 28 = **560 greedy evaluations**: a family of **at most 1,260**. The exact number of distinct combinations evaluated is counted by the code and is the family size of every statistic below.
+
+**4. Sample.** **Discovery: every NIFTY 100 stock in the cache, every session 2024-09-20 to 2025-12-31** (the first two sessions only as history; 316 evaluable sessions). No split into halves for selection; the sample is split internally only for CSCV.
+
+**5. Statistics over the whole family, net of costs.** Per combination: trades, sessions with a trade, mean net bp a trade and its session-clustered *t* (§3), win rate, both halves of the sample.
+- **Primary: the Romano–Wolf stepdown** (§4) over **every combination evaluated**, stationary bootstrap of sessions, mean block 5, B = 10,000, seed 20261005, one-sided, **FWER 5%**.
+- **Probability of backtest overfitting** (CSCV): the 316 sessions in **16 consecutive blocks**, all 12,870 ways to choose 8 as in-sample; in each, the combination with the best in-sample mean net bp (among those with at least 50 in-sample trades) and its relative rank out of sample; PBO = the share of splits where it falls in the bottom half.
+- **Deflated Sharpe ratio** of the best combination's per-session net series at **n_trials = the family size** (`evaluation.deflated_sharpe_ratio`).
+- **Survivors**: combinations rejected by the Romano–Wolf stepdown, with **at least 200 trades and 40 sessions**, positive mean and **both halves positive**; and only if **PBO < 0.5** (otherwise the search as a whole is judged overfit and there are none). If more than **5** qualify, the 5 with the highest *t* that are not nested in a higher-ranked survivor (a set containing a higher survivor's conditions, same side and exit, is skipped). **At most 5 survivors.**
+
+**6. The 2026 confirmation, once.** The owner's quote above is his authorisation, dated 2026-10-05; it is recorded in `trials.md`'s held-out log when this is committed. **The 2026 window is not pristine**: the project's first phase ran its backtests on 2026 bars (README "Backtest results", 2026-06-29 to 2026-09-11, and the 2026 swing backtests), and the momentum family spent its held-out look on 2026 (`trials.md`). A 2026 pass is therefore weaker evidence than "held-out" usually means, and will be reported so.
+- **What is read before the pass:** nothing from 2026 except a count of rows (`COUNT(*)` by symbol, for the runtime estimate). No 2026 price, volume or signal.
+- **When:** only after the discovery run and an **independent review of the whole design and the discovery result**, in a single pass, on **2026-01-01 to the newest cached session**.
+- **What runs:** only the pre-declared survivors (at most 5), their conditions and exits exactly as found. Pass for each: at least 100 trades, mean net bp > 0, both halves of the 2026 sample positive, and rejected by the Romano–Wolf stepdown over **the survivors** at 5%.
+- **Then:** a survivor that passes is a **historical candidate** (§5's role, now filled by the search): it is registered in the forward lab as a new cohort by a dated amendment, and must still pass the forward confirmation on 40 untouched lab sessions (§6), the owner's yes and the live gate (§7, amendment 1's ladder). Nothing goes live without the owner.
+
+**7. Compute.** Each condition is computed once per stock-bar into a boolean array, by the forward lab's own signal functions (so the definitions cannot drift); a combination is the bitwise AND of its conditions' arrays. Each exit's outcome is computed once per (stock-bar, exit); a combination's trades are its signal bars with the one-open-trade rule applied. Stage 0 estimates the runtime and memory from a timed sample. The discovery run is on the owner's PC, or on the Mac outside 08:30–15:45 IST.
+
+**8. Stage 0, before any return.** Data checks as §5 (now over the whole discovery sample), the 2026 row count only, the condition counts (how often each fires; no outcome), the family size, the number of combinations with at least 200 signal bars, and the timing estimate. **Halt** if any 2026 bar is read, if fewer than 90% of stock-sessions have at least 70 bars, or if fewer than 50 combinations have at least 200 signals.
+
+**9. Bookkeeping.** L55 stays a research look; it spends no trial (the count stays 202). A survivor that becomes a proposal spends one trial (§7.3). The 2026 window's use is entered in the held-out exposure log when the pass runs.
