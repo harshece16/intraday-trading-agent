@@ -3274,7 +3274,7 @@
    "id": "UI-04",
    "area": "ui",
    "status": "active",
-   "rule": "The Momentum Book is the dashboard's front page (/). The navigation leads with it, then groups the intraday engine's pages as the intraday paper record, the intraday research (Jev book, Kronos), and the account. The intraday Overview is at /intraday; /momentum-book and /overview still open their pages, query string kept. Every intraday page opens with a banner: a paper record, no intraday edge found (with its sources), the strategy is the momentum book, and the paper engine takes its trades automatically, the confidence gate applying in Live only (§118). The banner is text only and changes nothing the engine does.",
+   "rule": "The Momentum Book is the dashboard's front page (/). The navigation leads with it, then groups the intraday engine's pages as the intraday paper record, the intraday research (Jev book, Kronos, Rule lab), and the account. The intraday Overview is at /intraday; /momentum-book and /overview still open their pages, query string kept. Every intraday page opens with a banner: a paper record, no intraday edge found (with its sources), the strategy is the momentum book, and the paper engine takes its trades automatically, the confidence gate applying in Live only (§118). The banner is text only and changes nothing the engine does.",
    "why": "The owner's decision of 2026-09-30: the momentum book is the core of Trader Sahab, and the intraday engine is kept in paper as a record, not as the strategy.",
    "enforced_in": "frontend/src/App.jsx:AppRoutes; frontend/src/components/Header.jsx:NAV; frontend/src/components/IntradayRecordBanner.jsx:IntradayRecordBanner",
    "config": null,
@@ -3310,13 +3310,61 @@
    "id": "RES-33",
    "area": "research",
    "status": "active",
-   "rule": "No new look for an intraday edge is started (the owner's decision of 2026-09-30). The monthly momentum book is the strategy, and the intraday engine runs in paper as a record. L52, pre-registered before the decision, stays on hold and is scored only if the owner asks. Real money stays a separate owner decision (RES-27).",
+   "rule": "No new look for an intraday edge is started (the owner's decision of 2026-09-30). The monthly momentum book is the strategy, and the intraday engine runs in paper as a record. L52, pre-registered before the decision, stays on hold and is scored only if the owner asks. Real money stays a separate owner decision (RES-27). The owner asked for the single-rule lab (L54) and its historical search (L55) on 2026-10-05; both are recorded as owner-requested.",
    "why": "202 trials and looks L40 to L51 found no intraday edge that pays the ~16.6 bp round trip; the one strategy that passed is positional.",
    "enforced_in": "docs/research/decisions/decision-2026-09-30-momentum-core.md (an owner decision, not enforced in code)",
    "config": null,
    "verify": "docs/research/trials.md: no research look on an intraday edge dated after 2026-09-30 unless the owner asked for it",
-   "source": "README §116",
+   "source": "README §116; README §119",
    "test": null
+  },
+  {
+   "id": "RES-34",
+   "area": "research",
+   "status": "paper-only",
+   "rule": "The rule lab (L54) runs each registered single rule as a shadow paper book on the day's list: a signal on a finished 5-minute bar enters at the next bar's open, Rs 50,000, config.COSTS on both legs, one open trade per rule per stock, exit 30 minutes later (or the 15:05 bar); R19/R20 exit on a stop beyond the signal bar, a 3R target or the 15:05 bar, stop first when a bar reaches both. The rules, the trade and the looks are fixed in docs/research/prereg-rule-lab.md; a rule is added only by a dated amendment.",
+   "why": "The owner's idea: one small rule per book, so a rule that works is not diluted by the others, judged only by a test fixed in advance.",
+   "enforced_in": "backend/rule_lab.py:simulate_session",
+   "config": "RULE_LAB",
+   "verify": "GET /api/rule-lab lists 20 rules; rule_lab_trades rows carry entry and exit times 30 minutes apart",
+   "source": "README §119; docs/research/prereg-rule-lab.md",
+   "test": "backend/tests/test_rule_lab.py::test_entry_next_open_exit_after_30_minutes_and_costs"
+  },
+  {
+   "id": "RES-35",
+   "area": "research",
+   "status": "paper-only",
+   "rule": "The rule lab never places an order and writes only rule_lab_trades and rule_lab_sessions. It runs after the tick's own work, on candles the tick already fetched, inside its own try/except and the engine's, within a 1.5 s budget a tick. Nothing that trades reads its statuses; nothing is promoted automatically.",
+   "why": "A research book must not be able to change, slow or stop the engine, nor move a rule toward live money without the owner.",
+   "enforced_in": "backend/rule_lab.py:RuleLab; backend/trading_engine.py:TradingEngine._run_rule_lab",
+   "config": "RULE_LAB",
+   "verify": "With the lab raising, a tick still completes and positions, capital and the daily-loss counter are unchanged",
+   "source": "README §119",
+   "test": "backend/tests/test_rule_lab.py::test_a_failing_lab_cannot_touch_the_tick_or_the_book"
+  },
+  {
+   "id": "RES-36",
+   "area": "research",
+   "status": "pending",
+   "rule": "A rule-lab rule is judged only at its pre-registered looks: the forward screen after its cohort's 40th lab session (at least 200 trades and 20 sessions, mean > 0, both halves positive, Romano-Wolf stepdown with every registered rule in the maximum at the cohort's alpha, 5% x 2^-cohort), then a confirmation on the next 40 untouched sessions. A confirmed rule may only be proposed to the owner; the proposal spends one trial, and live needs the owner's yes, the existing live gate, and a quarter of normal risk first.",
+   "why": "Testing 20 or more rules on one record finds some by luck; one error budget for every rule ever added keeps the lab honest.",
+   "enforced_in": "backend/rule_lab.py:evaluate",
+   "config": null,
+   "verify": "/api/rule-lab shows every rule 'collecting' until 40 lab sessions; statuses are recomputed deterministically from the journal",
+   "source": "docs/research/prereg-rule-lab.md §6, §7, amendments 1-2",
+   "test": "backend/tests/test_rule_lab.py::test_screen_look_at_40_sessions_and_confirmation_on_the_next_40"
+  },
+  {
+   "id": "RES-37",
+   "area": "research",
+   "status": "pending",
+   "rule": "L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite cache 2024-09-20 to 2025-12-31 only, judged by Romano-Wolf over every combination evaluated, with PBO by CSCV and the deflated Sharpe of the best. At most 5 survivors get one pass on 2026, only after an independent review; 2026 is otherwise read only as a row count.",
+   "why": "The owner asked for permutations and combinations backtested now; a search this wide needs a whole-family correction and an untouched confirmation.",
+   "enforced_in": "backend/research/rule_lab_screen.py:discover",
+   "config": null,
+   "verify": "docs/research/data/l55_stage0.json: newest_bar_read before 2026-01-01, no return computed",
+   "source": "docs/research/prereg-rule-lab.md amendment 3",
+   "test": "backend/tests/test_rule_lab.py::test_stage0_counts_without_returns"
   }
  ]
 }

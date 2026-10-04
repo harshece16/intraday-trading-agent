@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Describes `main` as of 2026-09-30 |
+| **Status** | Describes `main` as of 2026-10-05 |
 | **Audience** | The owner, a reviewer, or a new session that needs the whole system in one read |
 | **Companions** | [Low-Level Design](LLD.md) · [Rules checklist](RULES.md) · [Knowledge graph](KNOWLEDGE_GRAPH.md) |
 | **Source of truth** | The code. Every statement here was checked against it; where the code and this page disagree, the code wins and this page has a bug |
@@ -165,6 +165,7 @@ flowchart TB
 | **News and context** | Filings, headlines, flows, breadth, fundamentals | `nse_feed`, `news_sentiment`, `llm_sentiment`, `fundamentals` | Running |
 | **Momentum book** | The strategy: the paper run of the one that passed, the dashboard's front page, a monthly report against its benchmark, and an alert at each rebalance or failed evening job | `momentum_book`, `momentum_alerts` | Waiting for the month turn; first trades at the 1 Oct close |
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
+| **Rule lab** | Twenty single rules, each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §119); collects from the first session after deploy. Never places an order |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
 | **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 202 trials of record; no new intraday look since 2026-09-30 |
@@ -218,8 +219,9 @@ flowchart TD
     Ph -->|square_off_window| S1["Close every position<br/>repeat until flat"]
     S1 --> S2["Close and score Jev positions"]
     C3 --> Com
-    SW --> Com
+    RL --> Com
     S2 --> Com
+    SW --> RL["Rule lab pass on the same candles<br/>own tables only, never raises"]
     Com["Common hooks: pre-market once a day, scanner when due,<br/>ETF windows, Jev round from 09:45, review shadows"] --> E(["Stamp last update"])
 ```
 
@@ -320,6 +322,7 @@ Kite's prices. The mark is never stored and never scored.
 | Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.71% − 2 × 3.89% × √n, from month 6 | Forward record against the pre-registered band |
 | Jev | Buy, short or skip each shortlisted stock at 09:45; close at 15:08 | After 100 trades, t below −2 | After 300 trades or 60 sessions: t ≥ 2.24, both halves positive, beats the scanner |
 | Order-book test | None. It records data | Never | After 15 full sessions: one pre-registered analysis |
+| Rule lab | 20 single rules, one book each: next bar's open, 30 minutes (R19/R20: stop, 3R or 15:05), ₹50,000 | Never; a failed screen ends a rule | After 40 lab sessions: Romano–Wolf screen; candidates confirm on the next 40; a confirmed rule may only be proposed to the owner |
 
 ## 8. The evidence pipeline
 

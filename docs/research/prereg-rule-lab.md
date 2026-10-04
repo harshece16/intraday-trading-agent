@@ -211,3 +211,65 @@ Same ₹50,000 notional, `config.COSTS` (MIS charges and 0.03% slippage a leg), 
 **8. Stage 0, before any return.** Data checks as §5 (now over the whole discovery sample), the 2026 row count only, the condition counts (how often each fires; no outcome), the family size, the number of combinations with at least 200 signal bars, and the timing estimate. **Halt** if any 2026 bar is read, if fewer than 90% of stock-sessions have at least 70 bars, or if fewer than 50 combinations have at least 200 signals.
 
 **9. Bookkeeping.** L55 stays a research look; it spends no trial (the count stays 202). A survivor that becomes a proposal spends one trial (§7.3). The 2026 window's use is entered in the held-out exposure log when the pass runs.
+
+## Amendment 4 — 2026-10-05, about 01:10 IST: the two strategy catalogs join as cohort 2, before any of their returns was read
+
+**Why.** Both catalogs the owner asked for are in: popular YouTube trading videos (40 entries, 34 testable, with 8 recommended combinations CMB-1 to CMB-8) and named practitioners, GitHub, Reddit, Quantpedia, TradingView and SSRN (49 entries). They are kept as working files of this session (`yt-strategies/catalog.json`, `strategies-other/catalog.json`); every registered condition names its catalog entry in `rule_lab.REGISTRY[id]["sources"]`.
+
+**What had been read when this was written.** The conditions below were coded (`backend/rule_lab_catalog.py`) before this amendment, and while timing the code their **signal counts** were printed for one stock (RELIANCE, 2024-09-24 to 2025-12-31). No exit price, return, or 2026 bar was read. The definitions are the code and docstrings at this amendment's commit; nothing in them changes after it.
+
+**1. Cohort 2: 87 intraday conditions** (43 long, 44 short), each an entry signal on a finished 5-minute bar, with the same trade as every rule (§2) and the common exits (§3 below). 15- and 60-minute conditions use bars resampled from 09:15 and fire on the 5-minute bar that completes the higher bar.
+
+| IDs | Condition (catalog entry) |
+| --- | --- |
+| Y01L/S | 5-EMA alert candle broken (YT-MA-01; subasish_pani_5ema). The long is the 5-minute mirror, not the taught 15-minute one |
+| Y02L/S | EMA9/15 trend, EMA9 slope ≥ 0.10% over 3 bars, touch of EMA9, trigger candle (YT-MA-02) |
+| Y03L/S | EMA9 crosses EMA21, the catalog's control (YT-MA-03) |
+| Y04L/S | EMA200 side, EMA20 beyond EMA50, EMA20 touched in 3 bars, Stoch RSI reset from 20/80 (YT-MA-04 = CMB-1) |
+| Y05L/S | VWAP hold-and-bounce / rejection after 6 closes on one side, volume ≥ its 6-bar mean (YT-VW-01) |
+| Y06L/S | From 10:45: VWAP side, close through a Fibonacci pivot, Stoch RSI %K beyond %D (YT-VW-02) |
+| Y07L/S | First close beyond the 09:15–10:10 range (YT-OR-02; unger_first_hour_breakout) |
+| Y08L/S | Failed break of the 15-minute range, faded, first time today (YT-OR-03, fade part) |
+| Y09L/S | First-hour sweep: a later hourly bar beyond the first hour's extreme, closing back inside (YT-OR-04) |
+| Y11S | Three up days, gap ≥ 0.5%, the first red bar of the morning broken (YT-GP-02) |
+| Y12AL/S, Y12BL/S | Narrow CPR (≤ 0.25%): bounce off its edge; close through max(R1, PDH) / min(S1, PDL) (YT-PV-01; B is CMB-6 without its VWAP term) |
+| Y13L/S | Close through a classic pivot level (YT-PV-02) |
+| Y14L/S | From 09:40: ADX(14) on 15-minute bars > 20, Supertrend(10,3) on side, close through a Fibonacci pivot (YT-PV-03) |
+| Y15L/S | Supertrend(12,3) flip beyond DEMA200 (YT-ST-01). **Expected void**: DEMA200 needs about 400 bars and the 5-day input holds about 375 |
+| Y16L/S | EMA200 side, Stoch RSI back from an extreme within 4 bars, ≥ 2 of 3 Supertrends on side (YT-ST-02) |
+| Y17L/S | MACD cross, Supertrend(10,3) flipped within 3 bars, price within 0.2% of VWAP (YT-ST-03) |
+| Y18L/S | Close beyond Bollinger(30,2), RSI(13) < 25 / > 75, not in a squeeze (YT-OS-04) |
+| Y19L/S | MACD cross beyond zero, EMA200 side (YT-OS-05) |
+| Y20L/S | Heikin-Ashi reversal after a doji and a stochastic extreme (YT-OS-06) |
+| Y21L/S | Inside bar then a close beyond the mother bar, in an EMA10 trend (YT-PA-01) |
+| Y22L/S | False break of a 20-bar extreme: engulfing or sweep (YT-PA-02) |
+| Y23L/S | Retest of the previous session's point of control with a wick (YT-PA-04); the POC is approximated from 5-minute bars |
+| Y24L/S | 15-minute inside candle, then a 15-minute close beyond it (YT-PA-05) |
+| Y26L/S | VWAP side, close through max(OR high, PDH, next Fibonacci pivot), RVOL ≥ 1.5, 09:30–14:30 (CMB-2) |
+| Y27L/S | Close beyond Bollinger(20,2) with RSI(14) < 30 / > 70, then a close past that bar's other end (CMB-7) |
+| O01L/S | Williams volatility breakout, open ± 0.6 × yesterday's range, first close beyond (williams_volatility_breakout; one k fixed) |
+| O02L/S | Williams oops: open beyond yesterday's low/high by ≥ 0.3 × its range, first close back inside, by 11:00 (prior-day range in place of ADR10) |
+| O03L/S | Turtle soup on 5-minute bars (raschke_turtle_soup) |
+| O04L/S | Raschke 80-20 (raschke_80_20) |
+| O05L/S | Raschke anti on 15-minute bars (raschke_anti) |
+| O06L/S | Narrow CPR trend day with today's CPR beyond yesterday's, first close beyond the opening range (cpr_narrow_trend_day; the fixed 0.25% width in place of its 60-day percentile) |
+| O07L, O07S | GFR long and RDP short (cpr_untested_short_index_patterns) |
+| O08L/S | Supertrend(10,3) flip on 15-minute bars (supertrend_10_3) |
+| O09L/S | TTM squeeze release on 15-minute bars (ttm_squeeze_lazybear) |
+| F01–F09 L/S | Filters and building blocks, one copy a side: ATR rising (YT-FL-01), RVOL ≥ 1.5, by 11:00, 15-minute EMA20/50 trend, EMA200 side, Supertrend(10,3) flip, ADX(15m) > 20, engulfing or hammer (shooting star), VWAP side. Alone, each is a (silly) rule of its own and is counted as one |
+
+**2. Causality.** Every series is computed bar by bar from the past; a higher-timeframe bar is read only once its last 5-minute bar has finished. `test_every_condition_is_causal` checks each condition by deleting the bars after the signal bar.
+
+**3. Exits: the common set only.** Every condition trades with H30 and R3 (§2, amendment 1), never its catalog's own stop, target or signal exit (opposite cross, next pivot, gap fill, middle band, 2R or 1.5R targets, end of day). A bounded exit set could be added by a later amendment, as its own cohort; this keeps the family's size the product of conditions and two exits.
+
+**4. Combinations.** The catalogs' recommended combinations are in the family: CMB-1 is Y04, CMB-2 is Y26, CMB-7 is Y27; CMB-4 (R19 or R20 with F08), CMB-5 (F06 with F05 and F07), CMB-6 (Y12B with F09) and CMB-8 (a trigger with F04) are pairs and triples of the enumeration; CMB-3 has four parts (R13 with F02, F03 and F04, and the short mirror) and is **added explicitly**, both exits.
+
+**5. Excluded, with the project's earlier result, and not re-run:** plain opening-range breakout and Zarattini's stocks-in-play ORB (trial 35, −12.09 bp a session; R13/R14 stay as cohort 1 already registered them); market and gamma intraday momentum (L31, L32, L51); gap fill (L49, and R17/R18); SMC/ICT liquidity sweeps (trial 117, −0.299R); the Varsity EMA checklist (trials 1–44); Raschke's Holy Grail (the PB family, 24 of 24 fail); morning/evening star (control R4 of trials 128–202); the 9:20 straddle, averaging-in and "never lose" entries (not cash entry rules). **Deferred, not built**: the cross-sectional top-gainer first pullback (YT-MA-06; needs every stock at once), and the four rules that need a swing-structure engine with a confirmation delay (YT-MA-07, YT-OS-02, YT-OS-03, YT-PA-03); a later amendment may add them as their own cohort. **Not a rule here**: the end-of-day reversal (entries stop at 14:30; a measurement for another look), the noise-area and half-hour periodicity rules (index or cost-bound).
+
+**6. Shorts in the shadow lab.** The forward lab trades short rules **whatever `config.SCANNER["allow_shorts"]` says**: shadow trades are not orders. A stock the scanner marks long-only (a fixed price band, where a short cannot be covered) still skips its shorts. This replaces §2's sentence about `allow_shorts`. The historical search has no long-only information and skips no short (§5).
+
+**7. Cohort 3, reserved: daily and multi-day rules.** The catalogs' daily rules (Connors RSI(2), cumulative RSI, double 7s, IBS and Turnaround Tuesday on NIFTYBEES; Rayner Teo's 50-day pullback; Crabel NR7 × ORB; Kullamägi's episodic pivot and breakout; Minervini's trend template; Darvas, pocket pivots, Stockbee bursts, Turtles, Carver EWMAC, KAMA, floor/ceiling regime, MACD, RS55, polarity flips, VCP and EMA-band swings; and the monthly high-volume premium and tug-of-war) need a daily-bar harness with delivery costs and the bhavcopy panel. They are **not built or run here**. They will be pre-registered as cohort 3 in their own amendment, with **α₃ = 0.625%** of the lab's budget reserved for them, and still nothing dated 2026 before the one confirmation pass.
+
+**8. L55's family now.** 107 conditions (53 long, 54 short): all singles, pairs and triples of same-side conditions × 2 exits = **102,296**, plus CMB-3's 4 combinations, plus at most **14,450** greedy evaluations: **at most 116,750 combinations**, the exact number counted by the code. The Romano–Wolf stepdown streams over replicates and combinations, so its memory does not grow with the family. Cohort 1's twenty alone (amendment 3) would have been at most 1,260; the wider search pays for its width with a higher bar.
+
+**9. The forward lab** runs cohort 2 from the same first session as cohort 1. Cohort 2's screen is after its own 40th lab session, at **α₂ = 1.25%**, with all 107 rules in the bootstrap's maximum (amendment 2).
