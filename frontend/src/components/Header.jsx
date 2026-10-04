@@ -16,7 +16,7 @@ const NAV = [
   ["Intraday paper record", [["/intraday", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"],
     ["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"], ["/trades", "Trades"],
     ["/journal", "Journal"]]],
-  ["Intraday research", [["/jev-book", "Jev book"], ["/kronos", "Kronos"]]],
+  ["Intraday research", [["/jev-book", "Jev book"], ["/kronos", "Kronos"], ["/rule-lab", "Rule lab"]]],
   ["Account", [["/portfolio", "Portfolio", "held"]]],
 ];
 

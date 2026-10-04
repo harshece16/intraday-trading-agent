@@ -23,6 +23,7 @@ const Trades = lazy(() => import("./pages/Trades"));
 const MomentumBook = lazy(() => import("./pages/MomentumBook"));
 const JevBook = lazy(() => import("./pages/JevBook"));
 const Kronos = lazy(() => import("./pages/Kronos"));
+const RuleLab = lazy(() => import("./pages/RuleLab"));
 
 // `intraday` marks a page of the intraday paper record: it opens with the
 // banner that says so (README section 116).
@@ -58,6 +59,7 @@ const TECHNICAL = <Page intraday><TechnicalAnalysis /></Page>;
 const JOURNAL = <Page intraday><Journal /></Page>;
 const JEV = <Page intraday><JevBook /></Page>;
 const KRONOS = <Page intraday><Kronos /></Page>;
+const RULE_LAB = <Page intraday><RuleLab /></Page>;
 const DIAGNOSTIC = <Page><PortfolioDiagnostic /></Page>;
 
 function AppRoutes({ state }) {
@@ -79,6 +81,7 @@ function AppRoutes({ state }) {
       <Route path="/journal" element={JOURNAL} />
       <Route path="/jev-book" element={JEV} />
       <Route path="/kronos" element={KRONOS} />
+      <Route path="/rule-lab" element={RULE_LAB} />
       <Route path="/portfolio" element={<Page><Portfolio state={state} /></Page>} />
       <Route path="/portfolio/diagnostic" element={DIAGNOSTIC} />
     </Routes>

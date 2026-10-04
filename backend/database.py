@@ -21,6 +21,9 @@ Tables:
                     snapshot, every agent's validated output, the rating, tokens, cost
   day_lists         one row per session: the day's list, written once when it is
                     fixed, so a restart keeps it (#198)
+  rule_lab_trades   one row per virtual trade of the single-rule paper lab (rule_lab.py,
+                    README section 124): written at entry, closed once, never edited after
+  rule_lab_sessions one row per session the lab ran: how many stocks it read
   session_closes    one row per (session, stock): Kite's last traded price at the
                     15:08 square-off, the outcome of the shadow log (README §115)
   scan_candidates   a view, not a table: the shadow log of the scanner audit's
@@ -164,6 +167,21 @@ CREATE TABLE IF NOT EXISTS control (
 CREATE TABLE IF NOT EXISTS day_lists (
     session_date TEXT PRIMARY KEY, symbols_json TEXT NOT NULL, fixed_ts REAL NOT NULL,
     fixed_when TEXT, mode TEXT
+);
+CREATE TABLE IF NOT EXISTS rule_lab_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule TEXT NOT NULL, symbol TEXT NOT NULL, session_date TEXT NOT NULL, side TEXT NOT NULL,
+    signal_time TEXT, entry_time TEXT NOT NULL, entry_price REAL, qty INTEGER,
+    stop_price REAL, target_price REAL,
+    exit_time TEXT, exit_price REAL, exit_reason TEXT,
+    gross_bp REAL, net_bp REAL, net_rs REAL, net_r REAL,
+    status TEXT NOT NULL, feed TEXT, opened_ts REAL, closed_ts REAL,
+    UNIQUE (rule, symbol, session_date, entry_time)
+);
+CREATE INDEX IF NOT EXISTS idx_rule_lab_trades_status ON rule_lab_trades(status, session_date);
+CREATE TABLE IF NOT EXISTS rule_lab_sessions (
+    session_date TEXT PRIMARY KEY, symbols INTEGER NOT NULL, bars INTEGER, feed TEXT,
+    first_ts REAL, last_ts REAL
 );
 """
 

@@ -1,0 +1,472 @@
+{
+ "look": "L55",
+ "mode": "stage0",
+ "written": "2026-10-05T01:16:01+05:30",
+ "db": "kite_history.db",
+ "symbols": 100,
+ "sessions": 316,
+ "first_session": "2024-09-24",
+ "last_session": "2025-12-31",
+ "newest_bar_read": "2025-12-31",
+ "stock_sessions": 31049,
+ "share_with_70_bars": 0.9936,
+ "bars_evaluated": 2301313,
+ "rows_2026_count_only": {
+  "symbols": 100,
+  "rows": 1317603
+ },
+ "conditions": {
+  "R01": {
+   "side": "LONG",
+   "signals": 160149
+  },
+  "R02": {
+   "side": "SHORT",
+   "signals": 164165
+  },
+  "R03": {
+   "side": "LONG",
+   "signals": 19368
+  },
+  "R04": {
+   "side": "SHORT",
+   "signals": 16323
+  },
+  "R05": {
+   "side": "LONG",
+   "signals": 27060
+  },
+  "R06": {
+   "side": "SHORT",
+   "signals": 29554
+  },
+  "R07": {
+   "side": "LONG",
+   "signals": 99049
+  },
+  "R08": {
+   "side": "SHORT",
+   "signals": 103769
+  },
+  "R09": {
+   "side": "LONG",
+   "signals": 145468
+  },
+  "R10": {
+   "side": "SHORT",
+   "signals": 139572
+  },
+  "R11": {
+   "side": "LONG",
+   "signals": 87034
+  },
+  "R12": {
+   "side": "SHORT",
+   "signals": 90058
+  },
+  "R13": {
+   "side": "LONG",
+   "signals": 15719
+  },
+  "R14": {
+   "side": "SHORT",
+   "signals": 17696
+  },
+  "R15": {
+   "side": "LONG",
+   "signals": 2205
+  },
+  "R16": {
+   "side": "SHORT",
+   "signals": 1124
+  },
+  "R17": {
+   "side": "SHORT",
+   "signals": 3753
+  },
+  "R18": {
+   "side": "LONG",
+   "signals": 2139
+  },
+  "R19": {
+   "side": "LONG",
+   "signals": 135957
+  },
+  "R20": {
+   "side": "SHORT",
+   "signals": 133540
+  },
+  "Y01L": {
+   "side": "LONG",
+   "signals": 67954
+  },
+  "Y01S": {
+   "side": "SHORT",
+   "signals": 64009
+  },
+  "Y02L": {
+   "side": "LONG",
+   "signals": 17852
+  },
+  "Y02S": {
+   "side": "SHORT",
+   "signals": 17499
+  },
+  "Y03L": {
+   "side": "LONG",
+   "signals": 40980
+  },
+  "Y03S": {
+   "side": "SHORT",
+   "signals": 41561
+  },
+  "Y04L": {
+   "side": "LONG",
+   "signals": 41967
+  },
+  "Y04S": {
+   "side": "SHORT",
+   "signals": 41079
+  },
+  "Y05L": {
+   "side": "LONG",
+   "signals": 17235
+  },
+  "Y05S": {
+   "side": "SHORT",
+   "signals": 18574
+  },
+  "Y06L": {
+   "side": "LONG",
+   "signals": 24929
+  },
+  "Y06S": {
+   "side": "SHORT",
+   "signals": 27935
+  },
+  "Y07L": {
+   "side": "LONG",
+   "signals": 11826
+  },
+  "Y07S": {
+   "side": "SHORT",
+   "signals": 13552
+  },
+  "Y08L": {
+   "side": "LONG",
+   "signals": 17084
+  },
+  "Y08S": {
+   "side": "SHORT",
+   "signals": 15343
+  },
+  "Y09L": {
+   "side": "LONG",
+   "signals": 9833
+  },
+  "Y09S": {
+   "side": "SHORT",
+   "signals": 8843
+  },
+  "Y11S": {
+   "side": "SHORT",
+   "signals": 240
+  },
+  "Y12AL": {
+   "side": "LONG",
+   "signals": 20117
+  },
+  "Y12AS": {
+   "side": "SHORT",
+   "signals": 14358
+  },
+  "Y12BL": {
+   "side": "LONG",
+   "signals": 8670
+  },
+  "Y12BS": {
+   "side": "SHORT",
+   "signals": 8975
+  },
+  "Y13L": {
+   "side": "LONG",
+   "signals": 132083
+  },
+  "Y13S": {
+   "side": "SHORT",
+   "signals": 136206
+  },
+  "Y14L": {
+   "side": "LONG",
+   "signals": 36853
+  },
+  "Y14S": {
+   "side": "SHORT",
+   "signals": 36334
+  },
+  "Y15L": {
+   "side": "LONG",
+   "signals": 0
+  },
+  "Y15S": {
+   "side": "SHORT",
+   "signals": 0
+  },
+  "Y16L": {
+   "side": "LONG",
+   "signals": 26383
+  },
+  "Y16S": {
+   "side": "SHORT",
+   "signals": 24416
+  },
+  "Y17L": {
+   "side": "LONG",
+   "signals": 2742
+  },
+  "Y17S": {
+   "side": "SHORT",
+   "signals": 1860
+  },
+  "Y18L": {
+   "side": "LONG",
+   "signals": 31611
+  },
+  "Y18S": {
+   "side": "SHORT",
+   "signals": 32930
+  },
+  "Y19L": {
+   "side": "LONG",
+   "signals": 14135
+  },
+  "Y19S": {
+   "side": "SHORT",
+   "signals": 13931
+  },
+  "Y20L": {
+   "side": "LONG",
+   "signals": 24976
+  },
+  "Y20S": {
+   "side": "SHORT",
+   "signals": 24600
+  },
+  "Y21L": {
+   "side": "LONG",
+   "signals": 18132
+  },
+  "Y21S": {
+   "side": "SHORT",
+   "signals": 19945
+  },
+  "Y22L": {
+   "side": "LONG",
+   "signals": 20446
+  },
+  "Y22S": {
+   "side": "SHORT",
+   "signals": 17544
+  },
+  "Y23L": {
+   "side": "LONG",
+   "signals": 5231
+  },
+  "Y23S": {
+   "side": "SHORT",
+   "signals": 3501
+  },
+  "Y24L": {
+   "side": "LONG",
+   "signals": 30870
+  },
+  "Y24S": {
+   "side": "SHORT",
+   "signals": 33024
+  },
+  "Y26L": {
+   "side": "LONG",
+   "signals": 10964
+  },
+  "Y26S": {
+   "side": "SHORT",
+   "signals": 9244
+  },
+  "Y27L": {
+   "side": "LONG",
+   "signals": 5055
+  },
+  "Y27S": {
+   "side": "SHORT",
+   "signals": 5155
+  },
+  "O01L": {
+   "side": "LONG",
+   "signals": 8004
+  },
+  "O01S": {
+   "side": "SHORT",
+   "signals": 9335
+  },
+  "O02L": {
+   "side": "LONG",
+   "signals": 336
+  },
+  "O02S": {
+   "side": "SHORT",
+   "signals": 330
+  },
+  "O03L": {
+   "side": "LONG",
+   "signals": 28202
+  },
+  "O03S": {
+   "side": "SHORT",
+   "signals": 26964
+  },
+  "O04L": {
+   "side": "LONG",
+   "signals": 1109
+  },
+  "O04S": {
+   "side": "SHORT",
+   "signals": 921
+  },
+  "O05L": {
+   "side": "LONG",
+   "signals": 18332
+  },
+  "O05S": {
+   "side": "SHORT",
+   "signals": 18361
+  },
+  "O06L": {
+   "side": "LONG",
+   "signals": 1591
+  },
+  "O06S": {
+   "side": "SHORT",
+   "signals": 1253
+  },
+  "O07L": {
+   "side": "LONG",
+   "signals": 947
+  },
+  "O07S": {
+   "side": "SHORT",
+   "signals": 571
+  },
+  "O08L": {
+   "side": "LONG",
+   "signals": 9031
+  },
+  "O08S": {
+   "side": "SHORT",
+   "signals": 9073
+  },
+  "O09L": {
+   "side": "LONG",
+   "signals": 4611
+  },
+  "O09S": {
+   "side": "SHORT",
+   "signals": 5113
+  },
+  "F01L": {
+   "side": "LONG",
+   "signals": 870998
+  },
+  "F01S": {
+   "side": "SHORT",
+   "signals": 870998
+  },
+  "F02L": {
+   "side": "LONG",
+   "signals": 447006
+  },
+  "F02S": {
+   "side": "SHORT",
+   "signals": 447006
+  },
+  "F03L": {
+   "side": "LONG",
+   "signals": 674348
+  },
+  "F03S": {
+   "side": "SHORT",
+   "signals": 674348
+  },
+  "F04L": {
+   "side": "LONG",
+   "signals": 801604
+  },
+  "F04S": {
+   "side": "SHORT",
+   "signals": 817275
+  },
+  "F05L": {
+   "side": "LONG",
+   "signals": 955788
+  },
+  "F05S": {
+   "side": "SHORT",
+   "signals": 971299
+  },
+  "F06L": {
+   "side": "LONG",
+   "signals": 25268
+  },
+  "F06S": {
+   "side": "SHORT",
+   "signals": 25444
+  },
+  "F07L": {
+   "side": "LONG",
+   "signals": 1392731
+  },
+  "F07S": {
+   "side": "SHORT",
+   "signals": 1392731
+  },
+  "F08L": {
+   "side": "LONG",
+   "signals": 178846
+  },
+  "F08S": {
+   "side": "SHORT",
+   "signals": 179941
+  },
+  "F09L": {
+   "side": "LONG",
+   "signals": 900801
+  },
+  "F09S": {
+   "side": "SHORT",
+   "signals": 1031067
+  }
+ },
+ "family": {
+  "enumerated": 102296,
+  "greedy_max": 14450,
+  "max_total": 116746,
+  "named_combinations": 4,
+  "conditions_by_cohort": {
+   "1": 20,
+   "2": 87
+  },
+  "condition_sets_with_200_signals": 12421,
+  "combinations_with_200_signals": 24842
+ },
+ "timing": {
+  "seconds_per_symbol_conditions": 11.43,
+  "workers": 6,
+  "estimate_discovery_precompute_s": 571.0,
+  "seconds_per_combination_signals": 0.00078,
+  "estimate_search_s": 363.0,
+  "estimate_romano_wolf_pass_s": 74.0,
+  "stage0_wall_s": 504.9
+ },
+ "memory_estimate_mb": 853.0,
+ "halts": [],
+ "verdict": "OK: ready for review; no return was computed"
+}

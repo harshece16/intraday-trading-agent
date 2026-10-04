@@ -532,6 +532,12 @@ FNO = {
 # Zerodha's published tariff (percentages change occasionally — check your
 # broker's current cost sheet before relying on these for sizing decisions).
 # Used by backend/costs.py, currently applied in the backtester.
+# The single-rule paper lab (rule_lab.py, README section 124): shadow paper
+# trades of 20 single rules on the day's list, in their own tables. It never
+# places an order or touches positions, capital or risk. Its rules, trade and
+# tests are fixed in docs/research/prereg-rule-lab.md, not here.
+RULE_LAB = {"enabled": True}
+
 COSTS = {
     "brokerage_per_order": 20.0,     # flat fee per executed order (buy or sell)...
     "brokerage_pct": 0.03,           # ...or this % of order value, whichever is lower
