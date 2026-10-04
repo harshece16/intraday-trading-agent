@@ -4502,6 +4502,53 @@ python backtester.py --no-costs   # frictionless, for reference only
    gradient boosting / deep learning / RL once there's enough real trade
    history to justify them (see `research/ml4t_integration_plan.md`).
 
+### 123. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
+
+A logic review of the momentum book on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), but that four things in how the evening job handles its data could go wrong. None of them has touched the live book yet. **No rule changes, and on complete data no figure changes** (see *Checked*).
+
+**1. A held stock whose NSE symbol changes ([#261](https://github.com/harshece16/intraday-trading-agent/issues/261)).** `build_panel` names each stock's price chain by its latest symbol in NSE's `symbolchange.csv`, which is refreshed weekly. A holding keeps the symbol it was bought under. So once the file learnt a rename (ZOMATO became ETERNAL on 2025-04-09, TATAMOTORS became TMPV on 2025-10-24), the holding had no chain: it was valued at its cost every evening, sold at its cost at the next month turn, and any order waiting on it never filled. Nothing was logged. A replay of 2010 to 2025 by the review found 37 such events in the benchmark (about 2.3 a year) and one in the book (RNAM to NAM-INDIA in 2020, −₹7,408).
+
+- `build_panel(report=...)` now says which chain every symbol's rows went into.
+- Before processing, the job moves any holding or open order whose symbol is no longer a chain to that chain. Each move is kept in `state.symbol_changes`, and the holding keeps `bought_as`.
+- In the job, a holding or order with no chain and no symbol change to explain it stops the book (exit 4, the usual alert). It is never valued or sold at its cost.
+
+This corrects [#220](https://github.com/harshece16/intraday-trading-agent/issues/220)'s first reading: a *missed* rename does not split a stock's history, because rows with one ISIN stay in one chain. The damage came from a *successful* refresh.
+
+**2. A half-written bhavcopy ([#262](https://github.com/harshece16/intraday-trading-agent/issues/262)).** A file over 5,000 bytes counted as cached, zip or not, and curl wrote straight to the final name. A download cut off part-way was therefore never fetched again. The panel skipped it without a word, and the book traded past the missing day. In a test, the month's rebalance moved a session late, with exit 0.
+
+- A download goes to `<file>.part` and is moved into place only once it is a valid zip.
+- Only a valid zip counts as cached.
+- A file the panel can't read is deleted and fetched again. Until it is in, the book processes nothing (exit 4). Its name is in `state.data.unreadable_files`.
+
+**3. [#220](https://github.com/harshece16/intraday-trading-agent/issues/220)'s own two items.**
+
+- **The symbol-change refresh is no longer silent.** A failure is logged as a warning. `state.data` keeps `symbol_changes_refreshed` and `symbol_changes_as_of`, beside the corporate-actions pair.
+- **A day that keeps failing is no longer dropped after 31 days.** Failed days are kept in `state.data.failed_days_pending` and asked for on every run, inside the 31-day window or not. A day leaves the list when its file comes in, when NSE answers 404 (no session), or when the owner clears it with `python momentum_book.py clear-failed-day --date YYYY-MM-DD`. That is for a day that was not a session but that NSE keeps answering with an error.
+
+**4. One evening job at a time, and none for a switched-off book.**
+
+- **A switched-off book** ([#227](https://github.com/harshece16/intraday-trading-agent/issues/227)) no longer has its job started every 30 minutes all evening. The engine starts no job for it (MOM-10).
+- **Two jobs at once.** An engine restarted in the evening forgot the job it had started, and could start a second beside it, both writing the same state file. Now the job holds a lock beside the state file, with its pid. The engine starts no job while the lock is held. A job that finds it held exits 5 and does nothing, and the alert check ignores exit 5. The operating system releases the lock when the job ends, even if it is killed.
+
+**Not changed: [#263](https://github.com/harshece16/intraday-trading-agent/issues/263).** A holding with no row on the month-end or on the month's first session is sold at its last close when the job runs that evening. A day later it would wait and sell at the real later price. That is pre-registered rule H5 (MOM-05). It happened 0 times in 2010 to 2025. It is left for the owner to decide.
+
+**Checked.**
+
+- Ten new regression tests in `backend/tests/test_momentum_book_data.py`, plus one in `test_momentum_alerts.py`. Each fails on `main` (587d661) and passes here. They cover:
+  - a book holding and a benchmark holding renamed between two rebalances, which give the same marks, month points and trades as the run without the rename;
+  - a holding whose chain vanished, which stops the job with the record untouched;
+  - a download killed part-way, which leaves nothing that looks cached;
+  - a real bhavcopy cache with the month's first session cut to 60%, where the job stops, then re-fetches and rebalances on 1 March, not 4 March;
+  - a failed day 40 days back, which still stops the book;
+  - a switched-off book (0 jobs started in an evening, against 8 before);
+  - a held lock (no second job, exit 5).
+- The parity tests with trial 126 (`test_momentum_book.py`) are unchanged and pass. The research simulator builds its panel once with final symbols and holds those names, so #261 never reached its figures.
+- **Same record on complete data.** The old and the new job were each replayed on the real bhavcopy cache (4,401 files, 3,471 chains) to 2026-10-05, without fetching and on scratch copies only. They ran from a book started on 2025-12-20 (10 rebalances), one started on 2024-06-20 (28), and a copy of the live state. All three gave identical states: holdings, orders, trades, NAV, month points and fill counts. On the real panel no file is unreadable, ZOMATO resolves to ETERNAL and TATAMOTORS to TMPV, and no live holding or order is missing its chain.
+- Full backend suite: 1,317 passed, 2 skipped (before the last documentation edits; the momentum, alert and rules-catalogue tests were re-run after them, 159 passed).
+- Not checked live: the first evening run on this code comes after `main` is pulled into the main checkout. The switched-off skip and the engine's lock check run in the engine's process, so they also need a backend restart. The data fixes run in the job's own process and need none.
+
+Rules: MOM-10, MOM-11, MOM-12 and MOM-13 changed in wording (no rule's substance), MOM-18 new. Files: `backend/momentum_book.py`, `backend/momentum_alerts.py`, `backend/tests/test_momentum_book_data.py`, `backend/tests/test_momentum_alerts.py`, `docs/architecture/` (rules), `docs/research/prereg-3i-momentum-corrected-data.md`, `BUG_LOG.md`.
+
 ## Architecture and design
 
 The design lives in [`docs/architecture/`](docs/architecture/README.md).

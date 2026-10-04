@@ -313,6 +313,14 @@ def test_a_job_killed_by_a_signal_is_alerted(sent, job):
     assert "was stopped by signal 9" in _lines(st)[0]["message"]
 
 
+def test_a_run_that_found_another_job_running_is_not_alerted(sent, job):
+    st = AppState(watchlist=[], paper_mode=True)
+    assert ma.BUSY == mb.BUSY
+    job["proc"] = FakeJob(mb.BUSY)               # a job from before an engine restart held the lock
+    ma.check(_at("2026-10-01", "19:40"), None, st.log)
+    assert _lines(st) == [] and sent == []
+
+
 def test_a_run_that_stopped_early_is_alerted_once_even_across_a_restart(sent, job):
     st = AppState(watchlist=[], paper_mode=True)
     s = mb.new_state(1_000_000.0, "2026-09-26")

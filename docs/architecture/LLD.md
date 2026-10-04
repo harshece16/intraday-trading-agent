@@ -621,7 +621,8 @@ trial 126 month by month.
 
 | Function | Behaviour |
 | --- | --- |
-| `build_panel()` | Merges the bhavcopy folders, reads the EQ, BE and BZ series, follows renames, drops fund units, and applies splits, bonuses, consolidations, rights, demergers and dividends backward to build total-return closes. Each chain also carries `eq`, its EQ rows alone |
+| `build_panel()` | Merges the bhavcopy folders, reads the EQ, BE and BZ series, follows renames, drops fund units, and applies splits, bonuses, consolidations, rights, demergers and dividends backward to build total-return closes. Each chain also carries `eq`, its EQ rows alone. With `report=`, it says which chain every symbol went into (`aliases`) and which files it could not read (`unreadable`) |
+| `follow_symbol_changes()` | Re-keys a holding or open order whose symbol is no longer a chain to the chain its rows went into, and keeps the change in `state.symbol_changes` (#261) |
 | `ranked_universe()` | Chosen from EQ rows only: stocks with at least 250 sessions, an EQ print that day and a raw close of ₹20 or more, sorted by median traded value over 126 sessions |
 | `scores()` | `mean((c1/c7 − 1)/σ, (c1/c13 − 1)/σ)`, with closes at month-ends 1, 7 and 13 months back and σ from up to 252 daily changes |
 | `ranking()` | The universe, the names by score, and each name's rank |
@@ -629,11 +630,12 @@ trial 126 month by month.
 | `lock()`, `why_not()` | Whether a row closed locked at a price band, and why an order cannot fill today |
 | `rebalance()` | The month-turn decision: drop open orders, sell what can be sold, count vacancies, fix each buy's amount, buy |
 | `work_orders()` | Try the open orders of one book. A buy is cancelled after five sessions |
-| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band. With `strict` (the evening job), a month turn with nothing to rank raises `IncompleteData` before the state changes; without it the month is skipped, as the research simulator skips months before its panel can rank |
+| `process_session()` | One session: rebalance on a month turn, otherwise try the waiting orders; then mark to market and check the band. With `strict` (the evening job), a holding or order with no chain, or a month turn with nothing to rank, raises `IncompleteData` before the state changes; without it the month is skipped, as the research simulator skips months before its panel can rank |
 | `band_threshold(n, mean, sd)` | `n × mean − 2 × sd × √n` |
-| `update_bhavcopies()`, `download_bhavcopy()` | Ask NSE for every day of the last 31 without a file (#159). Each answer is fetched, no file (404: no session, or not out yet) or failed |
-| `daily()` | The evening job. Exit code 0 when today is processed, 3 when the bhavcopy isn't out, 4 when the data is incomplete: it stops before a past day whose download failed, or before a month turn with an empty ranking, and keeps what it processed before it. Logs a failed corporate-actions refresh. Writes `data` to the state |
-| `maybe_start_evening_job()` | The engine hook. Never raises |
+| `update_bhavcopies()`, `download_bhavcopy()` | Ask NSE for every day of the last 31 without a file (#159). Each answer is fetched, no file (404: no session, or not out yet) or failed. A download goes to `.part` and is moved into place only as a valid zip; only a valid zip counts as cached (#262) |
+| `daily()` | The evening job, under a lock beside the state file (`.lock`, with its pid). Exit code 0 when today is processed, 3 when the bhavcopy isn't out, 4 when the data is incomplete: it stops before a past day whose download failed (kept in `data.failed_days_pending` until it comes in, #220), before a session where a holding has no chain, or before a month turn with an empty ranking, and keeps what it processed before it; an unreadable bhavcopy is deleted and fetched again, and nothing is processed until it is in. 5 when another job holds the lock. Logs a failed corporate-actions or symbol-change refresh. Writes `data` to the state |
+| `clear_failed_day(day)` | The owner's way past a day NSE keeps failing that was not a session (`momentum_book.py clear-failed-day --date`) |
+| `maybe_start_evening_job()` | The engine hook. Starts nothing for a switched-off book (#227) or while a job holds the lock (`job_running()`, a job from before an engine restart). Never raises |
 | `monthly_report(state)` | Read side. One row per completed month, from one rebalance close to the next: book and benchmark returns, excess, cumulative excess (the band's own sum), one-sided turnover and costs of the trades inside it; the opening rebalance apart. No row before the first month completes |
 | `band_status(state)` | Read side. Months counted, expected cumulative excess, the floor from month 6, and `not_active`, `inside`, `below` or `switched_off` |
 | `next_rebalance(day)` | Read side. The first session of the month after `day`'s, holidays skipped; flagged when the year has no holiday list |
@@ -646,11 +648,11 @@ sequenceDiagram
     participant N as NSE archives
     participant F as State file
 
-    E->>E: weekday, not a holiday, 19:30 to 23:30,<br/>30 min since the last try
+    E->>E: weekday, not a holiday, 19:30 to 23:30,<br/>30 min since the last try, not switched off, no job holds the lock
     E->>C: spawn momentum_book.py daily
-    C->>N: corporate actions, every day of the last 31 without a bhavcopy
+    C->>N: symbol changes (weekly), corporate actions, every day of the last 31 without a bhavcopy, older failed days
     N-->>C: files, 404 (no session), or a failed download
-    opt a past day failed, or a month-end ranking is empty
+    opt a past day failed, a file can't be read, a holding has no chain, or a month-end ranking is empty
         C->>C: process only the sessions before it
         C->>F: save, with data.problem
         C-->>E: exit 4, retried in 30 minutes
@@ -680,7 +682,7 @@ State file `backend/data/momentum_book_state.json`:
 ```text
 version, created, status, status_reason, capital,
 last_processed, latest_session, updated_at, rebalances,
-book   {cash, positions {SYM: {symbol, fill_date, amount, fill_price}},
+book   {cash, positions {SYM: {symbol, fill_date, amount, fill_price, bought_as?}},
         orders [{side, symbol, placed, amount, waiting}]}
 bench  {cash, positions {SYM: {symbol, fill_date, amount}}, orders [...]}
 nav          [{date, book, bench}]
@@ -688,8 +690,11 @@ month_points [{date, book, bench}]
 trades       [{date, side, symbol, value, cost, ordered?, series?, reason?}]
 fills        {waited_buy_locked, waited_sell_locked, buys_cancelled, ...}
 excess_months, cumulative_excess, band_floor     (after the first month turn)
+symbol_changes [{date, side, from, to, what}]   (holdings re-keyed, #261)
 data         {corporate_actions_refreshed, corporate_actions_as_of,
-              failed_downloads, problem}      (the evening job's data checks)
+              symbol_changes_refreshed, symbol_changes_as_of,
+              failed_downloads, failed_days_pending, unreadable_files,
+              problem}      (the evening job's data checks)
 ```
 
 `status` is `waiting_for_month_end`, `active` or `switched_off`. Once
@@ -704,7 +709,7 @@ changes.
 | Seen | Line (kind `momentum`) | Once per |
 | --- | --- | --- |
 | A new date in `month_points` | The rebalance: month, bought, sold, waiting, the month just ended against the benchmark, since the start, the band, the next rebalance. Level `info`, `warn` if the book switched off | Rebalance. With no record, only the latest |
-| A job ended with a code other than 0, 3 or 4, or a signal | The code, the last line of `momentum_book.log`, where the book stands. Level `error` | Reason a day |
+| A job ended with a code other than 0, 3, 4 or 5, or a signal | The code, the last line of `momentum_book.log`, where the book stands. Level `error` | Reason a day |
 | `data.problem` in a state saved today | The job's reason. Level `warn` | Reason a day |
 | 23:30 or later on a weekday, not a holiday, a run today, `last_processed` not today, no problem, not switched off | The day was not processed; tomorrow's run catches up. Level `warn` | Day |
 
