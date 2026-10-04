@@ -4345,11 +4345,11 @@ Rules: ENT-28 new; ENT-01, ENT-02, ENT-23, RES-24 and UI-04 changed. Files:
 
 **Checked.**
 - `backend/tests/test_engine_money_paths.py`, 28 tests, built from the reviews' reproductions (now asserting the fixed behaviour). 26 fail on `main`; the other two are controls (a clean approval still goes through; a position closed in two legs is still not restored).
-- `backend/tests/test_kill_switch.py`: the live-readiness test now loses money in Live's counter, since a paper loss no longer refuses Live. `backend/tests/test_size_rounding_and_cost_floor.py` reads the sizing call from `_try_enter_claimed`. The F&O test kit's fake Kite now shows a day book that agrees with the engine unless a test sets one, since every live close reads it (`tests/fno_kit.py`, one fake in `test_paper_fno_stops.py`).
+- `backend/tests/test_kill_switch.py`: the live-readiness test now loses money in Live's counter, since a paper loss no longer refuses Live. `backend/tests/test_size_rounding_and_cost_floor.py` reads the sizing call from `_try_enter_claimed`. The fake Kites in `tests/fno_kit.py`, `test_live_fills.py`, `test_live_restart.py` and `test_paper_fno_stops.py` now show a day book that agrees with the engine unless a test sets one, since every live close reads it. Three review-queue tests assumed a card blocked on volume could be offered and approved under a net R:R of 1.5; they now check that it isn't (`test_review_queue.py`).
 - Full backend suite.
 - **Not deployed.** It goes live at the next backend restart.
 
-Rules: EXE-09 new; ENT-23, ENT-26, RSK-06, RSK-07, RSK-08, EXE-05, EXE-08, EXT-04, EXT-07 and OPS-03 changed. Files: `backend/trading_engine.py`, `backend/state.py`, `backend/risk_manager.py`, `backend/paper_broker.py`, `backend/day_plan.py`; `backend/tests/test_engine_money_paths.py` (new), `backend/tests/test_kill_switch.py`, `backend/tests/test_size_rounding_and_cost_floor.py`, `backend/tests/fno_kit.py`, `backend/tests/test_paper_fno_stops.py`; `docs/architecture/` (LLD, rules); `BUG_LOG.md`.
+Rules: EXE-09 new; ENT-23, ENT-26, RSK-06, RSK-07, RSK-08, EXE-05, EXE-08, EXT-04, EXT-07 and OPS-03 changed. Files: `backend/trading_engine.py`, `backend/state.py`, `backend/risk_manager.py`, `backend/paper_broker.py`, `backend/day_plan.py`; `backend/tests/test_engine_money_paths.py` (new), `backend/tests/test_kill_switch.py`, `backend/tests/test_size_rounding_and_cost_floor.py`, `backend/tests/fno_kit.py`, `backend/tests/test_paper_fno_stops.py`, `backend/tests/test_live_fills.py`, `backend/tests/test_live_restart.py`, `backend/tests/test_review_queue.py`; `docs/architecture/` (LLD, rules); `BUG_LOG.md`.
 
 ## Backtest results
 

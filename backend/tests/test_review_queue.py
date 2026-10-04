@@ -443,8 +443,13 @@ def test_an_rrr_card_is_offered_only_at_or_above_the_floor(engine, target, offer
 
 
 def test_the_floor_leaves_cards_blocked_on_other_items_alone(engine):
-    [card] = offer(engine, plan(failing=("volume",), target=101.0))
-    assert card["blocker"]["key"] == "volume" and card["net_rrr"] < 1 and card["status"] == "pending"
+    # The queue's 1.0 floor holds back R:R cards only. A card blocked on
+    # anything else is held to the engine's own 1.5 minimum instead (#249):
+    # under it, it is neither offered nor journaled as held back.
+    assert offer(engine, plan(failing=("volume",), target=101.0)) == []
+    assert database.reviews_on("2026-09-24") == []
+    [card] = offer(engine, plan(failing=("volume",), target=104.0))
+    assert card["blocker"]["key"] == "volume" and card["net_rrr"] >= 1.5 and card["status"] == "pending"
 
 
 def test_the_floor_is_read_from_config(engine, monkeypatch):
@@ -505,10 +510,13 @@ def test_an_rrr_card_still_at_the_floor_at_the_live_price_is_placed(engine, monk
 
 
 def test_the_approval_floor_leaves_cards_blocked_on_other_items_alone(engine, monkeypatch):
-    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)
-    [card] = offer(engine, plan(failing=("volume",), target=102.34))
+    # Not held to the queue's floor, but to the engine's 1.5 minimum at the
+    # live price, as every engine entry is (#249).
+    [card] = offer(engine, plan(failing=("volume",), target=104.0))     # net 1.77 at 100
+    monkeypatch.setattr(data_provider, "get_ltp", lambda s: 100.5)      # net 1.25: over the floor, under 1.5
     result = engine.approve_review(card["id"])
-    assert result["ok"] and result["net_rrr_at_fill"] < 1.0
+    assert not result["ok"] and result["status"] == "refused"
+    assert "below 1.5" in result["reason"] and "queue's floor" not in result["reason"]
 
 
 def test_the_approval_floor_is_off_when_the_floor_is(engine, monkeypatch):
@@ -544,7 +552,7 @@ def test_a_later_closer_near_miss_replaces_an_expired_card(engine, monkeypatch):
 def test_a_volume_miss_that_expired_is_replaced_by_a_closer_rrr_miss(engine, monkeypatch):
     """The TCS case from #166: a 0.7x volume card at 09:50 expired, and the
     10:40 near-miss at R:R 1.40, 93% of the 1.5 it needed, was never offered."""
-    vol_plan = plan(failing=("volume",), target=103.0)
+    vol_plan = plan(failing=("volume",), target=104.0)       # clears the 1.5 minimum (#249)
     next(i for i in vol_plan["items"] if i["key"] == "volume").update({"value": 0.7, "need": 1.0})
     [first] = offer(engine, vol_plan)
     assert first["progress"] == 0.7
