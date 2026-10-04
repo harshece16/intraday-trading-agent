@@ -331,14 +331,19 @@ class RefusedRun(RuntimeError):
     tree, or a family that is not the one stage 0 recorded."""
 
 
-def family_hash(conds):
+def family_hash(conds, look=1):
     """sha256 over the sorted condition ids with their sides and the family's size by part.
-    Stage 0 writes it; discover() must produce the same; confirm_2026() must match discover()'s."""
+    Stage 0 writes it; discover() must produce the same; confirm_2026() must match discover()'s.
+    Look 2 (amendment 6) hashes the filter too, so its records cannot be mistaken for look 1's."""
     import hashlib
     enum, greedy = max_family_size(conds)
     desc = {"conditions": sorted((c, rule_lab.REGISTRY[c]["side"]) for c in conds),
             "enumerated": enum, "greedy_max": greedy, "named": len(named_combinations(conds)) * len(EXITS),
             "exits": list(EXITS)}
+    if look != 1:
+        desc["look"] = look
+        desc["max_filter"] = {"min_trades": MIN_TRADES, "min_sessions": MIN_SESSIONS,
+                              "min_clusters": rule_lab.MIN_CLUSTERS_IN_MAX}
     return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
 
 
@@ -353,7 +358,7 @@ def stage0_family_hash(rec):
     return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
 
 
-def refuse_unless_allowed(out, conds, expected_hash, what):
+def refuse_unless_allowed(out, conds, expected_hash, what, look=1):
     """The three refusals of the prereg correction (B2). Returns the provenance to record."""
     if os.path.exists(out):
         raise RefusedRun(f"{out} exists: the prereg allows one {what} run; move the old record aside by hand "
@@ -361,7 +366,7 @@ def refuse_unless_allowed(out, conds, expected_hash, what):
     commit, dirty = git_state()
     if dirty:
         raise RefusedRun("the working tree has uncommitted changes; commit first so the record names the code")
-    got = family_hash(conds)
+    got = family_hash(conds, look)
     if expected_hash is not None and got != expected_hash:
         raise RefusedRun(f"the family hash {got[:12]} is not the one on record ({str(expected_hash)[:12]}): "
                          f"the condition list or the family changed since")
@@ -499,21 +504,27 @@ def cscv_pbo(S_all, N_all, blocks=CSCV_BLOCKS, min_is=CSCV_MIN_IS_TRADES):
     return float(sum(1 for x in lambdas if x <= 0) / len(lambdas)), len(lambdas)
 
 
-def judge(evaluated, days, alpha=rule_lab.ALPHA, b=rule_lab.BOOTSTRAP_B, log=print):
+def judge(evaluated, days, alpha=rule_lab.ALPHA, b=rule_lab.BOOTSTRAP_B, log=print, look=1):
+    """Look 1 (as run): every combination with a t enters the maximum. Look 2 (amendment 6): only
+    combinations with MIN_TRADES trades and MIN_SESSIONS sessions set the bar, with the cluster guard."""
     import numpy as np
     import evaluation
     keys = list(evaluated)
     S = np.stack([evaluated[k]["S"] for k in keys])
     N = np.stack([evaluated[k]["N"] for k in keys])
-    eligible = []
+    eligible, in_max = [], []
     for k in keys:
         v = evaluated[k]
         hp, h1, h2 = halves_positive(v["S"], v["N"])
-        v["halves"] = [h1, h2]
-        eligible.append(bool(v["n"] >= MIN_TRADES and v["sessions"] >= MIN_SESSIONS and v["mean"]
-                             and v["mean"] > 0 and hp))
-    log(f"  Romano-Wolf over {len(keys)} combinations, B={b}")
-    t_hat, rej, step, crits = rule_lab.romano_wolf_matrix(S, N, BLOCK, b=b, alpha=alpha, eligible=eligible)
+        G = len(v["N"])
+        v["halves"] = [h1 if v["N"][:G // 2].sum() else None, h2 if v["N"][G // 2:].sum() else None]
+        powered = bool(v["n"] >= MIN_TRADES and v["sessions"] >= MIN_SESSIONS)
+        in_max.append(powered if look != 1 else True)
+        eligible.append(bool(powered and v["mean"] and v["mean"] > 0 and hp))
+    log(f"  Romano-Wolf over {len(keys)} combinations ({sum(in_max)} in the maximum), B={b}")
+    t_hat, rej, step, crits = rule_lab.romano_wolf_matrix(
+        S, N, BLOCK, b=b, alpha=alpha, eligible=eligible, in_max=in_max,
+        min_clusters=rule_lab.MIN_CLUSTERS_IN_MAX if look != 1 else 0)
     log("  CSCV")
     pbo, n_splits = cscv_pbo(S, N)
     order = sorted(range(len(keys)), key=lambda i: -(t_hat[i] if np.isfinite(t_hat[i]) else -1e9))
@@ -535,7 +546,7 @@ def judge(evaluated, days, alpha=rule_lab.ALPHA, b=rule_lab.BOOTSTRAP_B, log=pri
                               "origin": evaluated[keys[i]].get("origin", "enumerated")})
             if len(survivors) >= MAX_SURVIVORS:
                 break
-    return keys, t_hat, rej, crits, pbo, n_splits, dsr, survivors, best
+    return keys, t_hat, rej, crits, pbo, n_splits, dsr, survivors, best, sum(in_max)
 
 
 # ---- modes ------------------------------------------------------------------------
@@ -637,13 +648,15 @@ def default_stage0():
                         "l55_stage0.json")
 
 
-def discover(db, out, conds, workers, log=print, stage0_path=None):
-    """The one discovery run. Refuses (RefusedRun) when `out` exists, the tree is dirty, or the family is
-    not the one the stage 0 record names (prereg correction of 2026-10-05, B2)."""
+def discover(db, out, conds, workers, log=print, stage0_path=None, look=1):
+    """The discovery run: look 1 as run on 2026-10-05, or look 2, amendment 6's filtered re-judgement.
+    Refuses (RefusedRun) when `out` exists, the tree is dirty, or the family is not the one the stage 0
+    record names (prereg correction of 2026-10-05, B2); look 2's hash includes its filter."""
     stage0_path = stage0_path or default_stage0()
     with open(stage0_path) as fh:
         s0 = json.load(fh)
-    prov = refuse_unless_allowed(out, conds, stage0_family_hash(s0), "discovery")
+    expected = stage0_family_hash(s0) if look == 1 else family_hash(conds, look)
+    prov = refuse_unless_allowed(out, conds, expected, f"look-{look} discovery", look=look)
     t0 = time.time()
     log("precomputing conditions and exits")
     results = build(db, conds, outcomes=True, workers=workers)
@@ -652,7 +665,8 @@ def discover(db, out, conds, workers, log=print, stage0_path=None):
     panel = Panel(results, conds, outcomes=True)
     log(f"  {panel.session.size} stock-bars, {len(panel.days)} sessions ({time.time() - t0:.0f}s)")
     evaluated = run_search(panel, conds, log)
-    keys, t_hat, rej, crits, pbo, n_splits, dsr, survivors, best = judge(evaluated, panel.days, log=log)
+    keys, t_hat, rej, crits, pbo, n_splits, dsr, survivors, best, n_in_max = judge(evaluated, panel.days, log=log,
+                                                                                 look=look)
     rows = []
     for i, k in enumerate(keys):
         v = evaluated[k]
@@ -667,10 +681,16 @@ def discover(db, out, conds, workers, log=print, stage0_path=None):
             own = "R3" if rule_lab.REGISTRY[rid]["exit"] == "r" else "H30"
             if r["exit"] == own:
                 singles[rid] = {"n": r["n"], "mean": r["mean"], "t": r["t"], "passed": r["rejected"]}
-    rec = {"look": "L55", "mode": "discover", "written": datetime.now(IST).isoformat(timespec="seconds"),
-           "sessions": [panel.days[0], panel.days[-1], len(panel.days)], "family_size": len(keys),
+    powered_rows = [r for r in rows if r["n"] >= MIN_TRADES]
+    rec = {"look": "L55", "look_number": look, "mode": "discover" if look == 1 else f"discover-look{look}",
+           "written": datetime.now(IST).isoformat(timespec="seconds"),
+           "sessions": [panel.days[0], panel.days[-1], len(panel.days)], "newest_bar_read": newest,
+           "family_size": len(keys), "family_in_max": n_in_max,
+           "max_filter": None if look == 1 else {"min_trades": MIN_TRADES, "min_sessions": MIN_SESSIONS,
+                                                   "min_clusters": rule_lab.MIN_CLUSTERS_IN_MAX},
            "romano_wolf_critical_values": crits, "pbo": pbo, "cscv_splits": n_splits, "dsr_best": dsr,
-           "best": rows[0] if rows else None, "survivors": survivors, "top": rows[:50], "rules": singles,
+           "best": (powered_rows[0] if look != 1 else rows[0]) if rows else None, "survivors": survivors,
+           "top": rows[:50] if look == 1 else powered_rows[:50], "powered_rows": powered_rows, "rules": singles,
            "provenance": {**prov, "stage0": os.path.basename(stage0_path)}, "wall_s": round(time.time() - t0, 1)}
     with open(out, "w") as fh:
         json.dump(rec, fh, indent=1)
@@ -736,6 +756,8 @@ def main(argv=None):
     ap.add_argument("--catalog-rules", action="append", default=[],
                     help="a committed JSON of catalog rules in rule_lab.spec_signal's format (amendment 2)")
     ap.add_argument("--discovery-result", help="--confirm-2026: the discovery run's result file")
+    ap.add_argument("--look", type=int, default=1, choices=(1, 2),
+                    help="--discover: 1 = as run on 2026-10-05; 2 = amendment 6's filtered re-judgement")
     ap.add_argument("--stage0-record", help="--discover: the stage 0 record whose family this run must match "
                                              "(default docs/research/data/l55_stage0.json)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
@@ -748,7 +770,9 @@ def main(argv=None):
         stage0(args.db, args.out, conds, args.workers)
     elif args.discover:
         try:
-            discover(args.db, args.out, conds, args.workers, stage0_path=args.stage0_record)
+            if args.look != 1 and "look2" not in os.path.basename(args.out):
+                ap.error("--look 2 writes to its own file: name it ...look2...json")
+            discover(args.db, args.out, conds, args.workers, stage0_path=args.stage0_record, look=args.look)
         except RefusedRun as e:
             sys.exit(f"REFUSED: {e}")
     else:

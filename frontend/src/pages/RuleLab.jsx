@@ -31,6 +31,20 @@ function StatusCell({ row }) {
   return <span className={`pill ${cls}`}>{label}{row.status === "candidate" ? route : ""}</span>;
 }
 
+function LookNote({ rows, which }) {
+  // Amendment 6: each look's critical value and the rules that actually set the bar.
+  const looked = rows.map((r) => r[which]).filter(Boolean);
+  if (!looked.length) return null;
+  const s = looked[0];
+  const voided = looked.filter((x) => x.void).length;
+  return (
+    <p className="muted" style={{ fontSize: 12 }}>
+      {which === "screen" ? "Screen" : "Confirmation"}: {s.family_in_max} of {s.family} rules set the bar
+      {voided ? ` (${voided} void here, below the floor)` : ""}; critical t {s.critical != null ? s.critical.toFixed(2) : "—"}.
+    </p>
+  );
+}
+
 function RuleTable({ rows }) {
   return (
     <div className="table-wrap">
@@ -116,6 +130,8 @@ export default function RuleLab() {
       </p>
 
       {!anyTrades && <p className="empty">No paper trade yet. The lab starts with the first session after it is deployed.</p>}
+      <LookNote rows={rows} which="screen" />
+      <LookNote rows={rows} which="confirmation" />
       <h3 style={{ marginTop: 20 }}>The lab's own rules</h3>
       <RuleTable rows={cohort1} />
       <h3 style={{ marginTop: 24 }}>Rules from the strategy catalogs (YouTube and named traders)</h3>

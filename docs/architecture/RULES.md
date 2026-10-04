@@ -17,10 +17,10 @@ Companions: [High-Level Design](HLD.md) · [Low-Level Design](LLD.md) · [Knowle
 
 | Status | Meaning | Rules |
 | --- | --- | --- |
-| **Active** | Enforced now | 238 |
+| **Active** | Enforced now | 239 |
 | **Paper only** | Enforced; the component never places an order | 5 |
 | **Off by default** | Built, but switched off unless the owner turns it on | 17 |
-| **Pending** | Written down; takes effect when its condition is met | 5 |
+| **Pending** | Written down; takes effect when its condition is met | 4 |
 | **Retired** | No longer the rule; kept so nobody re-adopts it blind | 5 |
 
 ## Areas
@@ -40,7 +40,7 @@ Companions: [High-Level Design](HLD.md) · [Low-Level Design](LLD.md) · [Knowle
 | [Jev book](#jev-book) | 15 | 14 | 13 | – |
 | [Order-book sampler](#order-book-sampler) | 5 | 4 | 4 | – |
 | [Research desk and diagnostics](#research-desk-and-diagnostics) | 9 | 7 | 8 | – |
-| [Research protocol](#research-protocol) | 38 | 36 | 18 | – |
+| [Research protocol](#research-protocol) | 38 | 37 | 18 | – |
 | [Evaluation and statistics](#evaluation-and-statistics) | 17 | 14 | 11 | – |
 | [Security](#security) | 15 | 15 | 10 | – |
 | [Operations](#operations) | 17 | 17 | 10 | [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) |
@@ -3102,22 +3102,22 @@ The rule lab never places an order and writes only rule_lab_trades and rule_lab_
 <details>
 <summary><code>RES-36</code> <b>Pending</b> — A rule-lab rule is judged only at its pre-registered looks: the forward screen after its cohort's 40th lab session (at least 200 trades and 20…</summary>
 
-A rule-lab rule is judged only at its pre-registered looks: the forward screen after its cohort's 40th lab session (at least 200 trades and 20 sessions, mean > 0, both halves positive, Romano-Wolf stepdown with every registered rule in the maximum at the cohort's alpha, 5% x 2^-cohort), then a confirmation on the next 40 untouched sessions. A confirmed rule may only be proposed to the owner; the proposal spends one trial, and live needs the owner's yes, the existing live gate, and a quarter of normal risk first.
+A rule-lab rule is judged only at its pre-registered looks: the forward screen after its cohort's 40th lab session (at least 200 trades and 20 sessions, mean > 0, both halves positive, Romano-Wolf stepdown with every registered rule in the maximum at the cohort's alpha, 5% x 2^-cohort), then a confirmation on the next 40 untouched sessions. A confirmed rule may only be proposed to the owner; the proposal spends one trial, and live needs the owner's yes, the existing live gate, and a quarter of normal risk first. Amendment 6: at each look only rules at that look's floor (200 trades and 20 sessions at the screen; 100 and 10 at confirmation) enter the bootstrap maximum, with a guard of 5 effective session clusters per replicate; the others are void at that look. The record and page show the critical value and the family in the maximum.
 
 | | |
 | --- | --- |
 | **Why** | Testing 20 or more rules on one record finds some by luck; one error budget for every rule ever added keeps the lab honest. |
 | **Enforced in** | `backend/rule_lab.py:evaluate` |
 | **How to check** | /api/rule-lab shows every rule 'collecting' until 40 lab sessions; statuses are recomputed deterministically from the journal |
-| **Test** | `backend/tests/test_rule_lab.py::test_screen_look_at_40_sessions_and_confirmation_on_the_next_40` |
-| **Source** | docs/research/prereg-rule-lab.md §6, §7, amendments 1-2, 4 |
+| **Test** | `backend/tests/test_rule_lab.py::test_screen_look_at_40_sessions_and_confirmation_on_the_next_40; backend/tests/test_rule_lab.py::test_a_two_trade_rule_no_longer_sets_the_bar; backend/tests/test_rule_lab.py::test_forward_screen_voids_rules_below_the_floor_and_reports_the_family` |
+| **Source** | docs/research/prereg-rule-lab.md §6, §7, amendments 1-2, 4, amendment 6 |
 
 </details>
 
 <details>
-<summary><code>RES-37</code> <b>Pending</b> — L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite…</summary>
+<summary><code>RES-37</code> <b>Active</b> — L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite…</summary>
 
-L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite cache 2024-09-20 to 2025-12-31 only, over at most 116,746 combinations of the 107 conditions (amendment 4), judged by Romano-Wolf over every combination evaluated, with PBO by CSCV and the deflated Sharpe of the best. At most 5 survivors get one pass on 2026, only after an independent review; 2026 is otherwise read only as a row count. discover() and confirm_2026() refuse to run when the output file exists, the working tree has uncommitted changes, or the family hash differs from the stage 0 (or discovery) record; each record carries the commit, the hash, and each survivor's origin (enumerated or greedy); the confirmation pass records that MAX(ts) was its only 2026 metadata read before loading bars.
+L55, the rule lab's historical search, runs singles, pairs, triples and a bounded greedy search of same-side conditions with both exits on the Kite cache 2024-09-20 to 2025-12-31 only, over at most 116,746 combinations of the 107 conditions (amendment 4), judged by Romano-Wolf over every combination evaluated, with PBO by CSCV and the deflated Sharpe of the best. At most 5 survivors get one pass on 2026, only after an independent review; 2026 is otherwise read only as a row count. discover() and confirm_2026() refuse to run when the output file exists, the working tree has uncommitted changes, or the family hash differs from the stage 0 (or discovery) record; each record carries the commit, the hash, and each survivor's origin (enumerated or greedy); the confirmation pass records that MAX(ts) was its only 2026 metadata read before loading bars. Look 1 ran once on 2026-10-05 (no survivor; stepdown vacuous, see results-rule-lab-l55.md); amendment 6 declares a filtered look 2 (--discover --look 2, its own output name and family hash) whose maximum holds only sets with 200 trades and 40 sessions, with the cluster guard.
 
 | | |
 | --- | --- |
@@ -3125,7 +3125,7 @@ L55, the rule lab's historical search, runs singles, pairs, triples and a bounde
 | **Enforced in** | `backend/research/rule_lab_screen.py:discover` |
 | **How to check** | docs/research/data/l55_stage0.json: newest_bar_read before 2026-01-01, no return computed; \`rule_lab_screen.py --discover\` against an existing result prints REFUSED and writes nothing |
 | **Test** | `backend/tests/test_rule_lab.py::test_stage0_counts_without_returns; backend/tests/test_rule_lab.py::test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_changed_family` |
-| **Source** | docs/research/prereg-rule-lab.md amendment 3, correction of 2026-10-05 |
+| **Source** | docs/research/prereg-rule-lab.md amendment 3, correction of 2026-10-05, amendment 6 |
 
 </details>
 
