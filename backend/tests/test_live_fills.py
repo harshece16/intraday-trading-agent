@@ -22,6 +22,7 @@ class FakeKite:
     def __init__(self, states, cancel_to=None, fail_reads=0):
         self.states, self.cancel_to, self.fail_reads = list(states), cancel_to, fail_reads
         self.placed, self.cancelled = [], []
+        self.eng = None
 
     def place_order(self, **kw):
         self.placed.append(kw)
@@ -38,6 +39,14 @@ class FakeKite:
         self.cancelled.append(order_id)
         if self.cancel_to:
             self.states = [self.cancel_to]
+
+    def positions(self):
+        # Kite's day book agrees with the engine: every live close reads it
+        # first since #250.
+        held = [] if self.eng is None else [
+            {"tradingsymbol": s, "quantity": p["quantity"], "product": "MIS"}
+            for s, p in self.eng.state.positions.items() if p["quantity"]]
+        return {"day": held, "net": []}
 
 
 def order(status, filled=0, avg=0.0, message=None):
@@ -62,6 +71,7 @@ def engine(monkeypatch):
 
 def use(eng, fake):
     eng.kite_executor = executor(fake)
+    fake.eng = eng
     return fake
 
 

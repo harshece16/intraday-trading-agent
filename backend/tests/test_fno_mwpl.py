@@ -54,6 +54,7 @@ def test_index_options_are_exempt_even_when_the_status_is_unknown():
 
 def _engine(monkeypatch, ban):
     e = trading_engine.TradingEngine(AppState(watchlist=[], paper_mode=True))
+    e.state.market = {"bias": "neutral", "reasons": []}     # the first scan has finished (#256)
     monkeypatch.setattr(database, "journal_summary", lambda *a, **k: {"scorecard": []})
     monkeypatch.setattr(confidence, "score_trade",
                         lambda *a, **k: {"score": 90, "label": "high", "explanation": "test"})

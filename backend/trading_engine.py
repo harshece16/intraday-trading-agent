@@ -59,6 +59,10 @@ TICK_STALL_SECONDS = 120
 TICK_WATCHDOG_INTERVAL_SECONDS = 15
 
 
+class NoPrice(Exception):
+    """A close that needs a live price couldn't read one (#255)."""
+
+
 def _parse_hhmm(s: str) -> dtime:
     h, m = map(int, s.split(":"))
     return dtime(h, m)
@@ -92,6 +96,11 @@ def next_session_open(now=None) -> str:
     return datetime.combine(open_date, MARKET_OPEN_T, tzinfo=IST).isoformat()
 
 
+def _is_trading_day(now) -> bool:
+    """A weekday that isn't an NSE holiday."""
+    return now.weekday() < 5 and not holidays.is_holiday(now)
+
+
 def market_phase(now=None) -> str:
     now = now or datetime.now(IST)
     if now.weekday() >= 5 or holidays.is_holiday(now):
@@ -107,7 +116,9 @@ def market_phase(now=None) -> str:
 class TradingEngine:
     def __init__(self, state: AppState):
         self.state = state
-        self.risk = RiskManager(config.RISK)
+        # The daily loss limit reads the counter for the mode the engine is in
+        # (#252); each fill adds to its own mode's.
+        self.risk = RiskManager(config.RISK, mode_fn=lambda: "paper" if self.state.paper_mode else "live")
         # state.__init__ already reloaded today's real fills from the
         # journal (state._rehydrate_today(), see its docstring for the bug
         # this closes) — seed the daily-loss counter from that instead of
@@ -116,7 +127,7 @@ class TradingEngine:
         # Same reasoning for _last_day below: leaving it None made the very
         # first tick after any restart think a new day had started, which
         # zeroed this same counter right back out a moment later.
-        self.risk.daily_realized_pnl = state.realized_pnl_today
+        self.risk.daily_realized = dict(state.realized_by_mode)
         # Open positions restored from today's journal (state._rehydrate_open_positions)
         # count against max_open_positions and get their stops watched again.
         restored = getattr(state, "restored_positions", []) or []
@@ -183,6 +194,17 @@ class TradingEngine:
         # the engine's tick both reach the order path; this keeps them from
         # both opening the same stock. See approve_review().
         self._entering = set()
+        # Symbols holding a position slot (and their sector) between the last
+        # entry gate and the fill being counted. Taken under state.lock, so two
+        # entries on two threads can't both pass max_open_positions or the
+        # sector cap on the same free slot (#251). See _reserve_slot().
+        self._reserved = set()
+        # symbol -> the last message logged for a close that failed, so a
+        # retry every tick doesn't repeat the same line (#250, #255).
+        self._close_errors = {}
+        self._square_off_logged_for = None
+        self._last_closed_reconcile = 0.0
+        self._offday_scan_for = None       # the weekend/holiday date already scanned once (#259)
         # symbol -> a live order that was sent but whose outcome Kite never
         # confirmed, with everything needed to book it once it does. While a
         # symbol is here the engine sends no other order in it. See _live_fill().
@@ -300,10 +322,13 @@ class TradingEngine:
                     or any(p.get("live") for p in self.state.fno_positions.values()))
 
     def _verify_live_position(self, symbol, kite_positions=None):
-        """Bring a restored live position in line with what Kite holds, before
-        any order is sent for it. The closing order is sized from the
-        journal; if the position was closed or cut in Kite while the engine
-        was down, that order would open a new position the other way.
+        """Bring a live position in line with what Kite holds, before any
+        closing order is sent for it. The closing order is sized from what the
+        engine believes; if the position was closed or cut in Kite meanwhile
+        (while the engine was down, or by Zerodha's own MIS square-off after a
+        rejected close), that order would open a new position the other way.
+        Run for every live closing order since #250, not only for positions
+        restored after a restart.
 
         Kite flat: the position is dropped and no order is sent. Kite smaller,
         same side: the quantity is cut to Kite's. Kite bigger or on the other
@@ -315,6 +340,10 @@ class TradingEngine:
         with self.state.lock:
             pos = self.state.positions[symbol]
             ours = pos["quantity"]
+            restored = symbol in self._unverified_live
+            if ours == 0:
+                self._unverified_live.discard(symbol)
+                return held
             if held == 0:
                 pos.update(_new_position())
                 self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
@@ -323,16 +352,16 @@ class TradingEngine:
                 pos["quantity"] = held
             self._unverified_live.discard(symbol)
         if held == 0:
-            self.state.log("error", f"Kite shows no open position in {symbol}, but today's journal has an open "
-                                    f"live leg of {ours:+d}. It was closed outside the engine. The engine has "
-                                    f"stopped watching it and sent no order; its exit is not in the journal.",
-                           symbol=symbol, level="error")
+            self.state.log("error", f"Kite shows no open position in {symbol}, but the engine held a live "
+                                    f"{ours:+d}. It was closed outside the engine (by hand, or by Zerodha's own "
+                                    f"square-off). The engine has stopped watching it and sent no order; its exit "
+                                    f"is not in the journal.", symbol=symbol, level="error")
         elif held != ours:
             self.state.log("error", f"Kite holds {held:+d} in {symbol}; today's journal says {ours:+d}. "
                                     + (f"The engine now watches {held:+d}." if held * ours > 0 and abs(held) < abs(ours)
                                        else "The engine keeps watching its own figure. Check Kite."),
                            symbol=symbol, level="error")
-        else:
+        elif restored:
             self.state.log("risk", f"Kite confirms the restored live position in {symbol} ({held:+d}).", symbol=symbol)
         return held
 
@@ -412,16 +441,24 @@ class TradingEngine:
             logger.exception("Failed to journal the scan")
 
         held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
-        new_watch = list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["active"] + held))
         old_watch = list(self.state.watchlist)
+        # A weekend or holiday scan updates the plan the dashboard shows, but
+        # not what is tracked: nothing can trade until the next session, and
+        # its list is chosen then (#259).
+        off_day = not _is_trading_day(datetime.now(IST))
+        new_watch = old_watch if off_day else \
+            list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["active"] + held))
         mkt = result["market"]
         with self.state.lock:
             self.state.market = mkt
             self.state.scanner = result
-        self.state.set_watchlist(new_watch)
+        if not off_day:
+            self.state.set_watchlist(new_watch)
         self.size_multiplier = config.MARKET_FILTER["vix_high_size_multiplier"] if mkt.get("vix_high") else 1.0
 
         picks = ", ".join(result["active"]) or "nothing qualifies yet"
+        if off_day:
+            picks += " (no session today: the tracked list is left as it is)"
         mood = {"risk-on": "strong", "risk-off": "weak"}.get(mkt["bias"], "mixed")
         self.state.log(
             "scan",
@@ -539,9 +576,12 @@ class TradingEngine:
         between process start and the first live intraday scan — only while
         that gap is real (no live scan has run yet today) and only once a
         day, so it never fights the live scanner once that takes over."""
-        today = datetime.now(IST).date()
+        now = datetime.now(IST)
+        today = now.date()
         if self._last_premarket_seed_date == today:
             return
+        if not _is_trading_day(now):
+            return          # no session today: tracking is left alone (#259)
         if self.scanner and self.scanner.list_fixed_for(today.isoformat()):
             return          # the watchlist already follows the day's fixed list (#198)
         live_scan_done_today = self.state.scanner and self.state.scanner.get("session_date") == today.isoformat()
@@ -596,14 +636,22 @@ class TradingEngine:
         if symbol in self._unconfirmed_orders:
             raise OrderUnconfirmed(f"order {self._unconfirmed_orders[symbol]['order_id']} in {symbol} is still "
                                    f"unconfirmed, so no new order is sent")
-        if symbol in self._unverified_live:
+        with self.state.lock:
+            ours = self.state.positions.get(symbol, {}).get("quantity", 0)
+        if ours != 0 and (ours > 0) == (side == "SELL"):
+            # A closing order. Kite's day book is read first, every time (#250):
+            # a position Kite no longer holds gets no order, which would open a
+            # new one the other way.
             try:
                 held = self._verify_live_position(symbol)
             except Exception as exc:
-                raise OrderUnconfirmed(f"Kite couldn't confirm the restored position in {symbol} is still open, "
+                raise OrderUnconfirmed(f"Kite couldn't confirm the position in {symbol} is still open, "
                                        f"so no order is sent: {exc}")
             if held == 0:
                 raise OrderNotFilled(f"Kite holds no position in {symbol}; there is nothing to close")
+            if held * ours < 0:
+                raise OrderNotFilled(f"Kite holds {held:+d} in {symbol}, the other side of the engine's {ours:+d}; "
+                                     f"no closing order is sent")
             qty = min(qty, abs(held))
         executor = self._ensure_kite()
         order_id = executor.place_order(symbol, side, qty)
@@ -674,16 +722,56 @@ class TradingEngine:
                 logger.exception(f"Couldn't resolve the unconfirmed order in {symbol}")
 
     def _execute(self, symbol, side, qty, price, reason="signal", note=None, checklist_snapshot=None,
-                position_id=None, initial_risk=None, confirmed=None, live=None, confidence=None):
+                position_id=None, initial_risk=None, confirmed=None, live=None, confidence=None,
+                opening=None, closing=False):
         """`confirmed` is a fill Kite has already reported, as (quantity,
         price, order id); it is booked as a live fill and no order is sent.
         `live` says where the order goes; None follows the engine's mode. An
         exit passes the position's own flag, so real money is closed with a
         real order and a paper position never sends one, whatever the mode
         has been switched to since it opened (#156). `confidence` is the
-        entry's confidence record, journaled on its trade row (README §118)."""
+        entry's confidence record, journaled on its trade row (README §118).
+
+        The bookkeeping a fill decides is done the moment the position
+        changes, before anything is written to the journal (#253): an entry's
+        plan (`opening`: stop_price, target_price, entry_atr, position_id) and
+        its place in max_open_positions; for an exit (`closing`), giving the
+        slot back once the position is flat; and the daily loss counter of
+        the fill's own mode (#252). A journal write that fails after that
+        can't leave a position on the fallback stop, leak its slot or hide its
+        loss. `price` may be None for a live close with no readable price:
+        Kite fills at market, and the note says there was no signal price."""
         if live is None:
             live = not self.state.paper_mode
+        mode = "live" if (confirmed is not None or live) else "paper"
+        with self.state.lock:
+            was_flat = self.state.positions.get(symbol, {}).get("quantity", 0) == 0
+
+        def booked(fill):
+            with self.state.lock:
+                pos = self.state.positions[symbol]
+                if pos["quantity"] != 0:
+                    pos["live"] = mode == "live"
+                if opening is not None and was_flat and pos["quantity"] != 0:
+                    pos["stop_price"] = opening.get("stop_price")
+                    pos["target_price"] = opening.get("target_price")
+                    pos["entry_atr"] = opening.get("entry_atr")
+                    pos["position_id"] = opening.get("position_id")
+                    # Risk per share from the price actually paid, not the
+                    # signal price: the stop is a chart level and doesn't move
+                    # with the fill.
+                    stop, entry = pos["stop_price"], pos["avg_price"]
+                    pos["initial_risk"] = abs(entry - stop) if stop else \
+                        self.risk._stop_distance(entry, pos["entry_atr"])
+                    self.risk.open_positions_count += 1
+                    self._reserved.discard(symbol)
+                if closing and not was_flat and pos["quantity"] == 0:
+                    self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+            # net of both legs' charges, so the daily loss limit and the log
+            # agree with what the account actually did (issue #21).
+            if fill["net"]:
+                self.risk.record_realized_pnl(fill["net"], mode)
+
         # backtester.py has always applied costs.apply_slippage() to every
         # fill; this function — every live and paper trade's one real path
         # — never did, only leg_cost() (brokerage/STT/exchange charges).
@@ -693,13 +781,13 @@ class TradingEngine:
         # performance is. price stays the raw signal/stop/target price for
         # logging the plan; fill_price is what P&L and the journal actually
         # use, same as backtester.py already does for both entries and exits.
-        if confirmed is None and not live:
+        if mode == "paper":
             fill_price = costs.apply_slippage(side, price, config.COSTS)
             charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
             fill = execute_paper_order(self.state, symbol, side, qty, fill_price, reason=reason, note=note,
                                        charges=charges, checklist_snapshot=checklist_snapshot,
                                        position_id=position_id, initial_risk=initial_risk, signal_price=price,
-                                       confidence=confidence)
+                                       confidence=confidence, on_fill=booked)
         else:
             # Live: the quantity and price are Kite's, not the model's (#155).
             qty, fill_price, order_id = confirmed or self._live_fill(
@@ -707,45 +795,86 @@ class TradingEngine:
                 {"reason": reason, "note": note, "checklist_snapshot": checklist_snapshot,
                  "position_id": position_id, "initial_risk": initial_risk, "confidence": confidence})
             charges = costs.leg_cost(side, fill_price, qty, config.COSTS)
-            fill = self.state.apply_fill(symbol, side, qty, fill_price, charges=charges)
+            fill = self.state.apply_fill(symbol, side, qty, fill_price, charges=charges, mode="live")
+            booked(fill)
             r_multiple = (fill["net"] / (initial_risk * qty)) if initial_risk and qty else None
-            slip_bp = (fill_price - price) / price * 1e4 * (1 if side == "BUY" else -1) if price else 0.0
-            note = f"{note + ' — ' if note else ''}Kite filled at {fill_price:.2f}, {slip_bp:+.1f} bp against " \
-                   f"the signal price {price:.2f}"
+            if price:
+                slip_bp = (fill_price - price) / price * 1e4 * (1 if side == "BUY" else -1)
+                filled_txt = f"Kite filled at {fill_price:.2f}, {slip_bp:+.1f} bp against the signal price {price:.2f}"
+            else:
+                filled_txt = f"Kite filled at {fill_price:.2f}; no live price could be read for a signal price"
+            note = f"{note + ' — ' if note else ''}{filled_txt}"
             self.state.record_trade(symbol, side, qty, fill_price, mode="live", reason=reason, note=note,
                                     realized=fill["net"], realized_gross=fill["gross"], charges=charges,
                                     position_id=position_id, initial_risk=initial_risk, r_multiple=r_multiple,
                                     checklist_snapshot=checklist_snapshot, signal_price=price, order_id=order_id,
                                     confidence=confidence)
-        with self.state.lock:
-            if self.state.positions[symbol]["quantity"] != 0:
-                self.state.positions[symbol]["live"] = bool(confirmed or live)
-        # net of both legs' charges, so the daily loss limit and the log agree
-        # with what the account actually did (issue #21).
         realized = fill["net"]
-        if realized:
-            self.risk.record_realized_pnl(realized)
         pnl = f" · P&L ₹{realized:,.0f} after ₹{fill['charges_deducted']:,.0f} charges" if realized else ""
         logger.info(f"{reason}: {side} {qty} {symbol} @ {fill_price:.2f}{pnl}")
         self.state.log("trade", f"{side} {qty} @ {fill_price:.2f} ({reason}){pnl}" + (f" — {note}" if note else ""),
                        symbol=symbol, level="trade")
         return realized
 
-    def _square_off_all(self, reason="auto_square_off"):
+    def _close_error(self, symbol, message):
+        """Log a failed close once per distinct message: the close is tried
+        again every tick, and the same line every 30 s is noise."""
+        if self._close_errors.get(symbol) == message:
+            return
+        self._close_errors[symbol] = message
+        self.state.log("error", message, symbol=symbol, level="error")
+
+    def _close_at_market(self, symbol, reason):
+        """Close one cash position at the live price, for the square-off and
+        the kill switch. A paper position with no readable price is not
+        closed (#255): it used to be booked at its own entry price, a made-up
+        exit. It raises, and the caller tries again next tick. A live one is
+        still sent: Kite fills it at market, and leaving real money open
+        because a quote couldn't be read is the worse error."""
+        with self.state.lock:
+            pos = dict(self.state.positions.get(symbol) or {})
+        if not pos.get("quantity"):
+            return False
+        try:
+            price = data_provider.get_ltp(symbol)
+            err = None if price and price > 0 else f"price {price!r}"
+        except Exception as exc:
+            price, err = None, str(exc)
+        if err:
+            if not pos.get("live"):
+                raise NoPrice(f"no live price for {symbol} ({err}), so the paper position is not closed yet")
+            price = None
+        closed = self._exit_position(symbol, price, reason=reason)
+        self._close_errors.pop(symbol, None)
+        return closed
+
+    def _square_off_all(self, reason="auto_square_off", failed=None):
         """Close every cash position. Goes through _exit_position() like every
         other exit, so a stop firing on the tick thread during the square-off
-        can't send a second closing order and flip the position. Returns the
-        symbols it closed."""
+        can't send a second closing order and flip the position.
+
+        Each position is closed on its own (#250): before, the first close
+        that raised (a rejected order) ended the loop, every later position
+        got no closing order, and the rest of the square-off tick was skipped,
+        tick after tick. A failed close is logged and left for the next tick.
+        Returns the symbols it closed; `failed`, if given, collects
+        {"symbol", "error"} for each position still open."""
         closed = []
         for symbol, pos in list(self.state.positions.items()):
             if pos["quantity"] == 0:
                 continue
             try:
-                price = data_provider.get_ltp(symbol)
-            except Exception:
-                price = pos["avg_price"]
-            if self._exit_position(symbol, price, reason=reason):
-                closed.append(symbol)
+                if self._close_at_market(symbol, reason):
+                    closed.append(symbol)
+            except Exception as exc:
+                if self.state.positions.get(symbol, {}).get("quantity", 0) == 0:
+                    continue        # Kite held nothing: dropped, and nothing to retry
+                if not isinstance(exc, (OrderNotFilled, OrderUnconfirmed, NoPrice)):
+                    logger.exception(f"Square-off ({reason}) couldn't close {symbol}")
+                if failed is not None:
+                    failed.append({"symbol": symbol, "error": str(exc)})
+                self._close_error(symbol, f"Couldn't close {symbol} ({reason}): {exc}. "
+                                          f"The engine tries again every cycle.")
         return closed
 
     def set_entries_paused(self, paused: bool, source="dashboard"):
@@ -769,13 +898,8 @@ class TradingEngine:
         mode flips."""
         self.set_entries_paused(True, source="kill switch")
         self.state.log("risk", "Kill switch — closing every open position now", level="warn")
-        closed, failed = [], []
-        for symbol in [s for s, p in list(self.state.positions.items()) if p["quantity"]]:
-            try:
-                closed += self._square_off_all_one(symbol)
-            except Exception as exc:
-                logger.exception(f"Kill switch couldn't close {symbol}")
-                failed.append({"symbol": symbol, "error": str(exc)})
+        failed = []
+        closed = self._square_off_all(reason="kill_switch", failed=failed)
         for underlying in list(self.state.fno_positions.keys()):
             try:
                 done = self._close_fno(underlying, "kill_switch")
@@ -810,8 +934,9 @@ class TradingEngine:
         kite = data_provider.kite_session_status(probe=probe)
         if not kite.get("connected"):
             blockers.append(f"Kite isn't usable: {kite.get('reason') or kite.get('state')}")
-        if self.risk.daily_loss_limit_hit():
-            blockers.append("Today's daily loss limit is already hit — live trading can start next session")
+        # Live money's own counter (#252): paper losses don't refuse Live.
+        if self.risk.daily_loss_limit_hit("live"):
+            blockers.append("Today's daily loss limit is already hit in Live — live trading can start next session")
         if probe and kite.get("connected"):
             # Otherwise the first look at Kite's positions is the capital sync
             # after the switch, and going live isn't held back by them (#156).
@@ -820,14 +945,6 @@ class TradingEngine:
             blockers.append("Kite holds positions the engine isn't tracking ("
                             + ", ".join(sorted(self._untracked_kite_positions)) + ") — resolve them in Kite first")
         return {"ready": not blockers, "blockers": blockers, "entries_paused": self.state.entries_paused}
-
-    def _square_off_all_one(self, symbol):
-        pos = self.state.positions.get(symbol) or {}
-        try:
-            price = data_provider.get_ltp(symbol)
-        except Exception:
-            price = pos.get("avg_price")
-        return [symbol] if self._exit_position(symbol, price, reason="kill_switch") else []
 
     def _claim_exit(self, symbol) -> bool:
         """Claim the right to close `symbol`, so exactly one thread sends the
@@ -862,11 +979,11 @@ class TradingEngine:
                 live = pos.get("live")
             if qty == 0:
                 return False
+            # The slot is given back inside _execute, once the fill leaves the
+            # position flat, before the journal write (#253). A live order can
+            # fill in part; what is left stays open, counted and watched.
             self._execute(symbol, "SELL" if qty > 0 else "BUY", abs(qty), ltp, reason=reason,
-                          note=note, position_id=position_id, initial_risk=initial_risk, live=live)
-            # A live order can fill in part; what is left stays open and watched.
-            if self.state.positions[symbol]["quantity"] == 0:
-                self.risk.open_positions_count = max(0, self.risk.open_positions_count - 1)
+                          note=note, position_id=position_id, initial_risk=initial_risk, live=live, closing=True)
             return True
         finally:
             self._release_exit(symbol)
@@ -937,6 +1054,12 @@ class TradingEngine:
         engine itself would have applied."""
         if self.state.entries_paused:
             return "new entries are paused from the dashboard"
+        if self.scanner is not None and self.state.market is None:
+            # Only a finished scan sets the market context and the scan rows
+            # every rule below reads. After a restart the first ticks ran
+            # before it: no market-bias filter, no scanner exclusions, no
+            # long-only guard and no VIX size cut (#256).
+            return "waiting for the first market scan since the engine started (market filter, exclusions, VIX size)"
         if symbol in self._untracked_kite_positions:
             return ("Kite shows an untracked open position in this symbol (see the reconciliation "
                     "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
@@ -958,9 +1081,28 @@ class TradingEngine:
             return f"no new shorts — market is risk-on ({reasons_txt})"
         if self.risk.daily_loss_limit_hit():
             return "daily loss limit reached"
-        if self.risk.open_positions_count >= config.RISK["max_open_positions"]:
-            return f"already at the max of {config.RISK['max_open_positions']} open positions"
+        return self._cap_block_reason(symbol, row)
 
+    def _in_flight_entries(self, symbol):
+        """Entries past their last gate whose fill isn't counted yet, other
+        than `symbol`'s own: reserved slots, and live entry orders Kite hasn't
+        confirmed. Call under state.lock."""
+        pending = {s for s, p in self._unconfirmed_orders.items()
+                   if not p.get("fno") and self.state.positions.get(s, {}).get("quantity", 0) == 0}
+        return (self._reserved | pending) - {symbol}
+
+    def _cap_block_reason(self, symbol, row=None):
+        """max_open_positions and the sector cap, counting open positions and
+        entries in flight (#251). Before, both counted only what had already
+        filled, and a fill is counted seconds after its gate (the confidence
+        read, Kite's depth, the order), so two entries on two threads could
+        both take the last slot."""
+        with self.state.lock:
+            in_flight = self._in_flight_entries(symbol)
+            if self.risk.open_positions_count + len(in_flight) >= config.RISK["max_open_positions"]:
+                return f"already at the max of {config.RISK['max_open_positions']} open positions"
+            held = {sym for sym, pos in self.state.positions.items() if pos["quantity"] != 0} - {symbol}
+            fno = list(self.state.fno_positions)
         # A multi-expert review flagged that max_open_positions alone doesn't stop 3
         # concurrent positions from being the same sector — which the scanner's own
         # sector-momentum ranking makes the *likely* outcome on a strong-trend day,
@@ -970,22 +1112,48 @@ class TradingEngine:
         max_per_sector = config.RISK.get("max_positions_per_sector")
         industry = self._industry_for(symbol, row)
         if industry and max_per_sector:
-            same_sector = sum(
-                1 for sym, pos in self.state.positions.items()
-                if pos["quantity"] != 0 and self._industry_for(sym, self._scan_row(sym)) == industry
-            ) + sum(1 for u in list(self.state.fno_positions) if self._industry_for(u, self._scan_row(u)) == industry)
+            same_sector = sum(1 for sym in held | in_flight if self._industry_for(sym, self._scan_row(sym)) == industry) \
+                + sum(1 for u in fno if self._industry_for(u, self._scan_row(u)) == industry)
             if same_sector >= max_per_sector:
                 return (f"already at the max of {max_per_sector} open position(s) in "
                         f"{industry} — avoids concentrating risk in one sector")
         return None
 
+    def _reserve_slot(self, symbol):
+        """Take a position slot, and a place in the sector cap, for `symbol`
+        right before its order, or return why not. The check and the claim
+        are one step under state.lock (#251). The slot is released when the
+        fill is counted (_execute) or by the caller when the order fails."""
+        with self.state.lock:
+            why = self._cap_block_reason(symbol, self._scan_row(symbol))
+            if not why:
+                self._reserved.add(symbol)
+            return why
+
+    def _release_slot(self, symbol):
+        with self.state.lock:
+            self._reserved.discard(symbol)
+
     def _try_enter(self, symbol, side, ltp, candles, analysis):
         """side is "LONG" (buy) or "SHORT" (intraday MIS sell, squared off at SQUARE_OFF_TIME).
         Returns True if a real order was placed, False if blocked for any reason —
         _process_symbol() uses this to roll back the entries_today count trader_brain
-        already spent on this signal when nothing was actually entered."""
-        if self.state.positions[symbol]["quantity"] != 0 or symbol in self._entering:
-            return False
+        already spent on this signal when nothing was actually entered.
+
+        Claims `symbol` in _entering for the whole attempt, as an approval
+        does, so a click and the engine can't both open the same stock (#251)."""
+        with self.state.lock:
+            if self.state.positions[symbol]["quantity"] != 0 or symbol in self._entering:
+                return False
+            self._entering.add(symbol)
+        try:
+            return self._try_enter_claimed(symbol, side, ltp, candles, analysis)
+        finally:
+            with self.state.lock:
+                self._entering.discard(symbol)
+                self._reserved.discard(symbol)
+
+    def _try_enter_claimed(self, symbol, side, ltp, candles, analysis):
         setup = f"{analysis.get('setup', 'Entry')} ({side.lower()})"
         why = self._entry_block_reason(symbol, side)
         if why:
@@ -1085,27 +1253,24 @@ class TradingEngine:
             why = "; ".join(r["text"] for r in analysis.get(key, [])[:3])
             note = f"bull {analysis['bull_score']:.1f} vs bear {analysis['bear_score']:.1f} — {why}, " \
                    f"{conf_txt}" if "bull_score" in analysis else conf_txt
+        why = self._reserve_slot(symbol)
+        if why:
+            return self._blocked(symbol, setup, why)
         position_id = database.new_position_id()
         try:
+            # The plan goes onto the position, and the position is counted, the
+            # moment the fill opens it, before any journal write (#253).
             self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp, reason=setup, note=note,
                           checklist_snapshot=analysis.get("checklist"), position_id=position_id,
-                          live=order_live, confidence=conf_record)
+                          live=order_live, confidence=conf_record,
+                          opening={"stop_price": stop_price, "target_price": plan["target"] if plan else None,
+                                   "entry_atr": atr_val, "position_id": position_id})
         except OrderNotFilled as exc:
             return self._blocked(symbol, setup, str(exc))
         except OrderUnconfirmed:
             # An order did go out, so today's entry in this stock stays spent.
+            # It holds its slot as an unconfirmed order until Kite answers.
             return True
-        with self.state.lock:
-            pos = self.state.positions[symbol]
-            pos["entry_atr"] = atr_val
-            pos["stop_price"] = stop_price
-            pos["target_price"] = plan["target"] if plan else None
-            # Risk per share from the price actually paid, not the signal
-            # price: the stop is a chart level and doesn't move with the fill.
-            entry = pos["avg_price"]
-            pos["initial_risk"] = abs(entry - stop_price) if stop_price else self.risk._stop_distance(entry, atr_val)
-            pos["position_id"] = position_id
-        self.risk.open_positions_count += 1
         return True
 
     # ---- manual review queue (review_queue.py) ---------------------------
@@ -1130,6 +1295,24 @@ class TradingEngine:
             if blocker:
                 self._offer_review(symbol, side, plan, blocker, ltp, bars, analysis)
 
+    def _card_recheck(self, side, stop, target, price, blocker_key, cost_pct=None):
+        """trader_brain.recheck_plan() at `price`, the rules every engine entry
+        is held to at the fill (minimum reward-to-risk after costs, and the
+        stop at least min_stop_to_cost x the round trip), minus the one the
+        card overrides (#249). A card blocked on reward-to-risk is exempt
+        from min_rrr (the queue's own floor applies instead, #211); one
+        blocked on the cost floor, from that floor. Before, an approval
+        checked neither, so a late click could take a trade at a net R:R of
+        0.28 or with its stop 0.10 away."""
+        params = dict(self.strategy_params)
+        if cost_pct is not None:
+            params["cost_pct"] = cost_pct
+        if blocker_key == "rrr":
+            params["min_rrr"] = float("-inf")
+        elif blocker_key == "cost":
+            params["min_stop_to_cost"] = 0
+        return trader_brain.recheck_plan({"stop": stop, "target": target}, side.lower(), price, params)
+
     def _offer_review(self, symbol, side, plan, blocker, ltp, bars, analysis, conf=None):
         """Put one card in front of the user, if it could actually be taken:
         the plan has a stop and a target the price hasn't passed, no other
@@ -1145,6 +1328,10 @@ class TradingEngine:
             return None
         s = 1 if side == "LONG" else -1
         if (ltp - stop) * s <= 0 or (target - ltp) * s <= 0:
+            return None
+        # A card is only offered if approving it now would pass every rule
+        # but its own blocker (#249).
+        if not self._card_recheck(side, stop, target, ltp, blocker.get("key"))["ok"]:
             return None
         params = {**trader_brain.DEFAULTS, **self.strategy_params}
         rrr = trader_brain._net_rrr(ltp, stop, target, params["cost_pct"])
@@ -1278,6 +1465,12 @@ class TradingEngine:
         if below:
             was = f" (it was {card['net_rrr']:.2f} at the offer)" if card.get("net_rrr") is not None else ""
             return self._refuse_review(review_id, below + was, net_rrr_live=round(rrr, 3), live_price=round(ltp, 2))
+        # Every other rule an engine entry meets at its fill, at this price
+        # (#249): only the card's own blocker is overridden.
+        check = self._card_recheck(side, stop, target, ltp, card["blocker"].get("key"), cost_pct)
+        if not check["ok"]:
+            return self._refuse_review(review_id, check["reason"], net_rrr_live=round(rrr, 3),
+                                       live_price=round(ltp, 2))
         candles = self.state.candles.get(symbol) or []
         atr_val = compute_atr(candles, config.RISK.get("atr_period", 14)) \
             if config.RISK.get("use_atr_risk") and candles else None
@@ -1289,6 +1482,16 @@ class TradingEngine:
         if not liq_ok:
             return self._refuse_review(review_id, f"liquidity: {liq_reason}")
 
+        why = self._reserve_slot(symbol)
+        if why:
+            return self._refuse_review(review_id, why)
+        try:
+            return self._approve_reserved(card, ltp, stop, target, rrr, atr_val, qty, taken, today)
+        finally:
+            self._release_slot(symbol)
+
+    def _approve_reserved(self, card, ltp, stop, target, rrr, atr_val, qty, taken, today):
+        symbol, side, review_id = card["symbol"], card["side"], card["id"]
         b = card["blocker"]
         note = (f"Manually approved — overrode \"{b['label']}\" ({b['detail']}). Stop {stop:.2f}, "
                 f"target {target:.2f}, reward-to-risk {rrr:.2f} at the entry price. The confidence gate was not applied.")
@@ -1296,7 +1499,9 @@ class TradingEngine:
         try:
             self._execute(symbol, "BUY" if side == "LONG" else "SELL", qty, ltp,
                           reason=f"{card['setup']} ({side.lower()}, manual approval)", note=note,
-                          checklist_snapshot=card.get("checklist"), position_id=position_id)
+                          checklist_snapshot=card.get("checklist"), position_id=position_id,
+                          opening={"stop_price": stop, "target_price": target, "entry_atr": atr_val,
+                                   "position_id": position_id})
         except Exception as exc:
             logger.exception(f"Manual approval of {symbol} failed at the order")
             self.review_queue.decide(review_id, "failed", outcome={"reason": str(exc)})
@@ -1305,18 +1510,12 @@ class TradingEngine:
             return {"ok": False, "status": "failed", "reason": f"the order failed: {exc}"}
         with self.state.lock:
             pos = self.state.positions[symbol]
-            pos["entry_atr"] = atr_val
-            pos["stop_price"] = stop
-            pos["target_price"] = target
-            pos["initial_risk"] = abs(pos["avg_price"] - stop)
-            pos["position_id"] = position_id
             fill_price, qty = pos["avg_price"], abs(pos["quantity"])
             st = self.state.strategy_state.get(symbol)
             if not isinstance(st, dict):
                 st = {}
                 self.state.strategy_state[symbol] = st
             st["entries_today"], st["entry_day"] = taken + 1, today
-        self.risk.open_positions_count += 1
         outcome = {"fill_price": round(fill_price, 2), "qty": qty, "net_rrr_at_fill": round(rrr, 2),
                    "mode": "paper" if self.state.paper_mode else "live"}
         self.review_queue.decide(review_id, "approved", position_id=position_id, outcome=outcome)
@@ -1362,9 +1561,9 @@ class TradingEngine:
         with self.state.lock:
             self.state.trades.insert(0, trade)
         if realized:
-            self.risk.record_realized_pnl(realized)
-            with self.state.lock:
-                self.state.realized_pnl_today += realized
+            mode = "live" if live else "paper"
+            self.risk.record_realized_pnl(realized, mode)
+            self.state.add_realized(realized, mode)
         self.state.log("trade", f"[F&O] {side} {quantity} {symbol} @ {price:.2f} ({reason})"
                        + (f" — {note}" if note else ""), symbol=symbol, level="trade")
         return r_multiple
@@ -1459,6 +1658,7 @@ class TradingEngine:
             kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions()}
         with self.state.lock:
             pos = self.state.fno_positions.get(underlying)
+            restored = underlying in self._unverified_live_fno
             self._unverified_live_fno.discard(underlying)
             if pos is None:
                 return 0
@@ -1472,8 +1672,8 @@ class TradingEngine:
                 pos["entry_charges"] = (pos.get("entry_charges") or 0.0) * (held // lot * lot) / ours
                 pos["lots"] = held // lot
         if held == 0:
-            self.state.log("error", f"Kite shows no open position in {ts}, but today's journal has an open live "
-                                    f"option leg of {ours}. It was closed outside the engine. The engine has stopped "
+            self.state.log("error", f"Kite shows no open position in {ts}, but the engine held a live option "
+                                    f"position of {ours}. It was closed outside the engine. The engine has stopped "
                                     f"watching it and sent no order; its exit is not in the journal.",
                            symbol=underlying, level="error")
         elif held != ours:
@@ -1481,7 +1681,7 @@ class TradingEngine:
                                     + (f"The engine now watches {held // lot * lot}." if lot <= held < ours
                                        else "The engine keeps watching its own figure. Check Kite."),
                            symbol=underlying, level="error")
-        else:
+        elif restored:
             self.state.log("risk", f"Kite confirms the restored live option position {ts} ({held:+d}).",
                            symbol=underlying)
         return held
@@ -1637,16 +1837,18 @@ class TradingEngine:
                     note = ((note + "; ") if note else "") + (
                         f"no fresh underlying price at exit, booked at the last repriced premium {ltp:.2f}")
                 return self._book_fno_exit(underlying, qty, ltp, reason, note)
-            if underlying in self._unverified_live_fno:
-                try:
-                    self._verify_live_fno(underlying)
-                except Exception as exc:
-                    raise OrderUnconfirmed(f"Kite couldn't confirm the restored option position on {underlying} is "
-                                           f"still open, so no order is sent: {exc}")
-                pos = self.state.fno_positions.get(underlying)
-                if pos is None:
-                    return True     # Kite holds none: nothing to sell
-                qty = pos["lots"] * pos["lot_size"]
+            # Kite's day book first, for every live option close, not only a
+            # restored one: a SELL for a contract Kite no longer holds would
+            # open a short option (#250).
+            try:
+                self._verify_live_fno(underlying)
+            except Exception as exc:
+                raise OrderUnconfirmed(f"Kite couldn't confirm the option position on {underlying} is "
+                                       f"still open, so no order is sent: {exc}")
+            pos = self.state.fno_positions.get(underlying)
+            if pos is None:
+                return True     # Kite holds none: nothing to sell
+            qty = pos["lots"] * pos["lot_size"]
             try:
                 quoted = self._fno_ltp(pos["tradingsymbol"], live=True)
             except Exception as exc:
@@ -1996,6 +2198,8 @@ class TradingEngine:
         try:
             if self._unconfirmed_orders:
                 self._resolve_unconfirmed_orders()
+            if self.state.unjournaled:
+                self.state.retry_journal()
             self._tick_impl()
         except Exception as exc:
             logger.exception("tick() failed — skipping this cycle, will retry next one")
@@ -2098,10 +2302,12 @@ class TradingEngine:
         if self._last_day != now.date():
             self.risk.reset_day()
             # Drops earlier days' legs from the blotter and the tax summary
-            # (#247); realized_pnl_today and the daily-loss counter come from
-            # today's journal rows, which are none at midnight.
+            # (#247); the per-mode realized figures and the daily-loss
+            # counters come from today's journal rows, none at midnight (#252).
             self.state.roll_trades_to_today()
-            self.risk.daily_realized_pnl = self.state.realized_pnl_today
+            self.risk.daily_realized = dict(self.state.realized_by_mode)
+            # A kill switch still retrying yesterday must not close today's trades.
+            self._reflatten_pending = False
             self._last_day = now.date()
 
         phase = market_phase(now)
@@ -2160,8 +2366,14 @@ class TradingEngine:
             # holiday (planning ahead to the next trading day) as any other.
             self.request_premarket_scan()
 
+        trading_day = now.weekday() < 5 and not holiday
         if self.scanner and self.scanner.due(phase != "closed"):
-            self.request_scan()
+            # On a weekend or a holiday one scan is enough to show a plan:
+            # nothing can trade, and the closed-market cadence ran 44-49 scans
+            # a day there, one of them 4,940 s (#259).
+            if trading_day or self._offday_scan_for != now.date():
+                if self.request_scan() and not trading_day:
+                    self._offday_scan_for = now.date()
 
         if phase in ("open", "square_off_window"):
             # ETF books at the overnight-hold entry and exit times; a no-op
@@ -2173,10 +2385,23 @@ class TradingEngine:
         if phase == "square_off_window" and jev_book.maybe_close(now):
             self.state.log("system", "Jev book: closed today's paper positions at the square-off")
 
+        if phase == "closed":
+            try:
+                self._reconcile_live_while_closed()
+            except Exception:
+                logger.exception("Couldn't reconcile live positions with Kite after the close")
+
         if phase == "square_off_window":
             if any(p["quantity"] for p in self.state.positions.values()):
-                self.state.log("risk", "Square-off time — closing all open positions", level="warn")
-                self._square_off_all()
+                if self._square_off_logged_for != now.date():
+                    self._square_off_logged_for = now.date()
+                    self.state.log("risk", "Square-off time — closing all open positions", level="warn")
+                try:
+                    # Never raises for one position (#250); guarded anyway, so
+                    # the F&O square-off and the 15:08 prices below always run.
+                    self._square_off_all()
+                except Exception:
+                    logger.exception("Square-off failed")
             for underlying in list(self.state.fno_positions.keys()):
                 try:
                     self._close_fno(underlying, "fno_auto_square_off")
@@ -2223,10 +2448,20 @@ class TradingEngine:
                 logger.exception("F&O processing failed")
             if self._reflatten_pending:
                 # Catches an entry that was already past the pause check when
-                # the kill switch flattened from the API thread.
-                self._reflatten_pending = False
-                if self._square_off_all(reason="kill_switch"):
-                    self.state.log("risk", "Kill switch — closed a position opened during the stop", level="warn")
+                # the kill switch flattened from the API thread, and anything
+                # the kill switch couldn't close. Stays pending until a pass
+                # leaves nothing open (#250); before, it was cleared first, so
+                # one failed close was never tried again.
+                failed = []
+                try:
+                    if self._square_off_all(reason="kill_switch", failed=failed):
+                        self.state.log("risk", "Kill switch — closed a position still open after the stop",
+                                       level="warn")
+                except Exception as exc:
+                    logger.exception("Kill switch reflatten failed")
+                    failed.append({"symbol": None, "error": str(exc)})
+                if not failed:
+                    self._reflatten_pending = False
             # Keep the tick stream subscribed to exactly what we hold, so a
             # position opened this cycle is under tick-by-tick stop watch
             # within a second of its order going in.
@@ -2243,6 +2478,28 @@ class TradingEngine:
 
         with self.state.lock:
             self.state.last_update_ts = now.timestamp()
+
+    def _reconcile_live_while_closed(self, min_interval=300):
+        """With the market closed, check every live cash position the engine
+        still holds against Kite's day book, every five minutes (#250). The
+        engine sends no order after the close, so a live entry Kite confirmed
+        only after the square-off, or a position whose closing order kept
+        failing, would otherwise stay "open" in memory with nothing to close
+        it. Zerodha's own MIS square-off has usually flattened it: the
+        position is then dropped. One Kite still holds is reported loudly.
+        No order is sent here."""
+        with self.state.lock:
+            live = [s for s, p in self.state.positions.items() if p["quantity"] and p.get("live")]
+        if not live or time.time() - self._last_closed_reconcile < min_interval:
+            return
+        self._last_closed_reconcile = time.time()
+        kite_positions = {p["tradingsymbol"]: p for p in self._ensure_kite().get_positions()}
+        for symbol in live:
+            held = self._verify_live_position(symbol, kite_positions)
+            if held:
+                self._close_error(symbol, f"The market is closed and Kite still holds {held:+d} in {symbol}, a "
+                                          f"live position the engine could not close. The engine sends no order "
+                                          f"after the close: close it in Kite.")
 
     def _record_session_closes(self, now):
         """Once a session, at the first tick of the square-off window: Kite's

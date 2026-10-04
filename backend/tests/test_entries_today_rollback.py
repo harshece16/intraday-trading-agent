@@ -29,6 +29,7 @@ from state import AppState, _new_position
 def make_engine():
     state = AppState(watchlist=[], paper_mode=True)
     engine = trading_engine.TradingEngine(state)
+    state.market = {"bias": "neutral", "reasons": []}     # the first scan has finished (#256)
     return engine, state
 
 

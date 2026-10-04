@@ -22,12 +22,19 @@ NOTE = "Varsity checklist passed on the 11:20 candle: stop 98.00, target 104.00,
 
 
 class FakeKite:
-    def __init__(self, positions=(), fill_price=97.5, down=False):
-        self.day, self.fill_price, self.down, self.placed = list(positions), fill_price, down, []
+    def __init__(self, positions=None, fill_price=97.5, down=False):
+        # positions=None: Kite's day book agrees with the engine (every live
+        # close reads it first since #250).
+        self.day = None if positions is None else list(positions)
+        self.fill_price, self.down, self.placed, self.eng = fill_price, down, [], None
 
     def positions(self):
         if self.down:
             raise ConnectionError("Kite is unreachable")
+        if self.day is None:
+            return {"day": [] if self.eng is None else [
+                {"tradingsymbol": s, "quantity": p["quantity"], "product": "MIS"}
+                for s, p in self.eng.state.positions.items() if p["quantity"]], "net": []}
         return {"day": self.day, "net": []}
 
     def place_order(self, **kw):
@@ -56,6 +63,7 @@ def restarted(fake, paper_mode=True, monkeypatch=None):
     ex = KiteExecutor.__new__(KiteExecutor)
     ex.kite = fake
     eng.kite_executor = ex
+    fake.eng = eng
     return eng
 
 

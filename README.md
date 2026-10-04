@@ -4355,7 +4355,6 @@ Four read-only audits of the dashboard on 2026-10-05 (web interface guidelines, 
 **Trades page (#247, #248).** The Trades page shows every trade in the journal by day, newest first: one row per round trip with side, quantity, entry and exit, why, gross, charges, net, R and a Paper/Live tag. Today's live blotter stays at the top. In the backend, `state.trades` was rebuilt from the journal only at start-up, so a backend running across midnight kept earlier days' legs, and the tax box counted them as today's (on 2026-10-04 23:57 it still held the 2026-10-01 APOLLOHOSP legs, net −₹204). At the day change `state.roll_trades_to_today()` now rebuilds the blotter and `realized_pnl_today` from today's journal rows. **This part needs a backend restart to go live**; the dashboard filters its today blotter to today's IST date meanwhile.
 
 Left for the owner to decide: replacing the browser's `confirm()` with an in-page dialog, serving the built bundle instead of the dev server, a "connection lost" banner, the phone status-bar layout, and labelling the status bar's figures "Intraday".
-
 ### 120. Dashboard performance: pages load on demand, hidden tabs stop polling, live charts get new candles
 
 From the same 2026-10-05 React performance audit as §119.
@@ -4366,6 +4365,58 @@ From the same 2026-10-05 React performance audit as §119.
 - **Live charts get new candles.** Candles used to load once per stock and never update; only the price lines moved. They now reload when the engine reports a new bar and every 60 seconds while visible. The opening zoom is set only on a stock's first load, so a refresh keeps the user's zoom. *Not yet seen in a live session: check it on the first market day after this deploys.*
 - **Charts redraw only what changed.** Price lines and markers are keyed on their numbers, so a state push with the same plan redraws nothing; the "Now" line moves with `applyOptions`. Theme colours are read once per chart, not for every candle.
 - **Smaller re-renders.** Pages that don't read the live state (momentum book, day plan, technical analysis, journal, Jev book, Kronos, holdings diagnostic) are not re-rendered by the 3 s state push. Activity lines are keyed by content, not position, and the live log keeps following new lines once the backend's 80-line list is full (it followed the count, which stops changing at 80).
+
+### 121. Seven money-path bugs in the intraday engine, fixed
+
+**Found 2026-10-05** by two read-only logic reviews of the intraday engine and its accounting, each with a reproduction against the real code on a throwaway journal. No real order has been placed by the engine, so none of these has cost money yet. Four can, once Live is on. The rest put wrong numbers in the paper record.
+
+| Issue | What was wrong | Now |
+| --- | --- | --- |
+| [#249](https://github.com/harshece16/intraday-trading-agent/issues/249) | An approval skipped `trader_brain.recheck_plan`. A volume card approved after the price moved was taken at a net R:R of 0.28. Approved 0.10 above its stop, it bought 336 shares and a stop-out lost 2.11R. | An approval, and an offer, re-run `recheck_plan` at the live price: the 1.5 minimum net R:R and the stop-to-cost floor. Only the card's own blocker is exempt: an R:R card skips the 1.5 (the queue's 1.0 floor still applies, §111), a cost-floor card skips the cost floor. |
+| [#250](https://github.com/harshece16/intraday-trading-agent/issues/250) | The live square-off stopped at the first close Kite rejected. Later positions got no order, and the F&O square-off and the 15:08 price record were skipped, every tick. The kill switch's retry was cleared before it ran. Nothing compared the engine's own live positions with Kite, so after Zerodha's MIS square-off, a stop could send a real SELL into a flat account and open a short. | Each position is closed on its own; a failed close is logged once and tried again next tick. The kill switch's retry stays pending until nothing is left open, and is dropped at the day change. **Every live closing order reads Kite's day book first:** Kite flat, no order and the position is dropped; Kite smaller, the order is cut to it; Kite on the other side, no order. A live option close reads it the same way. With the market closed, every live position still held is checked against Kite every five minutes, so a live entry Kite confirmed after the square-off is dropped once Zerodha has closed it, or reported if Kite still holds it. |
+| [#251](https://github.com/harshece16/intraday-trading-agent/issues/251) | Max open positions and the sector cap counted only filled positions. Two entries on two threads (two approvals, or an approval during an engine entry) both passed: 4 positions against a max of 3, 2 banks against a cap of 1. | Right before its order an entry reserves its slot and sector under the state lock, counting open positions plus entries in flight (and live entries Kite hasn't confirmed). The reservation becomes a counted position at the fill, or is released if the order fails. The engine's own entry now claims the stock in `_entering`, as an approval does. |
+| [#252](https://github.com/harshece16/intraday-trading-agent/issues/252) | The 2% daily loss limit pooled paper and live P&L. A paper morning of +₹1,356 hid a real-money afternoon of −₹3,082 (−3.08%): no limit, new entries allowed. Paper losses could refuse a switch to Live. | Paper and live have separate counters, each fill adds to its own, and a restart seeds both from the journal by `mode`. Entries read the current mode's counter; the go-live check reads Live's. The header's "Realized today" (`realized_pnl_today`) is the current mode's figure; `realized_pnl_today_by_mode` carries both. The Day plan's "Stayed within daily loss cap" reads the current mode's trades. |
+| [#253](https://github.com/harshece16/intraday-trading-agent/issues/253) | A journal write that failed mid-order (`database is locked`) raised after the fill. On the entry's log line it left the APOLLOHOSP short with no plan stop: watched at the 0.8% fallback, 8100.88 instead of 8071, and uncounted. On the exit row it kept the slot and kept −₹203.58 out of the daily loss limit, and a restart reopened the trade. | The plan (stop, target, initial risk, position id) and the position count are set the moment the fill opens the position, before any journal write; an exit gives its slot back and adds to the loss counter the same way. An activity line that can't be journaled stays in memory. A trade row that can't be written is queued and written again every tick. |
+| [#254](https://github.com/harshece16/intraday-trading-agent/issues/254) | A restart treated any position with a second leg as closed. A live BUY 10 with a 4-share partial exit came back as nothing: 6 real shares unwatched. | A position is restored at its open quantity, net of its legs, with that share of the entry charges. |
+| [#255](https://github.com/harshece16/intraday-trading-agent/issues/255) | A square-off or kill-switch close with no readable price was booked at the entry price. | A paper position is not closed until a price can be read; it is retried next tick and logged once. A live one is still sent to Kite at market (leaving real money open is the worse error), and its journal row says it had no signal price. |
+
+**What does not change.** No entry rule, threshold, size or cost. The checklist, the confidence bars (0 in Paper, 60 in Live, §118), the queue's R:R floor, the 15:08 square-off time and Zerodha's charges are as before. Paper results are unaffected except where a bug above wrote a wrong figure.
+
+**Trade-offs, said plainly.**
+- A live close now costs one more Kite call (the day book) and is refused if Kite can't be read; it is tried again next tick. Kite's day book is assumed to show a fill as soon as the order reports it.
+- An approval that would have gone through before can now be refused at the live price. That is the point of #249, but cards blocked on volume, trend or a level will be refused more often when the price has moved toward the target.
+
+**Checked.**
+- `backend/tests/test_engine_money_paths.py`, 28 tests, built from the reviews' reproductions (now asserting the fixed behaviour). 26 fail on `main`; the other two are controls (a clean approval still goes through; a position closed in two legs is still not restored).
+- `backend/tests/test_state_rehydration.py`: the day change (#247, merged alongside) seeds both modes' realized figures and loss counters from the journal.
+- `backend/tests/test_kill_switch.py`: the live-readiness test now loses money in Live's counter, since a paper loss no longer refuses Live. `backend/tests/test_size_rounding_and_cost_floor.py` reads the sizing call from `_try_enter_claimed`. The fake Kites in `tests/fno_kit.py`, `test_live_fills.py`, `test_live_restart.py` and `test_paper_fno_stops.py` now show a day book that agrees with the engine unless a test sets one, since every live close reads it. Three review-queue tests assumed a card blocked on volume could be offered and approved under a net R:R of 1.5; they now check that it isn't (`test_review_queue.py`).
+- Full backend suite.
+- **Not deployed.** It goes live at the next backend restart.
+
+Rules: EXE-09 new; ENT-23, ENT-26, RSK-06, RSK-07, RSK-08, EXE-05, EXE-08, EXT-04, EXT-07 and OPS-03 changed. Files: `backend/trading_engine.py`, `backend/state.py`, `backend/risk_manager.py`, `backend/paper_broker.py`, `backend/day_plan.py`; `backend/tests/test_engine_money_paths.py` (new), `backend/tests/test_kill_switch.py`, `backend/tests/test_size_rounding_and_cost_floor.py`, `backend/tests/fno_kit.py`, `backend/tests/test_paper_fno_stops.py`, `backend/tests/test_live_fills.py`, `backend/tests/test_live_restart.py`, `backend/tests/test_review_queue.py`; `docs/architecture/` (LLD, rules); `BUG_LOG.md`.
+
+### 122. Four correctness bugs: entries before the first scan, the Scorecard's trade count, the tax box, off-day scans
+
+**Found 2026-10-05** by the same logic reviews as §121 and from the journal. None moves money; each puts a wrong rule or a wrong number in front of the owner.
+
+| Issue | What was wrong | Now |
+| --- | --- | --- |
+| [#256](https://github.com/harshece16/intraday-trading-agent/issues/256) | After a restart the first ticks ran before the first scan. With no `state.market` and no scan rows there was no market-bias filter, no scanner exclusion (trade-for-trade, surveillance, band), no long-only guard and no high-VIX size cut. On 2026-10-01 23 stocks were evaluated in the 28 s before the first scan finished. | No entry and no review card until the first scan since the start has finished. The block is logged: "waiting for the first market scan since the engine started". |
+| [#257](https://github.com/harshece16/intraday-trading-agent/issues/257) | The Scorecard counted trade rows. A live exit Kite fills in parts writes one row per fill, so one losing trade in two fills (1 + 99 shares) was two losses: 3 trades, 33%, −0.087R instead of 2 trades, 50%, +0.41R. | `database.closed_trade_rs()` gives one R per position: its closing legs summed by `position_id`, R = total net / (initial risk × entry quantity). `trade_stats()` and the Deflated Sharpe row read it. Paper closes in one leg, so **the paper record's numbers don't change.** |
+| [#258](https://github.com/harshece16/intraday-trading-agent/issues/258) | The tax box's charges summed every leg, including the entry charges of positions still open, while gross and net were closed trades only, so gross − charges ≠ net. | `tax.charges` is what the closed trades paid (gross − net). `tax.open_charges` is the entry charges of positions still open. The Trades page shows `charges` as before; showing `open_charges` is left to the dashboard PR that is changing that page. |
+| [#259](https://github.com/harshece16/intraday-trading-agent/issues/259) | The scanner ran on its closed-market cadence on weekends and holidays: 44–49 scans a day on 2026-10-02..04, one of 4,940 s, and the tracked list churned ("Now tracking / Stopped tracking") with nothing able to trade. | On a weekend or an NSE holiday the scanner runs once that date. Its result updates the plan the dashboard shows but not the tracked list, and the pre-market read doesn't seed the list either. |
+
+**Trade-off.** If every scan fails after a restart (the delayed feed down, say), the engine takes no entry until one succeeds. Before, it traded without the filters instead; a failed scan is logged at error level either way.
+
+**Not changed, for the owner: [#260](https://github.com/harshece16/intraday-trading-agent/issues/260).** `backtester.py` fills a stop exit at the stop level; the engine fills at the first price it sees past the stop. On the APOLLOHOSP short of 2026-10-01 that is −1.319R in a backtest against −1.479R booked. So backtests are optimistic by the stop overshoot on every stop-out. Changing it changes every research result of record, so it is filed, not fixed.
+
+**Checked.**
+- `backend/tests/test_engine_correctness.py`, 8 tests. 7 fail on `fix/engine-money-paths` (§121's branch, which this builds on); the eighth is a control (a trading day still scans on its cadence and tracks its picks).
+- Engine fixtures that model a running engine now set `state.market` as a finished scan would (`tests/fno_kit.py`, `test_fno_mwpl.py`, `test_entries_today_rollback.py`, one helper in `test_engine_money_paths.py`).
+- Full backend suite.
+- **Not deployed.**
+
+Rules: ENT-29 and EVL-17 new; SCN-03, SCN-12 and OPS-09 changed. Files: `backend/trading_engine.py`, `backend/database.py`, `backend/state.py`; `backend/tests/test_engine_correctness.py` (new), `backend/tests/fno_kit.py`, `backend/tests/test_fno_mwpl.py`, `backend/tests/test_entries_today_rollback.py`, `backend/tests/test_engine_money_paths.py`; `docs/architecture/` (LLD, rules).
 
 ## Backtest results
 
@@ -4451,7 +4502,7 @@ python backtester.py --no-costs   # frictionless, for reference only
    gradient boosting / deep learning / RL once there's enough real trade
    history to justify them (see `research/ml4t_integration_plan.md`).
 
-### 121. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
+### 123. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
 
 A logic review of the momentum book on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), but that four things in how the evening job handles its data could go wrong. None of them has touched the live book yet. **No rule changes, and on complete data no figure changes** (see *Checked*).
 

@@ -269,7 +269,7 @@ gave the same state too.
 
 # Fourth note on the forward paper book — 2026-10-05, after its first rebalance
 
-**These are data-handling fixes. They change no rule and, on complete data, no figure.** A logic review of the evening job on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), and found four ways the job could have recorded something the rule did not say. None has happened in the live book. README §121 has the details.
+**These are data-handling fixes. They change no rule and, on complete data, no figure.** A logic review of the evening job on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), and found four ways the job could have recorded something the rule did not say. None has happened in the live book. README §123 has the details.
 
 - **A held stock whose NSE symbol changes** (#261). After the weekly symbol-change file learnt the rename, the holding had no price chain, so it was valued at its cost and sold at its cost. The job now moves the holding to the chain its rows went into. If a holding has no chain and nothing explains it, the job stops.
 - **A half-written bhavcopy** (#262) counted as cached, and its day was dropped without a word. Downloads are now kept only as valid zips. A file that can't be read is fetched again, and the book waits for it.
