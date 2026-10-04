@@ -1,7 +1,8 @@
 """
-The single-rule paper lab (research look L54, README section 119).
+The single-rule paper lab (research look L54, README section 124).
 
-Twenty small rules, each with a fixed side, entry and exit, are run as
+Small rules (twenty in cohort 1, 87 from the strategy catalogs in cohort 2,
+rule_lab_catalog.py), each with a fixed side, entry and exit, are run as
 shadow paper books on the day's list: on every finished 5-minute bar, each
 rule asks only its own question ("a bullish engulfing bar?", "volume twice
 the usual on an up bar?") and, if yes, records a virtual trade at the next
@@ -76,7 +77,7 @@ HISTORICAL_CANDIDATES = {}    # rule id -> the first session of its confirmation
 HISTORICAL_RESULT_PATH = None  # set below, next to the research data
 
 # The first lab session of each cohort's forward screen; None = the lab's first session.
-COHORT_START = {1: None}
+COHORT_START = {1: None, 2: None}
 
 TIME_BUDGET_S = 1.5
 
@@ -366,8 +367,16 @@ def spec_signal(spec):
 
 
 def signals_at(ctx, pos, cache=None):
-    """The registered rule ids that fire on today's bar number `pos` (0 = 09:15)."""
-    return [rid for rid, r in REGISTRY.items() if r["signal"](ctx, pos, cache)]
+    """The registered rule ids that fire on today's finished bar number `pos` (0 = 09:15).
+    With a cache (the forward lab keeps one per stock), a finished bar is read once: its
+    answer cannot change, because every signal reads only bars up to it."""
+    key = ("_signals", ctx["bars"][ctx["today"][pos]]["time"], len(REGISTRY))
+    if cache is not None and key in cache:
+        return cache[key]
+    fired = [rid for rid, r in REGISTRY.items() if r["signal"](ctx, pos, cache)]
+    if cache is not None:
+        cache[key] = fired
+    return fired
 
 
 # Cohort 1: the twenty rules of prereg §1 and amendment 1, in this order.
@@ -596,37 +605,48 @@ def bootstrap_weights(G, block, b, seed):
     return W
 
 
-def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=ALPHA, eligible=None, chunk=1000):
+def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=ALPHA, eligible=None,
+                       chunk_b=500, chunk_k=4000):
     """Studentised one-sided Romano-Wolf stepdown on K rules' per-session sums S and counts N (K x G).
-    Returns (t_hat, rejected bool array, step array, critical value of each step)."""
+
+    Streams over replicates and rules, so memory stays O(b + chunk) whatever K is: each step
+    recomputes every replicate's maximum over the rules still in. Returns (t_hat, rejected bool
+    array, step array, the critical value of each step)."""
     import numpy as np
     S = np.asarray(S, dtype=np.float64)
     N = np.asarray(N, dtype=np.float64)
     K, G = S.shape
     m_hat, t_hat, _, _ = clustered_matrix(S, N)
     W = bootstrap_weights(G, block, b, seed).astype(np.float64)
-    t_star = np.empty((b, K), dtype=np.float32)
-    has = (N > 0).astype(np.float64)
-    for lo in range(0, b, chunk):
-        w = W[lo:lo + chunk]
-        n_s, s_s, g_s = w @ N.T, w @ S.T, w @ has.T
-        with np.errstate(divide="ignore", invalid="ignore"):
-            m_s = s_s / n_s
-            ss = w @ (S ** 2).T - 2 * m_s * (w @ (S * N).T) + m_s ** 2 * (w @ (N ** 2).T)
-            se_s = np.sqrt(np.clip(g_s / (g_s - 1), 0, None) * np.clip(ss, 0, None)) / n_s
-            ts = (m_s - m_hat[None, :]) / se_s
-        ts[~np.isfinite(ts)] = -np.inf
-        t_star[lo:lo + chunk] = ts
     eligible = np.ones(K, dtype=bool) if eligible is None else np.asarray(eligible, dtype=bool)
     active = np.isfinite(t_hat)
     rejected = np.zeros(K, dtype=bool)
     step_of = np.zeros(K, dtype=int)
     crits = []
     step = 0
+
+    def replicate_max(mask):
+        mx = np.full(b, -np.inf)
+        idx = np.nonzero(mask)[0]
+        for k0 in range(0, len(idx), chunk_k):
+            ks = idx[k0:k0 + chunk_k]
+            Sk, Nk = S[ks], N[ks]
+            S2, SN, N2, has = (Sk ** 2).T, (Sk * Nk).T, (Nk ** 2).T, (Nk > 0).astype(np.float64).T
+            for lo in range(0, b, chunk_b):
+                w = W[lo:lo + chunk_b]
+                n_s, s_s, g_s = w @ Nk.T, w @ Sk.T, w @ has
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    m_s = s_s / n_s
+                    ss = w @ S2 - 2 * m_s * (w @ SN) + m_s ** 2 * (w @ N2)
+                    se_s = np.sqrt(np.clip(g_s / (g_s - 1), 0, None) * np.clip(ss, 0, None)) / n_s
+                    ts = (m_s - m_hat[ks][None, :]) / se_s
+                ts[~np.isfinite(ts)] = -np.inf
+                np.maximum(mx[lo:lo + chunk_b], ts.max(axis=1), out=mx[lo:lo + chunk_b])
+        return mx
+
     while active.any():
         step += 1
-        mx = t_star[:, active].max(axis=1)
-        crit = float(np.quantile(mx, 1 - alpha))
+        crit = float(np.quantile(replicate_max(active), 1 - alpha))
         crits.append(crit)
         newly = active & eligible & (np.nan_to_num(t_hat, nan=-np.inf) > crit)
         if not newly.any():
@@ -824,7 +844,9 @@ class RuleLab:
             self._pattern_cache.clear()
             void_stale(session)
         if allow_shorts is None:
-            allow_shorts = bool(config.SCANNER.get("allow_shorts", True))
+            # Shadow trades are not orders, so the engine's switch for shorts does not apply
+            # (prereg amendment 4 §6); a long-only stock still skips its shorts.
+            allow_shorts = True
         open_by_sym = open_sessions_by_symbol()
         n = len(watchlist)
         if not n:
@@ -955,7 +977,7 @@ def evaluate(trades=None, sessions=None, open_left=None):
 
 
 def page(max_age_s=60):
-    """GET /api/rule-lab: the leaderboard (README section 119)."""
+    """GET /api/rule-lab: the leaderboard (README section 124)."""
     now = time.time()
     if _page_cache["data"] is not None and now - _page_cache["at"] < max_age_s:
         return _page_cache["data"]
@@ -978,6 +1000,7 @@ def page(max_age_s=60):
         h = hist_rules.get(rid) or {}
         hmean = h.get("mean")
         rows.append({"rule": rid, "name": name, "side": side, "family": family,
+                     "cohort": REGISTRY[rid]["cohort"], "sources": REGISTRY[rid].get("sources") or [],
                      "r_based": rid in R_RULES, **d,
                      "open": open_by_rule.get(rid, 0), "void": void_n.get(rid, 0),
                      **statuses[rid],
@@ -991,6 +1014,7 @@ def page(max_age_s=60):
         "first_session": sessions[0] if sessions else None,
         "last_session": sessions[-1] if sessions else None,
         "screen_at": SCREEN_SESSIONS, "confirm_sessions": CONFIRM_SESSIONS,
+        "cohort_alpha": {str(c): cohort_alpha(c) for c in sorted({r["cohort"] for r in REGISTRY.values()})},
         "screen_min_trades": SCREEN_MIN_TRADES,
         "notional": NOTIONAL, "hold_minutes": HOLD_BARS * BAR_MINUTES,
         "round_trip_bp": costs.round_trip_pct(NOTIONAL, _default_costs()) * 100,
@@ -1000,3 +1024,7 @@ def page(max_age_s=60):
     }
     _page_cache.update(at=now, data=data)
     return data
+
+
+# Cohort 2 (prereg amendment 4): the catalogs' intraday conditions, registered on import.
+import rule_lab_catalog  # noqa: E402,F401

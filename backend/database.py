@@ -22,7 +22,7 @@ Tables:
   day_lists         one row per session: the day's list, written once when it is
                     fixed, so a restart keeps it (#198)
   rule_lab_trades   one row per virtual trade of the single-rule paper lab (rule_lab.py,
-                    README section 119): written at entry, closed once, never edited after
+                    README section 124): written at entry, closed once, never edited after
   rule_lab_sessions one row per session the lab ran: how many stocks it read
   session_closes    one row per (session, stock): Kite's last traded price at the
                     15:08 square-off, the outcome of the shadow log (README §115)

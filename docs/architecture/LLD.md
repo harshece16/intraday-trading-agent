@@ -796,20 +796,21 @@ levels as before, so level 1 is `(bid, bid_qty1)` and the quantities add up to
 `research/measure_real_slippage.py` walks the recorded levels when a row has
 them and the modelled one-tick ladder when it does not, and counts each.
 
-### 10.4 Rule lab (`rule_lab.py`, README §119)
+### 10.4 Rule lab (`rule_lab.py`, README §124)
 
 Shadow paper books of single rules, research look L54 (`docs/research/prereg-rule-lab.md`).
 
 | Part | What it does |
 | --- | --- |
-| `REGISTRY`, `register()`, `combination()`, `spec_signal()` | The rules as data: id, name, side, family, signal function of `(ctx, pos, cache)`, exit kind (`fixed` or `r`), cohort. Twenty rules in cohort 1 |
+| `REGISTRY`, `register()`, `combination()`, `spec_signal()` | The rules as data: id, name, side, family, signal function of `(ctx, pos, cache)`, exit kind (`fixed` or `r`), cohort, sources. Twenty rules in cohort 1; 87 in cohort 2 from `rule_lab_catalog.py` (the YouTube and practitioner catalogs), registered on import. `signals_at` caches a finished bar's answer per stock |
+| `rule_lab_catalog.py` | Causal series computed once per stock-session (EMA, DEMA, RSI, Stoch RSI, stochastic, MACD, Supertrend, Bollinger, Heikin-Ashi, ATR), bars resampled to 15 and 60 minutes from 09:15 and read only once finished, and the previous session's levels (CPR, classic and Fibonacci pivots, POC). `NAMED_COMBINATIONS` holds CMB-3 |
 | `session_context(candles, session, n_closed)` | Per stock-session, once: EMA20 over the input, cumulative session VWAP, time-of-day volume of up to 4 earlier sessions, previous close, opening range |
 | `simulate_session(...)` | Every rule's trades on one stock-session: signal on a finished bar, entry at the next bar's open (≤ 14:30, contiguous), exit 30 minutes later or at the 15:05 bar; R19/R20 walk finished bars for stop (first), 3R target or 15:05. Priced by `costs.apply_slippage` and `costs.leg_cost` with `config.COSTS`. Opens may come from the forming bar; decisions never do |
-| `RuleLab.run(now, candles_map, watchlist, scan_row)` | Per tick: skips a stock whose last bar and bar count are unchanged; re-simulates today and any earlier session with an open trade; writes through `record()`; stops at `TIME_BUDGET_S` (1.5 s) and resumes next tick. Never raises. Measured: about 0.15 s CPU on a tick with a new bar for 25 stocks, about 15 ms averaged over all ticks |
+| `RuleLab.run(now, candles_map, watchlist, scan_row)` | Per tick: skips a stock whose last bar and bar count are unchanged; re-simulates today and any earlier session with an open trade; writes through `record()`; stops at `TIME_BUDGET_S` (1.5 s) and resumes next tick. Never raises. Measured with 107 rules: about 0.29 s CPU on a tick with a new bar for 25 stocks, about 28 ms averaged over all ticks |
 | `record()` | `INSERT OR IGNORE` keyed by (rule, symbol, session, entry time); an open row is closed once; a closed row is never updated |
 | `evaluate()`, `page()` | Statuses from the journal: collecting until a cohort's 40th lab session (with no open trade in it), then the screen (`romano_wolf` over every registered rule, only the cohort can pass, α = 5% × 2^−cohort), then confirmation on the next 40. `GET /api/rule-lab` |
 
-L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix`, `cscv_pbo` and `evaluation.deflated_sharpe_ratio`.
+L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`.
 
 ## 11. Research desk and holdings diagnostic
 

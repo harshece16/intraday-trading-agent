@@ -500,7 +500,7 @@ class ModeUpdate(BaseModel):
 
 @app.get("/api/rule-lab")
 def rule_lab_page():
-    """The single-rule paper lab's leaderboard (README section 119). Read-only."""
+    """The single-rule paper lab's leaderboard (README section 124). Read-only."""
     import rule_lab
     return rule_lab.page()
 

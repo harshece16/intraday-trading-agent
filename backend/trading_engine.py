@@ -235,7 +235,7 @@ class TradingEngine:
         except Exception:
             logger.exception("Couldn't read the LLM news sentiment setting — leaving config's default")
         self.stop_watcher = None
-        # The single-rule paper lab (README section 119): shadow trades only,
+        # The single-rule paper lab (README section 124): shadow trades only,
         # in its own tables; nothing here reads what it writes.
         self.rule_lab = rule_lab.RuleLab()
         self._restore_day_list()
@@ -2510,7 +2510,7 @@ class TradingEngine:
                                           f"after the close: close it in Kite.")
 
     def _run_rule_lab(self, now, watchlist, candles_map):
-        """README section 119. The candles the tick fetched, or the 200 bars it
+        """README section 124. The candles the tick fetched, or the 200 bars it
         kept for a stock the batch missed; the scanner's long-only flag."""
         try:
             if not config.RULE_LAB.get("enabled", True):

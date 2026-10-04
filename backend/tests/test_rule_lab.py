@@ -1,4 +1,4 @@
-"""The single-rule paper lab (rule_lab.py, README section 119, prereg-rule-lab.md):
+"""The single-rule paper lab (rule_lab.py, README section 124, prereg-rule-lab.md):
 each rule's signal on hand-built bars, the virtual book's entry, exit and cost
 arithmetic, isolation from the engine, the leaderboard's statistics, the
 journal migration, and the historical search's parity with the forward lab."""
@@ -57,12 +57,22 @@ def where(candles, rid, day=DAY):
 
 # ---- the registry -------------------------------------------------------------
 
+COHORT1 = [f"R{i:02d}" for i in range(1, 21)]
+
+
 def test_twenty_rules_registered_once_with_fixed_sides():
-    assert rule_lab.RULE_IDS == [f"R{i:02d}" for i in range(1, 21)]
-    longs = [r for r in rule_lab.RULE_IDS if rule_lab.RULE_SIDE[r] == "LONG"]
+    assert rule_lab.RULE_IDS[:20] == COHORT1
+    longs = [r for r in COHORT1 if rule_lab.RULE_SIDE[r] == "LONG"]
     assert len(longs) == 10
     assert rule_lab.R_RULES == ["R19", "R20"]
-    assert all(r["cohort"] == 1 for r in rule_lab.REGISTRY.values())
+    assert all(rule_lab.REGISTRY[r]["cohort"] == 1 for r in COHORT1)
+
+
+def test_cohort_two_is_the_catalogs_conditions():
+    two = [r for r in rule_lab.RULE_IDS if rule_lab.REGISTRY[r]["cohort"] == 2]
+    assert len(two) == 87 and len(rule_lab.RULE_IDS) == 107
+    assert all(rule_lab.REGISTRY[r].get("sources") for r in two)
+    assert all(rule_lab.REGISTRY[r]["exit"] == "fixed" for r in two)
     with pytest.raises(ValueError):
         rule_lab.register("R01", "dup", "LONG", "x", lambda c, p, k: False)
 
@@ -590,7 +600,7 @@ def test_screen_look_at_40_sessions_and_confirmation_on_the_next_40(monkeypatch)
     trades, sessions = _lab_rows(45, edge_rule="R09")
     st = rule_lab.evaluate(trades, sessions, open_left=set())
     assert st["R09"]["status"] == "candidate" and st["R09"]["confirm_from"] == sessions[40]
-    assert sum(v["status"] == "screen_failed" for v in st.values()) == 19
+    assert sum(v["status"] == "screen_failed" for v in st.values()) == len(rule_lab.RULE_IDS) - 1
     # a session of the screen with an open trade holds the look
     assert rule_lab.evaluate(trades, sessions, open_left={sessions[3]})["R09"]["status"] == "collecting"
     trades, sessions = _lab_rows(80, edge_rule="R09")
@@ -605,7 +615,7 @@ def test_page_reads_the_journal(monkeypatch):
     cm = {f"S{i}": _live_like_candles(i) for i in range(12)}
     lab.run(now, cm, list(cm))
     page = rule_lab.page(max_age_s=0)
-    assert len(page["rules"]) == 20 and page["sessions"] == 1
+    assert len(page["rules"]) == len(rule_lab.RULE_IDS) and page["sessions"] == 1
     assert page["round_trip_bp"] == pytest.approx(16.6, abs=0.1)
     assert all(r["status"] == "collecting" for r in page["rules"])
     json.dumps(page)
@@ -666,8 +676,10 @@ def test_stage0_counts_without_returns(screen, tmp_path):
     rls, db, days = screen
     out = tmp_path / "s0.json"
     rec = rls.stage0(db, str(out), list(rule_lab.RULE_IDS), workers=1, log=lambda *a: None)
+    assert rec["family"]["conditions_by_cohort"] == {"1": 20, "2": 87}
     assert rec["newest_bar_read"] < "2026-01-01"
-    assert rec["family"]["enumerated"] == 700 and rec["family"]["greedy_max"] == 560
+    enum, greedy = rls.max_family_size(list(rule_lab.RULE_IDS))
+    assert rec["family"]["enumerated"] == enum and rec["family"]["greedy_max"] == greedy
     text = out.read_text()
     for word in ("net_bp", "mean", "gross", "exit_price"):
         assert word not in text
@@ -675,7 +687,7 @@ def test_stage0_counts_without_returns(screen, tmp_path):
 
 def test_search_singles_equal_the_forward_lab(screen):
     rls, db, days = screen
-    conds = list(rule_lab.RULE_IDS)
+    conds = COHORT1 + ["Y01L", "Y05S", "Y13L", "O03S", "F02L"]
     results = rls.build(db, conds, outcomes=True, workers=1, syms=["AAA"])
     panel = rls.Panel(results, conds, outcomes=True)
     conn = rls.connect(db)
@@ -705,7 +717,7 @@ def test_discover_and_confirm_end_to_end_on_synthetic_bars(screen, tmp_path, mon
     monkeypatch.setattr(rls, "MIN_SESSIONS", 3)
     monkeypatch.setattr(rls, "GREEDY_MIN_TRADES", 5)
     out = tmp_path / "d.json"
-    rec = rls.discover(db, str(out), list(rule_lab.RULE_IDS), workers=1, log=lambda *a: None)
+    rec = rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None)
     assert rec["sessions"][1] < "2026-01-01"
     assert 700 <= rec["family_size"] <= 1260
     assert rec["pbo"] is None or 0 <= rec["pbo"] <= 1
@@ -713,7 +725,7 @@ def test_discover_and_confirm_end_to_end_on_synthetic_bars(screen, tmp_path, mon
     assert set(rec["rules"]) <= set(rule_lab.RULE_IDS)
     rec["survivors"] = [{"side": "LONG", "exit": "H30", "conditions": ["R09"], "t": 1.0, "mean": 1.0, "n": 1}]
     out.write_text(json.dumps(rec))
-    c = rls.confirm_2026(db, str(out), str(tmp_path / "c.json"), list(rule_lab.RULE_IDS), workers=1,
+    c = rls.confirm_2026(db, str(out), str(tmp_path / "c.json"), COHORT1, workers=1,
                          log=lambda *a: None)
     assert c["window"][0] == "2026-01-01" and len(c["survivors"]) == 1
 
@@ -737,3 +749,52 @@ def test_catalog_rules_register_once_with_every_source(tmp_path, monkeypatch):
     assert reg == ["Y1"] and [s["id"] for s in skipped] == ["Y2"]
     assert rule_lab.REGISTRY["Y1"]["cohort"] == 2
     assert rule_lab.REGISTRY["Y1"]["sources"] == ["yt:1", "ssrn:2"]
+
+
+def _long_walk(seed=21, days=(PREV2, PREV, DAY)):
+    rnd = random.Random(seed)
+    p, out = 100.0, []
+    for d in days:
+        spec = []
+        p *= 1 + rnd.uniform(-0.012, 0.012)
+        for i in range(75):
+            o = p
+            p = max(1.0, p * (1 + rnd.gauss(0, 0.0025)))
+            spec.append((o, max(o, p) * (1 + abs(rnd.gauss(0, 0.001))), min(o, p) * (1 - abs(rnd.gauss(0, 0.001))), p,
+                         rnd.randint(300, 6000)))
+        out += bars(d, spec)
+    return out
+
+
+@pytest.mark.parametrize("seed", [21, 22])
+def test_every_condition_is_causal(seed):
+    """A signal on bar pos must not change when the bars after it are removed (no look-ahead),
+    for every registered rule, including the 15- and 60-minute ones."""
+    c = _long_walk(seed)
+    first = len(c) - 75
+    full = fires(c)
+    for pos in range(0, 75, 2):
+        cut = c[:first + pos + 1]
+        ctx = rule_lab.session_context(cut, DAY)
+        got = set(rule_lab.signals_at(ctx, pos))
+        assert got == full[pos], (pos, got ^ full[pos])
+    fired = set().union(*full.values())
+    assert len(fired) >= 40, "the walk should exercise most conditions"
+
+
+def test_signal_cache_reuses_a_finished_bar():
+    c = _long_walk(5)
+    cache = {}
+    ctx = rule_lab.session_context(c, DAY)
+    a = rule_lab.signals_at(ctx, 10, cache)
+    assert rule_lab.signals_at(rule_lab.session_context(c[:-30], DAY), 10, cache) is a
+
+
+def test_shadow_lab_ignores_the_engines_shorts_switch(monkeypatch):
+    monkeypatch.setattr(config, "SCANNER", {**config.SCANNER, "allow_shorts": False})
+    lab = rule_lab.RuleLab()
+    now = datetime.fromisoformat(f"{DAY}T15:20:00+05:30")
+    cm = {f"S{i}": _live_like_candles(i) for i in range(12)}
+    lab.run(now, cm, list(cm))
+    n = database._conn().execute("SELECT COUNT(*) FROM rule_lab_trades WHERE side='SHORT'").fetchone()[0]
+    assert n > 0

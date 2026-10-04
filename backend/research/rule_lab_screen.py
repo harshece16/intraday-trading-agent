@@ -319,14 +319,28 @@ def side_conditions(conds):
     return by
 
 
+def named_combinations(conds):
+    """The catalogs' named combinations of more than three conditions (amendment 4 §4)."""
+    try:
+        import rule_lab_catalog
+    except ImportError:
+        return []
+    have = set(conds)
+    return [(side, tuple(parts)) for _, side, parts in rule_lab_catalog.NAMED_COMBINATIONS
+            if set(parts) <= have]
+
+
 def enumerate_family(conds):
-    """Singles, pairs and triples of same-side conditions, x the exits."""
+    """Singles, pairs and triples of same-side conditions, and the named combinations, x the exits."""
     out = []
     for side, cs in side_conditions(conds).items():
         for size in (1, 2, 3):
             for combo in itertools.combinations(cs, size):
                 for x in EXITS:
                     out.append((side, x, combo))
+    for side, parts in named_combinations(conds):
+        for x in EXITS:
+            out.append((side, x, parts))
     return out
 
 
@@ -365,14 +379,15 @@ def run_search(panel, conds, log=print):
         taken = panel.trades(key[2], side, x)
         S, N, valid = panel.session_sums(taken, side, x)
         mean, t, n, g = stats_of(S, N)
-        evaluated[key] = {"S": S, "N": N, "mean": mean, "t": t, "n": n, "sessions": g}
+        evaluated[key] = {"S": S.astype("float32"), "N": N.astype("float32"), "mean": mean, "t": t, "n": n,
+                          "sessions": g}
         return evaluated[key]
 
     family = enumerate_family(conds)
     t0 = time.time()
     for i, (side, x, combo) in enumerate(family):
         evaluate(side, x, combo)
-        if i % 200 == 0:
+        if i % 5000 == 0:
             log(f"  enumerated {i}/{len(family)} ({time.time() - t0:.0f}s)")
     by = side_conditions(conds)
     for side, cs in by.items():
@@ -509,10 +524,12 @@ def stage0(db, out, conds, workers, log=print):
     cond_counts = {rid: int(panel.signals((rid,)).size) for rid in conds}
     family = enumerate_family(conds)
     combo_counts = {}
+    tc = time.time()
     for side, x, combo in family:
         if x != EXITS[0]:
             continue
         combo_counts["+".join(combo)] = int(panel.signals(combo).size)
+    t_combo = (time.time() - tc) / max(1, len(combo_counts))
     enum, greedy_max = max_family_size(conds)
     n200 = sum(1 for v in combo_counts.values() if v >= 200)
     est_cond_s = t_cond * len(syms) / max(1, workers)
@@ -526,13 +543,21 @@ def stage0(db, out, conds, workers, log=print):
         "rows_2026_count_only": {"symbols": len(rows_2026), "rows": int(sum(rows_2026.values()))},
         "conditions": {rid: {"side": rule_lab.REGISTRY[rid]["side"], "signals": cond_counts[rid]} for rid in conds},
         "family": {"enumerated": enum, "greedy_max": greedy_max, "max_total": enum + greedy_max,
+                   "named_combinations": len(named_combinations(conds)) * len(EXITS),
+                   "conditions_by_cohort": {str(c): sum(1 for r in conds if rule_lab.REGISTRY[r]["cohort"] == c)
+                                            for c in sorted({rule_lab.REGISTRY[r]["cohort"] for r in conds})},
+                   "condition_sets_with_200_signals": n200,
                    "combinations_with_200_signals": n200 * len(EXITS)},
         "timing": {"seconds_per_symbol_conditions": round(t_cond, 2), "workers": workers,
                    "estimate_discovery_precompute_s": round(est_cond_s * 3, 0),
+                   "seconds_per_combination_signals": round(t_combo, 5),
+                   "estimate_search_s": round((enum + greedy_max) * t_combo * 4, 0),
+                   "estimate_romano_wolf_pass_s": round((enum + greedy_max) * rule_lab.BOOTSTRAP_B * len(panel.days)
+                                                        * 10 / 5e10, 0),
                    "stage0_wall_s": round(time.time() - t0, 1)},
-        "memory_estimate_mb": round(panel.session.size * (8 + 8 + 4 * 8 * 2) / 1e6
-                                    + (enum + greedy_max) * len(panel.days) * 16 / 1e6
-                                    + rule_lab.BOOTSTRAP_B * (enum + greedy_max) * 4 / 1e6, 0),
+        "memory_estimate_mb": round(panel.session.size * (8 + 8 + 4 * 8 * 2 + len(conds)) / 1e6
+                                    + (enum + greedy_max) * len(panel.days) * 8 / 1e6
+                                    + 500 * 4000 * 8 * 8 / 1e6, 0),
         "halts": [],
     }
     if newest and newest >= "2026-01-01":
