@@ -1,4 +1,4 @@
-# L55, the rule lab's historical search, look 1 — no survivor among 104,655 combinations; every eligible single rule loses after costs; the stepdown itself was vacuous
+# L55, the rule lab's historical search — look 1: no survivor, the stepdown vacuous; look 2 (filtered): 0 survivors among 24,026 powered combinations
 
 **2026-10-05.** Pre-registration `prereg-rule-lab.md` (base `3584b57`, amendments 1–5 and the correction of 02:10 IST). Code `backend/research/rule_lab_screen.py` at `b065fff` (the merge of #272). **One run**, 02:23–02:30 IST (450 s), on the Mac, from the detached worktree `l55-run` with a clean tree; the record names the commit and the family hash, which matched stage 0's. Record: `data/l55_result.json`, committed byte-for-byte. Not re-run, and it will not be.
 
@@ -170,3 +170,75 @@ Net bp a trade after `config.COSTS` (slippage and Zerodha MIS charges, about 16.
 - The forward lab (L54) continues as pre-registered; its first screen is after its 40th lab session. Its expectation is unchanged by this result, which if anything strengthens it: the same rules, on 316 sessions of history, lost the round trip.
 - Amendment 6 (above) before that screen.
 - No rule is proposed to the owner. Nothing changes in the engine.
+
+
+---
+
+## Look 2 — the filtered re-judgement of amendment 6: 0 survivors among 24,026 powered combinations
+
+**2026-10-05.** Amendment 6 (committed 02:36 IST, before any of its code) declared one filtered re-judgement of the same data, counted as a deliberate **second look**. It ran **once**, 03:12:19–03:22:54 IST (633 s), from `main` at `9271c63` (the merge of #273) in a clean detached worktree; the record names the commit and the look-2 family hash, which matched the one derived from the stage 0 record. Record: `data/l55_result_look2.json`, committed byte-for-byte. The log is kept by the owner.
+
+### Verdict, in amendment 6's terms
+
+**0 survivors.** The family in the bootstrap maximum was the **24,026** combinations with at least 200 trades and 40 sessions (of 104,655 evaluated; the other 80,629 were void at this look). With the 5-effective-cluster guard the Romano–Wolf critical t at the first step is **4.82**, a meaningful bar (compare look 1's 71,694,244): roughly what the largest of 24,000 correlated noise statistics reaches at the 5% level. **No powered combination has a t above 1.92**, so nothing comes near it; the stepdown stops at step 1. PBO 0.33 (CSCV over 12,870 splits, unchanged from look 1 because the panel is the same). **`--confirm-2026` is not run**: there is no pre-declared survivor, and the 2026 window stays as disclosed (the correction's N6). No trial is spent; the count of record stays **202**. §0's expectation, *no rule passes*, holds for the combinations as it did for the singles.
+
+| | |
+| --- | --- |
+| Combinations evaluated | 104,655 (same panel and search as look 1) |
+| In the maximum (≥ 200 trades, ≥ 40 sessions) | **24,026** (23,918 enumerated, 108 greedy) |
+| Void at this look | 80,629 |
+| Critical t, step 1 (α 5%, B 10,000, block 5, ≥ 5 clusters a replicate) | **4.82** |
+| Powered combinations with a positive net mean | **168 of 24,026** (0.7%; about 37–41 expected under a cost-only null) |
+| Eligible under amendment 6 (mean > 0, G ≥ 40, both halves > 0) | **41**; none rejected |
+| Powered combinations with t > 1.645 / t > 2 | 9 / **0**; the largest t is 1.91; family median t −7.4, 95th percentile −2.06 |
+| Survivors | **0** |
+| Median powered combination, net | −16.1 bp a trade (the round trip is 16.6) |
+| Newest bar read | 2025-12-31 |
+
+### The ten powered combinations with the highest t
+
+Net bp a trade after `config.COSTS`; t clustered by session; halves = mean net in the first and second half of the 316 sessions.
+
+| Conditions | Side | Exit | Origin | Trades | Sessions | Net bp | t | Halves |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| F02S + F05S + F09S + R17 | Short | R3 | greedy | 255 | 143 | +21.3 | 1.91 | +38.0 / +1.6 |
+| F02S + F03S + F05S + F09S + R17 | Short | R3 | greedy | 255 | 143 | +21.3 | 1.91 | +38.0 / +1.6 |
+| F01S + F02S + F05S + F09S + R17 | Short | R3 | greedy | 251 | 142 | +21.5 | 1.90 | +38.6 / +1.6 |
+| F02S + F05S + F07S + R17 | Short | R3 | greedy | 215 | 132 | +22.2 | 1.85 | +39.0 / +3.0 |
+| F02S + F04S + F05S + R17 | Short | R3 | greedy | 223 | 135 | +18.4 | 1.69 | +34.1 / +1.9 |
+| F02S + F03S + F04S + F05S + R17 | Short | R3 | greedy | 223 | 135 | +18.4 | 1.69 | +34.1 / +1.9 |
+| F01S + F02S + F04S + F05S + R17 | Short | R3 | greedy | 219 | 134 | +18.5 | 1.67 | +34.7 / +1.8 |
+| F02S + F04S + R17 | Short | R3 | enumerated | 224 | 136 | +17.9 | 1.65 | +33.1 / +1.9 |
+| F02S + F03S + F04S + R17 | Short | R3 | greedy | 224 | 136 | +17.9 | 1.65 | +33.1 / +1.9 |
+| F01S + F02S + F04S + R17 | Short | R3 | greedy | 220 | 135 | +18.0 | 1.63 | +33.6 / +1.8 |
+
+Every one is a stack of filters on **R17, the gap-up fade** (short), with the R3 exit: relative volume ≥ 1.5 (F02S), price below EMA200 (F05S), below VWAP (F09S), the 15-minute trend down (F04S), by 11:00 (F03S), ATR rising (F01S). Nine of the ten came from the greedy search, which starts from the best triples and adds conditions that raise t: these are **the most-searched corners of the family**, exactly where a false positive would appear. Their second halves earn +1.6 to +3.0 bp against +33 to +39 bp in the first: the "edge" is one period's. R17 alone is −12.8 bp (look 1), so the filters select 255 of its 3,753 trades.
+
+### Eligible but not rejected: 41 sets
+
+**41 of the 24,026 powered sets met amendment 6's eligibility** (mean > 0, at least 40 sessions, both halves positive). None was rejected: the largest t among them is **1.91** against a critical value of **4.82**; 9 sets have t > 1.645 and none has t > 2.0. The critical value is slightly conservative and meaningful: for 24,026 independent Gaussian statistics the 5% maximum would be about 4.60; the family's correlation and the cluster guard lift it to 4.82.
+
+### 168 positive of 24,026: what chance would give, and where the excess comes from
+
+- **Under a strict cost-only null** (no edge before costs; every set's true net mean is the family's) the expected number of positive sample means is about **37** at −16.6 bp, about **41** at the family median of −16.07 bp. **168** were observed.
+- **The excess is mining and heterogeneity, not edge.** 73 of the 168 are greedy sets: **68% of the 108 greedy sets are positive against 0.4% of the 23,918 enumerated ones**, because the greedy search adds whatever condition raises t. 70 of the 168 contain R17. 145 of the 168 have fewer than 500 trades: **2.0% of sets with n < 500 are positive, 0.26% at 500–2,000, and 0 of 7,834 at n ≥ 2,000**: the positives are the small, noisy sets.
+- **They decay.** 155 of the 168 earn more in the first half than the second; **119 of the 168 have a non-positive second half**.
+- **The family itself:** median t **−7.4**, 95th percentile **−2.06**, median net −16.1 bp a trade. The only positive single is O02S (Williams oops, short) under the R3 exit that is not its own: n 310, +3.8 bp, t 0.49.
+- The 24,026 sets share conditions and trades, so these counts are a comparison, not a test; the test is the stepdown, and it rejected nothing.
+
+### Notes on the record, disclosed
+
+1. **`dsr_best`: not computed (a defect).** `judge()` computes the deflated Sharpe on the raw-t best over all keys, which is a 2-trade set, so the field is `None` with "only 2 trades". The best powered set (t 1.91, 255 trades) would not pass at any deflation over 24,026 trials. Filed as a small issue to point `judge()` at the powered best; the record is not re-run.
+2. **`best` is of greedy origin** (F02S + F05S + F09S + R17, marked `"origin": "greedy"`), as is 9 of the top 10; `top` is the powered rows' top 50 by t and `powered_rows` holds all 24,026.
+3. **No 2026 metadata was read**: `confirm_2026` was never called, so not even `MAX(ts)` of the cache was read in look 2.
+
+### What was and was not read
+
+- **Read:** the same 5-minute bars as look 1 (every NIFTY 100 symbol in `kite_history.db`, 2024-09-20 to 2025-12-31, read-only; newest bar 2025-12-31, asserted). The record, written once.
+- **Not read:** any 2026 bar. The confirmation pass does not run. 2026 remains as the correction disclosed.
+- **Counted:** this is the second look at these data (amendment 6 overrode §5's one-run rule for exactly this), and the ledger records it as such.
+
+### What follows
+
+- The forward lab (L54) continues as pre-registered, with amendment 6's filtered maximum in code once the backend is restarted outside market hours; its first screen is at least 40 lab sessions away. Its expectation is unchanged: 107 rules and 104,655 of their combinations lost the round trip on 316 sessions of history.
+- No rule is proposed to the owner. Nothing changes in the engine. The lab's historical search is closed; a third look would need its own amendment and its own place in the error budget.
