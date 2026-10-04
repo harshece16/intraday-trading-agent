@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { postJson, useAction, useApi } from "../api";
 import LoadState from "../components/LoadState";
@@ -58,12 +58,20 @@ export default function PreMarket({ state: s }) {
   const [expanded, setExpanded] = useState(null);
   // A failed load is shown with a retry; it used to be swallowed, leaving the
   // ranking spinner up forever (#237).
-  const { data, error, reload } = useApi("/api/premarket", 20000);
+  const reloadRef = useRef(null);
   const refreshAction = useAction(async () => {
     await postJson("/api/premarket/refresh");
     await new Promise((r) => setTimeout(r, 3000));
-    reload();
+    reloadRef.current?.();
   });
+  // Polls only while a ranking is running (or one was just asked for). A
+  // settled page doesn't poll: a GET re-runs the scan once the result is over
+  // 30 minutes old (app.py), so an idle tab used to re-trigger it all day.
+  const [settled, setSettled] = useState(false);
+  const { data, error, reload } = useApi("/api/premarket", settled && !refreshAction.busy ? null : 5000);
+  useEffect(() => { reloadRef.current = reload; }, [reload]);
+  const isSettled = !!data && !data.running;
+  if (isSettled !== settled) setSettled(isSettled);
   const refreshing = refreshAction.busy;
   const refresh = refreshAction.run;
 

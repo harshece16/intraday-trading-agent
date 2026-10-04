@@ -1,6 +1,6 @@
 """
 Regression tests for the money-path bugs found by the 2026-10-05 logic
-review of the intraday engine and its accounting (README section 120):
+review of the intraday engine and its accounting (README section 121):
 
 - #249 an approval skipped recheck_plan (min R:R, stop-to-cost floor)
 - #250 the live square-off stopped at the first failed close, and a close

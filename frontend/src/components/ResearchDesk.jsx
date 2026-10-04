@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiJson, postJson } from "../api";
+import { apiJson, everyWhileVisible, postJson } from "../api";
 import LoadState from "./LoadState";
 import { clock, num } from "../format";
 
@@ -218,10 +218,7 @@ export default function ResearchDesk({ symbol, watchlist }) {
   }, [loadBriefs]);
 
   useEffect(() => { setBriefs(null); loadStatus(); loadBriefs(); }, [symbol, loadStatus, loadBriefs]);
-  useEffect(() => {
-    const id = setInterval(loadStatus, status?.run?.running ? 3000 : 15000);
-    return () => clearInterval(id);
-  }, [loadStatus, status?.run?.running]);
+  useEffect(() => everyWhileVisible(loadStatus, status?.run?.running ? 3000 : 15000), [loadStatus, status?.run?.running]);
 
   async function act(fn) {
     setBusy(true); setMessage("");
