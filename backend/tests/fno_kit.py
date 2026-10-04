@@ -25,10 +25,14 @@ def order(status, filled=0, avg=0.0, message=None):
 
 class FakeKite:
     """kiteconnect.KiteConnect, for NFO: a script of order states, one quote
-    for every contract, and a day book of positions."""
+    for every contract, and a day book of positions. With no `positions`
+    given, the day book agrees with whatever the engine holds (every live
+    close reads it first since #250)."""
 
-    def __init__(self, states=(), quote=20.0, positions=(), fail_reads=0, cancel_to=None, down=False):
-        self.states, self.quote, self.day = list(states), quote, list(positions)
+    def __init__(self, states=(), quote=20.0, positions=None, fail_reads=0, cancel_to=None, down=False):
+        self.states, self.quote = list(states), quote
+        self.day = None if positions is None else list(positions)
+        self.eng = None
         self.fail_reads, self.cancel_to, self.down = fail_reads, cancel_to, down
         self.placed, self.cancelled = [], []
 
@@ -54,13 +58,25 @@ class FakeKite:
     def positions(self):
         if self.down:
             raise ConnectionError("Kite is unreachable")
+        if self.day is None:
+            return {"day": self._mirror(), "net": []}
         return {"day": self.day, "net": []}
+
+    def _mirror(self):
+        if self.eng is None:
+            return []
+        rows = [{"tradingsymbol": p["tradingsymbol"], "quantity": p["lots"] * p["lot_size"], "product": "MIS"}
+                for p in self.eng.state.fno_positions.values()]
+        rows += [{"tradingsymbol": s, "quantity": p["quantity"], "product": "MIS"}
+                 for s, p in self.eng.state.positions.items() if p["quantity"]]
+        return rows
 
 
 def use(eng, fake):
     ex = KiteExecutor.__new__(KiteExecutor)  # skip __init__: no real KiteConnect
     ex.kite = fake
     eng.kite_executor = ex
+    fake.eng = eng
     return fake
 
 

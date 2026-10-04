@@ -17,22 +17,48 @@ import logging
 logger = logging.getLogger("trading_bot")
 
 
+MODES = ("paper", "live")
+
+
 class RiskManager:
-    def __init__(self, risk_config: dict):
+    """The daily loss limit counts paper and live money separately (#252).
+    One pooled counter let a morning's paper profit cancel out an afternoon's
+    real-money loss, and paper losses refuse a switch to Live for a limit real
+    money never reached. `mode_fn` returns "paper" or "live": the mode a call
+    without an explicit `mode` is about. The engine sets it to follow its own
+    Paper/Live switch; without one (the backtester) everything is "paper"."""
+
+    def __init__(self, risk_config: dict, mode_fn=None):
         self.cfg = risk_config
-        self.daily_realized_pnl = 0.0
+        self.daily_realized = {m: 0.0 for m in MODES}
         self.open_positions_count = 0
+        self.mode_fn = mode_fn
+
+    def _mode(self, mode=None) -> str:
+        mode = mode or (self.mode_fn() if self.mode_fn else "paper")
+        if mode not in MODES:
+            raise ValueError(f"unknown mode {mode!r}")
+        return mode
+
+    @property
+    def daily_realized_pnl(self) -> float:
+        """Today's realized P&L, net of charges, in the current mode."""
+        return self.daily_realized[self._mode()]
+
+    @daily_realized_pnl.setter
+    def daily_realized_pnl(self, value: float):
+        self.daily_realized[self._mode()] = value
 
     def reset_day(self):
-        self.daily_realized_pnl = 0.0
+        self.daily_realized = {m: 0.0 for m in MODES}
         self.open_positions_count = 0
 
-    def record_realized_pnl(self, pnl: float):
-        self.daily_realized_pnl += pnl
+    def record_realized_pnl(self, pnl: float, mode=None):
+        self.daily_realized[self._mode(mode)] += pnl
 
-    def daily_loss_limit_hit(self) -> bool:
+    def daily_loss_limit_hit(self, mode=None) -> bool:
         limit = -abs(self.cfg["total_capital"] * self.cfg["max_daily_loss_pct"] / 100)
-        return self.daily_realized_pnl <= limit
+        return self.daily_realized[self._mode(mode)] <= limit
 
     def _stop_distance(self, entry_price: float, atr: float | None) -> float:
         if self.cfg.get("use_atr_risk") and atr:

@@ -95,7 +95,7 @@ def test_the_engine_and_the_backtester_size_identically():
     import backtester
     import trading_engine
     bt = inspect.getsource(backtester.run_backtest)
-    eng = inspect.getsource(trading_engine.TradingEngine._try_enter)
+    eng = inspect.getsource(trading_engine.TradingEngine._try_enter_claimed)
     for src in (bt, eng):
         assert "size_factor=" in src, "sizing must pass the factor into position_size()"
         assert "int(risk.position_size" not in src and "int(self.risk.position_size" not in src, \

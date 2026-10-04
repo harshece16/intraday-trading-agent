@@ -1,6 +1,6 @@
 {
  "title": "Trader Sahab rules catalogue",
- "as_of": "2026-10-01",
+ "as_of": "2026-10-05",
  "note": "Source of truth for docs/architecture/RULES.md and rules.html. Edit this file, then run tools/build_rules_docs.py.",
  "interactive_url": "https://claude.ai/artifact/5VxZ5bHM8b79u2sSUUtWrK",
  "statuses": {
@@ -395,13 +395,13 @@
    "id": "ENT-23",
    "area": "entry",
    "status": "active",
-   "rule": "A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked (in Live; in Paper the bar is 0, so such a setup is entered, not carded). It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, and a size of at least 1 share. When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.",
+   "rule": "A review card is offered only when exactly one required checklist item failed, or the checklist passed and only the confidence gate blocked (in Live; in Paper the bar is 0, so such a setup is entered, not carded). It also needs: bar inside the entry window, stock not traded today, a stop and target the price hasn't passed, no other entry block, a size of at least 1 share, and trader_brain.recheck_plan passing at the offer price for every rule but the card's own blocker (the minimum net reward-to-risk of 1.5 and the stop-to-cost floor; a card blocked on reward-to-risk is exempt from the 1.5, one blocked on the cost floor from that floor). When the failed item is reward-to-risk, its R:R after costs at the offer must be at least 1.0; below that the near-miss is held back (journaled as 'withheld' and replayed, never offered or approvable). Cards blocked by any other item are not held to the floor. Every card states what a hit target makes and a stop loses after costs, and the win rate needed to break even, or that none can.",
    "why": "Only put setups in front of the user that could actually be taken. Of 39 replayed R:R cards, all under 1.0, the mean was -0.78R (t -5.42) and 21 of the 25 that hit their target still lost money (#166).",
-   "enforced_in": "backend/trading_engine.py:_offer_near_misses, _offer_review; backend/review_queue.py:single_blocker, floor_reason, build_card, ReviewQueue.hold",
+   "enforced_in": "backend/trading_engine.py:_offer_near_misses, _offer_review; backend/review_queue.py:single_blocker, floor_reason, build_card, ReviewQueue.hold; backend/trading_engine.py:_card_recheck; backend/trader_brain.py:recheck_plan",
    "config": "REVIEW_QUEUE.min_net_rrr = 1.0",
    "verify": "manual_reviews table (status 'withheld' with withheld_reason for a held-back near-miss); activity kind 'review'; Overview page review queue and its 'Held back today' list",
-   "source": "README §64, §105",
-   "test": "backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even"
+   "source": "README §64, §105, §119, issue #249",
+   "test": "backend/tests/test_review_queue.py::test_single_blocker_only_when_exactly_one_required_item_fails; backend/tests/test_review_queue.py::test_an_rrr_card_is_offered_only_at_or_above_the_floor; backend/tests/test_review_queue.py::test_the_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_a_card_that_loses_even_at_its_target_says_it_cannot_break_even; backend/tests/test_engine_money_paths.py::test_a_card_is_not_offered_when_the_live_price_already_fails_recheck_plan"
   },
   {
    "id": "ENT-24",
@@ -431,13 +431,13 @@
    "id": "ENT-26",
    "area": "entry",
    "status": "active",
-   "rule": "An approval overrides only the card's blocker and the confidence gate. At click time it re-checks market open, the wall-clock entry window, one entry per day, every _entry_block_reason rule, the live price vs stop/target, sizing and liquidity. A card blocked on reward-to-risk is also held to the R:R floor again: its net R:R after costs at the live price, with the card's stop, target and round-trip cost, must be at least REVIEW_QUEUE.min_net_rrr (1.0), or the approval is refused with that number and the offer's in the reason. Cards blocked on any other item are not held to it, and the stop-to-cost floor is not re-applied.",
-   "why": "The owner decides one gate; every risk limit still applies. The floor judged the offer's price, and in the minutes before a click the price can move toward the target: over 71 real cards the net R:R fell below its offer value at 45% of the prices seen while the card was open, by more than 0.10 at 16% (#211).",
-   "enforced_in": "backend/trading_engine.py:_approve_claimed, _refuse_review; backend/review_queue.py:floor_reason",
+   "rule": "An approval overrides only the card's blocker and the confidence gate. At click time it re-checks market open, the wall-clock entry window, one entry per day, every _entry_block_reason rule, the live price vs stop/target, sizing and liquidity. A card blocked on reward-to-risk is also held to the R:R floor again: its net R:R after costs at the live price, with the card's stop, target and round-trip cost, must be at least REVIEW_QUEUE.min_net_rrr (1.0), or the approval is refused with that number and the offer's in the reason. Cards blocked on any other item are not held to that floor. Every approval is also held to trader_brain.recheck_plan at the live price, as an engine entry is at its fill, except for the card's own blocker: the minimum net reward-to-risk of 1.5 and the stop at least 1x the round trip's cost (a card blocked on reward-to-risk is exempt from the 1.5, one blocked on the cost floor from that floor).",
+   "why": "The owner decides one gate; every risk limit still applies. The floor judged the offer's price, and in the minutes before a click the price can move toward the target: over 71 real cards the net R:R fell below its offer value at 45% of the prices seen while the card was open, by more than 0.10 at 16% (#211). An approval used to skip recheck_plan entirely: a volume card approved after the price moved could be taken at a net R:R of 0.28, or 0.10 above its stop at 336 shares for a -2.11R stop-out (#249).",
+   "enforced_in": "backend/trading_engine.py:_approve_claimed, _refuse_review; backend/review_queue.py:floor_reason; backend/trading_engine.py:_card_recheck; backend/trader_brain.py:recheck_plan",
    "config": "REVIEW_QUEUE.min_net_rrr = 1.0",
    "verify": "card status 'refused' with reason, and for the floor 'reward-to-risk after costs is N at the live price P, under the queue's floor of 1 (it was M at the offer)' and outcome net_rrr_live; trade note 'Manually approved — overrode …'",
-   "source": "README §64, §111",
-   "test": "backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit; backend/tests/test_review_queue.py::test_an_rrr_card_below_the_floor_at_the_live_price_is_refused_and_journaled; backend/tests/test_review_queue.py::test_the_approval_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_the_approval_floor_uses_the_cost_the_offer_used"
+   "source": "README §64, §111, §119, issue #249",
+   "test": "backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit; backend/tests/test_review_queue.py::test_an_rrr_card_below_the_floor_at_the_live_price_is_refused_and_journaled; backend/tests/test_review_queue.py::test_the_approval_floor_leaves_cards_blocked_on_other_items_alone; backend/tests/test_review_queue.py::test_the_approval_floor_uses_the_cost_the_offer_used; backend/tests/test_engine_money_paths.py::test_an_approval_below_min_rrr_at_the_live_price_is_refused; backend/tests/test_engine_money_paths.py::test_an_approval_inside_the_stop_to_cost_floor_is_refused; backend/tests/test_engine_money_paths.py::test_a_card_blocked_on_rrr_is_exempt_from_min_rrr_but_not_from_the_cost_floor"
   },
   {
    "id": "ENT-27",
@@ -527,37 +527,37 @@
    "id": "RSK-06",
    "area": "risk",
    "status": "active",
-   "rule": "Daily loss limit: once today's net realized P&L is <= -2% of capital (-₹2,000 on ₹1,00,000), no new cash or F&O entries are taken and a switch to live is refused. Open positions are not force-closed.",
-   "why": "Cap one day's damage; net of charges so the limit matches the account.",
-   "enforced_in": "backend/risk_manager.py:daily_loss_limit_hit; backend/trading_engine.py:_entry_block_reason, _try_enter_fno, live_readiness",
+   "rule": "Daily loss limit, counted per mode: once today's net realized P&L in the engine's current mode is <= -2% of capital (-₹2,000 on ₹1,00,000), no new cash or F&O entries are taken in that mode. A switch to live is refused when Live's own figure is past the limit. Paper and live P&L are separate counters, each rebuilt from today's journal by its trades' mode after a restart. Open positions are not force-closed.",
+   "why": "Cap one day's damage; net of charges so the limit matches the account. Pooled, a morning's paper profit (+₹1,356) cancelled out an afternoon's real-money loss (-₹3,082, past the limit), and paper losses could refuse Live (#252).",
+   "enforced_in": "backend/risk_manager.py:daily_loss_limit_hit, record_realized_pnl; backend/trading_engine.py:_entry_block_reason, _try_enter_fno, live_readiness, _execute; backend/state.py:_rehydrate_today",
    "config": "RISK.max_daily_loss_pct = 2.0",
-   "verify": "blocked reason 'daily loss limit reached'; GET /api/control/live-readiness",
-   "source": "README §45, §65",
-   "test": "backend/tests/test_net_pnl_charges.py::test_the_daily_loss_limit_sees_the_net_figure"
+   "verify": "blocked reason 'daily loss limit reached'; GET /api/control/live-readiness; /api/state realized_pnl_today (current mode) and realized_pnl_today_by_mode",
+   "source": "README §45, §65, §119, issue #252",
+   "test": "backend/tests/test_net_pnl_charges.py::test_the_daily_loss_limit_sees_the_net_figure; backend/tests/test_engine_money_paths.py::test_paper_profits_do_not_cancel_a_real_money_loss; backend/tests/test_engine_money_paths.py::test_a_restart_seeds_each_mode_from_the_journal; backend/tests/test_engine_money_paths.py::test_paper_losses_do_not_refuse_live"
   },
   {
    "id": "RSK-07",
    "area": "risk",
    "status": "active",
-   "rule": "At most 3 open positions, counting cash and F&O together.",
+   "rule": "At most 3 open positions, counting cash and F&O together. Entries already past their last gate count too: each one reserves its slot and sector under the state lock right before its order (and a live entry Kite hasn't confirmed keeps it), so two entries on two threads can't share the last slot.",
    "why": "One account, one risk budget.",
-   "enforced_in": "backend/trading_engine.py:_entry_block_reason, _try_enter_fno",
+   "enforced_in": "backend/trading_engine.py:_entry_block_reason, _try_enter_fno; backend/trading_engine.py:_cap_block_reason, _reserve_slot",
    "config": "RISK.max_open_positions = 3",
    "verify": "blocked reason 'already at the max of 3 open positions'",
-   "source": "README §7",
-   "test": "backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit"
+   "source": "README §7, §119, issue #251",
+   "test": "backend/tests/test_review_queue.py::test_approval_still_obeys_every_risk_limit; backend/tests/test_engine_money_paths.py::test_concurrent_entries_respect_max_positions_and_the_sector_cap"
   },
   {
    "id": "RSK-08",
    "area": "risk",
    "status": "active",
-   "rule": "At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together. The industry comes from the scan row, falling back to the static NIFTY 100 universe list.",
+   "rule": "At most 1 open position per industry, counting cash positions and open option positions (by their underlying) together. The industry comes from the scan row, falling back to the static NIFTY 100 universe list. Entries already past their last gate count too: each one reserves its slot and sector under the state lock right before its order (and a live entry Kite hasn't confirmed keeps it), so two entries on two threads can't share the last slot.",
    "why": "Sector-momentum ranking makes correlated picks likely; the 2% cap assumes some independence.",
-   "enforced_in": "backend/trading_engine.py:_entry_block_reason; _industry_for",
+   "enforced_in": "backend/trading_engine.py:_entry_block_reason; _industry_for; backend/trading_engine.py:_cap_block_reason, _reserve_slot",
    "config": "RISK.max_positions_per_sector = 1",
    "verify": "blocked reason 'already at the max of 1 open position(s) in <industry>'",
-   "source": "README §19",
-   "test": "backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too"
+   "source": "README §19, §119, issue #251",
+   "test": "backend/tests/test_fno_entry_rules.py::test_an_open_option_counts_against_the_sector_cap_for_cash_too; backend/tests/test_engine_money_paths.py::test_concurrent_entries_respect_max_positions_and_the_sector_cap"
   },
   {
    "id": "RSK-09",
@@ -638,13 +638,13 @@
    "id": "EXE-05",
    "area": "execution",
    "status": "active",
-   "rule": "The engine thread and an API approval can't both enter the same stock: _entering and a position check guard every entry; a busy symbol is refused.",
+   "rule": "The engine thread and an API approval can't both enter the same stock: both claim the symbol in _entering for the whole attempt (the engine's _try_enter too, since #251), and a busy symbol is refused.",
    "why": "Approvals and engine ticks share one order path.",
    "enforced_in": "backend/trading_engine.py:approve_review, _try_enter",
    "config": null,
    "verify": "review refusal 'is being entered right now'",
-   "source": "README §64",
-   "test": "backend/tests/test_review_queue.py::test_approval_places_the_entry_with_the_cards_stop_and_target"
+   "source": "README §64, §119, issue #251",
+   "test": "backend/tests/test_review_queue.py::test_approval_places_the_entry_with_the_cards_stop_and_target; backend/tests/test_engine_money_paths.py::test_the_engine_entry_claims_the_symbol_against_an_approval"
   },
   {
    "id": "EXE-06",
@@ -674,12 +674,24 @@
    "id": "EXE-08",
    "area": "execution",
    "status": "active",
-   "rule": "A position carries whether it is real money, set by the order that opened it, and its closing order goes where that says, whatever mode the engine is in. A live position restored after a restart sends no order until Kite's positions confirm it is still open; if Kite holds nothing, it is dropped and no order is sent.",
-   "why": "A restart comes back in Paper and the mode can be switched with a position open; a closing order for a position Kite no longer holds would open a new one the other way.",
-   "enforced_in": "backend/trading_engine.py:_exit_position; backend/trading_engine.py:_verify_live_position; backend/state.py:_rehydrate_open_positions",
+   "rule": "A position carries whether it is real money, set by the order that opened it, and its closing order goes where that says, whatever mode the engine is in. Before any closing order for a live position, Kite's day book is read: if Kite holds nothing, the position is dropped and no order is sent; if Kite holds less on the same side, the order is cut to Kite's quantity; if Kite holds the other side, no order is sent. With the market closed, every live position still held is checked against Kite every five minutes, so a late-confirmed entry or one whose close kept failing is dropped once Zerodha has squared it off, or reported if Kite still holds it.",
+   "why": "A restart comes back in Paper and the mode can be switched with a position open; a closing order for a position Kite no longer holds would open a new one the other way. A rejected square-off close followed by Zerodha's MIS square-off left a position 'open, live' in memory, and its stop then sent a real SELL into a flat account (#250).",
+   "enforced_in": "backend/trading_engine.py:_exit_position, _live_fill, _verify_live_position, _reconcile_live_while_closed; backend/state.py:_rehydrate_open_positions",
    "verify": "After a restart with a live leg open, the live log shows 'A LIVE position is open' at error level",
-   "source": "README §98",
-   "test": "backend/tests/test_live_restart.py::test_a_position_closed_in_kite_while_the_engine_was_down_sends_no_order"
+   "source": "README §98, §119, issue #250",
+   "test": "backend/tests/test_live_restart.py::test_a_position_closed_in_kite_while_the_engine_was_down_sends_no_order; backend/tests/test_engine_money_paths.py::test_no_closing_order_is_sent_for_a_position_kite_no_longer_holds; backend/tests/test_engine_money_paths.py::test_a_close_is_cut_to_what_kite_holds; backend/tests/test_engine_money_paths.py::test_a_live_entry_confirmed_after_the_close_is_reconciled_with_kite"
+  },
+  {
+   "id": "EXE-09",
+   "area": "execution",
+   "status": "active",
+   "rule": "A fill's bookkeeping happens the moment the position changes, before any journal write: an entry's stop, target, initial risk and position id, its place in max_open_positions, an exit giving its slot back, and the daily loss counter. A journal write that fails (a locked database) never raises into the order path: an activity line stays in memory, and a trade row is queued and written again every tick.",
+   "why": "One 'database is locked' on the entry's log line left the APOLLOHOSP short on the 0.8% fallback stop (8100.88 instead of 8071) and uncounted; on the exit row, it leaked the slot and kept a -₹203.58 loss out of the daily limit (#253).",
+   "enforced_in": "backend/trading_engine.py:_execute; backend/paper_broker.py:execute_paper_order; backend/state.py:log, record_trade, retry_journal",
+   "config": null,
+   "verify": "activity error 'The journal couldn't record the … fill just now'; the row appears in trades on a later tick",
+   "source": "README §119, issue #253",
+   "test": "backend/tests/test_engine_money_paths.py::test_a_locked_journal_on_the_entry_log_line_keeps_the_plan_stop; backend/tests/test_engine_money_paths.py::test_a_locked_journal_on_the_entry_row_keeps_the_plan_and_is_retried; backend/tests/test_engine_money_paths.py::test_a_locked_journal_on_the_exit_row_still_frees_the_slot_and_counts_the_loss"
   },
   {
    "id": "EXT-01",
@@ -721,13 +733,13 @@
    "id": "EXT-04",
    "area": "exit",
    "status": "active",
-   "rule": "From 15:08 to 15:30 IST, every tick closes all open cash positions (at the live price, or the average price if unreadable) and all F&O positions.",
-   "why": "Beat Zerodha's 15:12 MIS auto square-off (₹50 + GST per order) for closing-auction stocks.",
-   "enforced_in": "backend/trading_engine.py:_tick_impl, _square_off_all, market_phase",
+   "rule": "From 15:08 to 15:30 IST, every tick closes all open cash positions and all F&O positions. Each position is closed on its own: one that fails (a rejected order, or a paper position with no readable price) is logged once and tried again next tick, and the rest of the square-off, the F&O square-off and the 15:08 price record still run. A paper position is never booked without a live price; a live one is still sent to Kite at market.",
+   "why": "Beat Zerodha's 15:12 MIS auto square-off (₹50 + GST per order) for closing-auction stocks. One rejected close used to end the loop for every later position, tick after tick (#250), and a missing price booked the paper exit at the entry price (#255).",
+   "enforced_in": "backend/trading_engine.py:_tick_impl, _square_off_all, _close_at_market, market_phase",
    "config": "SQUARE_OFF_TIME = \"15:08\"",
    "verify": "activity 'Square-off time — closing all open positions'; trades reason 'auto_square_off' / 'fno_auto_square_off'",
-   "source": "README §65, issue #78",
-   "test": "backend/tests/test_kill_switch.py::test_square_off_skips_a_position_another_thread_is_already_closing"
+   "source": "README §65, issue #78, §119, issues #250, #255",
+   "test": "backend/tests/test_kill_switch.py::test_square_off_skips_a_position_another_thread_is_already_closing; backend/tests/test_engine_money_paths.py::test_one_rejected_close_does_not_stop_the_rest_of_the_square_off; backend/tests/test_engine_money_paths.py::test_a_paper_square_off_without_a_price_is_retried_not_booked_at_the_entry; backend/tests/test_engine_money_paths.py::test_a_live_square_off_without_a_price_is_still_sent"
   },
   {
    "id": "EXT-05",
@@ -757,13 +769,13 @@
    "id": "EXT-07",
    "area": "exit",
    "status": "active",
-   "rule": "Kill switch: pause entries, close every cash and F&O position at market, then switch to PAPER only if every close succeeded (otherwise stay live and name the open symbols; an option Kite sold only part of counts as not closed). The next open-phase tick closes any entry that was mid-flight.",
+   "rule": "Kill switch: pause entries, close every cash and F&O position at market, then switch to PAPER only if every close succeeded (otherwise stay live and name the open symbols; an option Kite sold only part of counts as not closed). Every open-phase tick after it closes anything still open, including an entry that was mid-flight, until a pass leaves nothing open; it stops at the day change.",
    "why": "Stopping must not orphan positions or strand a live one.",
    "enforced_in": "backend/trading_engine.py:stop_and_flatten, _tick_impl",
    "config": null,
    "verify": "POST /api/control/stop response {closed, failed, paper_mode}; activity 'Kill switch — …'",
-   "source": "README §65",
-   "test": "backend/tests/test_kill_switch.py::test_kill_switch_stays_live_when_a_close_fails"
+   "source": "README §65, §119, issue #250",
+   "test": "backend/tests/test_kill_switch.py::test_kill_switch_stays_live_when_a_close_fails; backend/tests/test_engine_money_paths.py::test_the_kill_switch_reflatten_is_retried_until_it_succeeds"
   },
   {
    "id": "CST-01",
@@ -2863,13 +2875,13 @@
    "id": "OPS-03",
    "area": "ops",
    "status": "active",
-   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L, the daily-loss counter, per-stock entry counts, single-leg open cash positions (stop and target parsed from the entry note, entry charges carried) and open option positions (FNO-12): paper legs when in Paper, live legs always. Seed max_open_positions from the restored count.",
+   "rule": "On restart, from today's journal: rebuild today's trades, realized P&L and the daily-loss counter per mode (paper, live), per-stock entry counts, open cash positions (a position with a partial exit at its open quantity, net of its legs) (stop and target parsed from the entry note, entry charges carried) and open option positions (FNO-12): paper legs when in Paper, live legs always. Seed max_open_positions from the restored count.",
    "why": "A restart orphaned two open positions (GRASIM, HYUNDAI) and could erase today's losses from the loss limit.",
    "enforced_in": "backend/state.py:_rehydrate_today, _rehydrate_open_positions, _rehydrate_fno_positions; backend/trading_engine.py:TradingEngine.__init__",
    "config": null,
    "verify": "activity 'Restored N open position(s) from today's journal after a restart'",
-   "source": "README §67, issue #118",
-   "test": "backend/tests/test_restore_open_positions.py::test_an_open_short_is_restored_with_its_stop_target_and_entry_charges"
+   "source": "README §67, issue #118, §119, issues #252, #254",
+   "test": "backend/tests/test_restore_open_positions.py::test_an_open_short_is_restored_with_its_stop_target_and_entry_charges; backend/tests/test_engine_money_paths.py::test_a_part_closed_live_position_is_restored_at_its_open_quantity"
   },
   {
    "id": "OPS-04",
