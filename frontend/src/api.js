@@ -153,6 +153,38 @@ export async function apiJson(path, options) {
   return res.json();
 }
 
+/**
+ * Calls `fn` every `ms` while the tab is visible. A hidden tab polls nothing;
+ * when it comes back, `fn` runs at once if a beat was missed. Returns the
+ * cleanup. The WebSocket and the alerts hook don't use this: they should run
+ * in a background tab.
+ */
+export function everyWhileVisible(fn, ms) {
+  if (!ms) return () => {};
+  let last = Date.now();
+  const tick = () => {
+    if (document.visibilityState === "hidden") return;
+    last = Date.now();
+    fn();
+  };
+  const id = setInterval(tick, ms);
+  const onVisible = () => {
+    if (document.visibilityState === "visible" && Date.now() - last >= ms) tick();
+  };
+  document.addEventListener("visibilitychange", onVisible);
+  return () => {
+    clearInterval(id);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+}
+
+/** `everyWhileVisible` as a hook; `fn` may change between renders. */
+export function useVisibleInterval(fn, ms) {
+  const fnRef = useRef(fn);
+  useEffect(() => { fnRef.current = fn; });
+  useEffect(() => everyWhileVisible(() => fnRef.current(), ms), [ms]);
+}
+
 /** GET `path` (again every `intervalMs`, if given). A failed load is shown, not swallowed:
  *  pages used to `.catch(() => {})` and sit on "Loading…" forever. Null path = don't fetch. */
 export function useApi(path, intervalMs) {
@@ -166,8 +198,8 @@ export function useApi(path, intervalMs) {
       .then((d) => { if (alive) { setData(d); setError(null); } })
       .catch((e) => { if (alive) setError(e.message); });
     load();
-    const t = intervalMs ? setInterval(load, intervalMs) : null;
-    return () => { alive = false; if (t) clearInterval(t); };
+    const stop = everyWhileVisible(load, intervalMs);
+    return () => { alive = false; stop(); };
   }, [path, intervalMs, tick]);
   const reload = useCallback(() => setTick((n) => n + 1), []);
   return { data, error, reload, setData };

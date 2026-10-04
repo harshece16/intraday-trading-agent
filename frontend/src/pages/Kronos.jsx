@@ -266,7 +266,7 @@ function DaysTable({ days, selected, onSelect }) {
 export default function Kronos() {
   const { data, error, reload } = useApi("/api/kronos", 60000);
   const [pickedDate, setPickedDate] = useState(null);
-  const picked = useApi(pickedDate && pickedDate !== data?.today?.date ? `/api/kronos/day/${pickedDate}` : null, 60000);
+  const picked = useApi(pickedDate && pickedDate !== data?.today?.date ? `/api/kronos/day/${pickedDate}` : null); // a past day doesn't change: no polling
   if (!data) return <LoadState error={error} onRetry={reload} />;
 
   const look = data.look || {};

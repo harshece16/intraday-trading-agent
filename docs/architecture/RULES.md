@@ -3903,7 +3903,9 @@ The dashboard keeps the key in localStorage['dashboardApiKey']. A ?key= on the d
 </details>
 
 <details>
-<summary><code>UI-02</code> <b>Active</b> — The Momentum Book and Jev Book pages are read-only: they only GET their summaries every 60 s, and no button on them changes book state.</summary>
+<summary><code>UI-02</code> <b>Active</b> — The Momentum Book and Jev Book pages are read-only: they only GET their summaries every 60 s while the tab is visible, and no button on them changes…</summary>
+
+The Momentum Book and Jev Book pages are read-only: they only GET their summaries every 60 s while the tab is visible, and no button on them changes book state.
 
 | | |
 | --- | --- |
@@ -3917,14 +3919,14 @@ The dashboard keeps the key in localStorage['dashboardApiKey']. A ?key= on the d
 <details>
 <summary><code>UI-03</code> <b>Active</b> — App state streams over the WebSocket every 3 s, with a reconnect 2 s after a close.</summary>
 
-App state streams over the WebSocket every 3 s, with a reconnect 2 s after a close. /api/state is polled only after 8 s without a WebSocket message; an error response or a snapshot older (server_ts) than the one shown is dropped. The header's Kite status polls every 15 s and spends a real probe on load and on window focus, at most once a minute.
+App state streams over the WebSocket every 3 s, with a reconnect 2 s after a close. /api/state is polled only after 8 s without a WebSocket message; an error response or a snapshot older (server_ts) than the one shown is dropped. The header's Kite status polls every 15 s while the tab is visible (every page poll stops in a hidden tab; the WebSocket keeps running) and spends a real probe on load and on window focus, at most once a minute.
 
 | | |
 | --- | --- |
 | **Why** | Keeps the UI live without spending a Kite call on every poll. |
-| **Enforced in** | `frontend/src/api.js:useAppState; backend/app.py:websocket_endpoint; frontend/src/components/Header.jsx` |
+| **Enforced in** | `frontend/src/api.js:useAppState, everyWhileVisible; backend/app.py:websocket_endpoint; frontend/src/components/Header.jsx` |
 | **How to check** | Browser network tab: /ws frames about every 3 s and no /api/state while they arrive; stop the socket and /api/state appears about every 8 s; focusing the window twice within a minute sends one ?probe=true |
-| **Source** | README §53, §119 |
+| **Source** | README §53, §119, §120 |
 
 </details>
 

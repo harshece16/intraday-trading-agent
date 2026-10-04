@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { apiFetch } from "../api";
+import { apiFetch, everyWhileVisible } from "../api";
 import { clockIST, inr, money, tone } from "../format";
 import { heldSymbols, scanRows, sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
@@ -104,11 +104,11 @@ export default function StatusBar({ state }) {
     refresh(false).then(() => { if (!stopped) refresh(true); });
     const onFocus = () => { if (Date.now() - lastProbe >= 60000) refresh(true); };
     window.addEventListener("focus", onFocus);
-    const id = setInterval(() => refresh(false), 15000);
+    const stopPolling = everyWhileVisible(() => refresh(false), 15000);
     return () => {
       stopped = true;
       window.removeEventListener("focus", onFocus);
-      clearInterval(id);
+      stopPolling();
     };
   }, []);
 
