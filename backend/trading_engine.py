@@ -2278,7 +2278,11 @@ class TradingEngine:
         self._sync_capital()
         if self._last_day != now.date():
             self.risk.reset_day()
-            self.state.reset_realized_today()
+            # Drops earlier days' legs from the blotter and the tax summary
+            # (#247); the per-mode realized figures and the daily-loss
+            # counters come from today's journal rows, none at midnight (#252).
+            self.state.roll_trades_to_today()
+            self.risk.daily_realized = dict(self.state.realized_by_mode)
             # A kill switch still retrying yesterday must not close today's trades.
             self._reflatten_pending = False
             self._last_day = now.date()

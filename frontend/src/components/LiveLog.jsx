@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
+import { hms } from "../format";
 import { KIND_TEXT } from "../helpers";
-
-function hms(t) {
-  return new Date(t * 1000).toLocaleTimeString([], { hour12: false });
-}
 
 /** A terminal-style live log — the same activity stream Feed.jsx shows on
  * Overview, but full-history, auto-scrolling, and available from any page
@@ -32,7 +29,7 @@ export default function LiveLog({ state: s, open, onClose }) {
   return (
     <div className="live-log">
       <div className="live-log-bar">
-        <span>Live log — {items.length ? `${items.length} events` : "waiting for activity…"}</span>
+        <span>Live log (IST) — {items.length ? `${items.length} events` : "waiting for activity…"}</span>
         <button className="btn" onClick={onClose}>Close</button>
       </div>
       <div className="live-log-body" ref={bodyRef} onScroll={handleScroll}>

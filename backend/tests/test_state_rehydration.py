@@ -171,3 +171,84 @@ def test_the_brain_carries_the_restored_count_forward():
     signal, st = trader_brain.trader_brain_signal(bars, prev_state=state.strategy_state["RELIANCE"])
     assert st["entries_today"] == 1
     assert signal not in ("BUY", "SHORT")
+
+
+# ---- issue #247: the blotter is rolled to today at the day change -------------
+
+
+def test_day_change_drops_earlier_days_legs_from_the_blotter_and_tax(monkeypatch):
+    """state.trades was rebuilt from the journal only at start-up, so a
+    backend that ran across midnight kept earlier days' legs, and the tax
+    summary counted them as today's (/api/state at 2026-10-04 23:57 still
+    held the 2026-10-01 APOLLOHOSP legs, tax net -203.58)."""
+    state = AppState(watchlist=[], paper_mode=True)
+    days_ago = time.time() - 86400 * 3
+    state.trades = [
+        {"id": "old-exit", "ts": days_ago + 60, "symbol": "APOLLOHOSP", "side": "BUY", "quantity": 4,
+         "price": 8078.92, "realized": -203.58, "realized_gross": -169.34, "charges": 13.62},
+        {"id": "old-entry", "ts": days_ago, "symbol": "APOLLOHOSP", "side": "SELL", "quantity": 4,
+         "price": 8036.59, "realized": 0.0, "realized_gross": 0.0, "charges": 20.62},
+    ]
+    state.realized_pnl_today = -203.58
+    engine = trading_engine.TradingEngine(state)
+    engine.scanner = None
+    engine._last_day = datetime.now(IST).date().replace(year=2000)  # force a day change
+    monkeypatch.setattr(trading_engine, "market_phase", lambda now: "closed")
+
+    engine._tick_impl()
+
+    assert state.trades == []
+    assert state.realized_pnl_today == 0.0
+    assert engine.risk.daily_realized_pnl == 0.0
+    tax = state._tax_summary()
+    assert tax["net_pnl"] == 0 and tax["charges"] == 0 and tax["closed_trades"] == 0
+
+
+def test_day_change_keeps_todays_journal_legs():
+    _insert_trade("t1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("t2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=-30.0)
+    state = AppState(watchlist=[], paper_mode=True)
+    state.trades.append({"id": "stale", "ts": time.time() - 86400 * 2, "realized": 50.0})
+
+    state.roll_trades_to_today()
+
+    assert {t["id"] for t in state.trades} == {"t1", "t2"}
+    assert state.trades[0]["id"] == "t2"  # newest first
+    assert state.realized_pnl_today == -30.0
+
+
+def test_day_change_survives_a_journal_failure(monkeypatch):
+    state = AppState(watchlist=[], paper_mode=True)
+    state.trades = [{"id": "stale", "ts": time.time() - 86400 * 2, "realized": 50.0},
+                    {"id": "fresh", "ts": _today_ts(0.5), "realized": -10.0}]
+    monkeypatch.setattr(database, "trades_between", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("db down")))
+
+    state.roll_trades_to_today()
+
+    assert [t["id"] for t in state.trades] == ["fresh"]
+    assert state.realized_pnl_today == -10.0
+
+
+def test_day_change_seeds_both_modes_daily_loss_counters_from_the_journal(monkeypatch):
+    """#247 meets #252: the day change rebuilds the per-mode realized figures
+    and the risk manager's per-mode counters from today's journal rows, so a
+    live loss across midnight is still counted against Live and a paper gain
+    against Paper, and neither leaks into the other."""
+    _insert_trade("p1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("p2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=120.0)
+    database.record_trade({"id": "l1", "position_id": "pos2", "ts": _today_ts(0.5), "symbol": "SBIN", "side": "BUY",
+                           "quantity": 10, "price": 800.0, "mode": "live", "reason": "test", "note": None,
+                           "realized": -450.0, "charges": 5.0, "initial_risk": 1.0, "r_multiple": -1.0})
+    state = AppState(watchlist=[], paper_mode=True)
+    state.realized_by_mode = {"paper": 9999.0, "live": 9999.0}
+    engine = trading_engine.TradingEngine(state)
+    engine.scanner = None
+    engine.risk.daily_realized = {"paper": 9999.0, "live": 9999.0}
+    engine._last_day = datetime.now(IST).date().replace(year=2000)
+    monkeypatch.setattr(trading_engine, "market_phase", lambda now: "closed")
+
+    engine._tick_impl()
+
+    assert state.realized_by_mode == {"paper": 120.0, "live": -450.0}
+    assert engine.risk.daily_realized == {"paper": 120.0, "live": -450.0}
+    assert engine.risk.daily_loss_limit_hit(mode="paper") is False

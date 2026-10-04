@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { apiFetch, explainRefusal, openKiteLogin, setTradingMode } from "../api";
-import { clock, money, num, tone } from "../format";
+import { apiFetch } from "../api";
+import { clockIST, inr, money, tone } from "../format";
 import { heldSymbols, scanRows, sessionInfo } from "../helpers";
 import { describeKite } from "../kiteStatus";
+import { useEngineControls } from "../useEngineControls";
+import KiteConnectButton from "./KiteConnectButton";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 // Grouped by what each page is for. The momentum book is the strategy and
@@ -18,17 +20,8 @@ const NAV = [
   ["Account", [["/portfolio", "Portfolio", "held"]]],
 ];
 
-async function setMode(paperMode) {
-  try {
-    await setTradingMode(paperMode);
-  } catch (e) {
-    if (!explainRefusal(e)) alert(`Couldn't switch mode: ${e.message}`);
-  }
-}
-
 export function Sidebar({ state, liveLogOpen, onToggleLiveLog }) {
-  const [alertsOn, setAlertsOn] = useState(false);
-  useEffect(() => { setAlertsOn(alertsEnabled()); }, []);
+  const [alertsOn, setAlertsOn] = useState(alertsEnabled);
 
   async function toggleAlerts() {
     if (alertsOn) {
@@ -87,12 +80,17 @@ export default function StatusBar({ state }) {
 
   useEffect(() => {
     let stopped = false;
+    let lastProbe = 0;
     // probe=true spends a real Kite API call to confirm the session. Worth it
     // on load and when the user comes back to the tab — both moments where a
-    // stale answer is the one they'd act on — but not on the 15s poll.
+    // stale answer is the one they'd act on — but not on the 15s poll, and at
+    // most once a minute however often the window takes focus (#241).
     async function refresh(probe = false) {
+      if (stopped) return;
+      if (probe) lastProbe = Date.now();
       try {
-        const res = await apiFetch(`/api/kite/status${probe ? "?probe=true" : ""}`);
+        const res = await apiFetch(`/api/kite/status${probe ? "?probe=true" : ""}`, { timeoutMs: probe ? 20000 : undefined });
+        if (!res.ok) return;
         const k = await res.json();
         if (!stopped) setKite(k);
       } catch (e) {
@@ -103,8 +101,8 @@ export default function StatusBar({ state }) {
     // refines it. Waiting on the probe left the header reading
     // "Checking Kite…" for as long as Kite took to answer — the one moment
     // the user is actually looking at it.
-    refresh(false).then(() => refresh(true));
-    const onFocus = () => refresh(true);
+    refresh(false).then(() => { if (!stopped) refresh(true); });
+    const onFocus = () => { if (Date.now() - lastProbe >= 60000) refresh(true); };
     window.addEventListener("focus", onFocus);
     const id = setInterval(() => refresh(false), 15000);
     return () => {
@@ -122,14 +120,16 @@ export default function StatusBar({ state }) {
     : 0;
   const k = describeKite(kite);
   const live = state && !state.paper_mode;
+  const controls = useEngineControls(state);
+  const switching = controls.busy.live || controls.busy.paper;
 
   return (
     <header className={`statusbar${live ? " is-live" : ""}`}>
       <div className="session">
         <strong>{open ? "Market open" : "Market closed"}</strong>
-        <span>{si ? si.label : ""}{state?.last_update_ts ? ` · updated ${clock(state.last_update_ts)}` : ""}</span>
+        <span>{si ? si.label : ""}{state?.last_update_ts ? ` · updated ${clockIST(state.last_update_ts)}` : ""}</span>
       </div>
-      <div className="stat"><small>Invested</small><strong>₹{num(invested, 0)}</strong></div>
+      <div className="stat"><small>Invested</small><strong>{inr(invested)}</strong></div>
       <div className="stat" title="After brokerage, STT, exchange fees, GST and stamp duty">
         <small>Realized today</small>
         <strong className={tone(state?.realized_pnl_today)}>{money(state?.realized_pnl_today)}</strong>
@@ -146,10 +146,17 @@ export default function StatusBar({ state }) {
           <span className="dot" aria-hidden="true"></span>
           {k.label}
         </span>
-        <button className={`btn ${k.urgent ? "primary" : ""}`} title={k.detail} onClick={openKiteLogin}>{k.action}</button>
-        <div className="segmented" role="group" aria-label="Trading mode">
-          <button className="paper" aria-pressed={String(state?.paper_mode === true)} onClick={() => setMode(true)}>Paper</button>
-          <button className="live" aria-pressed={String(state?.paper_mode === false)} onClick={() => { if (confirm("Switch to live trading? Trader Sahab will place real orders on Zerodha.")) setMode(false); }}>Live</button>
+        <KiteConnectButton className={`btn ${k.urgent ? "primary" : ""}`} title={k.detail} label={k.action} />
+        {/* Live runs the same full warning as the Overview card's Go live (#234). */}
+        <div className="segmented" role="group" aria-label="Trading mode" aria-busy={switching}>
+          <button className="paper" aria-pressed={String(state?.paper_mode === true)} disabled={!state || switching}
+            onClick={() => { if (state) controls.goPaper(); }}>
+            {controls.busy.paper ? "Switching…" : "Paper"}
+          </button>
+          <button className="live" aria-pressed={String(state?.paper_mode === false)} disabled={!state || switching}
+            onClick={() => { if (state?.paper_mode) controls.goLive(); }}>
+            {controls.busy.live ? "Switching…" : "Live"}
+          </button>
         </div>
       </div>
       <div className="session-bar"><div className="session-bar-fill" style={{ width: `${si ? si.pct : 0}%` }}></div></div>

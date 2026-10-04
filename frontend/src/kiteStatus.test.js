@@ -21,7 +21,7 @@ test("legacy payload with no `state` and a live session reads as connected", () 
     app_configured: true, connected: true, using_live_data: true,
     generated_at: "2026-09-21T03:46:11.127208+00:00", redirect_url: REDIRECT,
   });
-  assert.equal(k.label, "Kite live");
+  assert.equal(k.label, "Kite: live prices");
   assert.equal(k.tone, "ok");
   assert.equal(k.urgent, false);
   assert.match(k.detail, /Live prices/);
@@ -40,7 +40,7 @@ test("legacy payload with no API key reads as not configured", () => {
 
 test("legacy payload connected but on the delayed feed is amber, not green", () => {
   const k = describeKite({ app_configured: true, connected: true, using_live_data: false });
-  assert.equal(k.label, "Kite connected");
+  assert.equal(k.label, "Kite: delayed prices");
   assert.equal(k.tone, "warn");
 });
 

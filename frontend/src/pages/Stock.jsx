@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../api";
 import { joinWords, num, pct, safeUrl, signed, tone } from "../format";
 import { analysisFor, checklistSide, rowFor, scanRows, sentiment } from "../helpers";
@@ -182,11 +182,14 @@ function ScanTab({ r, totalRows }) {
   );
 }
 
-function NewsTab({ s, symbol, news }) {
+function NewsTab({ s, symbol, news, onRetry }) {
   const cats = scanRows(s).filter((r) => r.catalyst).sort((a, b) => Math.abs(b.catalyst.score) - Math.abs(a.catalyst.score)).slice(0, 8);
   let body;
   if (!news) body = <p className="empty">Loading headlines…</p>;
-  else if (news.error) body = <p className="empty">Couldn't load news ({news.error}). Retrying every minute.</p>;
+  else if (news.error) {
+    // It never retried by itself, whatever this used to say (#163).
+    body = <p className="empty" role="alert">Couldn't load news ({news.error}). <button className="more inline" onClick={onRetry}>Try again</button></p>;
+  }
   else {
     const overall = sentiment(news.score);
     const sources = Object.entries(news.sources || {}).filter(([, v]) => v).map(([k, v]) => `${v} from ${k}`);
@@ -237,9 +240,9 @@ function NewsTab({ s, symbol, news }) {
 
 export default function Stock({ state: s }) {
   const { symbol } = useParams();
-  const navigate = useNavigate();
   const [tab, setTab] = useState("timing");
   const [news, setNews] = useState(null);
+  const [newsTick, setNewsTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,7 +250,7 @@ export default function Stock({ state: s }) {
     (async () => {
       try {
         const res = await apiFetch(`/api/news/${encodeURIComponent(symbol)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`the backend answered ${res.status}`);
         const data = await res.json();
         if (!cancelled) setNews(data);
       } catch (e) {
@@ -255,7 +258,7 @@ export default function Stock({ state: s }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [symbol]);
+  }, [symbol, newsTick]);
 
   if (!symbol) return <p className="empty">Pick a stock from the Screener to see the agent's plan for it.</p>;
 
@@ -271,7 +274,7 @@ export default function Stock({ state: s }) {
 
   return (
     <>
-      <button className="backlink" onClick={() => navigate("/screener")}>← Screener</button>
+      <Link className="backlink" to="/screener">← Screener</Link>
       <div className="stock-head">
         <div>
           <h1>{symbol} {r && !r.excluded && r.long_only && <span className="pill neutral" title="This stock has a fixed price band, so it is never shorted">Long only</span>}</h1>
@@ -305,7 +308,7 @@ export default function Stock({ state: s }) {
       <div className="tab-content">
         {tab === "timing" && <TimingTab r={r} a={a} />}
         {tab === "scan" && <ScanTab r={r} totalRows={scanRows(s).length || 100} />}
-        {tab === "news" && <NewsTab s={s} symbol={symbol} news={news} />}
+        {tab === "news" && <NewsTab s={s} symbol={symbol} news={news} onRetry={() => setNewsTick((n) => n + 1)} />}
         {tab === "research" && <ResearchDesk symbol={symbol} watchlist={s.watchlist} />}
       </div>
     </>

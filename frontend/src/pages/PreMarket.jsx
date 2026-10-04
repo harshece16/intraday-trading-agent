@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { apiFetch, apiJson } from "../api";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { postJson, useAction, useApi } from "../api";
+import LoadState from "../components/LoadState";
 import { pct, tone } from "../format";
 import { BiasPill } from "../components/Pill";
 import { GuardNotes } from "../components/ListNotes";
@@ -9,21 +10,21 @@ const TABS = [
   ["watchlist", "Watchlist"], ["all", "All ranked"], ["avoid", "Avoid"],
 ];
 
-function Row({ r, expanded, onToggle, navigate }) {
+function Row({ r, expanded, onToggle }) {
   return (
     <>
-      <div className={`opp${expanded ? " expanded" : ""}`} onClick={() => onToggle(r.symbol)}>
+      <button type="button" className={`opp${expanded ? " expanded" : ""}`} aria-expanded={expanded} onClick={() => onToggle(r.symbol)}>
         <span className="opp-score" title="Pre-market score (daily data only)">{r.excluded ? "—" : r.score?.toFixed(0)}</span>
         <span>
           <span className="opp-name">
             {r.symbol} {r.excluded ? <span className="pill neutral">Avoid</span> : null}
             {r.status === "WATCHLIST" && <span className="pill solid">On today's list</span>}
           </span>
-          <div className="opp-why">{r.excluded || (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ")}</div>
+          <span className="opp-why">{r.excluded || (r.reasons || []).slice(0, 2).map((x) => x.text).join("; ")}</span>
         </span>
         <span className="opp-why">{r.name || ""}</span>
         <span className={`opp-chg ${tone(r.prev_chg_pct)}`}>{pct(r.prev_chg_pct)}</span>
-      </div>
+      </button>
       {expanded && (
         <div className="opp-detail">
           <div className="rb-row" style={{ marginBottom: 10 }}>
@@ -43,9 +44,9 @@ function Row({ r, expanded, onToggle, navigate }) {
               {r.reasons.map((x, i) => <li key={i}>{x.points >= 0 ? "+" : ""}{x.points} — {x.text}</li>)}
             </ul>
           )}
-          <button className="btn" onClick={() => navigate(`/stock/${encodeURIComponent(r.symbol)}`)}>
+          <Link className="btn btn-link" to={`/stock/${encodeURIComponent(r.symbol)}`}>
             Open full page →
-          </button>
+          </Link>
         </div>
       )}
     </>
@@ -53,42 +54,43 @@ function Row({ r, expanded, onToggle, navigate }) {
 }
 
 export default function PreMarket({ state: s }) {
-  const [data, setData] = useState(null);
   const [tab, setTab] = useState("watchlist");
   const [expanded, setExpanded] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const navigate = useNavigate();
+  // A failed load is shown with a retry; it used to be swallowed, leaving the
+  // ranking spinner up forever (#237).
+  const { data, error, reload } = useApi("/api/premarket", 20000);
+  const refreshAction = useAction(async () => {
+    await postJson("/api/premarket/refresh");
+    await new Promise((r) => setTimeout(r, 3000));
+    reload();
+  });
+  const refreshing = refreshAction.busy;
+  const refresh = refreshAction.run;
 
-  async function load() {
-    try { setData(await apiJson("/api/premarket")); } catch (e) { /* backend not reachable yet */ }
-  }
-
-  useEffect(() => {
-    load();
-    const id = setInterval(load, 20000);
-    return () => clearInterval(id);
-  }, []);
-
-  async function refresh() {
-    setRefreshing(true);
-    try { await apiFetch("/api/premarket/refresh", { method: "POST" }); } catch (e) {}
-    setTimeout(() => { load(); setRefreshing(false); }, 3000);
-  }
-
-  if (!data || (!data.result && data.running)) {
+  if (!data) {
     return (
       <>
-        <h2 className="h">Pre-Market Analysis</h2>
-        <p className="empty"><span className="spinner" />Ranking the NIFTY 100 on last session's daily data — this takes under a minute…</p>
+        <h2 className="h">Pre-market analysis</h2>
+        <LoadState error={error} onRetry={reload} label="Loading the pre-market ranking…" />
+      </>
+    );
+  }
+  if (!data.result && data.running) {
+    return (
+      <>
+        <h2 className="h">Pre-market analysis</h2>
+        <p className="empty"><span className="spinner" aria-hidden="true" />Ranking the NIFTY 100 on last session's daily data — this takes under a minute…</p>
+        {error && <LoadState error={error} onRetry={reload} />}
       </>
     );
   }
   if (data.error && !data.result) {
     return (
       <>
-        <h2 className="h">Pre-Market Analysis</h2>
-        <div className="tax">{data.error}</div>
-        <button className="btn" style={{ marginTop: 10 }} onClick={refresh}>Try again</button>
+        <h2 className="h">Pre-market analysis</h2>
+        <div className="tax" role="alert">{data.error}</div>
+        <button className="btn" style={{ marginTop: 10 }} disabled={refreshing} onClick={refresh}>{refreshing ? "Trying again…" : "Try again"}</button>
+        {refreshAction.error && <p className="down" role="alert">Couldn't start the refresh: {refreshAction.error}.</p>}
       </>
     );
   }
@@ -114,7 +116,7 @@ export default function PreMarket({ state: s }) {
 
   return (
     <>
-      <h2 className="h">Pre-Market Analysis</h2>
+      <h2 className="h">Pre-market analysis</h2>
       <p className="sub">
         {r.as_of_note}{" "}
         {r.selection?.mode === "liquidity"
@@ -127,19 +129,21 @@ export default function PreMarket({ state: s }) {
         {(refreshing || data.running) && <span className="spinner" />}
         {refreshing || data.running ? "Refreshing…" : "Refresh"}
       </button>
+      {refreshAction.error && <p className="down" role="alert" style={{ marginTop: -8 }}>Couldn't start the refresh: {refreshAction.error}.</p>}
+      {error && <LoadState error={`the last update failed (${error}); showing the earlier ranking`} onRetry={reload} />}
 
       {picksDiffer && (
         <div className="tax" style={{ marginBottom: 16 }}>
           The live intraday scanner has since run and updated today's actual picks — this page still shows last
           night's pre-market read, which won't change again until tomorrow.{" "}
-          <button className="more" onClick={() => navigate("/intraday")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
-            See today's current picks on Overview →
-          </button>
+          <Link className="more" to="/intraday" style={{ padding: 0 }}>
+            See today's list on Overview →
+          </Link>
         </div>
       )}
 
       {!!(r.narrative || []).length && (
-        <div className="cardbox" style={{ borderColor: "var(--accent, #7c6df0)" }}>
+        <div className="cardbox" style={{ borderColor: "var(--book)" }}>
           <h2 className="h" style={{ fontSize: 16 }}>The morning take</h2>
           <p className="muted" style={{ margin: "0 0 10px", fontSize: 12.5 }}>
             Same facts as the cards below, read the way a trader talks through a pre-market note — not a new
@@ -198,7 +202,7 @@ export default function PreMarket({ state: s }) {
       <div>
         {list.length ? (
           list.map((row) => (
-            <Row key={row.symbol} r={row} expanded={expanded === row.symbol} onToggle={(sym) => setExpanded((e) => (e === sym ? null : sym))} navigate={navigate} />
+            <Row key={row.symbol} r={row} expanded={expanded === row.symbol} onToggle={(sym) => setExpanded((e) => (e === sym ? null : sym))} />
           ))
         ) : (
           <p className="empty">Nothing here right now.</p>

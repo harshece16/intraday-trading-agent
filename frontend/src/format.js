@@ -16,8 +16,52 @@ export function money(n) {
   if (n === null || n === undefined) return "—";
   return `${n < 0 ? "−" : n > 0 ? "+" : ""}₹${Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
-export function clock(ts) {
-  return new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+/** A balance, limit or price in rupees: never a "+" sign, which reads as a
+ *  gain (#243). Use money() only for P&L. */
+export function inr(n, d = 0) {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return "—";
+  const v = Number(n);
+  return `${v < 0 ? "−" : ""}₹${Math.abs(v).toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+}
+
+// Every clock in IST, 24-hour, the way the engine writes its own times
+// ("15:08", "09:45"). They used to follow the browser's zone (#243).
+const IST = "Asia/Kolkata";
+const HM = new Intl.DateTimeFormat("en-IN", { timeZone: IST, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const HMS = new Intl.DateTimeFormat("en-IN", { timeZone: IST, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+const DAY_MONTH = new Intl.DateTimeFormat("en-IN", { timeZone: IST, day: "numeric", month: "short" });
+const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: IST, year: "numeric", month: "2-digit", day: "2-digit" });
+
+function toDate(t) {
+  if (t === null || t === undefined || t === "") return null;
+  const d = typeof t === "number" ? new Date(t * 1000) : new Date(t);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** "14:32" in IST, from epoch seconds or an ISO string. */
+export function clock(t) {
+  const d = toDate(t);
+  return d ? HM.format(d) : "—";
+}
+/** "14:32 IST", for a time shown on its own. */
+export function clockIST(t) {
+  const d = toDate(t);
+  return d ? `${HM.format(d)} IST` : "—";
+}
+/** "14:32:05" in IST. */
+export function hms(t) {
+  const d = toDate(t);
+  return d ? HMS.format(d) : "—";
+}
+/** "5 Oct, 14:32 IST". */
+export function dateTimeIST(t) {
+  const d = toDate(t);
+  return d ? `${DAY_MONTH.format(d)}, ${HM.format(d)} IST` : "—";
+}
+/** The IST calendar day, "2026-10-05". */
+export function istDay(t) {
+  const d = toDate(t);
+  return d ? YMD.format(d) : "";
 }
 export function dateLabel(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });

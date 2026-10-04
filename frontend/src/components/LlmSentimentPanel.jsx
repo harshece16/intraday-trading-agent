@@ -1,36 +1,18 @@
-import { useEffect, useState } from "react";
-import { apiFetch, apiJson } from "../api";
+import { postJson, useAction, useApi } from "../api";
+import LoadState from "./LoadState";
 import { num } from "../format";
 
 /** Live usage check + on/off toggle for the LLM news-sentiment feature. */
 export default function LlmSentimentPanel() {
-  const [status, setStatus] = useState(null);
-  const [busy, setBusy] = useState(false);
+  // Live check — real usage, not a one-time page-load snapshot. A failed load
+  // shows its reason (#237); it used to read "Loading…" forever.
+  const q = useApi("/api/llm-sentiment/status", 15000);
+  const status = q.data;
+  const toggleAction = useAction(async () => q.setData(await postJson("/api/llm-sentiment/enable", { enabled: !status.enabled })));
+  const busy = toggleAction.busy;
+  const toggle = toggleAction.run;
 
-  async function refresh() {
-    try { setStatus(await apiJson("/api/llm-sentiment/status")); } catch (e) { /* backend not reachable yet */ }
-  }
-
-  useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 15000); // live check — real usage, not a one-time page-load snapshot
-    return () => clearInterval(id);
-  }, []);
-
-  async function toggle() {
-    setBusy(true);
-    try {
-      const res = await apiFetch("/api/llm-sentiment/enable", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: !status.enabled }),
-      });
-      if (res.ok) setStatus(await res.json());
-      else alert((await res.json()).detail || "Couldn't change that.");
-    } catch (e) { /* backend not reachable yet */ }
-    setBusy(false);
-  }
-
-  if (!status) return <p className="empty">Loading LLM sentiment status…</p>;
+  if (!status) return <LoadState error={q.error && `LLM sentiment status: ${q.error}`} onRetry={q.reload} label="Loading LLM sentiment status…" />;
 
   const pctOfBudget = status.daily_limit ? Math.round((status.used_today / status.daily_limit) * 100) : 0;
 
@@ -45,10 +27,11 @@ export default function LlmSentimentPanel() {
         </div>
         {status.configured && (
           <button className={`btn ${status.enabled ? "primary" : ""}`} disabled={busy} onClick={toggle}>
-            {status.enabled ? "Turn off" : "Turn on"}
+            {busy ? "Switching…" : status.enabled ? "Turn off" : "Turn on"}
           </button>
         )}
       </div>
+      {toggleAction.error && <p className="down" role="alert" style={{ margin: "8px 0 0", fontSize: 13 }}>Couldn't switch it: {toggleAction.error}.</p>}
       {status.configured && (
         <div className="rb-row" style={{ marginTop: 12 }}>
           <div className="rb-chip">

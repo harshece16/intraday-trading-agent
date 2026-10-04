@@ -2,8 +2,11 @@
    chip, the Overview banner and anything else added later can't drift apart
    and tell the user two different stories about the same session. */
 
+import { dateTimeIST } from "./format.js";
+
 export const KITE_STATES = {
-  connected: { label: "Kite live", tone: "ok", action: "Reconnect" },
+  // "Kite: live prices", not "Kite live": in Paper, "live" read as live trading (#245).
+  connected: { label: "Kite: live prices", tone: "ok", action: "Reconnect" },
   expired: { label: "Kite session expired", tone: "bad", action: "Reconnect" },
   disconnected: { label: "Kite not connected", tone: "idle", action: "Connect Kite" },
   not_configured: { label: "Delayed prices", tone: "idle", action: "Connect Kite" },
@@ -21,13 +24,11 @@ export function relativeDuration(seconds) {
   return past ? `${text} ago` : `in ${text}`;
 }
 
-/** Local time of an ISO timestamp, or null — the backend sends IST-aware ISO. */
+/** An ISO timestamp as "5 Oct, 06:00 IST", or null (#243). */
 export function localTime(iso) {
   if (!iso) return null;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleString([], {
-    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-  });
+  return Number.isNaN(d.getTime()) ? null : dateTimeIST(d);
 }
 
 /** Stand-in for `reason` when talking to a backend that predates it. Says
@@ -64,7 +65,7 @@ export function describeKite(k) {
   // Connected but the engine is still on the delayed feed is its own case:
   // the login worked, so "expired" would be wrong, but so would "live".
   const live = k.state === "connected" && k.using_live_data;
-  const label = k.state === "connected" && !live ? "Kite connected" : base.label;
+  const label = k.state === "connected" && !live ? "Kite: delayed prices" : base.label;
   const tone = k.state === "connected" && !live ? "warn" : base.tone;
 
   const lines = [k.reason];

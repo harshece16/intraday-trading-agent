@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch } from "../api";
+import { apiJson, postJson } from "../api";
+import LoadState from "./LoadState";
 import { clock, num } from "../format";
 
 const STANCE_CLASS = { bullish: "up", bearish: "down", support: "up", reject: "down" };
@@ -8,13 +9,9 @@ const STATUS_TEXT = { pending: "Waiting", running: "Working…", done: "Done", e
 const PROPOSAL_TEXT = { long: "Go long", short: "Go short", stand_aside: "Stand aside" };
 const GRID = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginTop: 8 };
 
-async function call(path, body) {
-  const res = await apiFetch(path, body === undefined ? undefined : {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-  return data;
+// GET without a body, POST with one, through the shared helpers.
+function call(path, body) {
+  return body === undefined ? apiJson(path) : postJson(path, body);
 }
 
 function Points({ items }) {
@@ -228,15 +225,15 @@ export default function ResearchDesk({ symbol, watchlist }) {
 
   async function act(fn) {
     setBusy(true); setMessage("");
-    try { await fn(); } catch (e) { setMessage(String(e.message || e)); }
-    setBusy(false);
+    try { await fn(); } catch (e) { setMessage(String(e.message || e)); } finally { setBusy(false); }
     loadStatus();
   }
 
   const toggle = () => act(async () => setStatus(await call("/api/research/enable", { enabled: !status.enabled })));
   const run = (symbols) => act(async () => setMessage((await call("/api/research/run", { symbols })).message));
 
-  if (!status) return <p className="empty">Loading the research desk…</p>;
+  // The load error used to be hidden behind "Loading…" for good (#237).
+  if (!status) return <LoadState error={message || null} onRetry={() => { setMessage(""); loadStatus(); }} label="Loading the research desk…" />;
   const running = status.run?.running;
   const latest = briefs && briefs[0];
 

@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiFetch, apiJson } from "../api";
+import { postJson, useAction, useApi } from "../api";
 import LoadState from "../components/LoadState";
-import { money, num, pct, tone } from "../format";
+import { clockIST, inr, money, num, pct, tone } from "../format";
 import { ConfidencePill } from "../components/Pill";
 
 function PaperPositions({ positions }) {
   const rows = Object.entries(positions || {});
-  if (!rows.length) return <p className="empty">No open paper/live positions right now.</p>;
+  if (!rows.length) return <p className="empty">No open positions right now.</p>;
   return (
     <div className="table-wrap">
       <table className="datatable">
@@ -52,8 +51,9 @@ function KiteHoldings({ holdings }) {
   );
 }
 
-function FnoSection({ fno, onToggle }) {
-  if (!fno) return <p className="empty">Loading F&amp;O status…</p>;
+function FnoSection({ q, toggle }) {
+  const fno = q.data;
+  if (!fno) return <LoadState error={q.error && `F&O status: ${q.error}`} onRetry={q.reload} label="Loading F&O status…" />;
   const positions = Object.entries(fno.open_positions || {});
   return (
     <>
@@ -69,9 +69,10 @@ function FnoSection({ fno, onToggle }) {
           <div className="rb-chip"><b>Max premium risk/trade</b><span>{fno.max_premium_risk_pct}%</span></div>
           <div className="rb-chip"><b>Confidence bar to trade</b><span>{fno.min_confidence_to_trade}/100</span></div>
         </div>
-        <button className={`btn ${fno.enabled ? "primary" : ""}`} onClick={() => onToggle(!fno.enabled)}>
-          {fno.enabled ? "F&O is ON — turn off" : "Turn F&O on"}
+        <button className={`btn ${fno.enabled ? "primary" : ""}`} disabled={toggle.busy} onClick={() => toggle.run(!fno.enabled)}>
+          {toggle.busy ? "Switching…" : fno.enabled ? "Turn F&O off" : "Turn F&O on"}
         </button>
+        {toggle.error && <p className="down" role="alert" style={{ margin: "8px 0 0", fontSize: 13 }}>Couldn't switch F&amp;O: {toggle.error}.</p>}
         {!fno.kite_connected && <p className="empty" style={{ marginTop: 8 }}>Kite isn't connected — F&amp;O needs it for live option quotes and contract data even in paper mode.</p>}
       </div>
       <div className="cardbox" style={{ marginTop: 16 }}>
@@ -100,14 +101,8 @@ function FnoSection({ fno, onToggle }) {
 }
 
 function PcrSection() {
-  const [pcr, setPcr] = useState(null);
-  useEffect(() => {
-    let stopped = false;
-    function load() { apiJson("/api/fno/pcr").then((d) => !stopped && setPcr(d)).catch(() => {}); }
-    load();
-    const id = setInterval(load, 30000);
-    return () => { stopped = true; clearInterval(id); };
-  }, []);
+  // Context only, so a failed load just leaves the panel out.
+  const { data: pcr } = useApi("/api/fno/pcr", 30000);
   if (!pcr || pcr.error) return null;
   const entries = Object.entries(pcr).filter(([, v]) => v && !v.error);
   if (!entries.length) return null;
@@ -131,69 +126,66 @@ function PcrSection() {
 }
 
 export default function Portfolio({ state: s }) {
-  const [p, setP] = useState(null);
-  const [fno, setFno] = useState(null);
-  const [pErr, setPErr] = useState(null);
+  const portfolioQ = useApi("/api/portfolio");
+  const fnoQ = useApi("/api/fno/status");
+  const p = portfolioQ.data;
 
-  async function refresh() {
-    setPErr(null);
-    try { setP(await apiJson("/api/portfolio")); } catch (e) { setPErr(e.message); }
-    try { setFno(await apiJson("/api/fno/status")); } catch (e) {}
-  }
-
-  useEffect(() => { refresh(); }, []);
-
-  async function toggleFno(enabled) {
+  // The switch used to fail silently and just reload the old value (#236).
+  const fnoToggle = useAction(async (enabled) => {
     if (enabled && !confirm("Turn F&O on? Combined with Live mode, this lets Trader Sahab buy real option contracts " +
         "with real premium at risk, sized and confidence-gated automatically — no per-trade confirmation. " +
         "Paper mode still simulates it safely either way.")) return;
     try {
-      await apiFetch("/api/fno/enable", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
-    } catch (e) {}
-    refresh();
-  }
+      await postJson("/api/fno/enable", { enabled });
+    } finally {
+      fnoQ.reload();
+    }
+  });
 
-  if (!p) return <LoadState error={pErr} onRetry={refresh} label="Loading portfolio…" />;
+  if (!p) return <LoadState error={portfolioQ.error} onRetry={portfolioQ.reload} label="Loading portfolio…" />;
+  const eq = (p.margins || {}).equity || {};
+  const av = eq.available || {};
+  const ut = eq.utilised || {};
 
   return (
     <>
       <h2 className="h">Portfolio</h2>
       <p className="sub">What the account holds right now, F&amp;O settings, and today's P&amp;L.</p>
-      {p.error && <div className="tax">{p.error}</div>}
+      {p.error && <div className="tax" role="alert">{p.error}</div>}
       {p.kite_connected && p.margins ? (
         <>
           <div className="cardbox">
             <h2 className="h" style={{ fontSize: 16 }}>Kite margins (equity segment)</h2>
             <div className="rb-row">
-              <div className="rb-chip"><b>Cash</b><span>{money((p.margins.equity || {}).available?.cash || 0)}</span></div>
-              <div className="rb-chip"><b>Live balance</b><span>{money((p.margins.equity || {}).available?.live_balance ?? (p.margins.equity || {}).available?.cash ?? 0)}</span></div>
-              <div className="rb-chip"><b>Intraday payin</b><span>{money((p.margins.equity || {}).available?.intraday_payin || 0)}</span></div>
-              <div className="rb-chip"><b>Collateral</b><span>{money((p.margins.equity || {}).available?.collateral || 0)}</span></div>
+              <div className="rb-chip"><b>Cash</b><span>{inr(av.cash || 0)}</span></div>
+              <div className="rb-chip"><b>Live balance</b><span>{inr(av.live_balance ?? av.cash ?? 0)}</span></div>
+              <div className="rb-chip"><b>Intraday payin</b><span>{inr(av.intraday_payin || 0)}</span></div>
+              <div className="rb-chip"><b>Collateral</b><span>{inr(av.collateral || 0)}</span></div>
             </div>
             <div className="detail" style={{ margin: "10px 0 4px" }}>Utilised (what's tied up right now)</div>
             <div className="rb-row">
-              <div className="rb-chip"><b>Debits</b><span>{money((p.margins.equity || {}).utilised?.debits || 0)}</span></div>
-              <div className="rb-chip"><b>Span</b><span>{money((p.margins.equity || {}).utilised?.span || 0)}</span></div>
-              <div className="rb-chip"><b>Exposure</b><span>{money((p.margins.equity || {}).utilised?.exposure || 0)}</span></div>
-              <div className="rb-chip"><b>Option premium</b><span>{money((p.margins.equity || {}).utilised?.option_premium || 0)}</span></div>
-              <div className="rb-chip"><b>M2M unrealised</b><span className={tone((p.margins.equity || {}).utilised?.m2m_unrealised)}>{money((p.margins.equity || {}).utilised?.m2m_unrealised || 0)}</span></div>
-              <div className="rb-chip"><b>Holding sales</b><span>{money((p.margins.equity || {}).utilised?.holding_sales || 0)}</span></div>
+              <div className="rb-chip"><b>Debits</b><span>{inr(ut.debits || 0)}</span></div>
+              <div className="rb-chip"><b>Span</b><span>{inr(ut.span || 0)}</span></div>
+              <div className="rb-chip"><b>Exposure</b><span>{inr(ut.exposure || 0)}</span></div>
+              <div className="rb-chip"><b>Option premium</b><span>{inr(ut.option_premium || 0)}</span></div>
+              <div className="rb-chip"><b>M2M unrealised</b><span className={tone(ut.m2m_unrealised)}>{money(ut.m2m_unrealised || 0)}</span></div>
+              <div className="rb-chip"><b>Holding sales</b><span>{inr(ut.holding_sales || 0)}</span></div>
             </div>
             <div className="detail" style={{ marginTop: 10 }}>
               {!p.sync_capital_with_kite ? (
                 <>Risk-model capital is pinned in config, not synced to this live balance (config.RISK.sync_capital_with_kite is off).</>
               ) : s?.paper_mode ? (
                 <>
-                  <b>Paper mode</b> is sizing against a fixed ₹{num(p.risk_total_capital, 0)} test figure
+                  <b>Paper mode</b> is sizing against a fixed {inr(p.risk_total_capital)} test figure
                   (config.RISK.paper_capital), <i>not</i> this live balance — set up so simulated trades actually get
                   sized realistically. Going live snaps sizing back to this real balance immediately.
                 </>
               ) : (
                 <>
-                  Risk-model capital is synced to this live balance — <b>{money(p.risk_total_capital)}</b>, last
-                  synced {p.capital_sync ? new Date(p.capital_sync.synced_at * 1000).toLocaleTimeString() : "not yet"}.
-                  Position sizing (Van Tharp 1% rule) always uses the real number here, not a config guess, so a
-                  live order never gets rejected by Kite for insufficient margin against a stale figure.
+                  Risk-model capital is synced to this live balance — <b>{inr(p.risk_total_capital)}</b>, last
+                  synced {p.capital_sync ? clockIST(p.capital_sync.synced_at) : "not yet"}.
+                  Position sizing (Van Tharp 1% rule) uses the real number here, not a config guess, so live orders
+                  are sized on the current balance, not a stale figure.
                 </>
               )}
             </div>
@@ -207,13 +199,13 @@ export default function Portfolio({ state: s }) {
           </div>
         </>
       ) : (
-        <div className="tax">Kite isn't connected, so this shows today's paper positions only. Click "Connect" in the header to see real holdings and margins once you go live.</div>
+        <div className="tax">Kite isn't connected, so this page shows only the engine's paper positions. Click Connect Kite in the top bar to see your holdings and margins.</div>
       )}
       <div className="cardbox" style={{ marginTop: 16 }}>
-        <h2 className="h" style={{ fontSize: 16 }}>Today's open positions ({p.kite_connected ? "live" : "paper"})</h2>
+        <h2 className="h" style={{ fontSize: 16 }}>Today's open positions ({s ? (s.paper_mode ? "paper" : "live") : "engine"})</h2>
         <PaperPositions positions={p.paper_positions} />
       </div>
-      <div style={{ marginTop: 16 }}><FnoSection fno={fno} onToggle={toggleFno} /></div>
+      <div style={{ marginTop: 16 }}><FnoSection q={fnoQ} toggle={fnoToggle} /></div>
       {s && (
         <div className="cardbox" style={{ marginTop: 16 }}>
           <h2 className="h" style={{ fontSize: 16 }}>Today's P&amp;L</h2>
