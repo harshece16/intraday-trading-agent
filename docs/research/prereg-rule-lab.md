@@ -137,3 +137,32 @@ Sources: H. White, "A Reality Check for Data Snooping", *Econometrica* 68(5), 20
 - L55 reads only the selection sample before 2026-01-01; the 2026 held-out window is not opened, and the held-out exposure log gains no row.
 - L54's sessions are new data, after `splits.UNSEEN_AFTER`; they have been seen by no test.
 - **Amendments** before L54's first session or before L55's run are allowed, dated, with the reason; none after.
+
+## Amendment 1 — 2026-10-05, about 00:25 IST, before any code and before any data beyond §0's dates
+
+**Why.** The owner asked, through a video he sent (Craig Percoco, "Give Me 25 Minutes, I'll Give You 10,000 hours of Trading Knowledge", 2026-08-16), to "add these kind of logic in the app". Its testable logic is one rule with a risk-based exit, a way of reporting results in units of risk, and a ladder from replay to paper to live. The video's claims about money made are marketing and are not evidence for anything here. Nothing had been computed when this amendment was written.
+
+**1. Two more rules, the moving-average pullback with an R-based exit.** The family becomes **20 rules × 1 variant = 20 tests**; every "18" in §4 to §6 reads 20, and stage 0's halt (§5) becomes "fewer than 10 rules powered".
+
+| ID | Rule | Side | Signal on the finished bar `T[i]` |
+| --- | --- | --- | --- |
+| R19 | Pullback to a rising EMA20 | Long | i ≥ 1; `EMA(i) > EMA(i − 3)`; `close(i − 1) > EMA(i − 1)` (price was above the average); `low(i) ≤ EMA(i) < close(i)` (the bar touches it and closes back above) |
+| R20 | Pullback to a falling EMA20 | Short | the mirror: `EMA(i) < EMA(i − 3)`; `close(i − 1) < EMA(i − 1)`; `high(i) ≥ EMA(i) > close(i)` |
+
+- **Entry** as every rule: the next bar's open `E`, at or before 14:30.
+- **Stop** beyond the signal candle: `S = low(i)` for R19, `high(i)` for R20. Risk a share `r = |E − S|`. **No trade** if the entry opens at or past the stop, or if `r / E` is below the round trip of `costs.round_trip_pct` at the notional (16.60 bp), the engine's own floor that a stop must cover the cost (rule ENT-23).
+- **Target** `E ± 3r` (3R).
+- **Exit**, walking the finished bars from the entry bar on: the first bar whose low reaches the stop (long; high for the short) exits at the stop, or at the bar's open if it opened past it (a gap); the first bar whose high reaches the target exits at the target, or the open if it opened past it. **When one bar reaches both, the stop is taken.** With neither by 15:05, the exit is the open of the 15:05 bar, like every rule. This is the engine's paper stop handling (`_check_stop_take`: the first price at or past the stop fills, then slippage) read on bars: inside a bar the order of its high and low is unknown, so the conservative order is assumed. Slippage and charges apply to both legs as in §2.
+- **One open trade per rule per stock**, as §2. The tradability guards apply.
+- **Result**: net bp as every rule, which is the unit of the family test (§3, §4), and also **net R** = net ₹ / (r × qty).
+
+**2. What the page reports for every rule**, in addition to §3, as information (none of it is a test):
+- **Expectancy in R**, net of costs, for R19 and R20 (the other rules have no stop, so no R).
+- **Win rate beside the break-even win rate** for the rule's realised payoff: `1 / (1 + b)`, with `b` = the mean net win ÷ the mean net loss (both after costs). For R19 and R20 the planned payoff is 3R, which costs make smaller; the realised figure is used.
+- **Maximum consecutive losses**, in time order (session, then entry time).
+- **Historical against forward, side by side**: once L55 has run, its mean net bp, win rate and trade count for each rule (the discovery and confirmation halves together), next to the forward lab's, and the **decay**: forward mean − historical mean, in bp. Before L55 runs, the column says so.
+
+**3. The promotion ladder, in the owner's words: replay → paper → live, expecting returns to shrink at each step.** §7 stands, and its steps read as this ladder:
+1. **Replay** = L55, the historical screen (discovery, then confirmation), or the forward screen (lab sessions 1–40).
+2. **Paper** = the forward confirmation on 40 untouched lab sessions.
+3. **Live, small first.** After the owner's explicit yes, and only through the existing live gate (§7.4), a confirmed rule would trade at **a quarter of the engine's normal risk, 0.25% of capital a trade instead of 1%**, for at least 20 sessions and 50 trades, before any increase; an increase is a second owner decision. The decay from each step to the next (replay → paper, paper → live) is reported in bp at each step. Nothing about this is automatic, and none of it is built now: the lab places no orders.
