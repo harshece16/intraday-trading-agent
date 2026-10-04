@@ -103,16 +103,25 @@ duration apart.
    8. Entries: `_try_enter()`. If blocked, give the day's entry back.
    9. If flat and the review queue is on: `_offer_near_misses()`.
 4. `_process_fno()`: stops of open options positions, whether or not F&O is switched on, then options entries on this tick's entry signals.
-5. If a kill switch left anything open: `_square_off_all(reason="kill_switch")`.
+5. If a kill switch left anything open: `_square_off_all(reason="kill_switch")`. It stays pending until a pass leaves nothing open, and is dropped at the day change (#250).
 6. `stop_watcher.sync()`.
 
 **Phase `square_off_window`:** `_square_off_all()` exits each cash position
-at the live price, or at the average price if that read fails. Then every
-options position is closed. This repeats every tick until the book is flat.
+at the live price through `_close_at_market()`, each under its own guard: a
+close that fails is logged once (`_close_error`) and tried again next tick,
+and the loop goes on to the next position (#250). A paper position with no
+readable price is not closed that tick; it is never booked at its entry price
+(#255). A live one is still sent to Kite at market, with no signal price.
+Then every options position is closed. This repeats every tick until the book
+is flat.
 Then `_record_session_closes()`: once a session, Kite's last traded price of
 every universe stock and the NIFTY goes to `session_closes`, the 15:08
 outcome of the shadow log (README §115). Without Kite nothing is written; it
 is tried again each tick of the window and said once.
+
+**Phase `closed`:** `_reconcile_live_while_closed()` checks every live cash
+position still held against Kite's day book, every five minutes, and drops
+one Kite no longer holds (#250). It sends no order.
 
 **Failure handling.** `tick()` wraps `_tick_impl()` and catches everything.
 `_process_symbol` catches its own errors and logs each distinct message
@@ -135,26 +144,33 @@ the API and the WebSocket read it through `snapshot()`.
 | `review_queue`, `scanner`, `market`, `premarket` | Read models for the dashboard |
 | `activity` | Newest first, capped at 300 |
 | `trades`, `signals_log` | Today's trades; last 100 signals |
-| `realized_pnl_today`, `real_capital`, `capital_sync` | Money |
+| `realized_by_mode` | Today's realized P&L, `{paper, live}`; `realized_pnl_today` reads the current mode's (#252) |
+| `unjournaled` | Trade rows whose journal write failed, retried by `retry_journal()` each tick (#253) |
+| `real_capital`, `capital_sync` | Money |
 
 | Method | Behaviour |
 | --- | --- |
-| `apply_fill(symbol, side, qty, price, charges)` | Averages the price when opening or adding. When closing, realizes P&L pro rata: net = gross − entry-charge share − exit charges. Returns `{gross, charges_deducted, net}` |
-| `record_trade(...)` | Writes the in-memory list and the `trades` table |
-| `log(kind, message, symbol, level)` | Writes `activity` in memory and in the database, then hands the line to Telegram. A Telegram failure never breaks the log |
+| `apply_fill(symbol, side, qty, price, charges, mode)` | Averages the price when opening or adding. When closing, realizes P&L pro rata: net = gross − entry-charge share − exit charges, added to `mode`'s figure. Returns `{gross, charges_deducted, net}` |
+| `record_trade(...)` | Writes the in-memory list and the `trades` table. A failed table write is queued in `unjournaled`, logged, and never raised (#253) |
+| `log(kind, message, symbol, level)` | Writes `activity` in memory and in the database, then hands the line to Telegram. A failed database write or Telegram send never breaks the log, and never raises into the order path (#253) |
 | `snapshot()` | The dashboard's view of everything |
 | `_rehydrate_today()` | On startup, rebuilds today's trades, realized P&L, entry counts, open positions and open option positions from the journal |
 
 ### 2.4 Restart recovery
 
-`_rehydrate_open_positions()` restores a position that has a **single leg**
-today: a paper leg when the engine is in Paper, a live leg always. The stop
+`_rehydrate_open_positions()` restores a position opened today that still
+has shares open once its later legs are netted off: a paper leg when the
+engine is in Paper, a live leg always. A live exit Kite filled in part is
+restored at the quantity left open, with that share of the entry charges
+(#254). The stop
 and target come from the last "Stop X, target Y" text in the entry note.
 Entry charges are carried over.
 
 A restart always comes back in Paper. A restored live position keeps
-`live: True`, so its exit is a real order, and `_verify_live_position()`
-checks it against Kite's positions before any order is sent.
+`live: True`, so its exit is a real order. `_verify_live_position()` checks
+every live position against Kite's day book before any closing order is sent,
+restored or not (#250): Kite flat drops it with no order, Kite smaller on the
+same side cuts the order, Kite on the other side sends nothing.
 
 Open option positions come back through `_rehydrate_fno_positions()` (#187):
 every `fno_trades` row opened today with no exit, rebuilt with its entry leg
@@ -283,8 +299,17 @@ measured on the live `{strategy, entry_mode, interval}`.
 4. Cap the quantity at 33% of capital ÷ entry price.
 5. Multiply by the size factor and the VIX multiplier, then round down once.
 
-`daily_loss_limit_hit()` is true when today's realized P&L is at or below
-−2% of capital.
+`daily_loss_limit_hit(mode=None)` is true when today's realized P&L in that
+mode is at or below −2% of capital. Paper and live keep separate counters
+(`daily_realized`), each fill adds to its own mode's, and a restart seeds both
+from the journal by `mode` (#252). Without `mode`, the engine's current mode
+is read through `mode_fn`; `live_readiness()` reads `"live"`.
+
+`max_open_positions` and the sector cap count open positions plus entries in
+flight (`_cap_block_reason`): a slot is reserved under `state.lock` by
+`_reserve_slot()` right before the order and becomes a counted position in
+`_execute()`'s fill bookkeeping, so two threads can't share the last one
+(#251). An unconfirmed live entry keeps its slot.
 
 ### 3.5 Liquidity (`liquidity.py`)
 
@@ -311,7 +336,7 @@ With no order book to read, a paper entry proceeds and is recorded as
 | Card | `build_card()` is arithmetic only: entry, stop, target, net R:R, breakeven win rate `1/(1+R)`, expected R at the 32% reference win rate, rupee risk, reward and cost, and `money`: a hit target and a stop after costs (`target_net_rs`, `stop_net_rs`), and the break-even rate or "cannot break even at any win rate" |
 | Expiry | 300 seconds after the offer |
 | Approval | `approve_review()` needs a pending, unexpired card. In live mode it also needs `confirm_live` |
-| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. A card blocked on R:R is held to `REVIEW_QUEUE.min_net_rrr` again: `floor_reason()` on the net R:R at the live price, with the card's stop, target and `cost_pct`; under it the approval is refused, journaled as `refused` with the reason and `net_rrr_live` (#211). It does **not** re-apply the checklist's minimum R:R (1.5) or the stop-to-cost floor: the approval overrides the card's blocker |
+| Re-check | `_approve_claimed()` re-checks market open, the entry window, the daily entry cap, every block reason, a fresh price, the stop and target, size and liquidity. A card blocked on R:R is held to `REVIEW_QUEUE.min_net_rrr` again: `floor_reason()` on the net R:R at the live price, with the card's stop, target and `cost_pct`; under it the approval is refused, journaled as `refused` with the reason and `net_rrr_live` (#211). Then `_card_recheck()`: `trader_brain.recheck_plan()` at the live price, exempting only the card's own blocker (an R:R card skips the 1.5 minimum, a cost-floor card the cost floor). The same check runs at the offer (#249) |
 | Shadow | `shadow_outcome()` replays every unapproved card and every held-back near-miss as if approved at the offer, with the same slippage and charges. If one bar touches both stop and target, the stop is assumed first |
 
 The queue's switch is in memory only. A restart turns it off.

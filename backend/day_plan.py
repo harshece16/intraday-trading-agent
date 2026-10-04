@@ -108,13 +108,17 @@ def outcome(capital_used_today: float, paper_mode: bool = True) -> dict:
     now = datetime.now(IST)
     start_of_day = datetime(now.year, now.month, now.day, tzinfo=IST).timestamp()
     trades = database.trades_between(start_of_day)
-    realized = sum(t["realized"] for t in trades if t.get("realized") is not None)
-    closed = [t for t in trades if t.get("r_multiple") is not None]
+    mode = "paper" if paper_mode else "live"
+    # The loss cap is counted per mode, as the engine counts it (#252): paper
+    # profits don't offset a real-money loss.
+    mine = [t for t in trades if (t.get("mode") or "paper") == mode]
+    realized = sum(t["realized"] for t in mine if t.get("realized") is not None)
+    closed = [t for t in mine if t.get("r_multiple") is not None]
     wins = [t for t in closed if t["r_multiple"] > 0]
     max_daily_loss = abs(capital_used_today) * config.RISK["max_daily_loss_pct"] / 100
     return {
         "date": now.date().isoformat(),
-        "mode": "paper" if paper_mode else "live",
+        "mode": mode,
         "capital_used_today": capital_used_today,
         "trades": trades,
         "trade_count": len(trades),

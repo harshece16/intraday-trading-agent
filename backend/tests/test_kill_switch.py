@@ -138,7 +138,7 @@ def test_live_is_refused_without_a_usable_kite_session(engine, monkeypatch):
 
 def test_live_is_refused_after_the_daily_loss_limit(engine, monkeypatch):
     _kite(monkeypatch, True)
-    engine.risk.daily_realized_pnl = -1e9
+    engine.risk.record_realized_pnl(-1e9, "live")      # Live's own counter (#252)
     r = engine.live_readiness()
     assert r["ready"] is False
     assert "loss limit" in r["blockers"][0]

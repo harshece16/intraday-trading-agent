@@ -227,3 +227,28 @@ def test_day_change_survives_a_journal_failure(monkeypatch):
 
     assert [t["id"] for t in state.trades] == ["fresh"]
     assert state.realized_pnl_today == -10.0
+
+
+def test_day_change_seeds_both_modes_daily_loss_counters_from_the_journal(monkeypatch):
+    """#247 meets #252: the day change rebuilds the per-mode realized figures
+    and the risk manager's per-mode counters from today's journal rows, so a
+    live loss across midnight is still counted against Live and a paper gain
+    against Paper, and neither leaks into the other."""
+    _insert_trade("p1", _today_ts(0.2), "BEL", "SELL", 389.65)
+    _insert_trade("p2", _today_ts(0.4), "BEL", "BUY", 390.25, realized=120.0)
+    database.record_trade({"id": "l1", "position_id": "pos2", "ts": _today_ts(0.5), "symbol": "SBIN", "side": "BUY",
+                           "quantity": 10, "price": 800.0, "mode": "live", "reason": "test", "note": None,
+                           "realized": -450.0, "charges": 5.0, "initial_risk": 1.0, "r_multiple": -1.0})
+    state = AppState(watchlist=[], paper_mode=True)
+    state.realized_by_mode = {"paper": 9999.0, "live": 9999.0}
+    engine = trading_engine.TradingEngine(state)
+    engine.scanner = None
+    engine.risk.daily_realized = {"paper": 9999.0, "live": 9999.0}
+    engine._last_day = datetime.now(IST).date().replace(year=2000)
+    monkeypatch.setattr(trading_engine, "market_phase", lambda now: "closed")
+
+    engine._tick_impl()
+
+    assert state.realized_by_mode == {"paper": 120.0, "live": -450.0}
+    assert engine.risk.daily_realized == {"paper": 120.0, "live": -450.0}
+    assert engine.risk.daily_loss_limit_hit(mode="paper") is False

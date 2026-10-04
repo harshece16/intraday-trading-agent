@@ -4,7 +4,9 @@ the background trading loop and scanner write to it, the API/WebSocket layer
 reads it. Not persisted across restarts.
 """
 
+import logging
 import re
+import sqlite3
 import threading
 import time
 import uuid
@@ -19,6 +21,11 @@ import telegram_alerts
 
 ACTIVITY_LIMIT = 300
 IST = ZoneInfo("Asia/Kolkata")
+logger = logging.getLogger("trading_bot")
+
+
+def mode_of(paper_mode) -> str:
+    return "paper" if paper_mode else "live"
 
 
 def _gross_of(trade):
@@ -84,7 +91,13 @@ class AppState:
 
         self.trades = []           # trade blotter, newest first
         self.signals_log = []      # recent raw signals, newest first
-        self.realized_pnl_today = 0.0
+        # Today's realized P&L, net of charges, kept per mode (#252): paper
+        # money and real money never share one figure. realized_pnl_today
+        # reads the current mode's.
+        self.realized_by_mode = {"paper": 0.0, "live": 0.0}
+        # Trade rows whose journal write failed (a locked database). Retried
+        # by retry_journal() each tick; the fill itself is never undone (#253).
+        self.unjournaled = []
         self.last_update_ts = None
         self.last_error = None
         # Set by trading_engine._sync_capital() whenever RISK['total_capital'] is
@@ -103,6 +116,23 @@ class AppState:
         # the day's watchlist before the live intraday scanner has run.
         self.premarket = {"result": None, "error": None, "running": False}
         self._rehydrate_today()
+
+    @property
+    def realized_pnl_today(self) -> float:
+        """Today's realized P&L in the mode the engine is in now (#252)."""
+        return self.realized_by_mode[mode_of(self.paper_mode)]
+
+    @realized_pnl_today.setter
+    def realized_pnl_today(self, value):
+        self.realized_by_mode[mode_of(self.paper_mode)] = value
+
+    def reset_realized_today(self):
+        with self.lock:
+            self.realized_by_mode = {"paper": 0.0, "live": 0.0}
+
+    def add_realized(self, amount, mode):
+        with self.lock:
+            self.realized_by_mode[mode] += amount
 
     def _rehydrate_today(self):
         """A restart during market hours used to silently drop today's real
@@ -123,7 +153,9 @@ class AppState:
         except Exception:
             fno_rows = []
         self.trades = list(reversed(todays_trades))  # newest first, matching record_trade()'s insert(0, ...)
-        self.realized_pnl_today = sum(t["realized"] for t in self.trades if t.get("realized"))
+        for m in self.realized_by_mode:
+            self.realized_by_mode[m] = sum(t["realized"] for t in self.trades
+                                           if t.get("realized") and (t.get("mode") or "paper") == m)
         # F&O legs are in `trades` too, under the option's tradingsymbol. Before
         # #187 an open one was restored as a CASH position in that symbol.
         fno_underlying = {r["position_id"]: r["underlying"] for r in fno_rows}
@@ -139,9 +171,11 @@ class AppState:
         or square-off watching it. Found 2026-09-25 09:50, when a deploy
         restart orphaned two manually approved paper shorts (GRASIM, HYUNDAI).
 
-        Rebuild every position whose first leg is today and which has no
-        later leg: paper legs when the engine is in paper mode, and live legs
-        always. A restart comes back in Paper, and skipping the live leg left
+        Rebuild every position whose first leg is today and which still has
+        shares open once its later legs are netted off: paper legs when the
+        engine is in paper mode, and live legs always. A live exit Kite filled
+        in part leaves the rest open in the account, and is restored at that
+        open quantity (#254); before, any second leg counted as closed. A restart comes back in Paper, and skipping the live leg left
         real money with no stop, no target and no square-off (#156). A
         restored live position keeps "live": True, so it is closed with a
         real order. Stop and target come from the entry note
@@ -157,23 +191,29 @@ class AppState:
         restored = []
         for pid, ls in legs.items():
             entry = ls[0]
-            # One leg = still open. Entry legs are journaled with realized 0.0
-            # (not None), so "realized" can't tell an entry from an exit; the
-            # leg count can.
+            # Entry legs are journaled with realized 0.0 (not None), so
+            # "realized" can't tell an entry from an exit; the sides can: every
+            # later leg on the other side closes part of the entry.
             live = entry.get("mode") == "live"
-            if len(ls) > 1 or not (live or self.paper_mode):
+            if not (live or self.paper_mode):
                 continue
+            entry_qty = int(entry["quantity"])
+            closed_qty = sum(int(t["quantity"]) for t in ls[1:] if t["side"] != entry["side"])
+            added_qty = sum(int(t["quantity"]) for t in ls[1:] if t["side"] == entry["side"])
+            if added_qty or closed_qty >= entry_qty:
+                continue        # flat, or a shape no engine path writes: leave it to Kite reconciliation
             # Real money wins the slot if a paper leg is open in the same stock.
             if not live and self.positions.get(entry["symbol"], {}).get("live"):
                 continue
             m = _STOP_TARGET_RE.findall(entry.get("note") or "")
             stop, target = (float(m[-1][0]), float(m[-1][1])) if m else (None, None)
             pos = _new_position()
-            qty = int(entry["quantity"])
+            qty = entry_qty - closed_qty
             pos.update(quantity=qty if entry["side"] == "BUY" else -qty, avg_price=float(entry["price"]),
                        stop_price=stop, target_price=target, position_id=pid,
                        initial_risk=abs(float(entry["price"]) - stop) if stop else None,
-                       charges=float(entry.get("charges") or 0.0), live=live)
+                       # the entry charges still owed by the shares left open
+                       charges=float(entry.get("charges") or 0.0) * qty / entry_qty, live=live)
             self.positions[entry["symbol"]] = pos
             if entry["symbol"] not in restored:
                 restored.append(entry["symbol"])
@@ -275,7 +315,13 @@ class AppState:
         with self.lock:
             self.activity.insert(0, {"ts": ts, "kind": kind, "symbol": symbol, "message": message, "level": level})
             del self.activity[ACTIVITY_LIMIT:]
-        database.record_activity(kind, message, symbol=symbol, level=level, ts=ts)
+        try:
+            database.record_activity(kind, message, symbol=symbol, level=level, ts=ts)
+        except Exception:
+            # The log is called from inside the order path, after a fill. A
+            # locked journal raising here left a filled position without its
+            # stop, target or slot (#253). The line stays in memory.
+            logger.exception(f"Couldn't journal an activity line ({kind}): {message[:120]}")
         try:
             telegram_alerts.notify(kind, message, symbol=symbol, level=level, paper_mode=self.paper_mode)
         except Exception:
@@ -320,7 +366,9 @@ class AppState:
                 "trades": self.trades[:50],
                 "tax": self._tax_summary(),
                 "signals_log": self.signals_log[:30],
+                # The current mode's figure; both are in the _by_mode field (#252).
                 "realized_pnl_today": self.realized_pnl_today,
+                "realized_pnl_today_by_mode": dict(self.realized_by_mode),
                 "unrealized_pnl": unrealized,
                 "last_update_ts": self.last_update_ts,
                 "last_error": self.last_error,
@@ -346,7 +394,7 @@ class AppState:
                 "review_queue": review,
             }
 
-    def apply_fill(self, symbol, side, quantity, price, charges=0.0) -> dict:
+    def apply_fill(self, symbol, side, quantity, price, charges=0.0, mode=None) -> dict:
         """
         Update positions + realized P&L for an order fill. Used by both the
         paper broker and the live (Kite) path, so position/P&L bookkeeping
@@ -361,6 +409,9 @@ class AppState:
         opening leg's charges now ride on the position and are released when
         it closes, so the closing fill reports what the account actually
         gained or lost.
+
+        `mode` ("paper"/"live") is whose realized figure a closing fill adds
+        to; None means the engine's current mode (#252).
 
         Returns {"gross", "charges_deducted", "net"} for this fill — all 0.0
         when the fill only opens or adds to a position.
@@ -385,7 +436,7 @@ class AppState:
                 entry_share = pos.get("charges", 0.0) * closed_qty / open_qty if open_qty else 0.0
                 pos["charges"] = pos.get("charges", 0.0) - entry_share
                 deducted = entry_share + (charges or 0.0)
-                self.realized_pnl_today += gross - deducted
+                self.realized_by_mode[mode or mode_of(self.paper_mode)] += gross - deducted
                 if new_qty == 0:
                     pos.update(_new_position())
 
@@ -411,7 +462,38 @@ class AppState:
             trade["confidence"] = confidence
         with self.lock:
             self.trades.insert(0, trade)
-        database.record_trade(trade, checklist_snapshot=checklist_snapshot)
+        try:
+            database.record_trade(trade, checklist_snapshot=checklist_snapshot)
+        except Exception:
+            # Called after the fill: raising here skipped the exit's slot and
+            # daily-loss bookkeeping (#253). Kept and written by retry_journal().
+            logger.exception(f"Couldn't journal the {side} {quantity} {symbol} fill; it is retried next tick")
+            with self.lock:
+                self.unjournaled.append((trade, checklist_snapshot))
+            try:
+                self.log("error", f"The journal couldn't record the {side} {quantity} {symbol} fill just now. "
+                                  f"The position is booked in memory and the write is retried every cycle.",
+                         symbol=symbol, level="error")
+            except Exception:
+                pass
+
+    def retry_journal(self):
+        """Write the trade rows record_trade() couldn't. Never raises; a row
+        that fails again stays queued for the next call."""
+        with self.lock:
+            pending, self.unjournaled = self.unjournaled, []
+        failed = []
+        for trade, snapshot in pending:
+            try:
+                database.record_trade(trade, checklist_snapshot=snapshot)
+            except sqlite3.IntegrityError:
+                pass            # the first write did land after all
+            except Exception:
+                failed.append((trade, snapshot))
+        if failed:
+            with self.lock:
+                self.unjournaled = failed + self.unjournaled
+        return len(pending) - len(failed)
 
     def roll_trades_to_today(self):
         """At the day change: keep only today's legs in the blotter (#247).
@@ -428,7 +510,10 @@ class AppState:
                 todays = [t for t in self.trades if (t.get("ts") or 0) >= start_of_day]
         with self.lock:
             self.trades = todays
-            self.realized_pnl_today = sum(t["realized"] for t in todays if t.get("realized"))
+            # Per mode, as _rehydrate_today seeds it (#252): at midnight both are 0.
+            for m in self.realized_by_mode:
+                self.realized_by_mode[m] = sum(t["realized"] for t in todays
+                                               if t.get("realized") and (t.get("mode") or "paper") == m)
 
     def _tax_summary(self):
         """Intraday equity is speculative business income (Varsity Markets & Taxation ch 3-6).

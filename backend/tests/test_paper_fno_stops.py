@@ -135,6 +135,10 @@ def test_live_mode_still_uses_kites_premium(monkeypatch):
         def wait_for_fill(self, order_id):
             return {"status": "COMPLETE", "filled_quantity": LOT, "average_price": entry * 2 - 0.5, "message": ""}
 
+        def get_positions(self):       # a live close reads the day book first (#250)
+            return [{"tradingsymbol": p["tradingsymbol"], "quantity": p["lots"] * p["lot_size"]}
+                    for p in e.state.fno_positions.values()]
+
     monkeypatch.setattr(e, "_ensure_kite", lambda: Kite())
     assert e._check_fno_stop_take("ACME") is True
     t = _exit_trade(e)
