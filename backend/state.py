@@ -520,13 +520,22 @@ class AppState:
         Trade-wise turnover is the sum of the absolute profit or loss of each closed
         trade, taken *before* expenses — brokerage and statutory charges are a
         business expense claimed separately, not netted off turnover. So turnover
-        reads gross while net_pnl reads net (issue #21)."""
+        reads gross while net_pnl reads net (issue #21).
+
+        `charges` are the ones the closed trades paid, both legs, so gross -
+        charges = net (#258). Before, it also summed the entry charges of
+        positions still open, so the box didn't add up while one was.
+        Those are `open_charges`, paid but not yet set against any P&L."""
         closed = [t for t in self.trades if t.get("realized")]
+        gross = sum(_gross_of(t) for t in closed)
+        net = sum(t["realized"] for t in closed)
+        paid = sum(t.get("charges") or 0 for t in self.trades)
         return {
             "turnover": sum(abs(_gross_of(t)) for t in closed),
-            "net_pnl": sum(t["realized"] for t in closed),
-            "gross_pnl": sum(_gross_of(t) for t in closed),
-            "charges": sum(t.get("charges") or 0 for t in self.trades),
+            "net_pnl": net,
+            "gross_pnl": gross,
+            "charges": gross - net,
+            "open_charges": paid - (gross - net),
             "closed_trades": len(closed),
         }
 

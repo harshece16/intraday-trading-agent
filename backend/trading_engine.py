@@ -96,6 +96,11 @@ def next_session_open(now=None) -> str:
     return datetime.combine(open_date, MARKET_OPEN_T, tzinfo=IST).isoformat()
 
 
+def _is_trading_day(now) -> bool:
+    """A weekday that isn't an NSE holiday."""
+    return now.weekday() < 5 and not holidays.is_holiday(now)
+
+
 def market_phase(now=None) -> str:
     now = now or datetime.now(IST)
     if now.weekday() >= 5 or holidays.is_holiday(now):
@@ -199,6 +204,7 @@ class TradingEngine:
         self._close_errors = {}
         self._square_off_logged_for = None
         self._last_closed_reconcile = 0.0
+        self._offday_scan_for = None       # the weekend/holiday date already scanned once (#259)
         # symbol -> a live order that was sent but whose outcome Kite never
         # confirmed, with everything needed to book it once it does. While a
         # symbol is here the engine sends no other order in it. See _live_fill().
@@ -435,16 +441,24 @@ class TradingEngine:
             logger.exception("Failed to journal the scan")
 
         held = [s for s, p in self.state.positions.items() if p["quantity"] != 0]
-        new_watch = list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["active"] + held))
         old_watch = list(self.state.watchlist)
+        # A weekend or holiday scan updates the plan the dashboard shows, but
+        # not what is tracked: nothing can trade until the next session, and
+        # its list is chosen then (#259).
+        off_day = not _is_trading_day(datetime.now(IST))
+        new_watch = old_watch if off_day else \
+            list(dict.fromkeys(list(config.SCANNER.get("pinned", [])) + result["active"] + held))
         mkt = result["market"]
         with self.state.lock:
             self.state.market = mkt
             self.state.scanner = result
-        self.state.set_watchlist(new_watch)
+        if not off_day:
+            self.state.set_watchlist(new_watch)
         self.size_multiplier = config.MARKET_FILTER["vix_high_size_multiplier"] if mkt.get("vix_high") else 1.0
 
         picks = ", ".join(result["active"]) or "nothing qualifies yet"
+        if off_day:
+            picks += " (no session today: the tracked list is left as it is)"
         mood = {"risk-on": "strong", "risk-off": "weak"}.get(mkt["bias"], "mixed")
         self.state.log(
             "scan",
@@ -562,9 +576,12 @@ class TradingEngine:
         between process start and the first live intraday scan — only while
         that gap is real (no live scan has run yet today) and only once a
         day, so it never fights the live scanner once that takes over."""
-        today = datetime.now(IST).date()
+        now = datetime.now(IST)
+        today = now.date()
         if self._last_premarket_seed_date == today:
             return
+        if not _is_trading_day(now):
+            return          # no session today: tracking is left alone (#259)
         if self.scanner and self.scanner.list_fixed_for(today.isoformat()):
             return          # the watchlist already follows the day's fixed list (#198)
         live_scan_done_today = self.state.scanner and self.state.scanner.get("session_date") == today.isoformat()
@@ -1037,6 +1054,12 @@ class TradingEngine:
         engine itself would have applied."""
         if self.state.entries_paused:
             return "new entries are paused from the dashboard"
+        if self.scanner is not None and self.state.market is None:
+            # Only a finished scan sets the market context and the scan rows
+            # every rule below reads. After a restart the first ticks ran
+            # before it: no market-bias filter, no scanner exclusions, no
+            # long-only guard and no VIX size cut (#256).
+            return "waiting for the first market scan since the engine started (market filter, exclusions, VIX size)"
         if symbol in self._untracked_kite_positions:
             return ("Kite shows an untracked open position in this symbol (see the reconciliation "
                     "alert) — entries blocked until that's resolved, to avoid doubling up on real exposure")
@@ -2343,8 +2366,14 @@ class TradingEngine:
             # holiday (planning ahead to the next trading day) as any other.
             self.request_premarket_scan()
 
+        trading_day = now.weekday() < 5 and not holiday
         if self.scanner and self.scanner.due(phase != "closed"):
-            self.request_scan()
+            # On a weekend or a holiday one scan is enough to show a plan:
+            # nothing can trade, and the closed-market cadence ran 44-49 scans
+            # a day there, one of them 4,940 s (#259).
+            if trading_day or self._offday_scan_for != now.date():
+                if self.request_scan() and not trading_day:
+                    self._offday_scan_for = now.date()
 
         if phase in ("open", "square_off_window"):
             # ETF books at the overnight-hold entry and exit times; a no-op

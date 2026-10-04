@@ -4395,6 +4395,29 @@ From the same 2026-10-05 React performance audit as §119.
 
 Rules: EXE-09 new; ENT-23, ENT-26, RSK-06, RSK-07, RSK-08, EXE-05, EXE-08, EXT-04, EXT-07 and OPS-03 changed. Files: `backend/trading_engine.py`, `backend/state.py`, `backend/risk_manager.py`, `backend/paper_broker.py`, `backend/day_plan.py`; `backend/tests/test_engine_money_paths.py` (new), `backend/tests/test_kill_switch.py`, `backend/tests/test_size_rounding_and_cost_floor.py`, `backend/tests/fno_kit.py`, `backend/tests/test_paper_fno_stops.py`, `backend/tests/test_live_fills.py`, `backend/tests/test_live_restart.py`, `backend/tests/test_review_queue.py`; `docs/architecture/` (LLD, rules); `BUG_LOG.md`.
 
+### 122. Four correctness bugs: entries before the first scan, the Scorecard's trade count, the tax box, off-day scans
+
+**Found 2026-10-05** by the same logic reviews as §121 and from the journal. None moves money; each puts a wrong rule or a wrong number in front of the owner.
+
+| Issue | What was wrong | Now |
+| --- | --- | --- |
+| [#256](https://github.com/harshece16/intraday-trading-agent/issues/256) | After a restart the first ticks ran before the first scan. With no `state.market` and no scan rows there was no market-bias filter, no scanner exclusion (trade-for-trade, surveillance, band), no long-only guard and no high-VIX size cut. On 2026-10-01 23 stocks were evaluated in the 28 s before the first scan finished. | No entry and no review card until the first scan since the start has finished. The block is logged: "waiting for the first market scan since the engine started". |
+| [#257](https://github.com/harshece16/intraday-trading-agent/issues/257) | The Scorecard counted trade rows. A live exit Kite fills in parts writes one row per fill, so one losing trade in two fills (1 + 99 shares) was two losses: 3 trades, 33%, −0.087R instead of 2 trades, 50%, +0.41R. | `database.closed_trade_rs()` gives one R per position: its closing legs summed by `position_id`, R = total net / (initial risk × entry quantity). `trade_stats()` and the Deflated Sharpe row read it. Paper closes in one leg, so **the paper record's numbers don't change.** |
+| [#258](https://github.com/harshece16/intraday-trading-agent/issues/258) | The tax box's charges summed every leg, including the entry charges of positions still open, while gross and net were closed trades only, so gross − charges ≠ net. | `tax.charges` is what the closed trades paid (gross − net). `tax.open_charges` is the entry charges of positions still open. The Trades page shows `charges` as before; showing `open_charges` is left to the dashboard PR that is changing that page. |
+| [#259](https://github.com/harshece16/intraday-trading-agent/issues/259) | The scanner ran on its closed-market cadence on weekends and holidays: 44–49 scans a day on 2026-10-02..04, one of 4,940 s, and the tracked list churned ("Now tracking / Stopped tracking") with nothing able to trade. | On a weekend or an NSE holiday the scanner runs once that date. Its result updates the plan the dashboard shows but not the tracked list, and the pre-market read doesn't seed the list either. |
+
+**Trade-off.** If every scan fails after a restart (the delayed feed down, say), the engine takes no entry until one succeeds. Before, it traded without the filters instead; a failed scan is logged at error level either way.
+
+**Not changed, for the owner: [#260](https://github.com/harshece16/intraday-trading-agent/issues/260).** `backtester.py` fills a stop exit at the stop level; the engine fills at the first price it sees past the stop. On the APOLLOHOSP short of 2026-10-01 that is −1.319R in a backtest against −1.479R booked. So backtests are optimistic by the stop overshoot on every stop-out. Changing it changes every research result of record, so it is filed, not fixed.
+
+**Checked.**
+- `backend/tests/test_engine_correctness.py`, 8 tests. 7 fail on `fix/engine-money-paths` (§121's branch, which this builds on); the eighth is a control (a trading day still scans on its cadence and tracks its picks).
+- Engine fixtures that model a running engine now set `state.market` as a finished scan would (`tests/fno_kit.py`, `test_fno_mwpl.py`, `test_entries_today_rollback.py`, one helper in `test_engine_money_paths.py`).
+- Full backend suite.
+- **Not deployed.**
+
+Rules: ENT-29 and EVL-17 new; SCN-03, SCN-12 and OPS-09 changed. Files: `backend/trading_engine.py`, `backend/database.py`, `backend/state.py`; `backend/tests/test_engine_correctness.py` (new), `backend/tests/fno_kit.py`, `backend/tests/test_fno_mwpl.py`, `backend/tests/test_entries_today_rollback.py`, `backend/tests/test_engine_money_paths.py`; `docs/architecture/` (LLD, rules).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
