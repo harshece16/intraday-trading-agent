@@ -41,6 +41,7 @@ import news_sentiment
 import nse_feed
 import options_pricing
 import review_queue
+import rule_lab
 from kiteconnect.exceptions import TokenException
 from kite_broker import ORDER_FINAL, ORDER_UNKNOWN, OrderNotFilled, OrderUnconfirmed
 from paper_broker import execute_paper_order
@@ -234,6 +235,9 @@ class TradingEngine:
         except Exception:
             logger.exception("Couldn't read the LLM news sentiment setting — leaving config's default")
         self.stop_watcher = None
+        # The single-rule paper lab (README section 119): shadow trades only,
+        # in its own tables; nothing here reads what it writes.
+        self.rule_lab = rule_lab.RuleLab()
         self._restore_day_list()
 
     def _ensure_kite(self):
@@ -2470,6 +2474,10 @@ class TradingEngine:
                     self.stop_watcher.sync()
             except Exception:
                 logger.exception("Stop watcher sync failed — stops still covered by this poll")
+            # Last, after the tick's own work: the rule lab reads the candles
+            # already fetched and writes only its own tables. It never raises,
+            # and a failure here is caught again so it cannot touch the tick.
+            self._run_rule_lab(now, watchlist, candles_map)
 
         try:
             self._update_review_shadows(now)
@@ -2500,6 +2508,18 @@ class TradingEngine:
                 self._close_error(symbol, f"The market is closed and Kite still holds {held:+d} in {symbol}, a "
                                           f"live position the engine could not close. The engine sends no order "
                                           f"after the close: close it in Kite.")
+
+    def _run_rule_lab(self, now, watchlist, candles_map):
+        """README section 119. The candles the tick fetched, or the 200 bars it
+        kept for a stock the batch missed; the scanner's long-only flag."""
+        try:
+            if not config.RULE_LAB.get("enabled", True):
+                return
+            with self.state.lock:
+                kept = {s: list(self.state.candles.get(s) or []) for s in watchlist if s not in candles_map}
+            self.rule_lab.run(now, {**kept, **candles_map}, watchlist, scan_row=self._scan_row)
+        except Exception:
+            logger.exception("Rule lab: pass failed (the tick is unaffected)")
 
     def _record_session_closes(self, now):
         """Once a session, at the first tick of the square-off window: Kite's

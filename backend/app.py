@@ -498,6 +498,13 @@ class ModeUpdate(BaseModel):
     paper_mode: bool
 
 
+@app.get("/api/rule-lab")
+def rule_lab_page():
+    """The single-rule paper lab's leaderboard (README section 119). Read-only."""
+    import rule_lab
+    return rule_lab.page()
+
+
 @app.get("/api/jev-book")
 def jev_book_summary():
     """The Jev book (README section 86): the LLM judge's paper decisions on the

@@ -1,0 +1,115 @@
+{
+ "look": "L55",
+ "mode": "stage0",
+ "written": "2026-10-05T00:24:19+05:30",
+ "db": "kite_history.db",
+ "symbols": 100,
+ "sessions": 316,
+ "first_session": "2024-09-24",
+ "last_session": "2025-12-31",
+ "newest_bar_read": "2025-12-31",
+ "stock_sessions": 31049,
+ "share_with_70_bars": 0.9936,
+ "bars_evaluated": 2301313,
+ "rows_2026_count_only": {
+  "symbols": 100,
+  "rows": 1317603
+ },
+ "conditions": {
+  "R01": {
+   "side": "LONG",
+   "signals": 160149
+  },
+  "R02": {
+   "side": "SHORT",
+   "signals": 164165
+  },
+  "R03": {
+   "side": "LONG",
+   "signals": 19368
+  },
+  "R04": {
+   "side": "SHORT",
+   "signals": 16323
+  },
+  "R05": {
+   "side": "LONG",
+   "signals": 27060
+  },
+  "R06": {
+   "side": "SHORT",
+   "signals": 29554
+  },
+  "R07": {
+   "side": "LONG",
+   "signals": 99049
+  },
+  "R08": {
+   "side": "SHORT",
+   "signals": 103769
+  },
+  "R09": {
+   "side": "LONG",
+   "signals": 145468
+  },
+  "R10": {
+   "side": "SHORT",
+   "signals": 139572
+  },
+  "R11": {
+   "side": "LONG",
+   "signals": 87034
+  },
+  "R12": {
+   "side": "SHORT",
+   "signals": 90058
+  },
+  "R13": {
+   "side": "LONG",
+   "signals": 15719
+  },
+  "R14": {
+   "side": "SHORT",
+   "signals": 17696
+  },
+  "R15": {
+   "side": "LONG",
+   "signals": 2205
+  },
+  "R16": {
+   "side": "SHORT",
+   "signals": 1124
+  },
+  "R17": {
+   "side": "SHORT",
+   "signals": 3753
+  },
+  "R18": {
+   "side": "LONG",
+   "signals": 2139
+  },
+  "R19": {
+   "side": "LONG",
+   "signals": 135957
+  },
+  "R20": {
+   "side": "SHORT",
+   "signals": 133540
+  }
+ },
+ "family": {
+  "enumerated": 700,
+  "greedy_max": 560,
+  "max_total": 1260,
+  "combinations_with_200_signals": 298
+ },
+ "timing": {
+  "seconds_per_symbol_conditions": 1.82,
+  "workers": 6,
+  "estimate_discovery_precompute_s": 91.0,
+  "stage0_wall_s": 75.6
+ },
+ "memory_estimate_mb": 241.0,
+ "halts": [],
+ "verdict": "OK: ready for review; no return was computed"
+}
