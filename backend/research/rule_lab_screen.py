@@ -347,14 +347,20 @@ def family_hash(conds, look=1):
     return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
 
 
-def stage0_family_hash(rec):
-    """The family hash of a stage 0 record, from its own fields when it predates the hash."""
-    if rec.get("family_hash"):
+def stage0_family_hash(rec, look=1):
+    """The family hash of a stage 0 record, from the record's own fields (never from the run's
+    condition list, or the check would bind nothing). Look 2 adds the same look and filter fields
+    as family_hash(look=2)."""
+    if look == 1 and rec.get("family_hash"):
         return rec["family_hash"]
     import hashlib
     desc = {"conditions": sorted((c, v["side"]) for c, v in rec["conditions"].items()),
             "enumerated": rec["family"]["enumerated"], "greedy_max": rec["family"]["greedy_max"],
             "named": rec["family"].get("named_combinations", 0), "exits": list(EXITS)}
+    if look != 1:
+        desc["look"] = look
+        desc["max_filter"] = {"min_trades": MIN_TRADES, "min_sessions": MIN_SESSIONS,
+                              "min_clusters": rule_lab.MIN_CLUSTERS_IN_MAX}
     return hashlib.sha256(json.dumps(desc, sort_keys=True).encode()).hexdigest()
 
 
@@ -655,7 +661,9 @@ def discover(db, out, conds, workers, log=print, stage0_path=None, look=1):
     stage0_path = stage0_path or default_stage0()
     with open(stage0_path) as fh:
         s0 = json.load(fh)
-    expected = stage0_family_hash(s0) if look == 1 else family_hash(conds, look)
+    if sorted(s0["conditions"]) != sorted(conds):
+        raise RefusedRun("the condition list is not the one stage 0 recorded")
+    expected = stage0_family_hash(s0, look)
     prov = refuse_unless_allowed(out, conds, expected, f"look-{look} discovery", look=look)
     t0 = time.time()
     log("precomputing conditions and exits")
@@ -681,7 +689,7 @@ def discover(db, out, conds, workers, log=print, stage0_path=None, look=1):
             own = "R3" if rule_lab.REGISTRY[rid]["exit"] == "r" else "H30"
             if r["exit"] == own:
                 singles[rid] = {"n": r["n"], "mean": r["mean"], "t": r["t"], "passed": r["rejected"]}
-    powered_rows = [r for r in rows if r["n"] >= MIN_TRADES]
+    powered_rows = [r for r in rows if r["n"] >= MIN_TRADES and r["sessions"] >= MIN_SESSIONS]
     rec = {"look": "L55", "look_number": look, "mode": "discover" if look == 1 else f"discover-look{look}",
            "written": datetime.now(IST).isoformat(timespec="seconds"),
            "sessions": [panel.days[0], panel.days[-1], len(panel.days)], "newest_bar_read": newest,

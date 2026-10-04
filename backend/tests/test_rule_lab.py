@@ -756,8 +756,16 @@ def test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_chang
     with pytest.raises(rls.RefusedRun, match="uncommitted"):
         rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0))
     monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
-    with pytest.raises(rls.RefusedRun, match="family hash"):
+    with pytest.raises(rls.RefusedRun, match="condition list"):
         rls.discover(db, str(out), COHORT1[:-1], workers=1, log=lambda *a: None, stage0_path=str(s0))
+    # the same condition list but a stage 0 record whose family figures differ: refused on the hash
+    tampered = json.loads(s0.read_text())
+    tampered["family"]["greedy_max"] += 1
+    tampered.pop("family_hash", None)
+    s0b = tmp_path / "s0b.json"
+    s0b.write_text(json.dumps(tampered))
+    with pytest.raises(rls.RefusedRun, match="family hash"):
+        rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0b))
     assert not out.exists(), "a refused run writes nothing"
     disc = tmp_path / "disc.json"
     disc.write_text(json.dumps({"survivors": [{"side": "LONG", "exit": "H30", "conditions": ["R09"]}],
@@ -989,7 +997,7 @@ def test_look2_family_hash_differs_and_record_carries_the_amended_fields(screen,
     assert rec["newest_bar_read"] < "2026-01-01"
     assert rec["provenance"]["family_hash"] == rls.family_hash(COHORT1, look=2)
     assert 0 < rec["family_in_max"] <= rec["family_size"]
-    assert all(r["n"] >= 5 for r in rec["powered_rows"]) and all(r["n"] >= 5 for r in rec["top"])
+    assert all(r["n"] >= 5 and r["sessions"] >= 3 for r in rec["powered_rows"]) and all(r["n"] >= 5 for r in rec["top"])
     assert rec["best"] is None or rec["best"]["n"] >= 5
     assert all(len(r["halves"]) == 2 for r in rec["powered_rows"])
     assert out1.read_text() == "{}"
@@ -1006,3 +1014,19 @@ def test_halves_are_null_when_a_half_has_no_trades():
                                      "mean": 5.0, "t": 2.0, "n": 20, "sessions": 20}}
     rls.judge(ev, [f"d{i}" for i in range(40)], b=200, log=lambda *a: None, look=2)
     assert ev[("LONG", "H30", ("R01",))]["halves"][0] is None
+
+
+def test_look2_refuses_a_stage0_record_whose_conditions_differ(screen, tmp_path, monkeypatch):
+    """The expected hash comes from the stage 0 record, never from the run's own condition list."""
+    rls, db, days = screen
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    s0 = tmp_path / "s0.json"
+    rls.stage0(db, str(s0), COHORT1[:-1], workers=1, log=lambda *a: None)
+    rec = json.loads(s0.read_text())
+    assert rls.stage0_family_hash(rec, look=2) == rls.family_hash(COHORT1[:-1], look=2)
+    assert rls.stage0_family_hash(rec, look=2) != rls.stage0_family_hash(rec, look=1)
+    for look in (1, 2):
+        with pytest.raises(rls.RefusedRun, match="condition list"):
+            rls.discover(db, str(tmp_path / f"d_look{look}.json"), COHORT1, workers=1, log=lambda *a: None,
+                         stage0_path=str(s0), look=look)
+    assert not (tmp_path / "d_look2.json").exists()
