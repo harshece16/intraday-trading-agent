@@ -756,8 +756,16 @@ def test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_chang
     with pytest.raises(rls.RefusedRun, match="uncommitted"):
         rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0))
     monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
-    with pytest.raises(rls.RefusedRun, match="family hash"):
+    with pytest.raises(rls.RefusedRun, match="condition list"):
         rls.discover(db, str(out), COHORT1[:-1], workers=1, log=lambda *a: None, stage0_path=str(s0))
+    # the same condition list but a stage 0 record whose family figures differ: refused on the hash
+    tampered = json.loads(s0.read_text())
+    tampered["family"]["greedy_max"] += 1
+    tampered.pop("family_hash", None)
+    s0b = tmp_path / "s0b.json"
+    s0b.write_text(json.dumps(tampered))
+    with pytest.raises(rls.RefusedRun, match="family hash"):
+        rls.discover(db, str(out), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0b))
     assert not out.exists(), "a refused run writes nothing"
     disc = tmp_path / "disc.json"
     disc.write_text(json.dumps({"survivors": [{"side": "LONG", "exit": "H30", "conditions": ["R09"]}],
@@ -913,3 +921,112 @@ def test_y15_fires_once_dema200_has_history_and_is_causal():
         cut = c[:first + pos + 1]
         got = set(rule_lab.signals_at(rule_lab.session_context(cut, DAY), pos))
         assert got == full[pos], (pos, got ^ full[pos])
+
+
+# ---- amendment 6: the filtered maximum and the cluster guard --------------------
+
+def test_a_two_trade_rule_no_longer_sets_the_bar():
+    """A rule with two trades and a near-zero standard error used to dominate every replicate's
+    maximum (look 1's critical value was 7.17e7). With the floor it is void: the critical value with it
+    present equals the one without, and it cannot be rejected."""
+    sessions = [f"S{i:03d}" for i in range(60)]
+    noise = _synthetic({f"n{i}": 0.0 for i in range(10)}, sessions, seed=3)
+    without = rule_lab.romano_wolf(noise, sessions, block=3, b=2000)
+    crit_without = next(v["critical"] for v in without.values() if v.get("critical") is not None)
+    tiny = dict(noise)
+    tiny["two"] = {"S000": [50.0001], "S001": [50.0]}
+    floor = [r for r in tiny if r != "two"]
+    with_floor = rule_lab.romano_wolf(tiny, sessions, block=3, b=2000, in_max=floor)
+    crit_with = next(v["critical"] for v in with_floor.values() if v.get("critical") is not None)
+    assert with_floor["two"]["in_max"] is False and not with_floor["two"]["rejected"]
+    assert abs(crit_with - crit_without) < 1e-9
+    # (that the unfiltered maximum was the problem is look 1's record: critical value 7.17e7)
+
+
+def test_cluster_guard_drops_replicates_with_too_few_effective_sessions():
+    """The guard removes a rule from a replicate's maximum when its effective session clusters
+    (the replicate's weights over the sessions it traded in) are below the floor. Dropping entries
+    never raises a maximum; a floor no replicate can meet empties every maximum."""
+    import numpy as np
+    sessions = [f"S{i:03d}" for i in range(60)]
+    noise = _synthetic({f"n{i}": 0.0 for i in range(6)}, sessions, seed=4)
+    S = np.array([[sum(noise[r].get(s) or []) for s in sessions] for r in sorted(noise)])
+    N = np.array([[len(noise[r].get(s) or []) for s in sessions] for r in sorted(noise)])
+    # a rule that trades in only three sessions: its effective clusters are usually below five
+    S2 = np.vstack([S, np.array([[30.0, 31.0, 29.0] + [0.0] * 57])])
+    N2 = np.vstack([N, np.array([[1, 1, 1] + [0] * 57], dtype=float)])
+    _, _, _, c_off = rule_lab.romano_wolf_matrix(S2, N2, 3, b=1000, min_clusters=0)
+    _, _, _, c5 = rule_lab.romano_wolf_matrix(S2, N2, 3, b=1000, min_clusters=5)
+    _, _, _, c_all = rule_lab.romano_wolf_matrix(S2, N2, 3, b=1000, min_clusters=1000)
+    assert c5[0] <= c_off[0] + 1e-12
+    assert c_all[0] == np.inf
+    # the thin rule's own replicate statistics are what the guard removes: without it, the two agree
+    _, _, _, c5_without = rule_lab.romano_wolf_matrix(S, N, 3, b=1000, min_clusters=5)
+    _, _, _, c_off_without = rule_lab.romano_wolf_matrix(S, N, 3, b=1000, min_clusters=0)
+    assert abs(c5_without[0] - c_off_without[0]) < 1e-9
+
+
+def test_forward_screen_voids_rules_below_the_floor_and_reports_the_family(monkeypatch):
+    monkeypatch.setattr(rule_lab, "BOOTSTRAP_B", 1000)
+    trades, sessions = _lab_rows(41, edge_rule="R09")
+    thin = [t for t in trades if not (t["rule"] == "R16" and t["session_date"] > sessions[2])]
+    st = rule_lab.evaluate(thin, sessions, open_left=set())
+    assert st["R16"]["status"] == "screen_failed" and st["R16"]["screen"]["void"] is True
+    assert st["R09"]["status"] == "candidate" and st["R09"]["screen"]["void"] is False
+    sc = st["R09"]["screen"]
+    assert sc["family"] == len(rule_lab.RULE_IDS) and sc["family_in_max"] == len(rule_lab.RULE_IDS) - 1
+    assert sc["critical"] is not None and sc["critical"] < 10
+
+
+def test_look2_family_hash_differs_and_record_carries_the_amended_fields(screen, tmp_path, monkeypatch):
+    rls, db, days = screen
+    monkeypatch.setattr(rule_lab, "BOOTSTRAP_B", 300)
+    monkeypatch.setattr(rls, "MIN_TRADES", 5)
+    monkeypatch.setattr(rls, "MIN_SESSIONS", 3)
+    monkeypatch.setattr(rls, "GREEDY_MIN_TRADES", 5)
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    assert rls.family_hash(COHORT1, look=2) != rls.family_hash(COHORT1, look=1)
+    s0 = tmp_path / "s0.json"
+    rls.stage0(db, str(s0), COHORT1, workers=1, log=lambda *a: None)
+    out1 = tmp_path / "d.json"
+    out1.write_text("{}")  # look 1's record exists; look 2 writes elsewhere and is not refused by it
+    out2 = tmp_path / "d_look2.json"
+    rec = rls.discover(db, str(out2), COHORT1, workers=1, log=lambda *a: None, stage0_path=str(s0), look=2)
+    assert rec["look_number"] == 2 and rec["mode"] == "discover-look2"
+    assert rec["max_filter"] == {"min_trades": 5, "min_sessions": 3, "min_clusters": rule_lab.MIN_CLUSTERS_IN_MAX}
+    assert rec["newest_bar_read"] < "2026-01-01"
+    assert rec["provenance"]["family_hash"] == rls.family_hash(COHORT1, look=2)
+    assert 0 < rec["family_in_max"] <= rec["family_size"]
+    assert all(r["n"] >= 5 and r["sessions"] >= 3 for r in rec["powered_rows"]) and all(r["n"] >= 5 for r in rec["top"])
+    assert rec["best"] is None or rec["best"]["n"] >= 5
+    assert all(len(r["halves"]) == 2 for r in rec["powered_rows"])
+    assert out1.read_text() == "{}"
+    # the same family under look 1's hash is refused for look 2 (the filter is part of the hash)
+    with pytest.raises(rls.RefusedRun, match="family hash"):
+        rls.refuse_unless_allowed(str(tmp_path / "x_look2.json"), COHORT1, rls.family_hash(COHORT1, 1), "x", look=2)
+
+
+def test_halves_are_null_when_a_half_has_no_trades():
+    import numpy as np
+    import rule_lab_screen as rls
+    ev = {("LONG", "H30", ("R01",)): {"S": np.array([0.0] * 20 + [5.0] * 20, dtype="float32"),
+                                     "N": np.array([0] * 20 + [1] * 20, dtype="float32"),
+                                     "mean": 5.0, "t": 2.0, "n": 20, "sessions": 20}}
+    rls.judge(ev, [f"d{i}" for i in range(40)], b=200, log=lambda *a: None, look=2)
+    assert ev[("LONG", "H30", ("R01",))]["halves"][0] is None
+
+
+def test_look2_refuses_a_stage0_record_whose_conditions_differ(screen, tmp_path, monkeypatch):
+    """The expected hash comes from the stage 0 record, never from the run's own condition list."""
+    rls, db, days = screen
+    monkeypatch.setattr(rls, "git_state", lambda repo_dir=None: ("abc123", False))
+    s0 = tmp_path / "s0.json"
+    rls.stage0(db, str(s0), COHORT1[:-1], workers=1, log=lambda *a: None)
+    rec = json.loads(s0.read_text())
+    assert rls.stage0_family_hash(rec, look=2) == rls.family_hash(COHORT1[:-1], look=2)
+    assert rls.stage0_family_hash(rec, look=2) != rls.stage0_family_hash(rec, look=1)
+    for look in (1, 2):
+        with pytest.raises(rls.RefusedRun, match="condition list"):
+            rls.discover(db, str(tmp_path / f"d_look{look}.json"), COHORT1, workers=1, log=lambda *a: None,
+                         stage0_path=str(s0), look=look)
+    assert not (tmp_path / "d_look2.json").exists()

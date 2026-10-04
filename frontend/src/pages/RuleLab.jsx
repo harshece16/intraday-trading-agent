@@ -28,7 +28,24 @@ function interval(ci) {
 function StatusCell({ row }) {
   const [cls, label] = STATUS[row.status] || STATUS.collecting;
   const route = row.route === "historical" ? " (historical)" : "";
+  // Amendment 6: a rule below a look's floor is void at that look; it neither passes nor sets the bar.
+  const look = row.status === "confirmation_failed" ? row.confirmation : row.status === "screen_failed" ? row.screen : null;
+  if (look && look.void) return <span className="pill neutral">void (below the floor)</span>;
   return <span className={`pill ${cls}`}>{label}{row.status === "candidate" ? route : ""}</span>;
+}
+
+function LookNote({ rows, which, cohort }) {
+  // Amendment 6: each look's critical value and the rules that actually set the bar, one line per cohort.
+  const looked = rows.filter((r) => r.cohort === cohort).map((r) => r[which]).filter(Boolean);
+  if (!looked.length) return null;
+  const s = looked[0];
+  const voided = looked.filter((x) => x.void).length;
+  return (
+    <p className="muted" style={{ fontSize: 12 }}>
+      {which === "screen" ? "Screen" : "Confirmation"}, cohort {cohort}: {s.family_in_max} of {s.family} rules set the bar
+      {voided ? ` (${voided} of this cohort void, below the floor)` : ""}; critical t {s.critical != null ? s.critical.toFixed(2) : "—"}.
+    </p>
+  );
 }
 
 function RuleTable({ rows }) {
@@ -117,12 +134,16 @@ export default function RuleLab() {
 
       {!anyTrades && <p className="empty">No paper trade yet. The lab starts with the first session after it is deployed.</p>}
       <h3 style={{ marginTop: 20 }}>The lab's own rules</h3>
+      <LookNote rows={rows} which="screen" cohort={1} />
+      <LookNote rows={rows} which="confirmation" cohort={1} />
       <RuleTable rows={cohort1} />
       <h3 style={{ marginTop: 24 }}>Rules from the strategy catalogs (YouTube and named traders)</h3>
       <p className="muted" style={{ fontSize: 12 }}>
         Each traded with the lab's exits (30 minutes, or a stop beyond the signal bar and a 3R target), not the
         video's own. Rules this project had already tested and found losing were left out.
       </p>
+      <LookNote rows={rows} which="screen" cohort={2} />
+      <LookNote rows={rows} which="confirmation" cohort={2} />
       <RuleTable rows={cohort2} />
       <p className="muted" style={{ fontSize: 12 }}>
         Net bp is after charges and slippage. Break-even is the win rate this rule's average win and loss would need

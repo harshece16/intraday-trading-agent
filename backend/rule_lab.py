@@ -63,6 +63,7 @@ CONFIRM_SESSIONS = 40
 MIN_SYMBOLS_FOR_SESSION = 10
 SCREEN_MIN_TRADES, SCREEN_MIN_SESSIONS = 200, 20
 CONFIRM_MIN_TRADES = 100
+CONFIRM_MIN_SESSIONS = 10   # amendment 6: the floor for setting the bar at confirmation (passing needs §6 only)
 ALPHA = 0.05                  # the lab's family-wise error over its whole life (prereg amendment 2)
 BOOTSTRAP_B = 10000
 BOOTSTRAP_SEED = 20261005
@@ -605,13 +606,19 @@ def bootstrap_weights(G, block, b, seed):
     return W
 
 
+MIN_CLUSTERS_IN_MAX = 5
+
+
 def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=ALPHA, eligible=None,
-                       chunk_b=500, chunk_k=4000):
+                       chunk_b=500, chunk_k=4000, in_max=None, min_clusters=MIN_CLUSTERS_IN_MAX):
     """Studentised one-sided Romano-Wolf stepdown on K rules' per-session sums S and counts N (K x G).
 
     Streams over replicates and rules, so memory stays O(b + chunk) whatever K is: each step
-    recomputes every replicate's maximum over the rules still in. Returns (t_hat, rejected bool
-    array, step array, the critical value of each step)."""
+    recomputes every replicate's maximum over the rules still in. `in_max` (amendment 6): the
+    rules allowed to set the bar; the others are void (never in the maximum, never rejected).
+    Inside a replicate a rule enters the maximum only with at least `min_clusters` effective
+    session clusters (the replicate's weight over the sessions it traded in). Returns (t_hat,
+    rejected bool array, step array, the critical value of each step)."""
     import numpy as np
     S = np.asarray(S, dtype=np.float64)
     N = np.asarray(N, dtype=np.float64)
@@ -619,7 +626,9 @@ def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=AL
     m_hat, t_hat, _, _ = clustered_matrix(S, N)
     W = bootstrap_weights(G, block, b, seed).astype(np.float64)
     eligible = np.ones(K, dtype=bool) if eligible is None else np.asarray(eligible, dtype=bool)
-    active = np.isfinite(t_hat)
+    in_max = np.ones(K, dtype=bool) if in_max is None else np.asarray(in_max, dtype=bool)
+    eligible = eligible & in_max
+    active = np.isfinite(t_hat) & in_max
     rejected = np.zeros(K, dtype=bool)
     step_of = np.zeros(K, dtype=int)
     crits = []
@@ -641,12 +650,17 @@ def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=AL
                     se_s = np.sqrt(np.clip(g_s / (g_s - 1), 0, None) * np.clip(ss, 0, None)) / n_s
                     ts = (m_s - m_hat[ks][None, :]) / se_s
                 ts[~np.isfinite(ts)] = -np.inf
+                ts[g_s < min_clusters] = -np.inf
                 np.maximum(mx[lo:lo + chunk_b], ts.max(axis=1), out=mx[lo:lo + chunk_b])
         return mx
 
     while active.any():
         step += 1
-        crit = float(np.quantile(replicate_max(active), 1 - alpha))
+        mx = replicate_max(active)
+        finite = mx[np.isfinite(mx)]
+        # a replicate in which no rule met the cluster guard contributes nothing; if that is every
+        # replicate, nothing can be rejected
+        crit = float(np.quantile(finite, 1 - alpha)) if finite.size else float("inf")
         crits.append(crit)
         newly = active & eligible & (np.nan_to_num(t_hat, nan=-np.inf) > crit)
         if not newly.any():
@@ -657,25 +671,28 @@ def romano_wolf_matrix(S, N, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=AL
     return t_hat, rejected, step_of, crits
 
 
-def romano_wolf(data, sessions, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=ALPHA, eligible=None):
+def romano_wolf(data, sessions, block, b=BOOTSTRAP_B, seed=BOOTSTRAP_SEED, alpha=ALPHA, eligible=None,
+                in_max=None):
     """romano_wolf_matrix on {rule: {session: [net bp, ...]}}. Returns {rule: {"t", "rejected",
-    "step", "critical"}}; only rules in `eligible` can be rejected, but every rule with a t
-    enters each step's maximum."""
+    "step", "critical", "in_max"}}; only rules in `eligible` can be rejected, and only rules in
+    `in_max` (amendment 6: those at the look's floor) set each step's maximum."""
     import numpy as np
     sessions = sorted(sessions)
     rules = sorted(data)
     if len(sessions) < 2 or not rules:
-        return {r: {"t": None, "rejected": False} for r in rules}
+        return {r: {"t": None, "rejected": False, "in_max": False} for r in rules}
     S = np.array([[sum(data[r].get(s) or []) for s in sessions] for r in rules], dtype=float)
     N = np.array([[len(data[r].get(s) or []) for s in sessions] for r in rules], dtype=float)
     elig = set(eligible if eligible is not None else rules)
+    inm = set(in_max if in_max is not None else rules)
     t_hat, rej, step, crits = romano_wolf_matrix(S, N, block, b=b, seed=seed, alpha=alpha,
-                                                 eligible=[r in elig for r in rules])
+                                                 eligible=[r in elig for r in rules],
+                                                 in_max=[r in inm for r in rules])
     out = {}
     for i, r in enumerate(rules):
         st = int(step[i])
         out[r] = {"t": None if np.isnan(t_hat[i]) else float(t_hat[i]), "rejected": bool(rej[i]),
-                  "step": st or None,
+                  "step": st or None, "in_max": r in inm,
                   "critical": crits[st - 1] if st else (crits[-1] if crits else None)}
     return out
 
@@ -914,7 +931,7 @@ def _by_rule_session(trades, sessions):
     return out
 
 
-def _stage(trades, sessions, rules, min_trades, min_sessions, block, family=None, alpha=None):
+def _stage(trades, sessions, rules, min_trades, min_sessions, block, family=None, alpha=None, floor_sessions=None):
     data = _by_rule_session(trades, sessions)
     fam = family if family is not None else rules
     stats = {r: clustered(data[r]) for r in fam}
@@ -923,9 +940,16 @@ def _stage(trades, sessions, rules, min_trades, min_sessions, block, family=None
                                      and all(h is not None and h > 0 for h in halves_means(data[r], sessions)))]
     if alpha is None:
         alpha = cohort_alpha(max(REGISTRY[r]["cohort"] for r in rules))
-    rw = romano_wolf({r: data[r] for r in fam if stats[r]["n"]}, sessions, block, eligible=eligible, alpha=alpha)
+    # amendment 6: only rules at this look's floor set the bar; the rest are void at this look
+    floor_sessions = min_sessions if floor_sessions is None else floor_sessions
+    in_max = [r for r in fam if stats[r]["n"] >= min_trades and stats[r]["sessions"] >= floor_sessions]
+    rw = romano_wolf({r: data[r] for r in fam if stats[r]["n"]}, sessions, block, eligible=eligible, alpha=alpha,
+                     in_max=in_max)
+    crit = next((v["critical"] for v in rw.values() if v.get("critical") is not None), None)
     return {r: {"passed": bool(rw.get(r, {}).get("rejected")), "eligible": r in eligible,
-                "t": stats[r]["t"], "critical": rw.get(r, {}).get("critical")} for r in rules}
+                "void": r not in in_max, "n": stats[r]["n"], "sessions": stats[r]["sessions"],
+                "t": stats[r]["t"], "critical": rw.get(r, {}).get("critical", crit),
+                "family_in_max": len(in_max), "family": len(fam)} for r in rules}
 
 
 def evaluate(trades=None, sessions=None, open_left=None):
@@ -969,7 +993,7 @@ def evaluate(trades=None, sessions=None, open_left=None):
         period = [s for s in sessions if s >= first][:CONFIRM_SESSIONS]
         if len(period) < CONFIRM_SESSIONS or (open_left & set(period)):
             continue
-        res = _stage(trades, period, rules, CONFIRM_MIN_TRADES, 1, FORWARD_BLOCK)
+        res = _stage(trades, period, rules, CONFIRM_MIN_TRADES, 1, FORWARD_BLOCK, floor_sessions=CONFIRM_MIN_SESSIONS)
         for r in rules:
             status[r]["status"] = "confirmed" if res[r]["passed"] else "confirmation_failed"
             status[r]["confirmation"] = res[r]
