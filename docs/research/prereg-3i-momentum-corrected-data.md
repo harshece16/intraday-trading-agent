@@ -264,3 +264,18 @@ and on 2024-06-20 (27), gave identical states from the old and the new job
 gave the same state too.
 
 **Live from the job's run on the evening of 2026-10-01, the book's first rebalance.** `main` was pulled into the main checkout, which the evening job runs from, on 2026-09-30 at 21:05 IST. The job's run of 2026-09-30, at 19:30, used the old code and finished normally (exit code 0).
+
+---
+
+# Fourth note on the forward paper book — 2026-10-05, after its first rebalance
+
+**These are data-handling fixes. They change no rule and, on complete data, no figure.** A logic review of the evening job on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), and found four ways the job could have recorded something the rule did not say. None has happened in the live book. README §121 has the details.
+
+- **A held stock whose NSE symbol changes** (#261). After the weekly symbol-change file learnt the rename, the holding had no price chain, so it was valued at its cost and sold at its cost. The job now moves the holding to the chain its rows went into. If a holding has no chain and nothing explains it, the job stops.
+- **A half-written bhavcopy** (#262) counted as cached, and its day was dropped without a word. Downloads are now kept only as valid zips. A file that can't be read is fetched again, and the book waits for it.
+- **A day that keeps failing** (#220) was dropped once it left the 31-day window. It now stays on a list the book waits on.
+- **A switched-off book** (#227) had its job started every half hour. That no longer happens, and two jobs can no longer run at once.
+
+**Not changed.** A holding with no row on the month-end or on the turn day is sold at its last close when the job runs that evening (#263). That is the pre-registered rule H5. It happened 0 times in 2010 to 2025, and it is left for the owner to decide.
+
+**Could the record differ?** Only when one of these faults occurs: a rename of a stock held, a broken file, or a failed day older than 31 days. Trial 126's figures cannot differ: the research simulator builds its panel once with final symbols and holds those names, and its parity tests (`test_momentum_book.py`) are unchanged and pass. On the real bhavcopy cache to 2026-10-05, the old and the new job gave identical states from a book started on 2025-12-20 (10 rebalances), one started on 2024-06-20 (28), and a copy of the live state.

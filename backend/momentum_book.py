@@ -30,9 +30,14 @@ data/momentum_book_state.json. Paper only: nothing here places an order.
 
 The job never trades past data it doesn't have (#159). A day whose bhavcopy
 failed to download is fetched again on later runs, and the book stops before
-it until it is in. A month turn whose ranking comes out empty stops the book
-the same way. A corporate-actions refresh that fails is logged, and the page
-shows how old the file is.
+it until it is in, however long that takes (#220). A month turn whose ranking
+comes out empty stops the book the same way. A corporate-actions or
+symbol-change refresh that fails is logged, and the state keeps how old the
+file is. A download goes to a .part file and is kept only as a valid zip; a
+file the panel can't read is fetched again, and the book waits for it (#262).
+A holding or order follows its stock through an NSE symbol change; one whose
+price history is missing stops the job rather than be valued at its cost
+(#261). Only one evening job runs at a time, across engine restarts too.
 
 The book switches itself off if, from six months on, the cumulative net
 excess over the benchmark falls below n x 0.71% - 2 x 3.89% x sqrt(n)
@@ -50,6 +55,7 @@ import argparse
 import bisect
 import csv
 import datetime
+import fcntl
 import glob
 import io
 import json
@@ -152,31 +158,51 @@ def download_bhavcopy(d, out_dir=LIVE_DIR):
     """(path or None, outcome) for one day's bhavcopy. The outcome is "cached",
     "fetched", "no_file" (NSE answered 404: a weekend, a holiday, or a file
     not published yet) or "failed" (any other answer, no answer, or a file
-    that is not a zip): a day that may have been a session but isn't here."""
+    that is not a zip): a day that may have been a session but isn't here.
+
+    Only a valid zip counts as cached. The download goes to `<file>.part` and
+    is moved into place only once it is a valid zip, so a download cut off
+    part-way (the job killed, the connection dropped) never leaves a file
+    that looks cached (#262)."""
     os.makedirs(out_dir, exist_ok=True)
     tag, url = bhav_url(d)
     path = os.path.join(out_dir, f"{tag}.zip")
-    if os.path.exists(path) and os.path.getsize(path) > 5000:
-        return path, "cached"
-    code = _curl(url, path)
-    if code != "200" or not zipfile.is_zipfile(path):
-        if os.path.exists(path):
-            os.remove(path)
+    if os.path.exists(path):
+        if zipfile.is_zipfile(path):
+            return path, "cached"
+        os.remove(path)                       # a broken file from before #262: fetch it again
+    part = path + ".part"
+    code = _curl(url, part)
+    if code != "200" or not (os.path.exists(part) and zipfile.is_zipfile(part)):
+        if os.path.exists(part):
+            os.remove(part)
         return None, "no_file" if code == "404" else "failed"
+    os.replace(part, path)
     return path, "fetched"
 
 
+def bhav_file_date(path):
+    """The session date a cached bhavcopy's file name stands for, or None."""
+    name = os.path.basename(path)
+    if not name.endswith(".zip"):
+        return None
+    for fmt in ("%Y%m%d", "%d%b%Y"):
+        try:
+            return datetime.datetime.strptime(name[:-4], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 def cached_dates():
+    """Days with a bhavcopy that is a valid zip. A broken file is not counted,
+    so the day is fetched again (#262)."""
     dates = set()
     for d in BHAV_DIRS:
         for f in glob.glob(os.path.join(d, "*.zip")):
-            name = os.path.basename(f)[:-4]
-            for fmt in ("%Y%m%d", "%d%b%Y"):
-                try:
-                    dates.add(datetime.datetime.strptime(name, fmt).date())
-                    break
-                except ValueError:
-                    continue
+            day = bhav_file_date(f)
+            if day is not None and zipfile.is_zipfile(f):
+                dates.add(day)
     return dates
 
 
@@ -230,16 +256,26 @@ def update_corporate_actions(year, ca_dir=CA_DIR):
     return False
 
 
+def symbolchange_path():
+    return os.path.join(DATA, "bhav_daily", "symbolchange.csv")
+
+
 def refresh_reference_files(max_age_days=7):
-    for name, url in (("symbolchange.csv", "https://nsearchives.nseindia.com/content/equities/symbolchange.csv"),):
-        path = os.path.join(DATA, "bhav_daily", name)
-        if os.path.exists(path) and time.time() - os.path.getmtime(path) < max_age_days * 86400:
-            continue
-        tmp = path + ".tmp"
-        if _curl(url, tmp) == "200" and os.path.getsize(tmp) > 1000:
-            os.replace(tmp, path)
-        elif os.path.exists(tmp):
-            os.remove(tmp)
+    """Refresh NSE's symbol-change file once a week. Returns True when it was
+    refreshed, False when the refresh failed (the older file stays in use),
+    None when it was not due (#220)."""
+    path = symbolchange_path()
+    if os.path.exists(path) and time.time() - os.path.getmtime(path) < max_age_days * 86400:
+        return None
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".part"
+    code = _curl("https://nsearchives.nseindia.com/content/equities/symbolchange.csv", tmp)
+    if code == "200" and os.path.exists(tmp) and os.path.getsize(tmp) > 1000:
+        os.replace(tmp, path)
+        return True
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    return False
 
 
 # --- data: parse (a copy of research/nse_prices.py; parity-tested) -------------------
@@ -430,20 +466,28 @@ def etf_symbols(ca_dir=CA_DIR):
         return {(r.get("Symbol") or "").strip() for r in csv.DictReader(fh)} - {""}
 
 
-def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
+def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None, report=None):
     """(sessions, chains): chains[name] = dict(idx, close (total-return
     adjusted), raw, val, ser, high, low, prev, eq). ser is each row's series
     as a position in SERIES. high, low and prev (the previous close) are as
     printed; the band-lock rule reads them. eq holds the EQ rows alone, which
-    is what the universe is chosen from; prices and sales use every row."""
+    is what the universe is chosen from; prices and sales use every row.
+
+    A chain is named by the symbol's latest name in NSE's symbol-change file,
+    and rows with one ISIN stay in one chain. Given a dict as `report`, it
+    fills report["aliases"] (every symbol read -> the chain it is in, for the
+    evening job to follow a holding whose symbol changed, #261) and
+    report["unreadable"] (files that could not be read: a session the panel
+    lacks, #262)."""
     bhav_dirs = bhav_dirs or BHAV_DIRS
-    nxt = symbol_chains(symbolchange or os.path.join(DATA, "bhav_daily", "symbolchange.csv"))
-    cache, by_date = {}, {}
+    nxt = symbol_chains(symbolchange or symbolchange_path())
+    cache, by_date, unreadable = {}, {}, []
     for d in bhav_dirs:
         for p in glob.glob(os.path.join(d, "*.zip")):
             try:
                 rows = parse_bhavcopy(p)
             except Exception:
+                unreadable.append(p)
                 continue
             for sym, day, op, close, prev, isin, val, series, high, low in rows:
                 if close > 0:
@@ -523,7 +567,20 @@ def build_panel(bhav_dirs=None, ca_dir=CA_DIR, symbolchange=None):
     for c in chains.values():
         keep = [j for j, series in enumerate(c["ser"]) if series == EQ]
         c["eq"] = {k: [c[k][j] for j in keep] for k in ("idx", "raw", "val")}
+    if report is not None:
+        report["unreadable"] = sorted(unreadable)
+        report["aliases"] = {s: _resolve(s, cache, chains) for s in cache}
     return sessions, chains
+
+
+def _resolve(sym, cache, chains):
+    """The chain a symbol's rows went into. An ISIN merge re-points a chain's
+    name after other names were already pointed at it, so follow the links."""
+    cur, seen = sym, set()
+    while cur not in chains and cur in cache and cache[cur] != cur and cur not in seen:
+        seen.add(cur)
+        cur = cache[cur]
+    return cur
 
 
 # --- ranking (a copy of research/momentum_3i.py; parity-tested) -----------------------
@@ -822,6 +879,49 @@ class IncompleteData(Exception):
     stops before it and leaves it for the next run (#159)."""
 
 
+def missing_chains(state, chains):
+    """(side, symbol) of every holding or open order with no chain in the panel."""
+    out = []
+    for side in ("book", "bench"):
+        names = list(state[side]["positions"]) + [o["symbol"] for o in state[side].get("orders", [])]
+        out += [(side, n) for n in dict.fromkeys(names) if n not in chains]
+    return out
+
+
+def follow_symbol_changes(state, chains, aliases, today):
+    """Re-key every holding and open order whose symbol is no longer a chain
+    to the chain its rows are now in. NSE renames a stock (ZOMATO to ETERNAL),
+    the weekly symbol-change file learns it, and build_panel names the chain
+    by the new symbol; the position still carries the old one. Left alone it
+    would be valued at its cost and sold at its cost at the next month turn
+    (#261). Returns the changes made, also kept in state["symbol_changes"]."""
+    done = []
+    for side in ("book", "bench"):
+        book = state[side]
+        for old in list(book["positions"]):
+            new = aliases.get(old)
+            if old in chains or new is None or new == old or new not in chains or new in book["positions"]:
+                continue
+            pos = book["positions"][old]
+            pos["symbol"] = new
+            pos.setdefault("bought_as", old)
+            # in place, so the holdings keep their order (and the book's sum its rounding)
+            book["positions"] = {(new if k == old else k): v for k, v in book["positions"].items()}
+            done.append({"date": today, "side": side, "from": old, "to": new, "what": "holding"})
+        for o in book.get("orders", []):
+            new = aliases.get(o["symbol"])
+            if o["symbol"] in chains or new is None or new == o["symbol"] or new not in chains:
+                continue
+            done.append({"date": today, "side": side, "from": o["symbol"], "to": new, "what": o["side"] + " order"})
+            o["symbol"] = new
+    if done:
+        state.setdefault("symbol_changes", []).extend(done)
+        for ch in done:
+            logger.info(f"Momentum book: {ch['side']} {ch['what']} {ch['from']} follows NSE's symbol change "
+                        f"to {ch['to']} (#261)")
+    return done
+
+
 def process_session(state, chains, sessions, day, conf, sess_idx=None, strict=False):
     """Advance the book through one session: rebalance on the first session of
     a month (ranking at the previous session's close), otherwise try the
@@ -838,6 +938,16 @@ def process_session(state, chains, sessions, day, conf, sess_idx=None, strict=Fa
     if state["status"] == "switched_off":
         return
     upgrade_state(state)
+    if strict:
+        # A holding with no chain would be valued at its cost and sold at its
+        # cost. The job re-keys a renamed one first; anything still missing is
+        # broken data, so the book stops before the session (#261).
+        gone = missing_chains(state, chains)
+        if gone:
+            raise IncompleteData(
+                "no price history in the panel for " + ", ".join(f"{n} ({side})" for side, n in gone)
+                + f": the book stops before {day} rather than value or sell it at its cost; a symbol change "
+                "NSE's symbol-change file does not list yet, or a delisting the panel lost, needs a look")
     prev = sessions[i - 1] if i > 0 else None
     month_turn = prev is not None and prev[:7] != day[:7] and (state["last_processed"] or "") >= prev
     if month_turn:
@@ -882,30 +992,113 @@ def _file_time(path):
         return None
 
 
+BUSY = 5      # daily()'s exit code when another evening job holds the lock
+
+
+def _take_lock(state_path):
+    """An exclusive lock beside the state file, holding the job's pid, or None
+    when another job holds it. The OS drops it when the job ends, killed or
+    not, so a stale lock never blocks a later run."""
+    fh = open(state_path + ".lock", "a+")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        return None
+    fh.seek(0)
+    fh.truncate()
+    fh.write(str(os.getpid()))
+    fh.flush()
+    return fh
+
+
+def job_running(state_path=None):
+    """True when an evening job holds the lock: one started before an engine
+    restart is still running, and a second must not start beside it."""
+    path = (state_path or STATE_PATH) + ".lock"
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, "a+") as fh:
+            try:
+                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return True
+            fcntl.flock(fh, fcntl.LOCK_UN)
+    except OSError:
+        return False
+    return False
+
+
 def daily(today=None, state_path=STATE_PATH, fetch=True):
     """The evening job: fetch data, then advance the book through every
     session it hasn't processed yet. Exit code 0 = processed today's session,
     3 = today's bhavcopy isn't published yet (the engine retries), 4 = the
-    data is incomplete: a past day's download failed, or a month-end ranking
-    came out empty. The book then stops before that day, keeps what it
-    processed up to it, and the next run tries again (#159)."""
+    data is incomplete: a past day's download failed, a bhavcopy can't be
+    read, a holding has no price history, or a month-end ranking came out
+    empty. The book then stops before that day, keeps what it processed up to
+    it, and the next run tries again (#159). 5 = another evening job is
+    running (it holds the lock beside the state file); nothing is done."""
+    lock = _take_lock(state_path)
+    if lock is None:
+        logger.warning("Momentum book: another evening job is still running; this one does nothing")
+        return BUSY
+    try:
+        return _daily(today, state_path, fetch)
+    finally:
+        lock.close()
+
+
+def _daily(today, state_path, fetch):
     conf = cfg()
     today = today or datetime.date.today()
-    failed, ca_refreshed = [], None
+    state = load_state(state_path) or new_state(conf["capital"], today.isoformat())
+    checks = state.setdefault("data", {})
+    # Days whose download failed and have not come in since, kept across runs:
+    # a day that keeps failing is not dropped once it leaves the 31-day
+    # window that update_bhavcopies asks NSE about (#220).
+    pending = {datetime.date.fromisoformat(d) for d in checks.get("failed_days_pending") or []}
+    failed, ca_refreshed, sc_refreshed = [], None, None
     if fetch:
-        refresh_reference_files()
+        sc_refreshed = refresh_reference_files()
+        if sc_refreshed is False:
+            logger.warning(
+                "Momentum book: NSE's symbol-change file could not be refreshed. The copy from "
+                f"{_file_time(symbolchange_path()) or 'no date'} stays in use; a holding renamed since keeps "
+                "its old symbol until a refresh works (#220)")
         ca_refreshed = bool(update_corporate_actions(today.year))
         if not ca_refreshed:
             logger.warning(
                 f"Momentum book: NSE's corporate-actions file for {today.year} could not be refreshed. Prices are "
                 f"adjusted with the copy from {_file_time(os.path.join(CA_DIR, f'ca_{today.year}.csv')) or 'no date'}; "
                 "a split or bonus announced since would show as a price drop (#159)")
-        failed = update_bhavcopies(today)[1]
+        failed = list(update_bhavcopies(today)[1])
+        window = today - datetime.timedelta(days=REFETCH_DAYS)
+        for d in sorted(pending - set(failed)):
+            # update_bhavcopies asked again for every day of the window; an
+            # older one is asked for here
+            if d < window and download_bhavcopy(d)[1] == "failed":
+                failed.append(d)
         if failed:
             logger.warning(f"Momentum book: NSE's bhavcopy could not be downloaded for "
-                           f"{', '.join(d.isoformat() for d in failed)}; the next run tries again (#159)")
-    sessions, chains = build_panel()
-    state = load_state(state_path) or new_state(conf["capital"], today.isoformat())
+                           f"{', '.join(d.isoformat() for d in sorted(failed))}; the next run tries again (#159)")
+        pending = set(failed)
+    report = {}
+    sessions, chains = build_panel(report=report)
+    bad = report.get("unreadable") or []
+    if bad and fetch:
+        # a file cut off part-way before #262, or damaged since: fetch it again
+        for path in bad:
+            day = bhav_file_date(path)
+            if day is None:
+                continue                      # not named as a bhavcopy: left for the owner, and the book stops
+            logger.warning(f"Momentum book: {path} cannot be read; it is deleted and fetched again (#262)")
+            os.remove(path)
+            if download_bhavcopy(day)[1] not in ("fetched", "cached"):
+                pending.add(day)              # the file existed, so the day was a session: wait for it
+        report = {}
+        sessions, chains = build_panel(report=report)
+        bad = report.get("unreadable") or []
     start = state["last_processed"] or state["created"]
     todo = [d for d in sessions if d > start and d <= today.isoformat()]
     if state["last_processed"] is None:
@@ -915,15 +1108,22 @@ def daily(today=None, state_path=STATE_PATH, fetch=True):
         state["last_processed"] = before[-1] if before else None
         todo = [d for d in sessions if d > (state["last_processed"] or "") and d <= today.isoformat()]
     problem = None
+    if bad:
+        # the panel lacks those sessions; any of them may be in the book's past
+        # or ahead of it, so nothing is processed (#262)
+        todo = []
+        problem = (f"{len(bad)} bhavcopy file(s) cannot be read ({', '.join(os.path.basename(p) for p in bad[:5])}"
+                   f"{', ...' if len(bad) > 5 else ''}); the book stops until they are fetched again")
     # A past day whose download failed may have been a session. Processing the
     # sessions after it would fill orders a day late, or rank a month turn at
     # the wrong close, so the book waits for it (#159).
-    gap = next((d.isoformat() for d in failed
+    gap = next((d.isoformat() for d in sorted(pending)
                 if d < today and d.isoformat() > (state["last_processed"] or "")), None)
-    if gap:
+    if gap and not problem:
         todo = [d for d in todo if d < gap]
         problem = (f"NSE's bhavcopy for {gap} could not be downloaded; the book stops before it and the next "
                    "run tries again")
+    follow_symbol_changes(state, chains, report.get("aliases") or {}, today.isoformat())
     sess_idx = {d: i for i, d in enumerate(sessions)}
     for d in todo:
         try:
@@ -933,17 +1133,43 @@ def daily(today=None, state_path=STATE_PATH, fetch=True):
             break
     state["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
     state["latest_session"] = sessions[-1] if sessions else None
-    checks = state.setdefault("data", {})
     if fetch:
         checks["corporate_actions_refreshed"] = ca_refreshed
-        checks["failed_downloads"] = [d.isoformat() for d in failed]
+        checks["failed_downloads"] = [d.isoformat() for d in sorted(failed)]
+        if sc_refreshed is not None:
+            checks["symbol_changes_refreshed"] = sc_refreshed
+    # a failed day the book has already passed can't hold it back any more
+    checks["failed_days_pending"] = sorted(d.isoformat() for d in pending
+                                           if d.isoformat() > (state["last_processed"] or ""))
     checks["corporate_actions_as_of"] = _file_time(os.path.join(CA_DIR, f"ca_{today.year}.csv"))
+    checks["symbol_changes_as_of"] = _file_time(symbolchange_path())
+    checks["unreadable_files"] = [os.path.basename(p) for p in bad]
     checks["problem"] = problem
     save_state(state, state_path)
     if problem:
         logger.error(f"Momentum book: {problem} (#159)")
         return 4
     return 0 if sessions and sessions[-1] == today.isoformat() else 3
+
+
+def clear_failed_day(day, state_path=STATE_PATH):
+    """The owner's way past a day that keeps failing but was not a session
+    (NSE answering something other than 404 for it): drop it from the list
+    the book waits on. Run it only while no evening job is running."""
+    lock = _take_lock(state_path)
+    if lock is None:
+        raise RuntimeError("an evening job is running; try again when it has finished")
+    try:
+        state = load_state(state_path)
+        checks = (state or {}).get("data") or {}
+        days = checks.get("failed_days_pending") or []
+        if day not in days:
+            return False
+        checks["failed_days_pending"] = [d for d in days if d != day]
+        save_state(state, state_path)
+        return True
+    finally:
+        lock.close()
 
 
 # --- read side (the API) ------------------------------------------------------------
@@ -1081,11 +1307,15 @@ def maybe_start_evening_job(now, holiday):
         state = load_state()
         if state and state.get("latest_session") == today and state.get("last_processed") == today:
             return False
+        if state and state.get("status") == "switched_off":
+            return False                      # MOM-10: nothing left to process (#227)
         if _last_attempt["date"] == today and time.time() - _last_attempt["ts"] < conf["retry_minutes"] * 60:
             return False
         prev = _last_attempt.get("proc")
         if prev is not None and prev.poll() is None:
             return False                      # the last job is still running
+        if job_running():
+            return False                      # a job from before an engine restart is still running
         _last_attempt.update(date=today, ts=time.time())
         log = open(LOG_PATH, "ab")
         _last_attempt["proc"] = subprocess.Popen([sys.executable, os.path.abspath(__file__), "daily"], cwd=HERE,
@@ -1099,12 +1329,18 @@ def maybe_start_evening_job(now, holiday):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["daily", "summary"])
-    ap.add_argument("--date", help="process up to this date (YYYY-MM-DD); default today")
+    ap.add_argument("cmd", choices=["daily", "summary", "clear-failed-day"])
+    ap.add_argument("--date", help="process up to this date (YYYY-MM-DD); default today. For clear-failed-day: "
+                                   "the day to stop waiting for")
     ap.add_argument("--no-fetch", action="store_true")
     a = ap.parse_args()
     if a.cmd == "summary":
         print(json.dumps(summary(), indent=1))
+        return 0
+    if a.cmd == "clear-failed-day":
+        if not a.date:
+            ap.error("clear-failed-day needs --date")
+        print("cleared" if clear_failed_day(a.date) else f"{a.date} is not in the list of failed days")
         return 0
     d = datetime.date.fromisoformat(a.date) if a.date else None
     # The job's output goes to momentum_book.log; give its warnings a time.

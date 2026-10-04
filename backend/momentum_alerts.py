@@ -7,7 +7,7 @@ on the same closed-phase tick, calls check(). It says what the job did, once:
 - **A rebalance the job completed.** One activity line of kind "momentum": the
   month, the stocks bought and sold, the book against its benchmark for the
   month just ended and since the start, the band, and the next rebalance.
-- **A run that failed** (an exit code other than 0, 3 or 4, or a signal) **or
+- **A run that failed** (an exit code other than 0, 3, 4 or 5, or a signal) **or
   stopped early** (exit 4: the book stops before a day whose data is
   missing). One line with the reason, once per reason a day.
 - **A day still not processed when the job's window closes** (23:30), after a
@@ -41,6 +41,7 @@ KIND = "momentum"
 ALERTS_PATH = os.path.join(momentum_book.DATA, "momentum_book_alerts.json")
 NOT_PUBLISHED = 3        # daily()'s exit codes (momentum_book.daily)
 STOPPED = 4
+BUSY = 5                 # another evening job held the lock; it did nothing (momentum_book.BUSY)
 
 _mem = {"record": None, "state_mtime": None, "watched": None, "handled": []}
 
@@ -209,8 +210,8 @@ def _check(now, holiday, log):
         _mem["state_mtime"] = mtime
 
     for rc in codes:
-        if rc in (0, NOT_PUBLISHED, STOPPED):
-            continue                      # a stop is read from the state below, restart or not
+        if rc in (0, NOT_PUBLISHED, STOPPED, BUSY):
+            continue                      # a stop is read from the state below, restart or not; a busy run did nothing
         how = f"was stopped by signal {-rc}" if rc < 0 else f"failed with exit code {rc}"
         tail = _last_log_line()
         where = f" The book is unchanged since {state['last_processed']}." if state and state.get("last_processed") else ""
