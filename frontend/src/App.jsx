@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { API_BASE, useAppState } from "./api";
 import LoadState from "./components/LoadState";
@@ -7,19 +7,22 @@ import { useAlerts } from "./useAlerts";
 import StatusBar, { Sidebar } from "./components/Header";
 import LiveLog from "./components/LiveLog";
 import IntradayRecordBanner from "./components/IntradayRecordBanner";
-import Overview from "./pages/Overview";
-import PreMarket from "./pages/PreMarket";
-import DayPlan from "./pages/DayPlan";
-import Screener from "./pages/Screener";
-import Stock from "./pages/Stock";
-import TechnicalAnalysis from "./pages/TechnicalAnalysis";
-import Portfolio from "./pages/Portfolio";
-import PortfolioDiagnostic from "./pages/PortfolioDiagnostic";
-import Journal from "./pages/Journal";
-import Trades from "./pages/Trades";
-import MomentumBook from "./pages/MomentumBook";
-import JevBook from "./pages/JevBook";
-import Kronos from "./pages/Kronos";
+
+// Each page is its own chunk, loaded when first opened: the front page no
+// longer downloads every page and the chart library (README section 120).
+const Overview = lazy(() => import("./pages/Overview"));
+const PreMarket = lazy(() => import("./pages/PreMarket"));
+const DayPlan = lazy(() => import("./pages/DayPlan"));
+const Screener = lazy(() => import("./pages/Screener"));
+const Stock = lazy(() => import("./pages/Stock"));
+const TechnicalAnalysis = lazy(() => import("./pages/TechnicalAnalysis"));
+const Portfolio = lazy(() => import("./pages/Portfolio"));
+const PortfolioDiagnostic = lazy(() => import("./pages/PortfolioDiagnostic"));
+const Journal = lazy(() => import("./pages/Journal"));
+const Trades = lazy(() => import("./pages/Trades"));
+const MomentumBook = lazy(() => import("./pages/MomentumBook"));
+const JevBook = lazy(() => import("./pages/JevBook"));
+const Kronos = lazy(() => import("./pages/Kronos"));
 
 // `intraday` marks a page of the intraday paper record: it opens with the
 // banner that says so (README section 116).
@@ -28,7 +31,7 @@ function Page({ children, intraday = false }) {
   return (
     <main className="page" key={location.pathname}>
       {intraday && <IntradayRecordBanner />}
-      {children}
+      <Suspense fallback={<LoadState label="Loading the page…" />}>{children}</Suspense>
     </main>
   );
 }
@@ -47,27 +50,37 @@ function Connecting() {
     : <LoadState label="Connecting to the engine…" />;
 }
 
+// Pages that don't read the live state are built once, so the 3 s state push
+// doesn't re-render them: React skips an element it has already rendered.
+const MOMENTUM = <Page><MomentumBook /></Page>;
+const DAY_PLAN = <Page intraday><DayPlan /></Page>;
+const TECHNICAL = <Page intraday><TechnicalAnalysis /></Page>;
+const JOURNAL = <Page intraday><Journal /></Page>;
+const JEV = <Page intraday><JevBook /></Page>;
+const KRONOS = <Page intraday><Kronos /></Page>;
+const DIAGNOSTIC = <Page><PortfolioDiagnostic /></Page>;
+
 function AppRoutes({ state }) {
   if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
       {/* The momentum book is the strategy, so it is the front page (README section 116). */}
-      <Route path="/" element={<Page><MomentumBook /></Page>} />
+      <Route path="/" element={MOMENTUM} />
       <Route path="/momentum-book" element={<Redirect to="/" />} />
       {/* The intraday engine's pages: a paper record, each under the banner. */}
       <Route path="/intraday" element={<Page intraday><Overview state={state} /></Page>} />
       <Route path="/overview" element={<Redirect to="/intraday" />} />
       <Route path="/premarket" element={<Page intraday><PreMarket state={state} /></Page>} />
-      <Route path="/day-plan" element={<Page intraday><DayPlan /></Page>} />
+      <Route path="/day-plan" element={DAY_PLAN} />
       <Route path="/screener" element={<Page intraday><Screener state={state} /></Page>} />
       <Route path="/stock/:symbol" element={<Page intraday><Stock state={state} /></Page>} />
-      <Route path="/technical-analysis" element={<Page intraday><TechnicalAnalysis /></Page>} />
+      <Route path="/technical-analysis" element={TECHNICAL} />
       <Route path="/trades" element={<Page intraday><Trades state={state} /></Page>} />
-      <Route path="/journal" element={<Page intraday><Journal /></Page>} />
-      <Route path="/jev-book" element={<Page intraday><JevBook /></Page>} />
-      <Route path="/kronos" element={<Page intraday><Kronos /></Page>} />
+      <Route path="/journal" element={JOURNAL} />
+      <Route path="/jev-book" element={JEV} />
+      <Route path="/kronos" element={KRONOS} />
       <Route path="/portfolio" element={<Page><Portfolio state={state} /></Page>} />
-      <Route path="/portfolio/diagnostic" element={<Page><PortfolioDiagnostic /></Page>} />
+      <Route path="/portfolio/diagnostic" element={DIAGNOSTIC} />
     </Routes>
   );
 }

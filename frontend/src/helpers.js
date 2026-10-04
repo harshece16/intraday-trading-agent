@@ -103,3 +103,15 @@ export const KIND_TEXT = {
   blocked: "Skipped", risk: "Risk", error: "Problem", system: "System",
   summary: "Session summary", momentum: "Momentum book", review: "Review queue", kite_preopen: "Kite login",
 };
+
+/** Stable React keys for activity lines. The list grows at the front, so an
+ *  index key re-rendered (and re-mounted) every row on each new line. */
+export function activityKeys(items) {
+  const seen = new Map();
+  return items.map((a) => {
+    const base = `${a.ts}|${a.kind}|${a.symbol || ""}|${(a.message || "").slice(0, 60)}`;
+    const n = seen.get(base) || 0;
+    seen.set(base, n + 1);
+    return n ? `${base}#${n}` : base;
+  });
+}

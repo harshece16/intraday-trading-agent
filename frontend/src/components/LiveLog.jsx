@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { hms } from "../format";
-import { KIND_TEXT } from "../helpers";
+import { activityKeys, KIND_TEXT } from "../helpers";
 
 /** A terminal-style live log — the same activity stream Feed.jsx shows on
  * Overview, but full-history, auto-scrolling, and available from any page
@@ -11,12 +11,16 @@ export default function LiveLog({ state: s, open, onClose }) {
   const bodyRef = useRef(null);
   const stickToBottom = useRef(true);
   const items = [...(s?.activity || [])].reverse(); // oldest -> newest, terminal order
+  const keys = activityKeys(items);
+  // Keyed on the newest line, not the count: the backend caps the list at 80,
+  // so once full the count never changes and the log stopped following.
+  const newest = items.length ? keys[keys.length - 1] : "";
 
   useEffect(() => {
     if (!open) return;
     const el = bodyRef.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [items.length, open]);
+  }, [newest, open]);
 
   function handleScroll() {
     const el = bodyRef.current;
@@ -35,7 +39,7 @@ export default function LiveLog({ state: s, open, onClose }) {
       <div className="live-log-body" ref={bodyRef} onScroll={handleScroll}>
         {items.length ? (
           items.map((a, i) => (
-            <div className="live-log-line" key={i}>
+            <div className="live-log-line" key={keys[i]}>
               <span className="live-log-ts">{hms(a.ts)}</span>
               <span className={`kind ${a.kind}`}>[{KIND_TEXT[a.kind] || a.kind}]</span>
               {a.symbol && <span className="live-log-sym">{a.symbol}</span>}

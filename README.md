@@ -4356,6 +4356,17 @@ Four read-only audits of the dashboard on 2026-10-05 (web interface guidelines, 
 
 Left for the owner to decide: replacing the browser's `confirm()` with an in-page dialog, serving the built bundle instead of the dev server, a "connection lost" banner, the phone status-bar layout, and labelling the status bar's figures "Intraday".
 
+### 120. Dashboard performance: pages load on demand, hidden tabs stop polling, live charts get new candles
+
+From the same 2026-10-05 React performance audit as §119.
+
+- **Pages load when first opened** (`React.lazy` per route, `Suspense` inside the page shell). The front page (the momentum book) no longer downloads every page and the chart library: about 106 kB gzip of script and CSS instead of 194 kB. The chart library loads with the first page that draws a chart.
+- **A hidden tab polls nothing** (`everyWhileVisible` / `useVisibleInterval` in `api.js`). `useApi`, the header's Kite status, the research desk and the charts stop while the tab is hidden and catch up once when it is shown again. The WebSocket and the browser alerts keep running in a background tab, so alerts still fire.
+- **Less polling of the backend.** The Overview reads the journal summary once, and Go live reads it again at the click (§119), instead of every 20 seconds. The Pre-market page polls every 5 seconds only while a ranking runs, and not at all once it has settled: each GET re-runs the scan once the result is over 30 minutes old, so an idle tab used to re-trigger it all day. A past Kronos day is not polled.
+- **Live charts get new candles.** Candles used to load once per stock and never update; only the price lines moved. They now reload when the engine reports a new bar and every 60 seconds while visible. The opening zoom is set only on a stock's first load, so a refresh keeps the user's zoom. *Not yet seen in a live session: check it on the first market day after this deploys.*
+- **Charts redraw only what changed.** Price lines and markers are keyed on their numbers, so a state push with the same plan redraws nothing; the "Now" line moves with `applyOptions`. Theme colours are read once per chart, not for every candle.
+- **Smaller re-renders.** Pages that don't read the live state (momentum book, day plan, technical analysis, journal, Jev book, Kronos, holdings diagnostic) are not re-rendered by the 3 s state push. Activity lines are keyed by content, not position, and the live log keeps following new lines once the backend's 80-line list is full (it followed the count, which stops changing at 80).
+
 ## Backtest results
 
 55 days of 5-minute bars (2026-06-29 → 2026-09-11), ₹1,00,000 capital,
