@@ -314,3 +314,65 @@ reuses Jev 1's recorded exit when there is one" means a shared name **whose
 entry was Jev 1's** (`fill_source: "jev1"`); a shared name filled at Jev 2's
 own entry also takes Jev 2's own exit, so no decision mixes the two books'
 ticks. That is what the code does (`close_round`).
+
+---
+
+# Clarification 1 — 2026-10-05, after the independent review and before any Jev 2 decision
+
+**What had been seen:** nothing new. No Jev 2 round has run; no Jev 2
+decision exists. The review (of PR #280, merged and deployed, first round due
+2026-10-06 09:45) found two things the code did not do as this file says,
+and three places where this file was silent. Each is fixed here, in text
+first, then in code, before the first round.
+
+**1. The state was not blind: `catalyst` is dropped.** The scanner row's
+`catalyst` field is not a label but the whole output of
+`news_sentiment.market_catalysts` for the stock: an aggregate sentiment
+**score** in [−1, 1], a count, the top title and the same three headlines
+again, each with its own sentiment score, an LLM-scored flag, a URL and the
+raw `age_h` — including the 24.0 undated sentinel that the Headlines rule
+drops. `build_state` copied it whole. That sent a sentiment judgment and
+undated news, contrary to the blind-state rule. **From the first round,
+`catalyst` is not sent at all.** The stock's news reaches Jev 2 only through
+`headlines` (title, publisher, hours before the decision). The dry round's
+claim in README §128 that "every withheld key was absent from every state"
+was true of the listed keys and not of this nested content; the stage-0 copy
+of 2026-10-05's list carried it on 5 of the 25 rows. The fixture in the tests held `catalyst:
+None`, which is why the blind-state test passed; the fixture now carries the
+real shape and the test asserts that no `score`, `url`, `llm_scored`, raw
+`age_h` or duplicate title appears anywhere in the state. JEV2-02 is
+reworded to say so.
+
+**2. "Beats the scanner" is scored on every decision, skips at 0.** The
+Scoring section says the scanner's side is scored "on every Jev 2 decision"
+and that a skip scores 0; `summary()` computed pass-rule item 3 on buy/short
+decisions only. The text is right and the code is aligned to it: the paired
+Jev 2 − scanner figure and its clustered t run over **every closed decision**,
+a skip contributing 0 − scanner_net. That is what the abstention band is for:
+a skip on a stock-day the scanner would have traded is a decision, and it
+counts against or for Jev 2. Item 1 (Jev 2's own mean and t) stays on
+buy/short decisions, as written. The Jev 2 − Jev 1 pair already counted
+skips at 0 on both sides.
+
+**3. A missing `move_exhausted` answer means no trade.** The rule did not say
+what happens if TypeSafe returns the six directional Nouls but not
+`move_exhausted`. Now: the veto cannot be checked, so the decision is a
+**skip** (recorded with `p_combined` and `S`, and the reason). A missing
+directional Noul was already an excluded decision; that is unchanged.
+
+**4. Reusing Jev 1's fill after a restart.** If the engine restarts between
+Jev 1's round and Jev 2's, and the scan Jev 2 then captures carries the same
+`ltp` and `vwap` for a shared name as the scan Jev 1 recorded, Jev 2 reuses
+Jev 1's earlier fill for that name, as the Fills section says: the match is
+on the scan, not on the clock. Jev 2's decision still uses nothing newer than
+that scan for the name. The 10:00 limit on starting the round is unchanged.
+
+**5. The "record without own shared fills" figure looks at both ends.** Pass
+rule item 4 reports Jev 2's mean with shared names that took Jev 2's own fill
+left out. "Own fill" means **own entry or own exit** (`fill_source` or
+`exit_source` equal to "own"); the code looked at the entry only.
+
+**Unchanged:** the questions and their wordings, the combination rule and its
+thresholds, the band, the list, the model, the costs, the session-clustered
+t, the pass rule's bar, the kill rule and the verdict's timing. No number was
+refit; no Jev 2 answer has been read.

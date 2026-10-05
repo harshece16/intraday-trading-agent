@@ -133,11 +133,14 @@ def save_state(state, path=None):
 
 NUMBER_FIELDS = ("symbol", "name", "industry", "ltp", "chg_pct", "gap_pct", "rvol", "rs_today", "vwap",
                  "sector_chg_pct", "atr_pct", "rs10", "pct_from_high", "pct_from_low", "turnover_cr", "beta",
-                 "catalyst", "event", "large_deals")
+                 "event", "large_deals")
+# `catalyst` is news_sentiment.market_catalysts' whole output for the stock (a sentiment score, per-headline
+# scores, URLs and the raw age_h with its undated sentinel). It is not sent: news reaches Jev 2 only through
+# headlines() (prereg-jev2-book.md, clarification 1).
 CHART_NUMBERS = ("rsi", "adx", "support", "resistance")
 WITHHELD = ("side", "score_side", "score", "final_score", "long_score", "short_score", "reasons", "shadow_side",
             "sector_trend", "daily_trend", "swing_patterns", "long_only", "setup", "bias", "regime", "structure",
-            "htf_trend", "patterns", "fundamentals_label", "trend")
+            "htf_trend", "patterns", "fundamentals_label", "trend", "catalyst", "url", "llm_scored", "age_h")
 
 
 def headlines(row):
@@ -207,8 +210,8 @@ def combine(p, conf=None):
     s = sum(p[b] - p[r] for b, r in zip(BULLISH, BEARISH)) / 3.0
     pc = 0.5 + s / 2.0
     exhausted = p.get("move_exhausted")
-    vetoed = exhausted is not None and exhausted >= conf["exhausted_veto"]
-    if vetoed:
+    # The veto can't be checked without the answer, so the decision is a skip (clarification 1, item 3).
+    if exhausted is None or exhausted >= conf["exhausted_veto"]:
         return "skip", pc, s
     if pc >= conf["buy_at"]:
         return "buy", pc, s
@@ -314,6 +317,8 @@ def decide_round(scanner, now, get_ltp, post=None, state_path=None, sleep=time.s
                 d["excluded"] = "no live entry price"
         if action is None:
             d["excluded"] = "a directional answer was missing"
+        elif ans["p"].get("move_exhausted") is None:
+            d["skip_reason"] = "move_exhausted was not answered, so the veto could not be checked"
         day["decisions"].append(d)
         save_state(state, state_path)
     day["status"] = "open"
@@ -514,8 +519,12 @@ def summary(state_path=None, jev1_state=None):
     tr = _traded(state)
     dates = [date for date, _ in tr]
     nets = [d["net_bp"] for _, d in tr]
-    scan = [d["scanner_net_bp"] for _, d in tr]
-    paired_scan = [a - b for a, b in zip(nets, scan)]
+    # Pass rule item 3, Jev 2 - the scanner's side: every closed decision, a skip at 0 (clarification 1, item 2).
+    scored = [(date, d) for date in sorted(state["days"]) for d in state["days"][date]["decisions"]
+              if d.get("net_bp") is not None and d.get("scanner_net_bp") is not None]
+    scan_dates = [date for date, _ in scored]
+    scan = [d["scanner_net_bp"] for _, d in scored]
+    paired_scan = [d["net_bp"] - d["scanner_net_bp"] for _, d in scored]
     # Jev 2 - Jev 1 on the shared names: every Jev 2 decision (a skip is 0) on a stock-day Jev 1 also scored.
     j1 = _jev1_nets(jev1_state)
     pj, pj_dates = [], []
@@ -537,7 +546,8 @@ def summary(state_path=None, jev1_state=None):
         briers[key] = st.mean(xs) if xs else None
     shared = [d["net_bp"] for _, d in tr if d.get("shared")]
     extra = [d["net_bp"] for _, d in tr if not d.get("shared")]
-    own = [d["net_bp"] for _, d in tr if not (d.get("shared") and d.get("fill_source") == "own")]
+    own = [d["net_bp"] for _, d in tr
+           if not (d.get("shared") and "own" in (d.get("fill_source"), d.get("exit_source")))]
     sessions = [k for k, v in state["days"].items()
                 if v.get("closed") and any(d.get("net_bp") is not None for d in v["decisions"])]
     n_dec = len(all_dec)
@@ -551,9 +561,9 @@ def summary(state_path=None, jev1_state=None):
         "mean_net_bp": st.mean(nets) if nets else None, "t": _t(nets), "t_clustered": clustered_t(nets, dates),
         "halves": [st.mean(nets[:half]) if half else None, st.mean(nets[half:]) if nets[half:] else None],
         "hit_rate": (sum(1 for x in nets if x > 0) / len(nets)) if nets else None,
-        "scanner_mean_net_bp": st.mean(scan) if scan else None,
+        "scanner_mean_net_bp": st.mean(scan) if scan else None, "scanner_n": len(scan),
         "paired_vs_scanner_bp": st.mean(paired_scan) if paired_scan else None,
-        "paired_t": _t(paired_scan), "paired_t_clustered": clustered_t(paired_scan, dates),
+        "paired_t": _t(paired_scan), "paired_t_clustered": clustered_t(paired_scan, scan_dates),
         "paired_vs_jev1_bp": st.mean(pj) if pj else None, "paired_vs_jev1_n": len(pj),
         "paired_vs_jev1_t": _t(pj), "paired_vs_jev1_t_clustered": clustered_t(pj, pj_dates),
         "shared_mean_net_bp": st.mean(shared) if shared else None, "shared_n": len(shared),
@@ -572,7 +582,7 @@ def summary(state_path=None, jev1_state=None):
         "last_day": ({"date": last, **{k: v for k, v in state["days"][last].items() if k != "decisions"},
                       "decisions": [{**{k: d.get(k) for k in ("symbol", "action", "p_combined", "S", "p", "scanner_side",
                                                                 "shared", "fill_source", "exit_source", "entry", "exit",
-                                                                "move_bp", "net_bp", "scanner_net_bp", "excluded",
+                                                                "move_bp", "net_bp", "scanner_net_bp", "excluded", "skip_reason",
                                                                 "asked_at", "model")}}
                                     for d in state["days"][last]["decisions"]]} if last else None),
     }

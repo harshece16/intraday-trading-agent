@@ -25,7 +25,12 @@ def _row(i, side="LONG"):
     return {"symbol": f"S{i}", "name": f"S{i} Ltd", "industry": "Banks", "ltp": 100.0 + i, "vwap": 99.0 + i,
             "chg_pct": 0.5, "gap_pct": 0.2, "rvol": 1.4, "rs_today": 0.3, "or_high": 101.0 + i, "or_low": 99.5 + i,
             "sector_chg_pct": 0.4, "atr_pct": 1.8, "rs10": 2.0, "pct_from_high": 5.0, "pct_from_low": 20.0,
-            "turnover_cr": 500.0, "beta": 1.0, "catalyst": None, "event": None, "large_deals": None,
+            "turnover_cr": 500.0, "beta": 1.0, "event": None, "large_deals": None,
+            # The real shape of market_catalysts' output: a sentiment score, per-headline scores, URLs, raw ages
+            "catalyst": {"score": 0.42, "count": 3, "top": "dated",
+                         "headlines": [{"title": "dated", "score": 0.6, "llm_scored": True, "url": "u", "age_h": 0.5},
+                                       {"title": "undated", "score": 0.2, "llm_scored": False, "url": "u", "age_h": 24.0},
+                                       {"title": "old", "score": 0.4, "llm_scored": False, "url": "u", "age_h": 30.0}]},
             "score_side": side, "side": "", "final_score": 61.0, "score": 61.0, "daily_trend": "up",
             "reasons": [{"text": "Above VWAP"}], "swing_patterns": ["flag"], "shadow_side": "LONG",
             "sector_trend": "up", "long_only": False,
@@ -85,12 +90,18 @@ def _digest(path):
 
 # --- the blind state ---------------------------------------------------------------------------------
 
+def stock_keys(state):
+    return set(state["stock"])
+
+
 def test_the_state_is_blind_and_drops_undated_headlines():
     s = j2.build_state(_row(0), _scanner()["market"], NOW)
     text = json.dumps(s)
     for k in j2.WITHHELD:
         assert f'"{k}"' not in text, k
     assert "Bullish confluence" not in text and "Above VWAP" not in text and "risk-on" not in text
+    assert "catalyst" not in stock_keys(s) and "0.42" not in text and "llm_scored" not in text and '"url"' not in text
+    assert "24.0" not in text and json.dumps(s).count('"dated"') == 1          # no second copy of the headlines
     stock = s["stock"]
     assert stock["ltp"] == 100.0 and stock["vwap"] == 99.0 and stock["vwap_distance_pct"] == pytest.approx(1.01, abs=0.001)
     assert stock["opening_range"] == {"high": 101.0, "low": 99.5} and stock["sector_chg_pct"] == 0.4
@@ -134,6 +145,8 @@ def test_the_combination_rule_thresholds_and_the_exhaustion_veto():
     assert j2.combine({**edge, "move_exhausted": 0.69}, conf)[0] == "buy"
     assert j2.combine(BEAR, conf)[0] == "short" and j2.combine({**BEAR, "move_exhausted": 0.9}, conf)[0] == "skip"
     assert j2.combine({**edge, "sector_up": None}, conf) == (None, None, None)
+    act, pc, s = j2.combine({**edge, "move_exhausted": None}, conf)          # veto unanswerable -> skip
+    assert act == "skip" and pc == pytest.approx(0.65) and s == pytest.approx(0.30)
 
 
 def test_the_two_wordings_are_averaged():
@@ -193,6 +206,9 @@ def test_shared_names_reuse_jev1s_fills_and_the_rest_fetch_their_own(tmp_path, k
     assert ds["S1"]["exit"] == 101.0 and ds["S1"]["exit_source"] == "own"
     rt = jb.round_trip_bp()
     assert ds["S0"]["net_bp"] == pytest.approx((102.0 / 100.25 - 1) * 1e4 - rt)
+    s = j2.summary(state_path=path)
+    # "Without own shared fills" drops S1 (own entry) but keeps S0 (Jev 1's at both ends) and S2 (not shared).
+    assert s["mean_net_bp_without_own_shared_fills"] == pytest.approx(st_mean([ds["S0"]["net_bp"], ds["S2"]["net_bp"]]))
     assert ds["S0"]["scanner_net_bp"] == pytest.approx((102.0 / 100.25 - 1) * 1e4 - rt)      # S0 scanner LONG
     assert ds["S1"]["scanner_net_bp"] == pytest.approx(-(101.0 / 100.0 - 1) * 1e4 - rt)      # S1 scanner SHORT
     assert _digest(j1_path) == closed_digest                      # Jev 1's file untouched by the close
@@ -223,6 +239,32 @@ def test_jev2_never_writes_jev1s_state(tmp_path, key, monkeypatch):
 
 
 # --- skips, exclusions, outages, the missed day ---------------------------------------------------------
+
+def test_a_missing_move_exhausted_answer_is_a_skip_with_its_reason(tmp_path, key):
+    path = str(tmp_path / "s.json")
+    body = _resp(BULL).json()
+    del body["answers"]["move_exhausted_a"], body["answers"]["move_exhausted_b"]
+    resp = types.SimpleNamespace(status_code=200, json=lambda: body, text="", headers={})
+    j2.decide_round(_scanner(1), NOW, lambda s: 100.0, post=_post([resp]), state_path=path, sleep=lambda s: None)
+    d = j2.load_state(path)["days"][DAY]["decisions"][0]
+    assert d["action"] == "skip" and "move_exhausted" in d["skip_reason"] and not d.get("excluded")
+    assert d["p_combined"] == pytest.approx(0.7333, abs=1e-3)
+
+
+def test_beats_the_scanner_is_scored_on_every_decision_with_skips_at_zero(tmp_path, key):
+    path = str(tmp_path / "s.json")
+    j2.decide_round(_scanner(3), NOW, lambda s: 100.0, post=_post([_resp(BULL), _resp(FLAT), _resp(FLAT)]),
+                    state_path=path, sleep=lambda s: None)
+    j2.close_round(NOW.replace(hour=15, minute=8), lambda s: 101.0, state_path=path)     # +100 bp move everywhere
+    rt = jb.round_trip_bp()
+    s = j2.summary(state_path=path)
+    # S0 buy (scanner LONG), S1 skip (scanner SHORT), S2 skip (scanner LONG): three decisions, one trade.
+    assert s["traded"] == 1 and s["decisions"] == 3 and s["scanner_n"] == 3
+    assert s["mean_net_bp"] == pytest.approx(100.0 - rt)                                      # item 1: trades only
+    scanner = [100.0 - rt, -100.0 - rt, 100.0 - rt]
+    assert s["scanner_mean_net_bp"] == pytest.approx(sum(scanner) / 3)
+    assert s["paired_vs_scanner_bp"] == pytest.approx(((100.0 - rt) - scanner[0] + (0 - scanner[1]) + (0 - scanner[2])) / 3)
+
 
 def test_a_skip_costs_nothing_and_counts(tmp_path, key):
     path = str(tmp_path / "s.json")
