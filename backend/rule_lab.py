@@ -36,12 +36,14 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import candlestick_patterns
 import costs
 import indicators
 
 logger = logging.getLogger("trading_bot")
+IST = ZoneInfo("Asia/Kolkata")
 
 # ---- fixed by the pre-registration (prereg-rule-lab.md §1, §2, amendment 1) ----
 
@@ -1035,6 +1037,17 @@ def page(max_age_s=60):
     by_rule = defaultdict(list)
     for t in trades:
         by_rule[t["rule"]].append({"session": t["session_date"], **t})
+    # The money showcase (README section 129): each rule's net paper rupees
+    # after full costs, summed over its closed trades (net_rs, the trade's own
+    # figure on about NOTIONAL a trade), and the slice closed on today's IST day.
+    day0 = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    rupees = {r: 0.0 for r in RULE_IDS}
+    rupees_today = {r: 0.0 for r in RULE_IDS}
+    for t in trades:
+        if t["rule"] in rupees and t.get("net_rs") is not None:
+            rupees[t["rule"]] += float(t["net_rs"])
+            if t.get("closed_ts") is not None and t["closed_ts"] >= day0:
+                rupees_today[t["rule"]] += float(t["net_rs"])
     rows = []
     for rid, name, side, family in RULES:
         d = describe(by_rule.get(rid, []))
@@ -1045,6 +1058,7 @@ def page(max_age_s=60):
                      "prior": REGISTRY[rid].get("prior"), "sources": REGISTRY[rid].get("sources") or [],
                      "r_based": rid in R_RULES, **d,
                      "open": open_by_rule.get(rid, 0), "void": void_n.get(rid, 0),
+                     "rupees_total": round(rupees[rid], 2), "rupees_today": round(rupees_today[rid], 2),
                      **statuses[rid],
                      "historical": ({"n": h.get("n"), "mean": hmean, "win_rate": h.get("win_rate"),
                                      "passed": h.get("passed")} if h else None),
@@ -1062,6 +1076,8 @@ def page(max_age_s=60):
         "family": len(RULE_IDS),
         "screen_min_trades": SCREEN_MIN_TRADES,
         "notional": NOTIONAL, "hold_minutes": HOLD_BARS * BAR_MINUTES,
+        "rupees_total": round(sum(rupees.values()), 2), "rupees_today": round(sum(rupees_today.values()), 2),
+        "rupees_day": datetime.fromtimestamp(day0, IST).date().isoformat(),
         "round_trip_bp": costs.round_trip_pct(NOTIONAL, _default_costs()) * 100,
         "historical_run": bool(hist),
         "last_update_ts": last,

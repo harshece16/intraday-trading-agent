@@ -318,3 +318,38 @@ def test_desk_reads_only(files):
             paper_desk.process_log(d, book=b)
     assert {p: _digest(p) for p in before} == before
     assert counts == {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in counts}
+
+
+# --- the money showcase (README section 129) ----------------------------------------------------
+
+def test_money_showcase_is_hand_computed_per_book(files, monkeypatch):
+    """Each card carries rupees_today, rupees_total and the notional they are
+    on, net of costs, from the seeded trades: intraday from `trades.realized`,
+    Jev from net bp × its notional, the rule lab from net_rs summed over
+    closed trades, momentum from the marked book value minus its capital."""
+    seed(files)
+    monkeypatch.setattr(jev_book, "api_key", lambda: "k")
+    monkeypatch.setattr(paper_desk.time, "time", lambda: at(DAY, "12:30"))
+    books = {b["id"]: b for b in paper_desk.cards(now=now_at(DAY, "12:30"), engine={"market_status": "open",
+                                                                                     "paper_mode": True})["books"]}
+    for b in books.values():
+        assert {"rupees_today", "rupees_total", "notional", "notional_note"} <= set(b)
+    intraday = books["intraday"]
+    assert intraday["rupees_today"] == pytest.approx(-203.58)              # the one exit today, after charges
+    assert intraday["rupees_total"] == pytest.approx(-203.58 + 8.56)       # plus the earlier day's exit
+    assert intraday["notional"] == 100000.0 and "paper" in intraday["notional_note"]
+    jev = books["jev"]
+    assert jev["rupees_today"] is None                                     # today's position is not scored yet
+    assert jev["rupees_total"] == pytest.approx(-66.8 / 1e4 * 100000)      # −66.8 bp on ₹1,00,000, one trade
+    assert jev["notional"] == 100000.0 and "₹1,00,000" in jev["notional_note"]
+    lab = books["rule_lab"]
+    assert lab["rupees_today"] == pytest.approx(73.4 + 40.0 + 73.4)        # three closed today, net_rs each
+    assert lab["rupees_total"] == pytest.approx(186.8)
+    assert lab["notional"] == 50000.0 and "3 closed trades" in lab["notional_note"]
+    mom = books["momentum"]
+    assert mom["rupees_total"] == pytest.approx(998312.59 - 1_000_000)     # marked book minus capital
+    assert mom["rupees_today"] == pytest.approx(998312.59 - 1_000_000)     # the first mark is against capital
+    assert mom["rupees_vs_bench"] == pytest.approx(0.0) and mom["notional"] == 1_000_000.0
+    os.remove(momentum_book.STATE_PATH)
+    fresh = {b["id"]: b for b in paper_desk.cards(now=now_at(DAY, "12:30"))["books"]}["momentum"]
+    assert fresh["rupees_total"] is None and fresh["rupees_today"] is None

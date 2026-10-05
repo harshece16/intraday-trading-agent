@@ -23,11 +23,13 @@ so it has a book of its own. From 2026-09-30 it was the core of the system
 (`docs/research/decisions/decision-2026-09-30-momentum-core.md`). On
 2026-10-05 the owner reframed the front page
 (`docs/research/decisions/decision-2026-10-05-paper-desk.md`, README §125):
-the dashboard opens on the **paper desk**, where the four paper books (the
-intraday engine, the Jev book, the rule lab and the momentum book) are equal
-experiments, each trading in paper and logging every process step and trade
-into one merged process log. None is "the strategy" until it passes its own
-gate; the gates themselves are unchanged. The intraday engine still scans,
+the dashboard opens on the **paper desk**, where the five paper books (the
+intraday engine, the Jev book, the Jev 2 book, the rule lab and the momentum
+book) are equal experiments, each trading in paper and logging every process
+step and trade into one merged process log. Each card shows the book's net
+paper rupees today and since it started, on the notional it trades, with
+"paper" beside every figure (README §129). None is "the strategy" until it
+passes its own gate; the gates themselves are unchanged. The intraday engine still scans,
 labels setups and enforces risk, in paper, as a record: no intraday edge was
 found, and no new intraday look is started. Since 2026-10-01 it takes its
 entries automatically in paper: the confidence gate's bar is 0 in Paper and
@@ -94,11 +96,11 @@ Only Kite can receive an order. Every other arrow is a read.
 ```mermaid
 flowchart TB
     subgraph Browser["Browser"]
-        SPA["React SPA<br/>12 pages, one WebSocket"]
+        SPA["React SPA<br/>17 pages, one WebSocket"]
     end
 
     subgraph Proc["Backend process: uvicorn app:app"]
-        API["API layer<br/>54 routes + /ws<br/>ApiKeyMiddleware"]
+        API["API layer<br/>60 routes + /ws<br/>ApiKeyMiddleware"]
         State["AppState<br/>in memory, behind a lock"]
         Engine["TradingEngine<br/>tick every 30 s"]
         ScanT["Scanner thread<br/>every 5 min open, 60 min closed"]
@@ -111,9 +113,10 @@ flowchart TB
     Child["Evening job, separate process<br/>momentum_book.py daily<br/>19:30 to 23:30"]
 
     subgraph Disk["Local disk, all gitignored"]
-        DB[("sahab_journal.db<br/>SQLite, 15 tables")]
+        DB[("sahab_journal.db<br/>SQLite, 19 tables + 1 view")]
         MB["momentum_book_state.json"]
         MA["momentum_book_alerts.json<br/>what was alerted"]
+        ML["momentum_book.log<br/>one line per job run"]
         JB["jev_book_state.json"]
         J2["jev2_book_state.json"]
         Bhav["bhavcopies and<br/>corporate actions"]
@@ -142,9 +145,12 @@ flowchart TB
     Jev2T --> J2
     Jev2T -.->|"reads only"| JB
     Child --> MB
+    Child --> ML
     Child --> Bhav
     API -->|"reads"| MB
+    API -->|"reads"| ML
     API -->|"reads"| JB
+    API -->|"reads"| J2
     Research --> Hist
     Research --> Bhav
     Dog -->|"health check, restart"| Proc
@@ -173,11 +179,11 @@ flowchart TB
 | **F&O** | Buy calls and puts, never write | `fno_instruments`, `options_pricing`, `fno_risk` | Off |
 | **Market data** | One interface over Kite and yfinance; Kite session lifecycle | `data_provider`, `kite_tunnel`, `kite_history` | Kite when connected, else delayed |
 | **News and context** | Filings, headlines, flows, breadth, fundamentals | `nse_feed`, `news_sentiment`, `llm_sentiment`, `fundamentals` | Running |
-| **Momentum book** | The paper run of the one rule that passed, with a monthly report against its benchmark and an alert at each rebalance or failed evening job. One of the four books on the paper desk | `momentum_book`, `momentum_alerts` | Holding 15 since the 1 Oct close; next rebalance 2 Nov |
-| **Paper desk** | The front page: one card per paper book, equal weight, and one process log that merges every step and trade of the four books. Read-only: assembled from what the books already write (README §125) | `paper_desk` | Running from the next backend restart |
-| **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
-| **Jev 2 book** | A second test of the judge beside Jev 1: blind state, seven narrow questions combined in code, a skip band, all 25 names, fills shared with Jev 1 on the common 15 (README §128) | `jev2_book` | Built; first round after the next restart |
-| **Rule lab** | 157 single rules (20 of its own, 87 from the YouTube and practitioner catalogs, 50 basic pattern and indicator rules as cohort 2b), each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §124); collects from the first session after deploy. Never places an order |
+| **Momentum book** | The paper run of the one rule that passed, with a monthly report against its benchmark and an alert at each rebalance or failed evening job. One of the five books on the paper desk. The evening job follows renamed holdings, re-fetches a half-written bhavcopy, keeps a failed day until it arrives and runs one job at a time (README §123) | `momentum_book`, `momentum_alerts` | Holding 15 since the 1 Oct close; next rebalance 2 Nov |
+| **Paper desk** | The front page: one card per paper book, equal weight, with the book's net paper rupees today and since its start on the notional it trades (README §129), and one process log that merges every step and trade of the five books. Read-only: assembled from what the books already write (README §125) | `paper_desk` | Running |
+| **Jev book** | Paper test of an LLM judge on the shortlist. From 15 closed sessions its page shows an interim read (clustered t, projection, minimum detectable mean), information only; the test is unchanged (README §127) | `jev_book`, `typesafe_key` | Running since 28 Sep; 4 rounds closed, 1 skipped for no live prices |
+| **Jev 2 book** | A second test of the judge beside Jev 1: blind state, seven narrow questions combined in code, a skip band, all 25 names, fills shared with Jev 1 on the common 15, so the Jev 2 − Jev 1 pair is exact; session-clustered t (README §128) | `jev2_book` | Running since 5 Oct (that day's round was missed: the backend restarted after 10:00); first full round the next session |
+| **Rule lab** | 157 single rules in three cohorts (1: 20 of its own, 2: 87 from the YouTube and practitioner catalogs, 2b: 50 basic pattern and indicator rules), each a shadow paper book on the day's list, judged only at pre-registered looks. Its historical search L55 ran once and is closed: no survivor among 104,655 combinations, every powered single rule losing after costs (README §124) | `rule_lab`, `rule_lab_catalog`, `rule_lab_patterns`, `research/rule_lab_screen` | Running since the 5 Oct session (4,334 trades closed that day, −₹3.56 lakh paper); screen after lab session 40. Never places an order |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
 | **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 202 trials of record; no new intraday look since 2026-09-30 |
@@ -199,11 +205,12 @@ and `square_off_window` (15:08 to 15:30).
 | 09:15 | Phase `open`. Scanner every 5 minutes. Stops are watched on ticks and on every poll | For live prices |
 | 09:15 to 09:30 | ETF window sampling | Yes |
 | 09:15 to 15:08 | Order-book sample of the watchlist on every tick | Yes |
+| 09:15 to 15:05 | Rule lab: every finished 5-minute bar of the day's list through 157 rules, last in the tick, own tables only | No; delayed bars are flagged |
 | 09:30 to 14:30 | Entry window for the checklist and the review queue | |
 | 09:45 | Jev round: one request per shortlisted stock, paper entries at the live price | Yes |
 | After Jev 1's round, by 10:00 | Jev 2 round: fourteen Nouls per stock on the scan captured at 09:45, all 25 names; shared names reuse Jev 1's entry | Yes |
 | 15:00 to 15:30 | ETF window sampling | Yes |
-| 15:08 | Phase `square_off_window`. Every cash and F&O position is closed. Jev positions are closed and scored, then Jev 2's (shared names reuse Jev 1's exit) | Yes for Jev and Jev 2 |
+| 15:08 | Phase `square_off_window`. Every cash and F&O position is closed, each under its own guard, repeated until flat (#250). Jev positions are closed and scored, then Jev 2's (shared names reuse Jev 1's exit). Once a session, every universe stock's last price goes to `session_closes` | Yes for Jev, Jev 2 and the closes |
 | 15:30 | Phase `closed`. Session summary is logged | |
 | 19:30 to 23:30 | Evening job: download the bhavcopy, rebuild prices, mark the momentum book. On a month's first session, rebalance. After it, one alert per rebalance, failed run or early stop | No |
 | 23:30 | If a run that day left the day unprocessed, one alert | No |
@@ -245,13 +252,15 @@ runs past 120 seconds gets every thread's stack dumped once.
 
 ```mermaid
 flowchart TD
-    Sig(["Checklist signal on a finished bar<br/>inside 09:30 to 14:30, first of the day"]) --> B1{"Entries paused?<br/>Untracked Kite position?"}
+    Sig(["Checklist signal on a finished bar<br/>inside 09:30 to 14:30, first of the day"]) --> B0{"First scan since start done?<br/>(#256)"}
+    B0 -->|no| Blk
+    B0 -->|yes| B1{"Entries paused?<br/>Untracked Kite position?"}
     B1 -->|yes| Blk
     B1 -->|no| B2{"Scanner excluded it,<br/>or a short on a long-only stock?"}
     B2 -->|yes| Blk
     B2 -->|no| B3{"Market bias blocks this side?"}
     B3 -->|yes| Blk
-    B3 -->|no| B4{"Daily loss at 2%?<br/>3 positions open?<br/>Sector already held?"}
+    B3 -->|no| B4{"This mode's daily loss at 2%? (#252)<br/>3 positions open or in flight? (#251)<br/>Sector already held?"}
     B4 -->|yes| Blk
     B4 -->|no| CG{"Confidence at least the bar?<br/>Paper 0, Live 60"}
     CG -->|"no: always in Live, today"| Blk
@@ -263,7 +272,7 @@ flowchart TD
     LQ -->|no| Blk
     LQ -->|yes| EX(["Execute: paper fill or Kite order"])
     Blk["Blocked<br/>reason journaled, the day's entry is given back"] -.->|"exactly one gate failed,<br/>queue switched on"| Card(["Review card, 5 minutes to decide"])
-    Card -->|"owner approves"| AP["Re-check blocks, price, size, liquidity"]
+    Card -->|"owner approves"| AP["Re-check blocks, the plan at the live price (#249),<br/>size, liquidity"]
     AP --> EX
 
     style CG stroke-width:3px
@@ -279,6 +288,18 @@ owner's instruction of 2026-10-01), so every setup that reaches the gate
 passes it, and its trade row records the score and whether 60 would have
 blocked it. The bar is read at each entry: a switch to Live restores 60 for
 the next one, and a paper position stays paper.
+
+The money path was reviewed on 2026-10-05 and eleven bugs fixed (#249 to
+#259, README §121 and §122): an approval re-runs the plan check at the live
+price; the square-off closes every position under its own guard and repeats
+until flat; a slot and a sector are reserved under the lock before the order;
+paper and live keep separate daily-loss counters, seeded by mode on restart;
+a journal write that fails mid-order is queued and retried, never raised into
+the order path; a partly exited live position is restored at what is left; a
+paper close with no readable price waits for one; nothing is entered before
+the first scan; the Scorecard counts one R per position; the tax box's
+charges are the closed trades'; off-day scans run once. No entry rule,
+threshold, size or cost changed.
 
 ### 6.4 Market data and its fallbacks
 
@@ -306,7 +327,13 @@ The scanner uses Kite's quotes for today's prices when Kite is connected, and th
 ## 7. The books
 
 Each book is independent of the engine's mode, pause and kill switch. None
-places an order.
+places an order. Each has a card on the paper desk with its net paper rupees
+today and since it started, on the notional it trades (README §129): the
+engine's realized P&L on its ₹1,00,000 paper capital, Jev 1's and Jev 2's net
+bp × ₹1,00,000 a position, the rule lab's net ₹ summed over its closed
+₹50,000 trades, the momentum book's marked value minus ₹10,00,000 and against
+its benchmark. The figures are read from what the books write; they are not
+a verdict and never a gate.
 
 ```mermaid
 stateDiagram-v2
@@ -388,12 +415,36 @@ flowchart LR
 ## 10. Deployment
 
 One machine, no cloud. `uvicorn app:app --port 8000` runs detached; the
-dashboard dev server runs on 5500. launchd runs the watchdog every 120
-seconds and on wake. The project lives in `~/Projects`, because macOS
-blocks background jobs from reading Documents, Desktop and Downloads.
+dashboard dev server runs on 5500. launchd runs the watchdog
+(`scripts/sahab_watchdog.sh`) every 120 seconds and on wake; inside session
+hours (09:15 to 15:30, 20 minutes either side, trading days only) it starts a
+backend that is not listening or not answering `/api/state`, and never stops
+one. The project lives in `~/Projects`, because macOS blocks background jobs
+from reading Documents, Desktop and Downloads.
+
+**Deploy and restart.** The main checkout (`~/Projects/webapp`) is what the
+backend and the dashboard serve, so other sessions build in worktrees under
+`.claude/worktrees/` and never switch its branch.
+
+| Step | Command or check | Goes live |
+| --- | --- | --- |
+| 1 | `git status -sb` in the main checkout: on `main`, clean | |
+| 2 | `git pull` after the squash merge | Frontend changes at once: Vite serves the working tree, the open tab reloads on its own |
+| 3 | Outside market hours (before 09:15 or after 15:30, when no round or square-off is due): stop the backend (`kill` the uvicorn pid on :8000; the lock file is released) | |
+| 4 | In session hours the watchdog restarts it within 120 s; otherwise `cd backend && .venv/bin/uvicorn app:app --port 8000` detached, or `launchctl kickstart` the watchdog | Backend changes: new routes, fields, engine fixes, book code |
+| 5 | Read `~/Library/Logs/TraderSahab/backend.log` and `GET /api/state`; note the restart in the README section that shipped the change | |
+
+A restart comes back in Paper with the review queue, the options switch and
+the research desk off; today's trades, counters and open paper positions are
+rebuilt from the journal, and the day's list is read back from `day_lists`
+so the scanner does not choose again (#198). A dashboard tab older than the
+running backend shows "—" for a field the backend does not send yet; one
+newer than it says so beside the field.
 
 A second backend for testing must use another port **and** a copy of the
-journal (`SAHAB_DB_PATH`), or the engine lock refuses to start it.
+journal (`SAHAB_DB_PATH`), or the engine lock refuses to start it; its
+origin also needs adding to `CORS_ALLOWED_ORIGINS`, or a GET-only proxy on an
+allowed port, before a browser on another port can read it.
 
 ## 11. How it fails
 
@@ -408,20 +459,29 @@ journal (`SAHAB_DB_PATH`), or the engine lock refuses to start it.
 | A tick throws | Caught, logged once per distinct message, next tick runs |
 | Backend crashes or the Mac sleeps | Watchdog restarts it; today's trades, counts and open paper positions are rebuilt from the journal |
 | Two engines on one journal | The second refuses to start |
+| Kite rejects one close in the square-off | The other positions are still closed; the failed one is logged once and retried next tick (#250). A live position is checked against Kite's day book before any closing order |
+| A journal write fails mid-order | The fill stays in memory and the row is queued and retried each tick; nothing is raised into the order path (#253) |
+| No readable price for a paper close | The position waits for a price; it is never booked at its entry (#255). A live one is still sent to Kite at market |
+| A restart before the first scan | No entry and no card until a scan has set the market read (#256) |
 | Bhavcopy not published yet | Evening job exits and retries every 30 minutes until 23:30 |
 | Evening job fails or stops early | One alert with the reason, in the activity log and on Telegram when it is set up; one more at 23:30 if a run that day left the day unprocessed. A rebalance is alerted once, restart or not |
 
 ## 12. Known gaps
 
-Found while this design was mapped, confirmed in code, and filed. None
-stops today's paper operation, which takes automatic entries since README
-§118; paper fills use the assumed slippage (#66).
+The open issues as of 2026-10-05 (`gh issue list --state open`), confirmed
+in code. None stops today's paper operation, which takes automatic entries
+since README §118; paper fills use the assumed slippage (#66). #220 (the
+silent symbol-change refresh) closed with README §123.
 
 | Issue | Gap | Matters when |
 | --- | --- | --- |
-| [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only. A year without a list is now loud (an error at start-up and on each pre-market read, `holiday_calendar_missing` in the state); NSE's 2027 list is not published yet | Before 2027 |
-| [#220](https://github.com/harshece16/intraday-trading-agent/issues/220) | Momentum book: a failed symbol-change refresh is silent | Before a rename in a ranked or held stock |
+| [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) | One slippage figure for every stock, never measured | Every intraday test's hurdle, and the rule lab's 16.6 bp round trip |
+| [#162](https://github.com/harshece16/intraday-trading-agent/issues/162) | Holiday list covers 2026 only. A year without a list is loud (an error at start-up and on each pre-market read, `holiday_calendar_missing` in the state); NSE's 2027 list is not published yet | Before 2027 |
+| [#163](https://github.com/harshece16/intraday-trading-agent/issues/163) | Stale comments and UI text | Readers |
 | [#222](https://github.com/harshece16/intraday-trading-agent/issues/222) | A redacted request line is dropped from the log, with a traceback | Reading the log after a Kite login |
 | [#223](https://github.com/harshece16/intraday-trading-agent/issues/223) | An F&O index underlying needs pinning, and is then also traded as cash | Before enabling index options |
-| [#66](https://github.com/harshece16/intraday-trading-agent/issues/66) | One slippage figure for every stock, never measured | Every intraday test's hurdle |
-| [#163](https://github.com/harshece16/intraday-trading-agent/issues/163) | Stale comments and UI text | Readers |
+| [#260](https://github.com/harshece16/intraday-trading-agent/issues/260) | The backtester books a stop exit at the stop level; the engine books the first price past it, so backtests are optimistic by the overshoot on every stop-out. Owner decision pending | Reading any intraday backtest against the paper record |
+| [#263](https://github.com/harshece16/intraday-trading-agent/issues/263) | Momentum book: a holding with no month-end row is sold at a stale close when the job runs that evening (pre-registered rule H5). Owner decision pending | A held stock that does not trade on a month turn |
+| [#274](https://github.com/harshece16/intraday-trading-agent/issues/274) | `rule_lab_screen.judge()` computes `dsr_best` on the raw-t best over every key, not the powered best | Reading L55's DSR figure; the search is closed |
+| [#279](https://github.com/harshece16/intraday-trading-agent/issues/279) | An undated headline is given an age of 24 h and passes the 72 h filter, so it can be newer than a Jev fill | Jev 1's and Jev 2's news fields |
+| [#130](https://github.com/harshece16/intraday-trading-agent/issues/130) | NSE's bhavcopy carries no corporate-action tell; the research panel relies on the corporate-actions files | Research on delivery prices |

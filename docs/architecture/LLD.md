@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Describes `main` as of 2026-09-28 |
+| **Status** | Describes `main` as of 2026-10-05 |
 | **Read first** | [High-Level Design](HLD.md) for the shape of the system |
 | **Companions** | [Rules checklist](RULES.md) · [Knowledge graph](KNOWLEDGE_GRAPH.md) |
 | **Conventions** | Paths are relative to the repo root. Times are IST. Rule ids such as `ENT-01` point into the rules checklist. Line numbers are left out on purpose; function names are stable, lines are not |
@@ -18,7 +18,7 @@
 7. [Scanner](#7-scanner)
 8. [Market data and the Kite session](#8-market-data-and-the-kite-session)
 9. [News, sentiment and fundamentals](#9-news-sentiment-and-fundamentals)
-10. [Paper books](#10-paper-books)
+10. [Paper books](#10-paper-books) (momentum, Jev, order-book sampler, rule lab, paper desk, Jev 2)
 11. [Research desk and holdings diagnostic](#11-research-desk-and-holdings-diagnostic)
 12. [Evidence pipeline](#12-evidence-pipeline)
 13. [API surface](#13-api-surface)
@@ -735,6 +735,7 @@ exception.
 | `decide_round()`, `close_round()` | The morning round and the 15:08 close. A round stopped part-way stays open with its decisions and records `interrupted` |
 | `_apply_kill_rule()` | After 100 traded decisions, t below −2 switches the book off |
 | `summary()` | The scored read model. Counts a trade only after its 15:08 close |
+| `interim()` | README §127. From 15 closed sessions (and 30, 45): the pass rule's statistics on the same decisions, a session-clustered t beside the plain one, the t a test of the verdict's size could reach at the present mean and spread, the minimum detectable mean at t = 2, and what remains to the verdict. Computed on request, writes nothing, read by no code path; `page()` serves it under `interim` (null before 15 sessions) |
 | `live_marks()` | While today's round is open: each position at Kite's last traded price, and the mean after costs. One batched Kite call, cached 30 s. Display only: it writes nothing and feeds no score |
 | `page()` | `summary()` plus the live mark under `live`. What `/api/jev-book` returns |
 
@@ -810,21 +811,39 @@ Shadow paper books of single rules, research look L54 (`docs/research/prereg-rul
 | `simulate_session(...)` | Every rule's trades on one stock-session: signal on a finished bar, entry at the next bar's open (≤ 14:30, contiguous), exit 30 minutes later or at the 15:05 bar; R19/R20 walk finished bars for stop (first), 3R target or 15:05. Priced by `costs.apply_slippage` and `costs.leg_cost` with `config.COSTS`. Opens may come from the forming bar; decisions never do |
 | `RuleLab.run(now, candles_map, watchlist, scan_row)` | Per tick: skips a stock whose last bar and bar count are unchanged; re-simulates today and any earlier session with an open trade; writes through `record()`; stops at `TIME_BUDGET_S` (1.5 s) and resumes next tick. Never raises. Measured with 107 rules: about 0.29 s CPU on a tick with a new bar for 25 stocks, about 28 ms averaged over all ticks; with 157 rules (cohort 4 added) still about 0.29 s (p95 0.40 s), 0.2 ms on a tick with no new bar |
 | `record()` | `INSERT OR IGNORE` keyed by (rule, symbol, session, entry time); an open row is closed once; a closed row is never updated |
-| `evaluate()`, `page()` | Statuses from the journal: collecting until a cohort's 40th lab session (with no open trade in it), then the screen (`romano_wolf` over every registered rule, only the cohort can pass, α = 5% × 2^−cohort), then confirmation on the next 40. A cohort's window starts at `COHORT_START[cohort]`: `None` for the lab's first session, or `FIRST_TRADE` (cohort 4) for the first session with a trade of its rules (`cohort_start()`); the page carries `cohort_start`, `cohort_alpha` and `family`. `GET /api/rule-lab` |
+| `evaluate()`, `page()` | Statuses from the journal: collecting until a cohort's 40th lab session (with no open trade in it), then the screen (`romano_wolf` over every registered rule, only the cohort can pass, α = 5% × 2^−cohort), then confirmation on the next 40. A cohort's window starts at `COHORT_START[cohort]`: `None` for the lab's first session, or `FIRST_TRADE` (cohort 4) for the first session with a trade of its rules (`cohort_start()`); the page carries `cohort_start`, `cohort_alpha` and `family`. Each row also carries `rupees_total` (the rule's `net_rs` summed over its closed trades, about ₹50,000 a trade) and `rupees_today` (the slice whose `closed_ts` falls on today's IST day), and the page the same two sums over every rule with `rupees_day` (README §129). Cached 60 s. `GET /api/rule-lab` |
 
-L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`. `discover()` and `confirm_2026()` refuse to run on an existing result, a dirty tree or a family hash that differs from the stage 0 (or discovery) record; results carry commit, hash and each survivor's origin.
+L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`. `discover()` and `confirm_2026()` refuse to run on an existing result, a dirty tree or a family hash that differs from the stage 0 (or discovery) record; results carry commit, hash and each survivor's origin. **L55 ran once on 2026-10-05 and is closed** (`docs/research/results-rule-lab-l55.md`): 104,655 combinations of the 107 conditions of cohorts 1 and 2, no survivor; every one of the 105 single rules with 200 or more trades loses after costs (best −12.8 bp, t −4.4), and a filtered second look found 0 survivors among 24,026 powered combinations. Its per-rule figures are the page's `historical` column; the DSR figure has a known fault (#274). Cohort 2b is outside L55's family.
 
 ### 10.5 Paper desk (`paper_desk.py`, README §125)
 
-The read side of the four books together, for the front page and the process log. It imports `database`, `jev_book`, `momentum_book`, `rule_lab`, `holidays` and `config`, and calls only their read functions (`jev_book.summary`, `momentum_book.summary`, `rule_lab.page`, `database.trade_stats`) plus its own SELECTs. It never imports the app's state: `app.py` passes the market status, paper mode, paused flag, open-position count and open P&L in a small dict.
+The read side of the five books together, for the front page and the process log. It imports `database`, `jev_book`, `jev2_book`, `momentum_book`, `rule_lab`, `holidays` and `config`, and calls only their read functions (`jev_book.summary`, `jev2_book.summary`, `momentum_book.summary`, `rule_lab.page`, `database.trade_stats`) plus its own SELECTs. It never imports the app's state: `app.py` passes the market status, paper mode, paused flag, open-position count and open P&L in a small dict.
 
 | Function | What it does |
 | --- | --- |
-| `cards(now, engine)` | `GET /api/paper-desk`. One card per book in `BOOKS` order, each with `name`, `about`, `page`, `status {state, label, detail}`, `today`, `record {…, headline {label, value, note}}`, `next {label, when, text}` and `gate`. The states are `running`, `waiting`, `skipped`, `off`; each card is built inside `_safe`, so a book whose file is unreadable gives a card that says so. The gate texts quote the existing rules (RES-27, ENT-02/05, RES-36, MOM-10/16, L53) and are not rules of their own |
-| `process_log(day, book, kind, limit)` | `GET /api/process-log`. Merges `_engine_lines` (the `activity` table with every kind but `momentum`, the engine's "Jev book:" and "Momentum book:" system lines re-tagged to their books, and the `trades` table for the fills, so a fill is one line with its money), `_jev_lines` (the state file's day: round started, each decision, each scored close with its bp and its rupee value on the notional, round closed, a skipped day as one 09:45 warning, an interruption), `_lab_lines` (`rule_lab_sessions` for the session line; `rule_lab_trades` grouped by entry bar and by exit bar, each group one line with every trade in `details`; voids) and `_momentum_lines` (`momentum_book.log` runs with the exit code read, the state's trades dated that day at the close, a rebalance from `month_points`, a waiting order). Lines are filtered to the IST day, sorted newest first, then filtered by book and kind; the response carries `total`, `truncated`, `counts` per book and the day's `kinds` |
+| `cards(now, engine)` | `GET /api/paper-desk`. One card per book in `BOOKS` order (`intraday`, `jev`, `jev2`, `rule_lab`, `momentum`), each with `name`, `about`, `page`, `status {state, label, detail}`, `today`, `record {…, headline {label, value, note}}`, `next {label, when, text}`, `gate`, and the money showcase `rupees_today`, `rupees_total`, `notional`, `notional_note` (README §129). The states are `running`, `waiting`, `skipped`, `off`; each card is built inside `_safe`, so a book whose file is unreadable gives a card that says so. The gate texts quote the existing rules (RES-27, ENT-02/05, RES-36, MOM-10/16, L53) and are not rules of their own |
+| `_money(today, total, notional, note)` | The showcase block, from figures each card already computed, rounded to 2 decimals with `None` kept. Intraday: today's and all-time `SUM(realized)` of closed `trades` rows on `RISK["paper_capital"]`. Jev 1 and Jev 2: `net bp / 10⁴ × notional` summed over scored positions (today) and `mean × traded` (all time) on `JEV_BOOK["notional"]`. Rule lab: `net_rs` summed over closed `rule_lab_trades` (today by `closed_ts`), on `rule_lab.NOTIONAL`. Momentum: the newest `nav` mark minus the one before (today, only when that mark is today's) and `book_value − capital`; `rupees_vs_bench` is `book_value − bench_value`. `_inr` writes a notional with Indian grouping ("₹1,00,000"). The fallback card carries the four keys as `None` |
+| `process_log(day, book, kind, limit)` | `GET /api/process-log`. Merges `_engine_lines` (the `activity` table with every kind but `momentum`, the engine's "Jev book:", "Jev 2 book:" and "Momentum book:" system lines re-tagged to their books, and the `trades` table for the fills, so a fill is one line with its money), `_jev_lines` and `_jev2_lines` (each state file's day: round started, each decision (Jev 2's with its combined probability and whether the fill was Jev 1's), each scored close with its bp and its rupee value on the notional, round closed, a skipped or missed day as one 09:45 warning, an interruption), `_lab_lines` (`rule_lab_sessions` for the session line; `rule_lab_trades` grouped by entry bar and by exit bar, each group one line with every trade in `details`; voids) and `_momentum_lines` (`momentum_book.log` runs with the exit code read, the state's trades dated that day at the close, a rebalance from `month_points`, a waiting order). Lines are filtered to the IST day, sorted newest first, then filtered by book and kind; the response carries `total`, `truncated`, `counts` per book and the day's `kinds` |
 | `day_bounds(day)` | The IST day as epoch bounds. Every source is cut by it, so a Jev trade closed at 15:08 and the job run at 19:31 belong to their own day |
 
-Each book's state path is passed explicitly (`jev_book.STATE_PATH`, `momentum_book.STATE_PATH`, `momentum_book.LOG_PATH`), not left to a default bound at import, so conftest and the mock API can point them at copies. Tests: `tests/test_paper_desk.py`.
+Each book's state path is passed explicitly (`jev_book.STATE_PATH`, `jev2_book.STATE_PATH`, `momentum_book.STATE_PATH`, `momentum_book.LOG_PATH`), not left to a default bound at import, so conftest and the mock API can point them at copies. Tests: `tests/test_paper_desk.py`.
+
+### 10.6 Jev 2 book (`jev2_book.py`, README §128)
+
+A second paper test of the judge beside Jev 1, pre-registered in `docs/research/prereg-jev2-book.md` (clarification 1 of 2026-10-05 dropped the row's `catalyst` field from the state, since it carried `market_catalysts`' sentiment scores). Its own state file; it never writes Jev 1's.
+
+| Function | Behaviour |
+| --- | --- |
+| `build_state(row, market, now)` | A blind state: measurements only (price, change, gap, relative volume, VWAP distance, opening range, sector and NIFTY change, ATR, RS, 52-week distances, turnover, beta, RSI, ADX, support, resistance, event, large deals), up to three headlines with their age in hours, the market summary and the time. No scanner side, score or reasons; no keys, positions or account data |
+| `questions()`, `parse_answers()` | Seven narrow yes/no questions in two wordings each, fourteen Nouls in one request per stock; each probability is the mean of its two wordings. Model pinned to `JEV2_BOOK["model"]` (`jev-1.13.0`) and logged per decision |
+| `combine(p)` | The frozen rule: S = the mean of the three bullish-minus-bearish differences, p = 0.5 + S/2; buy at p ≥ 0.65, short at p ≤ 0.35, else skip; skip either way when "move exhausted" ≥ 0.70. A skip scores 0 and is counted |
+| `same_scan()`, `jev1_day()`, `jev1_finished()` | Jev 2 asks on the scan captured at the tick Jev 1 started on, once Jev 1's round has ended. On the 15 shared names it reuses the Kite entry and exit Jev 1 recorded when both read the same scan (`fill_source: jev1`), so the Jev 2 − Jev 1 pair is exact; the other 10 names fill at their own Kite price |
+| `decide_round()`, `close_round()` | The round over all 25 names of the day's list, and the 15:08 close after Jev 1's. A round not started by `decide_until` (10:00) is recorded as `missed`; no live prices or a TypeSafe failure before any answer records the day as skipped, as Jev 1 does |
+| `clustered_t(xs, groups)` | The session-clustered t (one cluster per session) the pre-registration scores by |
+| `summary()`, `page()` | Counts, mean net bp, plain and clustered t, the scanner's side on every stock-day, the paired difference against Jev 1 on the shared names (`paired_vs_jev1_bp`), `verdict_due` at 300 buy/short decisions or 60 sessions. `GET /api/jev2-book` |
+| `maybe_decide()`, `maybe_close()` | The engine hooks, each in its own try/except; never raise |
+
+The verdict is a person's, as for Jev 1: after 300 buy/short decisions or 60 sessions, positive after costs with a session-clustered t ≥ 2.39 (N_family = 3), both halves positive, ahead of the scanner's side; Jev 2 − Jev 1 is reported, not gated. The kill rule is Jev 1's (100 traded decisions, t below −2).
 
 ## 11. Research desk and holdings diagnostic
 
@@ -969,8 +988,8 @@ in the ledger by hand.
 
 | Count | Today |
 | --- | --- |
-| Strategy trials | 125. Trial 118 is void, 120 is the only pass, 123 is pending |
-| Research looks | L1 to L39 |
+| Strategy trials | 202. Trial 118 is void; 120 is the only pass, re-run on repaired prices as 126 (survives, narrowly); 127 (a 400-stock book) failed; 123 (the Jev book) is pending |
+| Research looks | L1 to L55. L54 is the rule lab (open, forward); L55 its historical search (run once, closed, no survivor) |
 | Held-out window | Spent once, on 2026-09-26, for the momentum family |
 
 ## 13. API surface
@@ -998,10 +1017,10 @@ Every route needs the `X-Api-Key` header except `/kite/callback`.
 | GET | `/api/journal/blocked-signals`, `/api/journal/blocker-stats` | Why entries were blocked |
 | GET | `/api/journal/session-summary` | Why a session traded what it did |
 | GET | `/api/journal/liquidity-checks`, `/api/journal/depth-samples` | Order-book records |
-| GET | `/api/rule-lab` | The rule lab's leaderboard (§10.4). Read-only |
-| GET | `/api/paper-desk` | The paper desk's cards (§10.5): one per book, equal shape. Read-only; `app.py` passes in the market status and open positions |
-| GET | `/api/process-log?day=&book=&kind=&limit=` | The merged process log of the four books for one IST day (§10.5), newest first; 400 lines by default, at most 2,000. 400 on an unknown book or a bad day |
-| GET | `/api/momentum-book`, `/api/jev-book` | The paper books. The momentum book's includes its monthly report, band status and next rebalance |
+| GET | `/api/rule-lab` | The rule lab's leaderboard (§10.4), each rule with its paper rupees (`rupees_total`, `rupees_today`) and the lab's totals. Read-only |
+| GET | `/api/paper-desk` | The paper desk's cards (§10.5): one per book, equal shape, each with its money showcase (`rupees_today`, `rupees_total`, `notional`, `notional_note`; the momentum card also `rupees_vs_bench`). Read-only; `app.py` passes in the market status and open positions |
+| GET | `/api/process-log?day=&book=&kind=&limit=` | The merged process log of the five books for one IST day (§10.5), newest first; 400 lines by default, at most 2,000. 400 on an unknown book or a bad day |
+| GET | `/api/momentum-book`, `/api/jev-book`, `/api/jev2-book` | The paper books. The momentum book's includes its monthly report, band status and next rebalance; the Jev book's its interim read from 15 sessions (§10.2); Jev 2's its paired difference against Jev 1 (§10.6) |
 | GET | `/api/kronos`, `/api/kronos/day/{date}` | The Kronos space: L40's records and the shadow's forecasts, from `kronos.db`. Display only |
 | GET, POST | `/api/review-queue`, `/enable`, `/{id}/approve`, `/{id}/reject` | The review queue |
 | POST | `/api/mode` | Paper or Live. Live needs a readiness check, else 409 |
@@ -1037,7 +1056,7 @@ migration that also rewrote rows, on purpose, is `trades.realized_gross`
 | --- | --- | --- | --- |
 | `scans` | One row per scan: bias, NIFTY price, open, change and trend, VIX, FII net, breadth, feed and quote time | `record_scan` | `journal_summary`, `scan_candidates` |
 | `scan_rows` | One row per stock per scan: status, exclusion, long-only, scores (`score_side`, `long_score`, `short_score`; `side` is empty from README §115 and held the old score's side before), feed and price time, price, change, gap, relative volume, VWAP, opening range, industry change, sector trend, turnover, ATR %, `shadow_side`. Columns added in `_migrate`; older rows have them empty | `record_scan` | `factor_ic`, `dimag_ki_batti`, `scan_candidates` |
-| `session_closes` | One row per session and stock (and `NIFTY 50`): Kite's last traded price at the 15:08 square-off, read once a session. First write stands | `record_session_closes` (from `_record_session_closes`) | `scan_candidates` |
+| `session_closes` | One row per session and stock (and `NIFTY 50`): `price`, `ts`, Kite's `last_trade` time and `source`, at the 15:08 square-off, read once a session. First write stands | `record_session_closes` (from `_record_session_closes`) | `scan_candidates` |
 | `scan_candidates` (view) | The shadow log: `scan_rows` joined to `scans` and `session_closes`. Every stock of every scan with its inputs, `vwap_dist_bp`, `score_side` (from `side` on older rows) and `ret_to_close_bp`, the return from the scan's price to the 15:08 price (empty for a scan after 15:08 or without a close). Recreated when its definition changes | `_migrate` | `database.scan_candidates()`, research |
 | `checklist_evals` | Every checklist read, every tick | `record_checklist_eval` | `checklist_blocker_stats`, `session_summary` |
 | `trades` | Every fill: price, charges, net and gross P&L, R-multiple | `record_trade` | Trades page, rehydration, `trade_stats` (one R per position via `closed_trade_rs`, #257) |
@@ -1051,9 +1070,12 @@ migration that also rewrote rows, on purpose, is `trades.realized_gross`
 | `research_briefs` | Research desk briefs | `research_desk` | Stock page |
 | `chaywanaprash_reports` | Self-review reports | `chaywanaprash` | Reports route |
 | `control` | `entries_paused`, `telegram_enabled`, `llm_sentiment_enabled` | Control routes | Engine at startup |
-| `day_lists` | One row per session: the day's list, when and how it was fixed. Written once; a second write for the session is ignored | `Scanner._keep` (`record_day_list`) | `Scanner.__init__` (`latest_day_list`) |
-| `rule_lab_trades` | One row per rule-lab virtual trade: rule, stock, session, side, signal, entry and exit bar and price, stop and target (R19/R20), gross and net bp, net ₹, net R, status (open, closed, void), feed. Unique on (rule, symbol, session, entry time) | `rule_lab.record`, `rule_lab.void_stale` | `rule_lab.page` |
-| `rule_lab_sessions` | One row per session the lab ran: stocks and bars read, feed | `rule_lab.note_session` | `rule_lab.lab_sessions` |
+| `day_lists` | One row per session: `symbols_json` (the day's list), `fixed_ts`, `fixed_when` (before the open or at the first full scan) and `mode`. Written once; a second write for the session is ignored | `Scanner._keep` (`record_day_list`) | `Scanner.__init__` (`latest_day_list`) |
+| `rule_lab_trades` | One row per rule-lab virtual trade: rule, stock, session, side, signal, entry and exit bar and price, stop and target (R19/R20 and the flags), gross and net bp, net ₹ (`net_rs`), net R, status (open, closed, void), feed, and `opened_ts` / `closed_ts` (when the lab wrote each leg, the process log's and the money showcase's clock). Unique on (rule, symbol, session, entry time) | `rule_lab.record`, `rule_lab.void_stale` | `rule_lab.page`, `paper_desk` |
+| `rule_lab_sessions` | One row per session the lab ran: stocks and bars read, feed, `first_ts` and `last_ts` | `rule_lab.note_session` | `rule_lab.lab_sessions`, `paper_desk` |
+
+Nineteen tables and one view in all. Nothing on the dashboard writes to any
+of them.
 
 Tests never touch this file. `conftest.py` points every test at a temporary
 database.
@@ -1081,7 +1103,10 @@ start-up sets any credential file other accounts can read to 0600
 | `backend/.typesafe_key.json` | The TypeSafe key | 0600 |
 | `backend/.telegram.json` | The Telegram bot token and chat id, written by hand | 0600 from start-up |
 | `backend/data/sahab_journal.db` | The journal | |
-| `backend/data/momentum_book_state.json`, `jev_book_state.json` | Book state, written atomically | |
+| `backend/data/momentum_book_state.json`, `jev_book_state.json`, `jev2_book_state.json` | Book state, written atomically. Jev 2 reads Jev 1's file and never writes it | |
+| `backend/data/momentum_book_state.json.lock` | The evening job's lock, with its pid; the engine starts no job while it is held (README §123) | |
+| `backend/data/momentum_book.log` | One line per finished job run (`<date>T<time> daily done code=N in Ss`), read by the momentum alerts and the process log | |
+| `backend/data/sahab_journal.db.enginelock` | The engine lock: `{pid, db_path, started_at}` (§2.5) | |
 | `backend/data/momentum_book_alerts.json` | What the momentum alerts have said (README §116), written atomically by the engine only | |
 | `backend/data/kronos.db` | The Kronos store: the shadow's forecasts and L40's records, ingested from the files below | |
 | `backend/data/kronos_shadow_<date>.json`, `..._summary.json` | The shadow's day and summary, written atomically by `research/kronos_shadow.py` | |
@@ -1109,7 +1134,9 @@ start-up sets any credential file other accounts can read to 0600
 | `FNO` | Options | Off; ₹10,000 |
 | `COSTS` | Tariff and slippage | Brokerage ₹20 or 0.03%; slippage 0.03% a leg |
 | `MOMENTUM_BOOK` | The momentum book | On; ₹10 lakh; 200 and 15; job 19:30 to 23:30 |
-| `JEV_BOOK` | The Jev book | On; 09:45; 15 names; `jev-latest` |
+| `JEV_BOOK` | The Jev book | On; 09:45; 15 names; ₹1,00,000 a position; kill after 100 at t < −2; `jev-latest` |
+| `JEV2_BOOK` | The Jev 2 book | On; from 09:45, missed after 10:00; 25 names; ₹1,00,000; buy at p ≥ 0.65, short at p ≤ 0.35; `jev-1.13.0` pinned |
+| `RULE_LAB` | The rule lab | On. Its notional (₹50,000), hold (30 minutes) and looks (40 sessions, 200 trades) are constants in `rule_lab.py`, fixed by the pre-registration |
 | `DEPTH_SAMPLER` | Order-book sampling | On; two ETF windows |
 | `RESEARCH_DESK` | Research desk | Off; 25 briefs and $10 a day |
 | `NEWS`, `CHAYWANAPRASH` | News sources and self-review | Budgets: Marketaux 90, Alpha Vantage 20, LLM 500, self-review 12. Self-review is on, runs when asked and once a week after the close (the fortnightly review), through the API or else the Claude Code CLI |
@@ -1154,12 +1181,13 @@ clears the stored key and asks again.
 | Technical Analysis | `/technical-analysis` | Every method, from live constants | Headline scoring on and off |
 | Portfolio | `/portfolio` | Margins, holdings, positions | Options on and off |
 | Holdings diagnostic | `/portfolio/diagnostic` | A technical read of real holdings | None |
-| Paper desk, the front page | `/` (`/paper-desk` redirects) | One card per paper book: what it is, status, today's trades and money, record with its headline statistic, next event, gate to go live, link; the newest lines of today's process log (README §125) | None |
-| Process log | `/process-log?day=&book=&kind=` | Every step and trade of the four books on one IST day, merged, newest first, tagged by book, kind, time, symbol and money; filters by book and kind, a day picker | None |
+| Paper desk, the front page | `/` (`/paper-desk` redirects) | One card per paper book: what it is, status, the money showcase (today's and the book's net paper rupees, signed and coloured, the notional beneath, "paper" on the block; README §129), today's trades, record with its headline statistic, next event, gate to go live, link; the newest lines of today's process log (README §125). A backend older than the page shows "—" and says it does not report paper rupees yet | None |
+| Process log | `/process-log?day=&book=&kind=` | Every step and trade of the five books on one IST day, merged, newest first, tagged by book, kind, time, symbol and money; filters by book and kind, a day picker | None |
 | Momentum Book | `/momentum-book` | Status, value, cumulative excess and next rebalance; the monthly report against the benchmark; the band; NAV against the benchmark; holdings, waiting orders, trades | None |
-| Jev Book | `/jev-book` | Status, Jev against the scanner, the latest session | None |
+| Jev Book | `/jev-book` | Status, Jev against the scanner, the latest session, the interim read from 15 sessions (README §127) | None |
+| Jev 2 Book | `/jev2-book` | Status, Jev 2 against the scanner and against Jev 1 on the shared names, each decision's seven probabilities and the combined one (README §128) | None |
 | Kronos | `/kronos` | L40's stage 0 records and result, the latest shadow day one time at a time, one row per day | None |
-| Rule lab | `/rule-lab` | Each rule's trades, win rate beside break-even, mean net bp, its interval, t, net R (R19/R20), losing run, historical figure and decay, status | None |
+| Rule lab | `/rule-lab` | The lab's net and today's paper rupees; three cohort tables (1, 2, 2b), each rule's trades, win rate beside break-even, mean net bp, its interval, t, net R (R19/R20 and the flags), losing run, net ₹ and today's ₹ (paper), historical figure and decay, status, with a total line per cohort. Every column sorts: a click toggles, the state is in `?sort=&dir=` (`sortRows.js`: numbers numerically, empty cells last, ties in registry order), headers are buttons with `aria-sort` | None |
 | Journal | `/journal` | Scorecard, blocks, trade record, IC | None |
 | Trades | `/trades` | Today's orders with charges | Export CSV |
 
@@ -1179,7 +1207,7 @@ forecast.
 
 ## 18. Tests and CI
 
-`backend/tests/` holds 84 test files. `conftest.py` has one autouse fixture
+`backend/tests/` holds 92 test files. `conftest.py` has one autouse fixture
 that points the database at a temporary file, blanks the Telegram
 credentials and resets the rejected-token cache.
 
@@ -1190,7 +1218,8 @@ credentials and resets the rejected-token cache.
 | Engine, state and operations | 11 | Engine lock, entry rollback, position restore, stop watcher, kill switch, fault injection, review queue, session summary, depth sampler |
 | Kite connectivity | 5 | Session status, tunnel, alert back-off, fallback, pre-open check |
 | Security, alerts and LLM services | 4 | Auth, Telegram, self-review, research desk |
-| Paper books | 4 | Momentum book, its evening job's data, its alerts and monthly report, Jev book |
+| Paper books and the desk | 9 | Momentum book, its evening job's data, its alerts and monthly report; Jev book and its interim read; Jev 2; the rule lab, its patterns cohort and its search; the paper desk and its money showcase (hand-computed rupees on synthetic trades) |
+| Engine money paths | 2 | `test_engine_money_paths.py` (28 tests from the reviews' reproductions, #249 to #255) and `test_engine_correctness.py` (#256 to #259) |
 | Design documents | 1 | `test_rules_catalogue.py`: every rule points at code that exists, and the generated pages are current |
 
 **CI** (`.github/workflows/tests.yml`): one job, on every pull request to
@@ -1199,3 +1228,5 @@ requirements.txt`, then `python -m pytest tests/ -v` in `backend/`.
 
 CI does not run the frontend lint or build, and has no Python 3.9 job. Local
 Python is 3.9, so 3.9 compatibility is held by running the suite locally.
+The frontend's own tests (`npm test`, node:test, no framework) cover the pure
+modules: `kiteStatus.js` and `sortRows.js`.

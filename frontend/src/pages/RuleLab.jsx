@@ -1,6 +1,8 @@
+import { useLocation, useNavigate } from "react-router-dom";
 import { useApi } from "../api";
 import LoadState from "../components/LoadState";
-import { num, tone } from "../format";
+import { money, num, tone } from "../format";
+import { nextSort, readSort, sortRows, writeSort } from "../sortRows";
 
 // The single-rule paper lab (README sections 124 and 126): small rules, each with its
 // own shadow paper book on the day's list. No orders; nothing that trades reads it.
@@ -48,36 +50,101 @@ function LookNote({ rows, which, cohort }) {
   );
 }
 
-function RuleTable({ rows }) {
+// Every column is sortable (README section 129). `get` is the value sorted on;
+// a null reads as "—" and sorts last. One sort state serves all three cohort
+// tables, so the cohorts stay separate sections and sort the same way inside.
+// Text order for the status column: the ladder's rungs, not the alphabet.
+const STATUS_ORDER = { collecting: "0 collecting", screen_failed: "1 screen failed", candidate: "2 candidate",
+  confirmation_failed: "3 confirmation failed", confirmed: "4 confirmed" };
+const COLUMNS = [
+  { key: "rule", label: "Rule", kind: "text", get: (r) => r.rule },
+  { key: "side", label: "Side", kind: "text", get: (r) => r.side },
+  { key: "n", label: "Trades", kind: "num", get: (r) => r.n },
+  { key: "win_rate", label: "Win rate", kind: "num", get: (r) => r.win_rate },
+  { key: "break_even", label: "Break-even", kind: "num", get: (r) => r.break_even_win_rate },
+  { key: "mean", label: "Net bp a trade", kind: "num", get: (r) => r.mean },
+  { key: "ci", label: "95% interval", kind: "num", get: (r) => (r.ci ? r.ci[0] : null) },
+  { key: "t", label: "t", kind: "num", get: (r) => r.t },
+  { key: "net_r", label: "Net R", kind: "num", get: (r) => (r.r_based ? r.expectancy_r : null) },
+  { key: "losing_run", label: "Losing run", kind: "num", get: (r) => (r.n ? r.max_consecutive_losses : null) },
+  { key: "rupees_total", label: "Net ₹ (paper)", kind: "num", get: (r) => (r.n ? r.rupees_total : null) },
+  { key: "rupees_today", label: "Today ₹ (paper)", kind: "num", get: (r) => (r.rupees_today ? r.rupees_today : null) },
+  { key: "historical", label: "Historical bp", kind: "num", get: (r) => (r.historical ? r.historical.mean : null) },
+  { key: "decay", label: "Decay", kind: "num", get: (r) => r.decay_bp },
+  { key: "status", label: "Status", kind: "text", get: (r) => STATUS_ORDER[r.status] ?? "0 collecting" },
+];
+const NUM_COLS = new Set(["n", "win_rate", "break_even", "mean", "t", "net_r", "losing_run", "rupees_total", "rupees_today", "historical", "decay"]);
+
+function useSort() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sort = readSort(location.search, COLUMNS);
+  const onSort = (column) => {
+    navigate({ pathname: location.pathname, search: writeSort(location.search, nextSort(sort, column)) }, { replace: true });
+  };
+  return [sort, onSort];
+}
+
+function SortHeader({ column, sort, onSort }) {
+  const active = sort && sort.key === column.key;
+  const dir = active ? sort.dir : null;
+  const next = nextSort(sort, column);
+  const hint = next ? `Sort by ${column.label}, ${next.dir === "asc" ? "low to high" : "high to low"}` : `Clear the sort on ${column.label}`;
+  return (
+    <th className={`sortable${NUM_COLS.has(column.key) ? " num" : ""}${active ? " sorted" : ""}`}
+      aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}>
+      <button type="button" className="sorthead" onClick={() => onSort(column)} title={hint} aria-label={hint}>
+        {column.label}<span className="sortmark" aria-hidden="true">{dir === "asc" ? "▲" : dir === "desc" ? "▼" : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+function Rupees({ v }) {
+  if (v === null || v === undefined) return <span className="muted">—</span>;
+  return <span className={tone(v)}>{money(v)}</span>;
+}
+
+function RuleTable({ rows, sort, onSort, cohort }) {
+  const sorted = sortRows(rows, sort ? COLUMNS.find((c) => c.key === sort.key) : null, sort && sort.dir);
+  const traded = rows.filter((r) => r.n > 0);
+  const total = traded.reduce((a, r) => a + (r.rupees_total || 0), 0);
+  const today = rows.reduce((a, r) => a + (r.rupees_today || 0), 0);
   return (
     <div className="table-wrap">
-      <table className="datatable">
+      <table className="datatable lab-table">
         <thead>
-          <tr>
-            <th>Rule</th><th>Side</th><th>Trades</th><th>Win rate</th><th>Break-even</th>
-            <th>Net bp a trade</th><th>95% interval</th><th>t</th><th>Net R</th><th>Losing run</th>
-            <th>Historical bp</th><th>Decay</th><th>Status</th>
-          </tr>
+          <tr>{COLUMNS.map((c) => <SortHeader key={c.key} column={c} sort={sort} onSort={onSort} />)}</tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {sorted.map((r) => (
             <tr key={r.rule}>
-              <td><strong>{r.rule}</strong> {r.name}</td>
+              <td className="lab-rule"><strong>{r.rule}</strong> {r.name}</td>
               <td className={r.side === "LONG" ? "up" : "down"}>{r.side === "LONG" ? "Long" : "Short"}</td>
-              <td>{r.n}{r.open ? <span className="muted"> +{r.open} open</span> : ""}</td>
-              <td>{rate(r.win_rate)}</td>
-              <td className="muted">{rate(r.break_even_win_rate)}</td>
-              <td className={tone(r.mean)}>{bp(r.mean)}</td>
+              <td className="num">{r.n}{r.open ? <span className="muted"> +{r.open} open</span> : ""}</td>
+              <td className="num">{rate(r.win_rate)}</td>
+              <td className="num muted">{rate(r.break_even_win_rate)}</td>
+              <td className={`num ${tone(r.mean)}`}>{bp(r.mean)}</td>
               <td className="muted">{interval(r.ci)}</td>
-              <td>{r.t != null ? r.t.toFixed(2) : "—"}</td>
-              <td className={tone(r.expectancy_r)}>{r.r_based ? (r.expectancy_r != null ? `${r.expectancy_r >= 0 ? "+" : "−"}${Math.abs(r.expectancy_r).toFixed(2)}R` : "—") : ""}</td>
-              <td>{r.n ? r.max_consecutive_losses : "—"}</td>
-              <td className={tone(r.historical && r.historical.mean)}>{r.historical ? bp(r.historical.mean) : "—"}</td>
-              <td className={tone(r.decay_bp)}>{r.decay_bp != null ? bp(r.decay_bp) : "—"}</td>
+              <td className="num">{r.t != null ? r.t.toFixed(2) : "—"}</td>
+              <td className={`num ${tone(r.expectancy_r)}`}>{r.r_based ? (r.expectancy_r != null ? `${r.expectancy_r >= 0 ? "+" : "−"}${Math.abs(r.expectancy_r).toFixed(2)}R` : "—") : ""}</td>
+              <td className="num">{r.n ? r.max_consecutive_losses : "—"}</td>
+              <td className="num"><Rupees v={r.n ? r.rupees_total : null} /></td>
+              <td className="num"><Rupees v={r.rupees_today ? r.rupees_today : null} /></td>
+              <td className={`num ${tone(r.historical && r.historical.mean)}`}>{r.historical ? bp(r.historical.mean) : "—"}</td>
+              <td className={`num ${tone(r.decay_bp)}`}>{r.decay_bp != null ? bp(r.decay_bp) : "—"}</td>
               <td><StatusCell row={r} /></td>
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="lab-total">
+            <td colSpan={10}>Cohort {cohort} total, paper: {traded.length} of {rows.length} rules have traded</td>
+            <td className="num"><Rupees v={traded.length ? total : null} /></td>
+            <td className="num"><Rupees v={today ? today : null} /></td>
+            <td colSpan={3} className="muted">net of charges and slippage; no real money</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
@@ -85,6 +152,7 @@ function RuleTable({ rows }) {
 
 export default function RuleLab() {
   const { data, error, reload } = useApi("/api/rule-lab", 60000);
+  const [sort, onSort] = useSort();
   if (!data) return <LoadState error={error} onRetry={reload} />;
   const rows = data.rules || [];
   const cohort1 = rows.filter((r) => r.cohort === 1);
@@ -120,6 +188,13 @@ export default function RuleLab() {
         combination search, trials 128–202; the confluence engine, trial 40).
       </p>
 
+      <div className="lab-money" aria-label="Paper rupees of the whole lab">
+        <div><small>Net ₹ since the first session, paper</small><strong className={tone(data.rupees_total)}>{anyTrades ? money(data.rupees_total) : "—"}</strong>
+          <small>on ₹{num(data.notional, 0)} a trade, summed over every closed trade; no real money</small></div>
+        <div><small>Today ₹, paper{data.rupees_day ? ` (${data.rupees_day})` : ""}</small><strong className={tone(data.rupees_today)}>{data.rupees_today ? money(data.rupees_today) : "—"}</strong>
+          <small>trades closed today, after charges and slippage</small></div>
+      </div>
+
       <div className="grid3" style={{ margin: "16px 0" }}>
         <div className="stat"><small>Lab sessions</small>
           <strong>{data.sessions}</strong>
@@ -133,6 +208,10 @@ export default function RuleLab() {
       </div>
 
       <p className="muted" style={{ fontSize: 12 }}>
+        Click a column heading to sort by it (again to flip, a third time to clear); the sort is kept in the page
+        address and applies inside each cohort. Net ₹ is paper money on the lab&apos;s ₹{num(data.notional, 0)} a trade.
+      </p>
+      <p className="muted" style={{ fontSize: 12 }}>
         <strong>A short record says little.</strong> With a few dozen trades, a rule's average can be +20 bp or −20 bp
         by luck alone; the interval shows how wide that is. The running figures below are not a test.
       </p>
@@ -141,7 +220,7 @@ export default function RuleLab() {
       <h3 style={{ marginTop: 20 }}>The lab's own rules</h3>
       <LookNote rows={rows} which="screen" cohort={1} />
       <LookNote rows={rows} which="confirmation" cohort={1} />
-      <RuleTable rows={cohort1} />
+      <RuleTable rows={cohort1} sort={sort} onSort={onSort} cohort={"1"} />
       <h3 style={{ marginTop: 24 }}>Rules from the strategy catalogs (YouTube and named traders)</h3>
       <p className="muted" style={{ fontSize: 12 }}>
         Each traded with the lab's exits (30 minutes, or a stop beyond the signal bar and a 3R target), not the
@@ -149,7 +228,7 @@ export default function RuleLab() {
       </p>
       <LookNote rows={rows} which="screen" cohort={2} />
       <LookNote rows={rows} which="confirmation" cohort={2} />
-      <RuleTable rows={cohort2} />
+      <RuleTable rows={cohort2} sort={sort} onSort={onSort} cohort={"2"} />
       <h3 style={{ marginTop: 24 }}>Cohort 2b: the basic pattern and indicator rules (amendment 7)</h3>
       <p className="muted" style={{ fontSize: 12 }}>
         The 16 candlestick patterns of the engine's detector that cohort 1 did not trade, Doji and inside-bar
@@ -161,7 +240,7 @@ export default function RuleLab() {
       </p>
       <LookNote rows={rows} which="screen" cohort={4} />
       <LookNote rows={rows} which="confirmation" cohort={4} />
-      <RuleTable rows={cohort4} />
+      <RuleTable rows={cohort4} sort={sort} onSort={onSort} cohort={"2b"} />
       <p className="muted" style={{ fontSize: 12 }}>
         Net bp is after charges and slippage. Break-even is the win rate this rule's average win and loss would need
         to make nothing. Net R is for the pullback and flag rules only (the others have no stop). Decay is the paper

@@ -512,6 +512,31 @@ def _status(state, label, detail=None):
     return {"state": state, "label": label, "detail": detail}
 
 
+def _inr(x):
+    """₹ with Indian grouping: 100000 -> '₹1,00,000', the way the dashboard writes it."""
+    n = int(round(abs(float(x))))
+    head, tail = str(n)[:-3], str(n)[-3:]
+    groups = []
+    while len(head) > 2:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    if head:
+        groups.insert(0, head)
+    body = ",".join(groups + [tail]) if groups else tail
+    return f"{'−' if float(x) < 0 else ''}₹{body}"
+
+
+def _money(today, total, notional, note, **extra):
+    """The card's money showcase (README section 129): today's and the book's
+    net paper rupees after costs, and the notional they are on. Read-only
+    figures assembled from what each card already computed; every one is
+    paper, and the dashboard says so beside each figure."""
+    out = {"rupees_today": _rs(today), "rupees_total": _rs(total), "notional": _rs(notional), "notional_note": note}
+    for k, v in extra.items():
+        out[k] = _rs(v)
+    return out
+
+
 def _intraday_card(now, engine, day):
     start, end = day_bounds(day)
     trades = _safe(lambda: _trade_rows(start, end), [])
@@ -555,6 +580,8 @@ def _intraday_card(now, engine, day):
                                 "note": (f"win rate {stats.get('win_rate_pct')}% over {stats.get('closed_trades')} closed"
                                          if stats.get("closed_trades") else "no closed trade yet")}},
         "next": nxt, "gate": GATES["intraday"],
+        **_money(net_today, all_net[0], float(config.RISK.get("paper_capital") or 0) or None,
+                 "realized P&L of the engine's paper fills, after charges; sized against its paper capital"),
     }
 
 
@@ -614,6 +641,9 @@ def _jev_card(now, day):
                                          if (t is not None and summary.get("scanner_mean_net_bp") is not None)
                                          else f"{summary.get('sessions_closed', 0)} sessions scored")}},
         "next": nxt, "gate": GATES["jev"],
+        **_money(sum(scored) / 1e4 * notional if (scored and notional) else None,
+                 mean / 1e4 * notional * summary.get("traded", 0) if (mean is not None and notional) else None,
+                 notional or None, f"≈ on {_inr(notional)} a position: net bp × notional" if notional else None),
     }
 
 
@@ -678,6 +708,9 @@ def _jev2_card(now, day):
                    "headline": {"label": "Net per trade", "value": (f"{mean:+.1f} bp" if mean is not None else "—"),
                                 "note": note}},
         "next": nxt, "gate": GATES["jev2"],
+        **_money(sum(scored) / 1e4 * notional if (scored and notional) else None,
+                 mean / 1e4 * notional * summary.get("traded", 0) if (mean is not None and notional) else None,
+                 notional or None, f"≈ on {_inr(notional)} a position: net bp × notional" if notional else None),
     }
 
 
@@ -725,6 +758,9 @@ def _rule_lab_card(now, day):
                                 "note": (f"{by_status.get('confirmed', 0)} confirmed · "
                                          f"{page.get('sessions', 0)} of {page.get('screen_at')} sessions to the screen")}},
         "next": nxt, "gate": GATES["rule_lab"],
+        **_money(net_today, tot[1], float(page.get("notional") or rule_lab.NOTIONAL),
+                 f"{_inr(page.get('notional') or rule_lab.NOTIONAL)} a trade, summed over "
+                 f"{int(tot[0] or 0)} closed trade{'s' if int(tot[0] or 0) != 1 else ''}; net ₹ after full costs"),
     }
 
 
@@ -758,6 +794,13 @@ def _momentum_card(now, day):
     nxt = {"label": "Next rebalance", "when": f"{nr}T{config.MARKET_CLOSE}" if nr else None,
            "text": (datetime.date.fromisoformat(nr).strftime("%a %-d %b") + " close") if nr else "—"}
     since = s.get("since_start") or {}
+    capital = float(s.get("capital") or 0)
+    nav = s.get("nav") or []
+    today_mark = None
+    if capital and nav and nav[-1].get("date") == day:
+        prev = nav[-2]["book"] if len(nav) > 1 else capital
+        today_mark = float(nav[-1]["book"]) - float(prev)
+    vs_bench = ((s.get("book_value") or 0) - (s.get("bench_value") or 0)) if capital else None
     months = s.get("excess_months") or 0
     ce = s.get("cumulative_excess")
     headline_value = (f"{ce * 100:+.2f}% over {months} month{'s' if months != 1 else ''}" if (months and ce is not None)
@@ -776,6 +819,10 @@ def _momentum_card(now, day):
                                 "note": (f"book {since.get('book', 0) * 100:+.2f}% · benchmark {since.get('bench', 0) * 100:+.2f}% since the start"
                                          if since else "the book holds cash until its first rebalance")}},
         "next": nxt, "gate": GATES["momentum"],
+        **_money(today_mark, ((s.get("book_value") or 0) - capital) if capital else None, capital or None,
+                 (f"book value marked at the close minus {_inr(capital)} of paper capital" if capital
+                  else "paper capital of ₹10,00,000 once the book starts"),
+                 rupees_vs_bench=vs_bench),
     }
 
 
@@ -800,4 +847,5 @@ def _fallback(book):
     return {"id": book, "name": BOOK_NAMES[book], "about": ABOUT[book], "page": BOOK_PAGES[book], "mode": "paper",
             "status": _status("unknown", "Could not read this book", "See the backend log"),
             "today": {}, "record": {"headline": {"label": "", "value": "—", "note": ""}},
-            "next": {"label": "", "when": None, "text": "—"}, "gate": GATES[book]}
+            "next": {"label": "", "when": None, "text": "—"}, "gate": GATES[book],
+            **_money(None, None, None, None)}

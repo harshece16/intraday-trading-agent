@@ -1030,3 +1030,41 @@ def test_look2_refuses_a_stage0_record_whose_conditions_differ(screen, tmp_path,
             rls.discover(db, str(tmp_path / f"d_look{look}.json"), COHORT1, workers=1, log=lambda *a: None,
                          stage0_path=str(s0), look=look)
     assert not (tmp_path / "d_look2.json").exists()
+
+
+def test_page_carries_each_rules_paper_rupees(monkeypatch):
+    """README section 129: rupees_total is net_rs summed over a rule's closed
+    trades, rupees_today the slice closed on today's IST day; open and void
+    rows count for nothing."""
+    rule_lab._page_cache.update(at=0.0, data=None)
+    tz = timezone(timedelta(hours=5, minutes=30))
+    today = datetime.now(tz).date()
+    yday = today - timedelta(days=1)
+    t_today = datetime(today.year, today.month, today.day, 10, 0, tzinfo=tz).timestamp()
+    t_yday = datetime(yday.year, yday.month, yday.day, 10, 0, tzinfo=tz).timestamp()
+    rows = [("R01", "AAA", yday.isoformat(), "LONG", "s", "e", 100.0, 500, None, None, "x", 101.0, "time",
+             100.0, 83.4, 417.0, None, "closed", "kite", t_yday - 1800, t_yday),
+            ("R01", "BBB", today.isoformat(), "LONG", "s", "e", 100.0, 500, None, None, "x", 99.0, "time",
+             -100.0, -116.6, -583.0, None, "closed", "kite", t_today - 1800, t_today),
+            ("R02", "AAA", today.isoformat(), "SHORT", "s", "e", 100.0, 500, None, None, "x", 99.5, "time",
+             50.0, 33.4, 167.0, None, "closed", "kite", t_today - 1800, t_today),
+            ("R02", "BBB", today.isoformat(), "SHORT", "s", "e", 100.0, 500, None, None, None, None, None,
+             None, None, None, None, "open", "kite", t_today, None),
+            ("R03", "AAA", today.isoformat(), "LONG", "s", "e", 100.0, 500, None, None, None, None, None,
+             None, None, None, None, "void", "kite", t_yday, t_today)]
+    conn = database._conn()
+    with conn:
+        conn.executemany(
+            "INSERT INTO rule_lab_trades (rule, symbol, session_date, side, signal_time, entry_time, entry_price, qty, "
+            "stop_price, target_price, exit_time, exit_price, exit_reason, gross_bp, net_bp, net_rs, net_r, status, "
+            "feed, opened_ts, closed_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+    page = rule_lab.page(max_age_s=0)
+    by = {r["rule"]: r for r in page["rules"]}
+    assert by["R01"]["rupees_total"] == pytest.approx(417.0 - 583.0)
+    assert by["R01"]["rupees_today"] == pytest.approx(-583.0)
+    assert by["R02"]["rupees_total"] == pytest.approx(167.0) and by["R02"]["rupees_today"] == pytest.approx(167.0)
+    assert by["R03"]["rupees_total"] == 0.0 and by["R03"]["rupees_today"] == 0.0
+    assert page["rupees_total"] == pytest.approx(417.0 - 583.0 + 167.0)
+    assert page["rupees_today"] == pytest.approx(-583.0 + 167.0)
+    assert page["rupees_day"] == today.isoformat() and page["notional"] == 50000.0
+    rule_lab._page_cache.update(at=0.0, data=None)
