@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useApi } from "../api";
 import LoadState from "../components/LoadState";
 import ProcessLines from "../components/ProcessLines";
-import { money } from "../format";
+import { inr, money, tone } from "../format";
 
 const REPO = "https://github.com/harshece16/intraday-trading-agent/blob/main";
 
@@ -51,6 +51,36 @@ function Record({ book }) {
   </>;
 }
 
+// The money showcase (README section 129): today's and the book's net paper
+// rupees after costs, signed and coloured, with the notional they are on
+// beneath. Every figure is paper; the block says so in its own words.
+function Money({ book }) {
+  const today = book.rupees_today;
+  const total = book.rupees_total;
+  const sinceLabel = book.id === "momentum" ? "Since the start" : "Since the book started";
+  // An older backend (before this section) sends none of these fields: say so
+  // rather than showing a notional that was never reported.
+  const basis = book.notional_note
+    || (book.notional != null ? `on ${inr(book.notional)}`
+      : total === undefined ? "the running backend does not report paper rupees yet (restart it)" : "no notional yet");
+  return (
+    <div className="desk-money" aria-label={`${book.name}: paper money`}>
+      <div className="desk-money-cell">
+        <small>Today, paper ₹</small>
+        <strong className={`desk-money-fig ${tone(today)}`}>{money(today)}</strong>
+      </div>
+      <div className="desk-money-cell">
+        <small>{sinceLabel}, paper ₹</small>
+        <strong className={`desk-money-fig ${tone(total)}`}>{money(total)}</strong>
+        {book.id === "momentum" && book.rupees_vs_bench != null && (
+          <small className={tone(book.rupees_vs_bench)}>vs benchmark {money(book.rupees_vs_bench)}</small>
+        )}
+      </div>
+      <p className="desk-money-basis"><span className="pill neutral">paper</span> {basis}</p>
+    </div>
+  );
+}
+
 function Card({ book }) {
   const s = book.status || {};
   return (
@@ -61,6 +91,7 @@ function Card({ book }) {
       </header>
       <p className="desk-about">{book.about}</p>
       {s.detail && <p className="desk-detail">{s.detail}</p>}
+      <Money book={book} />
       <dl className="desk-facts">
         <div><dt>Today</dt><dd><Today book={book} /></dd></div>
         <div><dt>Record{book.record?.since ? ` since ${book.record.since}` : ""}</dt><dd><Record book={book} /></dd></div>
