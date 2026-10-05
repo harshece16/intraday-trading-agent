@@ -324,3 +324,96 @@ A 2026 pass of L55 is therefore a **confirmation on partly-seen data**, and §5'
 
 
 *Note, 2026-10-05, about 03:30 IST: look 2 of L55 (amendment 6) ran once, 03:12:19–03:22:54 IST, from `9271c63` with a clean tree and the look-2 family hash derived from the stage 0 record (`data/l55_result_look2.json`, `results-rule-lab-l55.md`, "Look 2"). 24,026 combinations set the bar; critical t 4.82; the largest powered t is 1.91; **0 survivors**. `--confirm-2026` is not run; no 2026 bar was read. One reporting slip disclosed (`dsr_best` computed on the unpowered raw-t best). L55 is closed: a third look would need its own amendment and its own share of the error budget. The forward lab continues unchanged.*
+
+## Amendment 7 — 2026-10-05, about 10:50 IST, during the lab's first session: the basic candlestick, indicator and chart-pattern rules the lab lacked join as cohort 4 ("cohort 2b"), before any of their returns exists
+
+**Why.** The owner, 2026-10-05: *"are we missing any basic rules in rule book, or all pattern recognition etc are added?"* The lab trades 8 of the engine's 24 candlestick patterns as standalone rules and has no standalone rule for several textbook indicators (ADX, Fibonacci retracement, Ichimoku, Keltner channels, parabolic SAR, Donchian channels, VWAP bands, OBV) or for the two intraday chart patterns that can be defined exactly on 5-minute bars (double top/bottom, flags). This amendment adds them so the lab's forward record covers the basic rulebook, pattern by pattern.
+
+**What had been read when this was written.** The forward lab is in its first session today (its `rule_lab_sessions` row for 2026-10-05 and counts of its rows by status were read while checking that it runs: 25 stocks, no return of any rule was read). None of the rules below existed in code, so no return of any of them exists anywhere. The definitions are fixed here first; the code follows this commit.
+
+**1. The error budget: cohort 4, α₄ = 0.3125%.** Amendment 2 spends the lab's 5% by cohort, α_k = 5% × 2^−k, and amendment 4 §7 reserves cohort 3 (α₃ = 0.625%) for the daily rules, still unbuilt. The next free slice is therefore **cohort 4, α₄ = 5% × 2⁻⁴ = 0.3125%**, not cohort 2's 1.25%: cohort 2's screen is already fixed on its own first 40 sessions, and a rule cannot join a look whose window has begun. The owner's name for this batch, "cohort 2b", is kept on the page; in the budget's series it is cohort 4. Its forward screen runs on **its own first 40 lab sessions after it was added** (amendment 2 §3): the first lab session on which any cohort-4 rule recorded a trade, which the journal fixes deterministically (the deploy is after today's close, so that is expected to be 2026-10-06). At that look, every rule ever registered enters the bootstrap maximum (subject to amendment 6's floor) and only cohort 4 can pass. Cohort 3 stays reserved; nothing daily or multi-day is built here.
+
+**2. The family grows from 107 to 157 rules** (50 added: 25 long, 25 short). Every rule below is a standalone single rule with the common trade (§2) and the common exits: **H30** for all but the two flag rules, which use **R3** with the stop beyond the signal bar (amendment 1), because the breakout bar's far side is the flag's own stop. No variants, no new thresholds beyond those written here.
+
+**3. Prior evidence, stated so the prior is low.** Candlestick patterns *as a family* were tested in control R4 of trials 128–202 (every directional pattern of strength ≥ 2 of this same detector, L40's sample, 5,074 trades): about **+0.2 bp gross, −16.4 bp net** a trade at 30 minutes. Amendment 4 §5 excluded morning and evening stars for that reason; the owner now asks for a per-pattern record, which is the one thing that control did not give, so they are added with that result beside them. The confluence engine (trial 40) scored OBV divergence, VWAP and trend together and was worse than random before costs; trials 93–116 (VWAP breakout on volume) were 24 of 24 FAIL; L49 found time of day and VWAP distance useless as rankers; the engine's daily swing book trades Bulkowski's double tops and bottoms on daily bars (not these). **The expectation for every rule here is the same as §0's: none passes.**
+
+**4. Terms**, in addition to §1's. The input is the stock's 5-minute bars oldest first (today's and up to four earlier sessions); `k` is the input index of today's bar `T[i]`; a series written over the input is computed bar by bar from the past only.
+
+| Term | Definition |
+| --- | --- |
+| `ADX(k)`, `+DI(k)`, `−DI(k)` | Wilder's ADX(14) with +DI/−DI exactly as `indicators.adx(input[0..k], 14)` computes them, in a running form (a test asserts equality on every prefix) |
+| `HHn(k)`, `LLn(k)` | the highest high and lowest low of input bars `k−n+1..k` |
+| `TK(k)`, `KJ(k)` | Ichimoku tenkan `(HH9+LL9)/2` and kijun `(HH26+LL26)/2` at `k` |
+| `SA(k)`, `SB(k)` | the cloud at bar `k` as a chart draws it: senkou A `(TK(k−26)+KJ(k−26))/2`, senkou B `(HH52(k−26)+LL52(k−26))/2` (the spans plotted 26 bars ahead, so read from 26 bars back) |
+| `ATRn(k)` | `indicators.atr(input[0..k], n)` (the mean true range of the last n bars) |
+| `KU(k)`, `KL(k)` | Keltner channel: `EMA20(k) ± 2 × ATR10(k)` |
+| `DIR(k)` | the direction of Wilder's parabolic SAR after bar `k` (AF 0.02, step 0.02, cap 0.20). Start at the input's second bar with the direction of its first two closes, the SAR at the first bar's low (up) or high (down), EP that bar's high (low). Each bar: `SAR = SAR + AF × (EP − SAR)`, then the SAR is kept at or below the two previous bars' lows (up; at or above their highs, down); a new EP raises AF by 0.02 to at most 0.20; a flip when the bar's low ≤ SAR (up → down) or high ≥ SAR (down → up), after which SAR = the old EP, EP = the flipping bar's extreme, AF = 0.02 |
+| `SD(i)` | the volume-weighted standard deviation of today's typical price `(H+L+C)/3` about `VWAP(i)` over `T[0..i]`: `√(Σ v_j (tp_j − VWAP(i))² / Σ v_j)` |
+| `OBV(k)` | `indicators.obv_series(input)[k]` |
+| `DH(i)`, `DL(i)`, `aH`, `aL` | the day's highest high and lowest low over `T[0..i−1]`, and the bar positions where they occurred (the first if tied) |
+| swing high confirmed by `T[i]` | a bar `j` of today with `j ≤ i − 2`, `high(j) > high(j−2), high(j−1)` and `high(j) ≥ high(j+1), high(j+2)` (`market_structure.swing_points(left=2, right=2)` on `T[0..i]`); a swing low is the mirror. **A swing is known only two bars after it**, so no chart-pattern rule reads a swing before its confirmation |
+
+**5. The rules.** `PAT(i)` is §1's: the engine's detector on the 30-bar window ending at `T[i]`, with its trend conditions and its noise filter as written in `candlestick_patterns.py`.
+
+| ID | Rule | Side | Exit | Signal on the finished bar `T[i]` | Prior project test |
+| --- | --- | --- | --- | --- | --- |
+| P01 | Hanging man | Short | H30 | "Hanging Man" ∈ `PAT(i)` | family: control R4, trials 128–202 |
+| P02 | Inverted hammer | Long | H30 | "Inverted Hammer" ∈ `PAT(i)` | same |
+| P03 | Piercing line | Long | H30 | "Piercing Line" ∈ `PAT(i)` | same |
+| P04 | Dark cloud cover | Short | H30 | "Dark Cloud Cover" ∈ `PAT(i)` | same |
+| P05 | Bullish harami | Long | H30 | "Bullish Harami" ∈ `PAT(i)` | same |
+| P06 | Bearish harami | Short | H30 | "Bearish Harami" ∈ `PAT(i)` | same |
+| P07 | Tweezer bottom | Long | H30 | "Tweezer Bottom" ∈ `PAT(i)` | same |
+| P08 | Tweezer top | Short | H30 | "Tweezer Top" ∈ `PAT(i)` | same |
+| P09 | Morning star | Long | H30 | "Morning Star" ∈ `PAT(i)` | same; excluded by amendment 4 §5, now wanted per pattern |
+| P10 | Evening star | Short | H30 | "Evening Star" ∈ `PAT(i)` | same |
+| P11 | Three white soldiers | Long | H30 | "Three White Soldiers" ∈ `PAT(i)` | same |
+| P12 | Three black crows | Short | H30 | "Three Black Crows" ∈ `PAT(i)` | same |
+| P13 | Abandoned baby bottom | Long | H30 | "Abandoned Baby Bottom" ∈ `PAT(i)` | same |
+| P14 | Abandoned baby top | Short | H30 | "Abandoned Baby Top" ∈ `PAT(i)` | same |
+| P15 | Rising three methods | Long | H30 | "Rising Three Methods" ∈ `PAT(i)` | same |
+| P16 | Falling three methods | Short | H30 | "Falling Three Methods" ∈ `PAT(i)` | same |
+| P17L | Doji breakout up | Long | H30 | i ≥ 1; "Doji" ∈ `PAT(i−1)`; `close(i) > high(i−1)` | none (neutral patterns were not in R4) |
+| P17S | Doji breakdown | Short | H30 | i ≥ 1; "Doji" ∈ `PAT(i−1)`; `close(i) < low(i−1)` | none |
+| P18L | Inside bar (detector) breakout up | Long | H30 | i ≥ 1; "Inside Bar" ∈ `PAT(i−1)`; `close(i) > high(i−1)`. R07 restricted to the inside bars the engine's detector accepts (range ≥ 0.3 ATR, 15 bars of window) | R07 is cohort 1 |
+| P18S | Inside bar (detector) breakdown | Short | H30 | mirror: `close(i) < low(i−1)` | R08 is cohort 1 |
+| I01L | ADX trend, +DI crosses above −DI | Long | H30 | k ≥ 1; `ADX(k) > 25`; `+DI(k) > −DI(k)`; `+DI(k−1) ≤ −DI(k−1)` | ADX(15m) > 20 only as filter F07 and inside Y14 |
+| I01S | ADX trend, −DI crosses above +DI | Short | H30 | mirror | same |
+| I02L | Fibonacci retracement bounce | Long | H30 | i ≥ 6; the day's move to `T[i−1]` is up: `aL < aH` and `DH/DL − 1 ≥ 0.5%`; with `F38 = DH − 0.382 (DH − DL)`, `F62 = DH − 0.618 (DH − DL)`: `F62 ≤ low(i) ≤ F38`; `close(i) > F38`; `close(i) > open(i)` | only Fibonacci *pivots* of the previous day (Y06, Y14, Y26) |
+| I02S | Fibonacci retracement rejection | Short | H30 | mirror: `aH < aL`; `F38 = DL + 0.382 (DH − DL)`, `F62 = DL + 0.618 (DH − DL)`; `F38 ≤ high(i) ≤ F62`; `close(i) < F38`; `close(i) < open(i)` | same |
+| I03L | Ichimoku tenkan/kijun cross above the cloud | Long | H30 | `TK(k) > KJ(k)`; `TK(k−1) ≤ KJ(k−1)`; `close(k) > max(SA(k), SB(k))` | none |
+| I03S | Ichimoku cross below the cloud | Short | H30 | mirror: `close(k) < min(SA(k), SB(k))` | none |
+| I04L | Keltner breakout up | Long | H30 | `close(k) > KU(k)`; `close(k−1) ≤ KU(k−1)` | Keltner only inside O09's squeeze |
+| I04S | Keltner breakdown | Short | H30 | mirror with `KL` | same |
+| I05L | Keltner mean reversion from below | Long | H30 | `close(k−1) < KL(k−1)`; `close(k) ≥ KL(k)` | none |
+| I05S | Keltner mean reversion from above | Short | H30 | mirror with `KU` | none |
+| I06L | Parabolic SAR flips up | Long | H30 | `DIR(k) = +1` and `DIR(k−1) = −1` | none |
+| I06S | Parabolic SAR flips down | Short | H30 | mirror | none |
+| I07L | Donchian 20-bar breakout | Long | H30 | `close(k) > HH20(k−1)` | the opposite trade is Y22/O03 (false breaks) |
+| I07S | Donchian 20-bar breakdown | Short | H30 | `close(k) < LL20(k−1)` | same |
+| I08L | VWAP −1σ bounce | Long | H30 | i ≥ 6; `low(i) ≤ VWAP(i) − SD(i)`; `close(i) > VWAP(i) − SD(i)`; `close(i) > open(i)` | VWAP itself: trials 93–116, L49, Y05, F09 |
+| I08S | VWAP +1σ rejection | Short | H30 | mirror | same |
+| I09L | VWAP −2σ fade | Long | H30 | i ≥ 6; `close(i) < VWAP(i) − 2 SD(i)` | same |
+| I09S | VWAP +2σ fade | Short | H30 | i ≥ 6; `close(i) > VWAP(i) + 2 SD(i)` | same |
+| I10L | VWAP cross up | Long | H30 | i ≥ 1; `close(i) > VWAP(i)`; `close(i−1) ≤ VWAP(i−1)`. The "anchored VWAP from the day's open" the owner's list names **is** §1's session VWAP (anchored at 09:15), so the rule registered is the one VWAP rule the lab lacked, the cross of it | same |
+| I10S | VWAP cross down | Short | H30 | mirror | same |
+| I11L | OBV bullish divergence, 20 bars | Long | H30 | k ≥ 20; `close(k) < close(k−20)` and `OBV(k) > OBV(k−20)` (`indicators.obv_divergence`'s test) | a factor of the confluence engine, trial 40 |
+| I11S | OBV bearish divergence, 20 bars | Short | H30 | `close(k) > close(k−20)` and `OBV(k) < OBV(k−20)` | same |
+| F10L/S | Filter: the first 30 minutes | one a side | H30 | the signal bar starts before 09:45 (bars 09:15 to 09:40; entries 09:20 to 09:45) | L49 (time of day as a ranker) |
+| F11L/S | Filter: the last hour of entries | one a side | H30 | the signal bar starts at or after 13:30 (entries 13:35 to 14:30, the last hour before §2's 14:30 cut-off; the session's own last hour has no lab entries) | same |
+| C01S | Double top, neckline break | Short | H30 | two swing highs of today confirmed by `T[i]`, `j1 < j2`, `10 ≤ j2 − j1 ≤ 40`, `\|high(j2) − high(j1)\| ≤ 0.2% × high(j1)`, no bar of `T[j1..i]` with a high above `max(high(j1), high(j2))`; neckline `NL = min low of T[j1..j2]`; `close(i) < NL` and no close of `T[j2+1..i−1]` below `NL`. For the latest `j2`, the nearest qualifying `j1` | double tops: the swing book, daily bars only |
+| C01L | Double bottom, neckline break | Long | H30 | mirror (swing lows within 0.2%, neckline the highest high between, first close above it) | same |
+| C02L | Bull flag breakout | Long | **R3** | a pole bar `p` of today, `p ≥ 2`, `3 ≤ i − p ≤ 9`, whose high is a swing high confirmed by `T[i−1]`; `PH = high(p)`, `PL = min low of T[max(0, p−11)..p]`, `PH/PL − 1 ≥ 1%`; the flag `T[p+1..i−1]` (2 to 8 bars): every low ≥ `PH − 0.4 (PH − PL)` and every close ≤ `PH`; `close(i) > PH`. Stop `low(i)`, target 3R, as amendment 1 | none |
+| C02S | Bear flag breakdown | Short | **R3** | mirror: a swing low pole, `PL/PH` fall ≥ 1%, flag highs ≤ `PL + 0.4 (PH − PL)`, closes ≥ `PL`, `close(i) < PL`; stop `high(i)` | none |
+
+As in §1, an undefined term (too little history, no swing yet, `SD(i) = 0`) makes the rule silent on that bar. The filters F10 and F11, alone, are silly rules of their own and are counted as one each, as F01–F09 are.
+
+**6. Skipped, and why.** *Intraday relative strength against NIFTY* (the stock up ≥ 0.5% while the index is flat or down, and the mirror): the lab reads only the candles the engine's tick fetched for the day's list; the NIFTY 5-minute series exists only inside `scanner.run()` (a delayed yfinance download used for the market context and not kept), and `state.market` holds derived figures, not bars. Giving the lab an index series would mean a new fetch in the tick, outside this amendment; the rule is **not built** and is noted for a later amendment. Head-and-shoulders, triangles, wedges and cup-and-handle have no definition on 5-minute bars precise enough to pre-register without free parameters and are not built.
+
+**7. Causality.** Every series above is computed from bars 0..k only; the chart-pattern rules read a swing only once its two confirming bars have finished. `test_every_condition_is_causal` covers every registered rule, and hand-built fixtures that fire each new rule are truncated after the signal bar and must fire the same.
+
+**8. L55 is unchanged and closed.** Its family is the 107 conditions of cohorts 1 and 2 as stage 0 recorded; cohort 4 never enters it. The screen's default condition list is fixed to cohorts 1 and 2 so the committed stage 0 record still hashes to L55's family.
+
+**9. Bookkeeping.** No trial is spent (the count stays 202). The forward lab's page shows cohort 4 under "cohort 2b", with its α. The change needs a backend restart, done after today's close; cohort 4's first lab session is the first one after that.
+
+*Correction to amendment 7 §5, 2026-10-05, about 11:40 IST, while coding and before any return of cohort 4 exists: `indicators.obv_divergence(bars, 20)` compares the last close with `closes[-20]`, the bar **19** back, not 20. I11 reads exactly as the engine's function does (a test asserts equality on every prefix), so its text "close(k) − close(k−20)" reads "close(k) − close(k−19)", and likewise for OBV. No other definition changes.*

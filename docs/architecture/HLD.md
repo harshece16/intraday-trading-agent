@@ -171,7 +171,7 @@ flowchart TB
 | **Momentum book** | The paper run of the one rule that passed, with a monthly report against its benchmark and an alert at each rebalance or failed evening job. One of the four books on the paper desk | `momentum_book`, `momentum_alerts` | Holding 15 since the 1 Oct close; next rebalance 2 Nov |
 | **Paper desk** | The front page: one card per paper book, equal weight, and one process log that merges every step and trade of the four books. Read-only: assembled from what the books already write (README §125) | `paper_desk` | Running from the next backend restart |
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
-| **Rule lab** | 107 single rules (20 of its own, 87 from the YouTube and practitioner catalogs), each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §124); collects from the first session after deploy. Never places an order |
+| **Rule lab** | 157 single rules (20 of its own, 87 from the YouTube and practitioner catalogs, 50 basic pattern and indicator rules as cohort 2b), each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §124); collects from the first session after deploy. Never places an order |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
 | **Evidence pipeline** | Backtests, Deflated Sharpe, IC, the trial ledger | `backtester`, `evaluation`, `research/*`, `docs/research/*` | 202 trials of record; no new intraday look since 2026-09-30 |
@@ -328,7 +328,7 @@ Kite's prices. The mark is never stored and never scored.
 | Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.71% − 2 × 3.89% × √n, from month 6 | Forward record against the pre-registered band |
 | Jev | Buy, short or skip each shortlisted stock at 09:45; close at 15:08 | After 100 trades, t below −2 | After 300 trades or 60 sessions: t ≥ 2.24, both halves positive, beats the scanner |
 | Order-book test | None. It records data | Never | After 15 full sessions: one pre-registered analysis |
-| Rule lab | 107 single rules, one book each: next bar's open, 30 minutes (R19/R20: stop, 3R or 15:05), ₹50,000 | Never; a failed screen ends a rule | After 40 lab sessions: Romano–Wolf screen; candidates confirm on the next 40; a confirmed rule may only be proposed to the owner |
+| Rule lab | 157 single rules, one book each: next bar's open, 30 minutes (R19/R20 and the two flag rules: stop, 3R or 15:05), ₹50,000 | Never; a failed screen ends a rule | After 40 lab sessions: Romano–Wolf screen; candidates confirm on the next 40; a confirmed rule may only be proposed to the owner |
 
 ## 8. The evidence pipeline
 

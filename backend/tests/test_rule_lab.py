@@ -64,13 +64,13 @@ def test_twenty_rules_registered_once_with_fixed_sides():
     assert rule_lab.RULE_IDS[:20] == COHORT1
     longs = [r for r in COHORT1 if rule_lab.RULE_SIDE[r] == "LONG"]
     assert len(longs) == 10
-    assert rule_lab.R_RULES == ["R19", "R20"]
+    assert rule_lab.R_RULES[:2] == ["R19", "R20"]
     assert all(rule_lab.REGISTRY[r]["cohort"] == 1 for r in COHORT1)
 
 
 def test_cohort_two_is_the_catalogs_conditions():
     two = [r for r in rule_lab.RULE_IDS if rule_lab.REGISTRY[r]["cohort"] == 2]
-    assert len(two) == 87 and len(rule_lab.RULE_IDS) == 107
+    assert len(two) == 87 and len(rule_lab.RULE_IDS) == 157 and len(rule_lab.l55_conditions()) == 107
     assert all(rule_lab.REGISTRY[r].get("sources") for r in two)
     assert all(rule_lab.REGISTRY[r]["exit"] == "fixed" for r in two)
     with pytest.raises(ValueError):
@@ -675,10 +675,10 @@ def test_screen_never_loads_a_2026_bar_in_discovery(screen):
 def test_stage0_counts_without_returns(screen, tmp_path):
     rls, db, days = screen
     out = tmp_path / "s0.json"
-    rec = rls.stage0(db, str(out), list(rule_lab.RULE_IDS), workers=1, log=lambda *a: None)
+    rec = rls.stage0(db, str(out), rule_lab.l55_conditions(), workers=1, log=lambda *a: None)
     assert rec["family"]["conditions_by_cohort"] == {"1": 20, "2": 87}
     assert rec["newest_bar_read"] < "2026-01-01"
-    enum, greedy = rls.max_family_size(list(rule_lab.RULE_IDS))
+    enum, greedy = rls.max_family_size(rule_lab.l55_conditions())
     assert rec["family"]["enumerated"] == enum and rec["family"]["greedy_max"] == greedy
     text = out.read_text()
     for word in ("net_bp", "mean", "gross", "exit_price"):
@@ -777,7 +777,7 @@ def test_discover_and_confirm_refuse_an_existing_record_a_dirty_tree_and_a_chang
 def test_committed_stage0_record_hashes_to_the_current_family():
     import rule_lab_screen as rls
     rec = json.load(open(rls.default_stage0()))
-    assert rls.stage0_family_hash(rec) == rls.family_hash(list(rule_lab.RULE_IDS))
+    assert rls.stage0_family_hash(rec) == rls.family_hash(rule_lab.l55_conditions())   # L55 is closed at 107
 
 
 def test_catalog_rules_register_once_with_every_source(tmp_path, monkeypatch):

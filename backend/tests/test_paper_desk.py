@@ -286,7 +286,7 @@ def test_rule_lab_card(files, monkeypatch):
     assert card["status"]["state"] == "running" and "25 stocks" in card["status"]["detail"]
     assert card["today"] == {"trades": 3, "opened": 4, "open": 1, "net": pytest.approx(186.8, abs=0.01)}
     assert card["record"]["trades"] == 3 and card["record"]["sessions"] == 1
-    assert card["record"]["headline"]["value"].startswith("107 · 0 candidate")
+    assert card["record"]["headline"]["value"].startswith("157 · 0 candidate")
     assert card["next"]["text"] == "after 39 more lab sessions"
     monkeypatch.setattr(paper_desk.time, "time", lambda: at(DAY, "11:00") + 3600)
     assert paper_desk.cards(now=now_at(DAY, "12:00"))["books"][2]["status"]["label"] == "Session recorded"

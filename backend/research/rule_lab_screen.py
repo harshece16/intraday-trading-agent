@@ -773,7 +773,7 @@ def main(argv=None):
     registered, skipped = load_catalog_rules(args.catalog_rules)
     if skipped:
         print(f"{len(skipped)} catalog entries skipped (no usable spec): " + ", ".join(str(s["id"]) for s in skipped))
-    conds = list(rule_lab.RULE_IDS)
+    conds = rule_lab.l55_conditions()   # cohorts 1 and 2: L55's family is closed (amendment 7)
     if args.stage0:
         stage0(args.db, args.out, conds, args.workers)
     elif args.discover:

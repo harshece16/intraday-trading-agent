@@ -2,7 +2,8 @@
 The single-rule paper lab (research look L54, README section 124).
 
 Small rules (twenty in cohort 1, 87 from the strategy catalogs in cohort 2,
-rule_lab_catalog.py), each with a fixed side, entry and exit, are run as
+rule_lab_catalog.py, 50 basic pattern and indicator rules in cohort 4,
+rule_lab_patterns.py), each with a fixed side, entry and exit, are run as
 shadow paper books on the day's list: on every finished 5-minute bar, each
 rule asks only its own question ("a bullish engulfing bar?", "volume twice
 the usual on an up bar?") and, if yes, records a virtual trade at the next
@@ -77,8 +78,11 @@ HISTORICAL_CANDIDATES = {}    # rule id -> the first session of its confirmation
 # Where L55 writes its result; read only to show the historical column.
 HISTORICAL_RESULT_PATH = None  # set below, next to the research data
 
-# The first lab session of each cohort's forward screen; None = the lab's first session.
-COHORT_START = {1: None, 2: None}
+# The first lab session of each cohort's forward screen: None = the lab's first session;
+# FIRST_TRADE = the first lab session on which any rule of the cohort recorded a trade (a cohort
+# added after the lab started, prereg amendment 2 section 3 and amendment 7 section 1).
+FIRST_TRADE = "first_trade"
+COHORT_START = {1: None, 2: None, 4: FIRST_TRADE}
 
 TIME_BUDGET_S = 1.5
 
@@ -952,6 +956,17 @@ def _stage(trades, sessions, rules, min_trades, min_sessions, block, family=None
                 "family_in_max": len(in_max), "family": len(fam)} for r in rules}
 
 
+def cohort_start(cohort, trades):
+    """The first session of a cohort's forward screen: None for the lab's first session, a date,
+    or (FIRST_TRADE) the earliest session with a trade of one of its rules; False while it has none."""
+    start = COHORT_START.get(cohort)
+    if start != FIRST_TRADE:
+        return start
+    mine = {r for r in RULE_IDS if REGISTRY[r]["cohort"] == cohort}
+    firsts = [t["session_date"] for t in trades if t["rule"] in mine]
+    return min(firsts) if firsts else False
+
+
 def evaluate(trades=None, sessions=None, open_left=None):
     """Each rule's status under prereg §6, from the journal. Deterministic: the
     same journal gives the same answer, so computing it on every page load is
@@ -969,7 +984,9 @@ def evaluate(trades=None, sessions=None, open_left=None):
             open_left = set()
     for cohort in sorted({r["cohort"] for r in REGISTRY.values()}):
         members = [r for r in RULE_IDS if REGISTRY[r]["cohort"] == cohort and r not in HISTORICAL_CANDIDATES]
-        start = COHORT_START.get(cohort)
+        start = cohort_start(cohort, trades)
+        if start is False:
+            continue
         own = [s for s in sessions if start is None or s >= start]
         screen = own[:SCREEN_SESSIONS]
         if not members or len(screen) < SCREEN_SESSIONS or (open_left & set(screen)):
@@ -1024,7 +1041,8 @@ def page(max_age_s=60):
         h = hist_rules.get(rid) or {}
         hmean = h.get("mean")
         rows.append({"rule": rid, "name": name, "side": side, "family": family,
-                     "cohort": REGISTRY[rid]["cohort"], "sources": REGISTRY[rid].get("sources") or [],
+                     "cohort": REGISTRY[rid]["cohort"], "cohort_label": REGISTRY[rid].get("label"),
+                     "prior": REGISTRY[rid].get("prior"), "sources": REGISTRY[rid].get("sources") or [],
                      "r_based": rid in R_RULES, **d,
                      "open": open_by_rule.get(rid, 0), "void": void_n.get(rid, 0),
                      **statuses[rid],
@@ -1039,6 +1057,9 @@ def page(max_age_s=60):
         "last_session": sessions[-1] if sessions else None,
         "screen_at": SCREEN_SESSIONS, "confirm_sessions": CONFIRM_SESSIONS,
         "cohort_alpha": {str(c): cohort_alpha(c) for c in sorted({r["cohort"] for r in REGISTRY.values()})},
+        "cohort_start": {str(c): cohort_start(c, trades) or None
+                         for c in sorted({r["cohort"] for r in REGISTRY.values()})},
+        "family": len(RULE_IDS),
         "screen_min_trades": SCREEN_MIN_TRADES,
         "notional": NOTIONAL, "hold_minutes": HOLD_BARS * BAR_MINUTES,
         "round_trip_bp": costs.round_trip_pct(NOTIONAL, _default_costs()) * 100,
@@ -1052,3 +1073,10 @@ def page(max_age_s=60):
 
 # Cohort 2 (prereg amendment 4): the catalogs' intraday conditions, registered on import.
 import rule_lab_catalog  # noqa: E402,F401
+# Cohort 4, "cohort 2b" (prereg amendment 7): the basic pattern, indicator and chart rules.
+import rule_lab_patterns  # noqa: E402,F401
+
+
+def l55_conditions():
+    """L55's family, fixed by amendment 4 and closed: cohorts 1 and 2 only (amendment 7 section 8)."""
+    return [r for r in RULE_IDS if REGISTRY[r]["cohort"] in (1, 2)]
