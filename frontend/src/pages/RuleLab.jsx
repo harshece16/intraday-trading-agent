@@ -2,7 +2,7 @@ import { useApi } from "../api";
 import LoadState from "../components/LoadState";
 import { num, tone } from "../format";
 
-// The single-rule paper lab (README section 124): 20 small rules, each with its
+// The single-rule paper lab (README sections 124 and 126): small rules, each with its
 // own shadow paper book on the day's list. No orders; nothing that trades reads it.
 
 const STATUS = {
@@ -88,7 +88,10 @@ export default function RuleLab() {
   if (!data) return <LoadState error={error} onRetry={reload} />;
   const rows = data.rules || [];
   const cohort1 = rows.filter((r) => r.cohort === 1);
-  const cohort2 = rows.filter((r) => r.cohort !== 1);
+  const cohort2 = rows.filter((r) => r.cohort === 2);
+  const cohort4 = rows.filter((r) => r.cohort === 4);
+  const alpha = (c) => (data.cohort_alpha && data.cohort_alpha[String(c)] != null ? `${(data.cohort_alpha[String(c)] * 100).toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}%` : "—");
+  const start4 = data.cohort_start && data.cohort_start["4"];
   const screenLeft = Math.max(0, data.screen_at - data.sessions);
   const anyTrades = rows.some((r) => r.n > 0 || r.open > 0);
 
@@ -98,10 +101,12 @@ export default function RuleLab() {
       <p className="sub">
         Each of {rows.length} small rules runs its own paper book on the day's list: {cohort1.length} of the lab's own
         (a candlestick pattern, a volume spike on an up or down bar, a trend turn, an opening-range break, a gap, a
-        pullback to the 20-bar average) and {cohort2.length} taken from popular YouTube trading videos and named
-        traders' published rules (5-EMA, VWAP bounce, CPR and pivots, Supertrend, MACD, Stoch RSI, squeeze and more).
+        pullback to the 20-bar average), {cohort2.length} taken from popular YouTube trading videos and named
+        traders' published rules (5-EMA, VWAP bounce, CPR and pivots, Supertrend, MACD, Stoch RSI, squeeze and more),
+        and {cohort4.length} basic rules from the textbook (cohort 2b: the rest of the candlestick patterns, ADX,
+        Fibonacci retracement, Ichimoku, Keltner, parabolic SAR, Donchian, VWAP bands, OBV, double tops and flags).
         On every finished 5-minute bar a rule that fires buys or shorts ₹{num(data.notional, 0)} at the next bar's
-        open and closes {data.hold_minutes} minutes later, or by the 15:05 bar; the two pullback rules use a stop
+        open and closes {data.hold_minutes} minutes later, or by the 15:05 bar; the pullback and flag rules use a stop
         beyond the signal bar and a 3R target instead. No stops otherwise. Every trade pays about{" "}
         {num(data.round_trip_bp, 1)} bp of Zerodha charges and slippage. <strong>No orders are placed</strong>, and
         nothing here changes the engine's trades, risk or review queue.
@@ -109,7 +114,7 @@ export default function RuleLab() {
       <p className="muted">
         The rules and the test were fixed in advance (<code>{data.prereg}</code>). Nothing is judged before the
         look: after {data.screen_at} lab sessions, every rule is tested once, with a correction for testing
-        {" "}{rows.length} rules at once (the lab's own rules at a 2.5% error rate, the catalog rules at 1.25%); a rule that passes becomes a candidate and must pass again on the next{" "}
+        {" "}{rows.length} rules at once (the lab's own rules at a {alpha(1)} error rate, the catalog rules at {alpha(2)}, cohort 2b at {alpha(4)}); a rule that passes becomes a candidate and must pass again on the next{" "}
         {data.confirm_sessions} sessions. Only then can it be proposed to you, and going live needs your yes and the
         engine's own live gate. <strong>Earlier tests of rules like these lost money after costs</strong> (the
         combination search, trials 128–202; the confluence engine, trial 40).
@@ -145,9 +150,21 @@ export default function RuleLab() {
       <LookNote rows={rows} which="screen" cohort={2} />
       <LookNote rows={rows} which="confirmation" cohort={2} />
       <RuleTable rows={cohort2} />
+      <h3 style={{ marginTop: 24 }}>Cohort 2b: the basic pattern and indicator rules (amendment 7)</h3>
+      <p className="muted" style={{ fontSize: 12 }}>
+        The 16 candlestick patterns of the engine's detector that cohort 1 did not trade, Doji and inside-bar
+        breakouts, ADX, Fibonacci retracement, Ichimoku, Keltner, parabolic SAR, Donchian, VWAP bands and cross, OBV
+        divergence, two time-of-day filters, double top/bottom and flags. Tested at {alpha(4)} (the budget's fourth
+        slice; the third is reserved for daily rules) on its own first {data.screen_at} sessions
+        {start4 ? `, from ${start4}` : " once it has its first trade"}. Candlestick patterns as a family already lost
+        about 16.4 bp a trade after costs (trials 128–202), so expect the same here.
+      </p>
+      <LookNote rows={rows} which="screen" cohort={4} />
+      <LookNote rows={rows} which="confirmation" cohort={4} />
+      <RuleTable rows={cohort4} />
       <p className="muted" style={{ fontSize: 12 }}>
         Net bp is after charges and slippage. Break-even is the win rate this rule's average win and loss would need
-        to make nothing. Net R is for the two pullback rules only (the others have no stop). Decay is the paper
+        to make nothing. Net R is for the pullback and flag rules only (the others have no stop). Decay is the paper
         result minus the historical one: expect it to be negative. Status changes only at the pre-registered looks;
         nothing is ever switched on automatically.
       </p>

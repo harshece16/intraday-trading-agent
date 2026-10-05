@@ -415,3 +415,5 @@ As in §1, an undefined term (too little history, no swing yet, `SD(i) = 0`) mak
 **8. L55 is unchanged and closed.** Its family is the 107 conditions of cohorts 1 and 2 as stage 0 recorded; cohort 4 never enters it. The screen's default condition list is fixed to cohorts 1 and 2 so the committed stage 0 record still hashes to L55's family.
 
 **9. Bookkeeping.** No trial is spent (the count stays 202). The forward lab's page shows cohort 4 under "cohort 2b", with its α. The change needs a backend restart, done after today's close; cohort 4's first lab session is the first one after that.
+
+*Correction to amendment 7 §5, 2026-10-05, about 11:40 IST, while coding and before any return of cohort 4 exists: `indicators.obv_divergence(bars, 20)` compares the last close with `closes[-20]`, the bar **19** back, not 20. I11 reads exactly as the engine's function does (a test asserts equality on every prefix), so its text "close(k) − close(k−20)" reads "close(k) − close(k−19)", and likewise for OBV. No other definition changes.*
