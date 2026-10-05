@@ -24,7 +24,11 @@ if, after 100 buy/short decisions, the cumulative net t is below -2.
 While a round is open the page shows a live mark of its positions
 (live_marks). That mark is for display only: it is never written to the state
 file and never enters a score, the kill rule or the verdict. Those use the
-15:08 close alone.
+15:08 close alone. From 15 closed sessions the page also shows an interim read
+(interim): the pass rule's statistics so far, a session-clustered t, a
+projection of t to the verdict's size and the minimum detectable mean. It is
+information only, computed on request, and nothing in the book reads it
+(prereg clarification 12).
 """
 
 import datetime
@@ -509,15 +513,116 @@ def live_marks(state_path=None, quotes=None, now=None, clock=time.time):
 
 
 def page(state_path=None, quotes=None, now=None):
-    """What the Jev Book page shows: the scored summary and, while today's
-    round is open, the live mark of its positions under "live"."""
+    """What the Jev Book page shows: the scored summary; while today's round
+    is open, the live mark of its positions under "live"; and from 15 closed
+    sessions the report-only interim read under "interim" (clarification 12)."""
     out = summary(state_path)
     try:
         out["live"] = live_marks(state_path, quotes=quotes, now=now)
     except Exception:
         logger.exception("Jev book: live mark failed")
         out["live"] = None
+    try:
+        out["interim"] = interim(state_path)
+    except Exception:
+        logger.exception("Jev book: interim read failed")
+        out["interim"] = None
     return out
+
+
+# --- the interim read (information only; prereg clarification 12) -----------------------------
+
+INTERIM_CHECKPOINTS = (15, 30, 45)
+
+
+def _clustered_t(xs, groups):
+    """t of the mean of `xs` with a cluster-robust standard error, one cluster
+    per value of `groups` (here the session). The decisions of one session
+    share that day's market, so the plain t counts them as independent when
+    they are not. Variance of the mean = G/(G-1) * sum_g (sum of the cluster's
+    residuals)^2 / N^2. None with fewer than two clusters or a zero spread."""
+    n = len(xs)
+    if n < 2:
+        return None
+    m = st.mean(xs)
+    sums = {}
+    for x, g in zip(xs, groups):
+        sums[g] = sums.get(g, 0.0) + (x - m)
+    G = len(sums)
+    if G < 2:
+        return None
+    var = (G / (G - 1)) * sum(s * s for s in sums.values()) / (n * n)
+    return m / math.sqrt(var) if var > 0 else None
+
+
+def interim(state_path=None):
+    """The interim read: information only (prereg-jev-book.md, clarification 12).
+
+    None until 15 closed sessions. From then: the statistics the pass rule
+    will use, as summary() computes them, a session-clustered t beside the
+    pass rule's t, what t a test of the verdict's size could reach if the
+    present mean and spread held, the minimum detectable mean at t = 2, and
+    how far the verdict is. Pure: reads the state file through summary() and
+    _traded(), writes nothing, and nothing in the book reads its result. It
+    does not change the pass rule, the kill rule, the verdict's timing or the
+    family."""
+    conf = cfg()
+    s = summary(state_path)
+    sessions = s["sessions_closed"]
+    if sessions < INTERIM_CHECKPOINTS[0]:
+        return None
+    tr = _traded(load_state(state_path))
+    nets = [d["net_bp"] for _, d in tr]
+    dates = [date for date, _ in tr]
+    paired = [d["net_bp"] - d["scanner_net_bp"] for _, d in tr]
+    n = len(nets)
+    verdict_decisions, verdict_sessions = conf["verdict_after_decisions"], conf["verdict_after_sessions"]
+    per_session = n / sessions if sessions else 0.0
+    # The verdict arrives at 300 decisions or 60 sessions, whichever first. At the present
+    # rate of decisions a session, the count the verdict would be read on:
+    at_60 = per_session * verdict_sessions
+    by_decisions_first = at_60 >= verdict_decisions
+    final_n = verdict_decisions if by_decisions_first else at_60
+    final_sessions = (verdict_decisions / per_session) if (by_decisions_first and per_session) else verdict_sessions
+    remaining_n = max(final_n - n, 0.0)
+    sd = st.stdev(nets) if n >= 2 else None
+    t_now, t_cl = s["t"], _clustered_t(nets, dates)
+
+    def scaled(t, now_count, final_count):
+        return t * math.sqrt(final_count / now_count) if (t is not None and now_count) else None
+
+    banked = sum(nets)
+    return {
+        "note": "Information only. Not a verdict, not a gate: the pass rule, the kill rule and the verdict's "
+                "timing are unchanged, and nothing in the book reads this (prereg clarification 12).",
+        "checkpoint": max(c for c in INTERIM_CHECKPOINTS if sessions >= c),
+        "next_checkpoint": next((c for c in INTERIM_CHECKPOINTS if c > sessions), None),
+        "sessions": sessions, "decisions": n, "decisions_per_session": per_session,
+        "mean_net_bp": s["mean_net_bp"], "t": t_now, "t_clustered": t_cl, "sd_bp": sd,
+        "hit_rate": s["hit_rate"],
+        "paired_vs_scanner_bp": s["paired_vs_scanner_bp"], "paired_t": s["paired_t"],
+        "paired_t_clustered": _clustered_t(paired, dates),
+        "brier": s["brier"],
+        "verdict_at": {"decisions": verdict_decisions, "sessions": verdict_sessions,
+                       "first": "decisions" if by_decisions_first else "sessions",
+                       "expected_decisions": final_n, "expected_sessions": final_sessions},
+        "sessions_remaining": max(verdict_sessions - sessions, 0),
+        "decisions_remaining": max(verdict_decisions - n, 0),
+        # At the present rate, how far the verdict is by whichever count arrives first.
+        "expected_sessions_remaining": max(final_sessions - sessions, 0.0),
+        "expected_decisions_remaining": remaining_n,
+        # If the present mean and spread held, t grows with the square root of the count.
+        "t_projected": scaled(t_now, n, final_n),
+        "t_clustered_projected": scaled(t_cl, sessions, final_sessions),
+        # The smallest mean net bp the remaining decisions alone could call at t = 2 with the
+        # present spread; the same for the full test; and the mean the remaining decisions
+        # would need for the cumulative t to end at 2, given what has been banked.
+        "mde_remaining_bp": (2 * sd / math.sqrt(remaining_n)) if (sd and remaining_n > 0) else None,
+        "mde_full_bp": (2 * sd / math.sqrt(final_n)) if (sd and final_n > 0) else None,
+        "required_mean_remaining_bp": ((2 * sd * math.sqrt(final_n) - banked) / remaining_n)
+                                      if (sd and remaining_n > 0) else None,
+        "pass_rule": {"t": 2.24, "paired_t": 1.65, "both_halves_positive": True},
+    }
 
 
 # --- the read side -------------------------------------------------------------------------

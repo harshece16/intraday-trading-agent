@@ -4575,6 +4575,22 @@ python backtester.py --no-costs   # frictionless, for reference only
    gradient boosting / deep learning / RL once there's enough real trade
    history to justify them (see `research/ml4t_integration_plan.md`).
 
+### 127. The Jev book shows an interim read at 15 sessions — information only, the test unchanged
+
+**The owner's words, 2026-10-05**, after three closed rounds (+8.6 bp a decision, t 0.61): cut the 60-session test to 15. That was declined: a test's size is fixed before it starts, and shortening it after a look at the running score is the early stop the pre-registration exists to prevent. What was built instead is an **interim read** (`docs/research/prereg-jev-book.md`, Clarification 12, committed before the code).
+
+From **15 closed sessions**, and again from 30 and 45, the Jev Book page shows a box headed *Interim read at N sessions (information only)*, and `GET /api/jev-book` carries the same under `interim` (null before 15 sessions):
+
+- the statistics the pass rule will use, on the same closed decisions: mean net bp a buy/short decision and its t, hit rate, the paired difference against the scanner's side and its t, the Brier score, decisions and sessions;
+- a **session-clustered t** beside the pass rule's t. The 15 decisions of one session share that day's market, so the plain t counts them as independent when they are not; the clustered t (cluster-robust standard error, one cluster per session) does not. The pass rule's t stays the pass rule's t;
+- **what t a test of the verdict's size could reach if the present mean and spread held**: t scaled by the square root of the ratio of counts, where the verdict's count is 300 decisions or the present rate carried to 60 sessions, whichever arrives first (at 15 decisions a session that is 300 decisions after about 20 sessions);
+- the **minimum detectable mean at t = 2**: the smallest mean the remaining decisions alone could call with the present spread, the same for the full test, and the mean the remaining decisions would need for the cumulative t to end at 2 given what has been banked;
+- how many sessions and decisions remain to the verdict, and which count is on course to arrive first.
+
+**What this changes in the test: nothing.** The pass rule, the kill rule, the verdict's timing and the family are as registered. The read is computed on request from the state file with the same functions the summary uses, writes nothing, and no code path reads it; it is never used to stop, extend or alter the book. Rule JEV-16; JEV-13 notes it.
+
+Tests: the read is absent at 14 sessions and present at 15, 30 and 45; the projection, the minimum detectable mean and the clustered t are recomputed by hand on synthetic states where sessions and where decisions arrive first; the state file is byte-identical after the read and `summary()` returns the same thing before and after. A backend restart is needed for `/api/jev-book` to carry `interim`.
+
 ### 126. Cohort 2b: the basic candlestick, indicator and chart-pattern rules the rule lab lacked
 
 **Your question, 2026-10-05:** "are we missing any basic rules in rule book, or all pattern recognition etc are added?" The lab traded 8 of the engine's 24 candlestick patterns as standalone rules and had no standalone rule for several textbook indicators. This adds **50 rules (25 long, 25 short)** as **cohort 4** of the lab, called "cohort 2b" on the page, fixed first in [`docs/research/prereg-rule-lab.md`](docs/research/prereg-rule-lab.md) **amendment 7** (committed before the code, before any of their returns existed) and coded in `backend/rule_lab_patterns.py`. The family goes from 107 to **157** rules; every one is a single rule with the lab's common trade and exits.
