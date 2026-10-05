@@ -2431,7 +2431,7 @@ Jev 2 is paper only and runs beside Jev 1 without touching it: its own module, s
 <details>
 <summary><code>JEV2-02</code> <b>Active</b> — The state Jev 2 sees is blind: measurements only (price, change, gap, relative volume, VWAP and distance, opening range, sector and NIFTY change…</summary>
 
-The state Jev 2 sees is blind: measurements only (price, change, gap, relative volume, VWAP and distance, opening range, sector and NIFTY change, ATR, RS, 52-week distances, turnover, beta, RSI, ADX, support, resistance, catalyst, event, large deals), up to three headlines with their age in hours, the market summary (NIFTY, VIX, breadth, FII/DII) and the cost line. The scanner's side, score and reasons, the chart's setup, bias and pattern labels, the daily and sector trend labels and the market bias are withheld (WITHHELD).
+The state Jev 2 sees is blind: measurements only (price, change, gap, relative volume, VWAP and distance, opening range, sector and NIFTY change, ATR, RS, 52-week distances, turnover, beta, RSI, ADX, support, resistance, event, large deals), up to three headlines as title, publisher and age in hours only, the market summary (NIFTY, VIX, breadth, FII/DII) and the cost line. Withheld (WITHHELD): the scanner's side, score and reasons, the chart's setup, bias and pattern labels, the daily and sector trend labels, the market bias, and the row's catalyst field (market_catalysts' output: a sentiment score, per-headline scores, URLs and raw ages), which went out whole until clarification 1.
 
 | | |
 | --- | --- |
@@ -2439,7 +2439,7 @@ The state Jev 2 sees is blind: measurements only (price, change, gap, relative v
 | **Enforced in** | `backend/jev2_book.py:build_state` |
 | **How to check** | decisions[].state in jev2_book_state.json has no side, score, reasons, setup or bias key |
 | **Test** | `backend/tests/test_jev2_book.py::test_the_state_is_blind_and_drops_undated_headlines` |
-| **Source** | docs/research/prereg-jev2-book.md (the blind state) |
+| **Source** | docs/research/prereg-jev2-book.md (the blind state; clarification 1) |
 
 </details>
 
@@ -2478,7 +2478,7 @@ Each stock gets one request with fourteen Noul questions: seven fixed questions 
 <details>
 <summary><code>JEV2-05</code> <b>Active</b> — The combination rule is frozen: S = ((news_positive − news_negative) + (strength_extending − weakness_extending) + (sector_up − sector_down)) / 3…</summary>
 
-The combination rule is frozen: S = ((news_positive − news_negative) + (strength_extending − weakness_extending) + (sector_up − sector_down)) / 3; p_combined = 0.5 + S/2. Buy if p_combined ≥ 0.65, short if ≤ 0.35, otherwise skip; skip in either direction if move_exhausted ≥ 0.70. A skip scores 0 and is counted. No number may be refit during the test.
+The combination rule is frozen: S = ((news_positive − news_negative) + (strength_extending − weakness_extending) + (sector_up − sector_down)) / 3; p_combined = 0.5 + S/2. Buy if p_combined ≥ 0.65, short if ≤ 0.35, otherwise skip; skip in either direction if move_exhausted ≥ 0.70, and skip (with the reason recorded) if move_exhausted was not answered, since the veto cannot be checked. A skip scores 0 and is counted. No number may be refit during the test.
 
 | | |
 | --- | --- |
@@ -2486,7 +2486,7 @@ The combination rule is frozen: S = ((news_positive − news_negative) + (streng
 | **Enforced in** | `backend/jev2_book.py:combine` |
 | **Setting** | `JEV2_BOOK.buy_at = 0.65; JEV2_BOOK.short_at = 0.35; JEV2_BOOK.exhausted_veto = 0.70` |
 | **How to check** | Jev 2 page thresholds; decisions[].p_combined against decisions[].action |
-| **Test** | `backend/tests/test_jev2_book.py::test_the_combination_rule_thresholds_and_the_exhaustion_veto` |
+| **Test** | `backend/tests/test_jev2_book.py::test_the_combination_rule_thresholds_and_the_exhaustion_veto; backend/tests/test_jev2_book.py::test_a_missing_move_exhausted_answer_is_a_skip_with_its_reason` |
 | **Source** | docs/research/prereg-jev2-book.md (The combination rule) |
 
 </details>
@@ -2526,7 +2526,7 @@ The scan is captured at Jev 2's first open-phase tick at or after 09:45, the tic
 <details>
 <summary><code>JEV2-08</code> <b>Active</b> — Fills are Kite-only and shared with Jev 1 where it has one: a shared name reuses Jev 1's recorded entry when Jev 1 read the same scan (same ltp and…</summary>
 
-Fills are Kite-only and shared with Jev 1 where it has one: a shared name reuses Jev 1's recorded entry when Jev 1 read the same scan (same ltp and VWAP in its recorded state), and its recorded exit at the square-off; otherwise Jev 2 fetches its own live price through jev_book.live_ltp, never the delayed feed. Each decision records fill_source and exit_source. Without a live Kite session the day is 'no_live_prices' and does not count; a decision that cannot be priced at either end is excluded.
+Fills are Kite-only and shared with Jev 1 where it has one: a shared name reuses Jev 1's recorded entry when Jev 1 read the same scan (same ltp and VWAP in its recorded state), and its recorded exit at the square-off; otherwise Jev 2 fetches its own live price through jev_book.live_ltp, never the delayed feed. Each decision records fill_source and exit_source. Without a live Kite session the day is 'no_live_prices' and does not count; a decision that cannot be priced at either end is excluded. The match is on the scan, not the clock: after a restart, a captured scan with the same ltp and VWAP reuses Jev 1's earlier fill.
 
 | | |
 | --- | --- |
@@ -2541,7 +2541,7 @@ Fills are Kite-only and shared with Jev 1 where it has one: a shared name reuses
 <details>
 <summary><code>JEV2-09</code> <b>Active</b> — Scoring: net_bp = sign × move_bp − the engine's round trip at ₹1,00,000 (14.27 bp, the same function as JEV-11) for a buy or short, 0 for a skip; the…</summary>
 
-Scoring: net_bp = sign × move_bp − the engine's round trip at ₹1,00,000 (14.27 bp, the same function as JEV-11) for a buy or short, 0 for a skip; the scanner's side (score_side) is scored the same way on the same prices, and on the shared names Jev 1's net_bp is read from its state for the paired Jev 2 − Jev 1 figure. The verdict's t is session-clustered (one cluster per session); the plain t is reported beside it. Kill rule: after 100 buy/short decisions, plain t below −2 switches the book off.
+Scoring: net_bp = sign × move_bp − the engine's round trip at ₹1,00,000 (14.27 bp, the same function as JEV-11) for a buy or short, 0 for a skip; the scanner's side (score_side) is scored the same way on the same prices for every closed decision, and the paired Jev 2 − scanner figure (pass rule item 3) runs over every decision with a skip at 0, while Jev 2's own mean (item 1) runs over buy/short decisions. On the shared names Jev 1's net_bp is read from its state for the paired Jev 2 − Jev 1 figure. The 'without own shared fills' figure leaves out a shared name whose entry or exit was Jev 2's own. The verdict's t is session-clustered (one cluster per session); the plain t is reported beside it. Kill rule: after 100 buy/short decisions, plain t below −2 switches the book off.
 
 | | |
 | --- | --- |
@@ -2549,8 +2549,8 @@ Scoring: net_bp = sign × move_bp − the engine's round trip at ₹1,00,000 (14
 | **Enforced in** | `backend/jev2_book.py:close_round, clustered_t, summary, _apply_kill_rule` |
 | **Setting** | `JEV2_BOOK.notional = 100000.0; JEV2_BOOK.kill_after = 100; JEV2_BOOK.kill_t = -2.0` |
 | **How to check** | GET /api/jev2-book t_clustered, paired_t_clustered, paired_vs_jev1_t_clustered, round_trip_bp |
-| **Test** | `backend/tests/test_jev2_book.py::test_clustered_t_treats_a_session_as_one_cluster; backend/tests/test_jev2_book.py::test_kill_rule_switches_the_book_off; backend/tests/test_jev2_book.py::test_a_skip_costs_nothing_and_counts` |
-| **Source** | docs/research/prereg-jev2-book.md (Scoring; Kill rule) |
+| **Test** | `backend/tests/test_jev2_book.py::test_clustered_t_treats_a_session_as_one_cluster; backend/tests/test_jev2_book.py::test_kill_rule_switches_the_book_off; backend/tests/test_jev2_book.py::test_a_skip_costs_nothing_and_counts; backend/tests/test_jev2_book.py::test_beats_the_scanner_is_scored_on_every_decision_with_skips_at_zero` |
+| **Source** | docs/research/prereg-jev2-book.md (Scoring; Kill rule; clarification 1) |
 
 </details>
 

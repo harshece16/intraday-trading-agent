@@ -337,7 +337,7 @@ undated news, contrary to the blind-state rule. **From the first round,
 `headlines` (title, publisher, hours before the decision). The dry round's
 claim in README §128 that "every withheld key was absent from every state"
 was true of the listed keys and not of this nested content; the stage-0 copy
-of 2026-10-05's list carried it. The fixture in the tests held `catalyst:
+of 2026-10-05's list carried it on 5 of the 25 rows. The fixture in the tests held `catalyst:
 None`, which is why the blind-state test passed; the fixture now carries the
 real shape and the test asserts that no `score`, `url`, `llm_scored`, raw
 `age_h` or duplicate title appears anywhere in the state. JEV2-02 is

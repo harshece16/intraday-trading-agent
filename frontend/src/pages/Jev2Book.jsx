@@ -61,7 +61,7 @@ export default function Jev2Book() {
         A second paper test of the Jev judge, run beside the <Link to="/jev-book">Jev book</Link> and leaving it
         untouched. Each trading day, once Jev 1's 09:45 round has ended, Jev is shown a <strong>blind</strong> state
         for every one of the 25 names on the day's list: prices, gap, relative volume, VWAP distance, opening range,
-        sector and NIFTY change, three dated headlines, the market summary and the cost line; never the scanner's
+        sector and NIFTY change, three dated headlines (title, publisher, age), the market summary and the cost line; never the scanner's
         side, score, reasons or chart labels. It answers <strong>seven narrow yes/no questions</strong>, each in two
         wordings, and a frozen rule combines them: buy if the combined probability is at or above {th.buy_at ?? 0.65},
         short at or below {th.short_at ?? 0.35}, otherwise skip; skip too when the move looks exhausted
@@ -88,9 +88,9 @@ export default function Jev2Book() {
           <strong className={toneOf(data.mean_net_bp)}>{bp(data.mean_net_bp)}</strong>
           <small>{data.traded} closed · clustered t {t2(data.t_clustered)} (plain {t2(data.t)}) · hit rate{" "}
             {data.hit_rate != null ? `${(data.hit_rate * 100).toFixed(0)}%` : "—"}</small></div>
-        <div className="stat"><small>Scanner's side, same stocks</small>
+        <div className="stat"><small>Scanner's side, every decision (skips at 0)</small>
           <strong className={toneOf(data.scanner_mean_net_bp)}>{bp(data.scanner_mean_net_bp)}</strong>
-          <small>Jev 2 minus scanner {bp(data.paired_vs_scanner_bp)} · clustered t {t2(data.paired_t_clustered)}</small></div>
+          <small>{data.scanner_n ?? 0} decisions · Jev 2 minus scanner {bp(data.paired_vs_scanner_bp)} · clustered t {t2(data.paired_t_clustered)}</small></div>
         <div className="stat"><small>Jev 2 minus Jev 1, shared names</small>
           <strong className={toneOf(data.paired_vs_jev1_bp)}>{bp(data.paired_vs_jev1_bp)}</strong>
           <small>{data.paired_vs_jev1_n} pairs · clustered t {t2(data.paired_vs_jev1_t_clustered)} · reported, not gated</small></div>
