@@ -8,15 +8,17 @@ import { useEngineControls } from "../useEngineControls";
 import KiteConnectButton from "./KiteConnectButton";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
-// Grouped by what each page is for. The momentum book is the strategy and
-// leads (README section 116). The intraday engine's pages follow as its paper
-// record, then the intraday research, then the Kite account.
+// Grouped by what each page is for. The paper desk leads (README section
+// 125), then the four paper books as peers, then the intraday engine's own
+// pages, then research, then the Kite account. No book is "the strategy".
 const NAV = [
-  ["The strategy", [["/", "Momentum book"]]],
-  ["Intraday paper record", [["/intraday", "Overview"], ["/premarket", "Pre-market"], ["/day-plan", "Day plan"],
+  ["Paper desk", [["/", "Paper desk"], ["/process-log", "Process log"]]],
+  ["Paper books", [["/intraday", "Intraday engine"], ["/jev-book", "Jev book"], ["/rule-lab", "Rule lab"],
+    ["/momentum-book", "Momentum book"]]],
+  ["Intraday engine pages", [["/premarket", "Pre-market"], ["/day-plan", "Day plan"],
     ["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"], ["/trades", "Trades"],
     ["/journal", "Journal"]]],
-  ["Intraday research", [["/jev-book", "Jev book"], ["/kronos", "Kronos"], ["/rule-lab", "Rule lab"]]],
+  ["Research", [["/kronos", "Kronos"]]],
   ["Account", [["/portfolio", "Portfolio", "held"]]],
 ];
 

@@ -147,14 +147,65 @@
   .backlink:hover { color: var(--ink); }
   a.backlink { text-decoration: none; }
 
-  /* The intraday pages' banner: a paper record, not the strategy (README section 116). */
+  /* The intraday pages' banner: a paper record, one of four paper books (README sections 116, 125). */
   .record-banner { margin: 0 0 24px; padding: 12px 16px; border-radius: 10px; background: var(--wait-bg); box-shadow: inset 4px 0 0 var(--wait); font-size: 14px; line-height: 1.5; }
   .record-banner p { margin: 0; max-width: 90ch; }
   .record-banner a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
   .record-banner .record-banner-src { margin-top: 4px; font-size: 12.5px; color: var(--ink-2); }
   .record-banner .record-banner-src a { font-weight: 500; color: var(--ink-2); }
 
-  /* ---- Momentum book, the front page ---- */
+  /* ---- Paper desk, the front page (README section 125) ---- */
+  .desk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0 8px; }
+  .desk-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); min-width: 0; }
+  .desk-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .desk-head h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .desk-about { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+  .desk-detail { margin: -2px 0 0; font-size: 13px; color: var(--ink); }
+  .desk-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); }
+  .desk-facts dt { font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+  .desk-facts dd { margin: 2px 0 0; font-size: 14.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+  .desk-facts dd small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--ink-2); }
+  .desk-gate { margin: 4px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--sunken); font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+  .desk-gate strong { color: var(--ink); }
+  .desk-link { margin-top: auto; align-self: flex-start; font-size: 13.5px; font-weight: 600; color: var(--ink); text-underline-offset: 3px; }
+  .desk-strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .desk-strip-head h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .desk-strip-head a { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  @media (max-width: 900px) { .desk-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) { .desk-facts { grid-template-columns: minmax(0, 1fr); } }
+
+  /* ---- Process log (README section 125) ---- */
+  .plog { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13.5px; }
+  .plog-line { display: grid; grid-template-columns: 64px 184px minmax(0, 1fr) 96px; gap: 0 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--rule); }
+  .plog.compact .plog-line { grid-template-columns: 44px 184px minmax(0, 1fr) 90px; padding: 5px 0; font-size: 13px; }
+  .plog-tags { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .plog-time { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+  .book-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; background: var(--sunken); color: var(--ink-2); }
+  .book-tag.book-intraday { background: var(--focus-bg); color: var(--focus); }
+  .book-tag.book-jev { background: var(--book-bg); color: var(--book); }
+  .book-tag.book-rule_lab { background: var(--wait-bg); color: var(--wait); }
+  .book-tag.book-momentum { background: var(--long-bg); color: var(--long); }
+  .plog-kind { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .plog-line.level-error .plog-kind, .plog-line.level-warn .plog-kind { color: var(--short); }
+  .plog-line.level-trade .plog-kind { color: var(--ink); }
+  .plog-body { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
+  .plog.compact .plog-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .plog-money { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .plog-details { margin-top: 4px; }
+  .plog-details > summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+  .plog-table { font-size: 12.5px; margin-top: 4px; }
+  .plog-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+  .plog-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .plog-filters input, .plog-filters select { font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+  @media (max-width: 640px) {
+    .plog-line, .plog.compact .plog-line { grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-areas: "time tags money" "body body body"; row-gap: 3px; }
+    .plog-time { grid-area: time; }
+    .plog-tags { grid-area: tags; }
+    .plog-body { grid-area: body; }
+    .plog-money { grid-area: money; }
+  }
+
+  /* ---- Momentum book ---- */
   .mb-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0 8px; }
   .mb-fact { padding: 14px 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .mb-fact small { font-size: 12px; color: var(--ink-2); }

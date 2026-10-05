@@ -11,11 +11,13 @@ const SOURCES = [
   ["§109", `${README}#109-market-breadth-and-intermarket-moves-measured-run-2026-09-25-merged-2026-09-30-neither-predicts-the-session-by-enough-to-trade`],
   ["§116", `${README}#116-the-momentum-book-is-the-strategy-the-intraday-engine-is-a-paper-record`],
   ["§118", `${README}#118-the-paper-engine-takes-automatic-trades-the-confidence-gate-applies-in-live-only`],
+  ["§125", `${README}#125-the-paper-desk-four-paper-books-as-equal-experiments-and-one-process-log`],
   ["trial log", `${REPO}/docs/research/trials.md`],
 ];
 
-/** Opens every page of the intraday engine: it is a paper record, not the
- * strategy. Informational only; it changes nothing the engine does. */
+/** Opens every page of the intraday engine: a paper record, one of four
+ * paper books on the desk (README section 125). Informational only; it
+ * changes nothing the engine does. */
 export default function IntradayRecordBanner() {
   return (
     <aside className="record-banner" aria-label="About the intraday pages">
@@ -23,7 +25,8 @@ export default function IntradayRecordBanner() {
         <strong>Intraday paper record.</strong> No intraday edge was found: 202 strategy trials and research
         looks L40 to L51 found nothing that pays the ~16.6 bp round trip. The intraday engine keeps running in
         paper as a record, and takes its trades automatically: the confidence gate applies in Live only.
-        {" "}The strategy is the monthly <Link to="/">momentum book</Link>.
+        {" "}It is one of four paper books on the <Link to="/">paper desk</Link>, all equal experiments; none is
+        the strategy until it passes its gate.
       </p>
       <p className="record-banner-src">
         Sources:{" "}

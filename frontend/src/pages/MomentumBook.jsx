@@ -173,8 +173,8 @@ export default function MomentumBook() {
     <>
       <h2 className="h">Momentum book <span className={`pill ${pillClass}`} style={{ verticalAlign: "middle" }}>{label}</span></h2>
       <p className="sub">
-        Trader Sahab&apos;s strategy: hold the 15 of NSE&apos;s 200 most-traded stocks with the strongest 6- and
-        12-month momentum, in delivery, rebalanced monthly. It is the one strategy that passed its pre-registered test
+        One of the four paper books on the <Link to="/">paper desk</Link>: hold the 15 of NSE&apos;s 200 most-traded
+        stocks with the strongest 6- and 12-month momentum, in delivery, rebalanced monthly. It is the one rule that passed its pre-registered test
         (trial 120) and, narrowly, its re-run on repaired prices (trial 126: +0.71% a month over its benchmark in the
         backtest). <strong>Paper only</strong>, with ₹10 lakh:
         no order is placed. Real money comes only after months of paper results agree with the backtest, and it is
