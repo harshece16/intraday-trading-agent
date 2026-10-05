@@ -46,6 +46,55 @@ function OpenRound({ live }) {
   );
 }
 
+function tval(x) {
+  return x === null || x === undefined ? "—" : Number(x).toFixed(2);
+}
+
+// From 15 closed sessions: the pass rule's statistics so far, a session-clustered t,
+// the t a full-size test could reach if the mean held, and the smallest mean the
+// remaining sessions could detect. Information only (prereg clarification 12): the
+// backend computes it on request, stores nothing, and nothing acts on it. The pass
+// rule, the kill rule and the verdict's timing are unchanged.
+function InterimRead({ r }) {
+  const v = r.verdict_at || {};
+  const sessionsLeft = Math.ceil(r.expected_sessions_remaining);
+  const firstBy = v.first === "decisions"
+    ? `${v.decisions} decisions, about ${Math.round(v.expected_sessions)} sessions at the present ${Math.round(r.decisions_per_session)} a session`
+    : `${v.sessions} sessions, about ${Math.round(v.expected_decisions)} decisions at the present rate`;
+  return (
+    <div className="plan" style={{ marginTop: 16 }}>
+      <h3>Interim read at {r.checkpoint} sessions (information only)</h3>
+      <p>
+        The verdict is still read once, at {v.decisions} buy/short decisions or {v.sessions} sessions, whichever comes
+        first: on course for {firstBy}, so <strong>{plural(sessionsLeft, "session")} remain</strong> to the verdict
+        ({r.decisions_remaining} decisions). This read changes nothing: not the pass rule, not the kill rule, not the
+        verdict's timing. Nothing in the book acts on it.
+      </p>
+      <div className="grid3">
+        <div className="stat"><small>Jev, net per decision so far</small>
+          <strong className={toneOf(r.mean_net_bp)}>{bp(r.mean_net_bp)}</strong>
+          <small>t {tval(r.t)} (pass rule needs ≥ 2.24) · session-clustered t {tval(r.t_clustered)} · hit rate{" "}
+            {r.hit_rate != null ? `${(r.hit_rate * 100).toFixed(0)}%` : "—"}</small></div>
+        <div className="stat"><small>Jev minus scanner, same stocks</small>
+          <strong className={toneOf(r.paired_vs_scanner_bp)}>{bp(r.paired_vs_scanner_bp)}</strong>
+          <small>t {tval(r.paired_t)} (needs ≥ 1.65) · clustered t {tval(r.paired_t_clustered)} · Brier{" "}
+            {r.brier != null ? r.brier.toFixed(3) : "—"}</small></div>
+        <div className="stat"><small>If this mean and spread held to the verdict</small>
+          <strong>t {tval(r.t_projected)}</strong>
+          <small>clustered t {tval(r.t_clustered_projected)} · on {r.decisions} decisions in {r.sessions} sessions,
+            sd {r.sd_bp != null ? r.sd_bp.toFixed(0) : "—"} bp</small></div>
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+        Smallest mean the remaining {Math.round(r.expected_decisions_remaining)} decisions alone could call at t = 2
+        with this spread: <strong>{bp(r.mde_remaining_bp)}</strong>; for the whole test, {bp(r.mde_full_bp)}. For the
+        cumulative t to end at 2, the remaining decisions would need to average {bp(r.required_mean_remaining_bp)}.
+        A projection assumes the mean holds, which is what the test exists to find out.
+        {r.next_checkpoint ? ` The next read is at ${r.next_checkpoint} sessions, if the verdict has not come first.` : ""}
+      </p>
+    </div>
+  );
+}
+
 function toneOf(x) {
   return x > 0 ? "up" : x < 0 ? "down" : "";
 }
@@ -127,6 +176,7 @@ export default function JevBook() {
         halves, and beat the scanner. It switches itself off if, after 100 trades, it is clearly losing (t below −2).
         {data.verdict_due ? " The verdict is now due." : ""}
       </p>
+      {data.interim && <InterimRead r={data.interim} />}
 
       <h3 style={{ marginTop: 24 }}>Latest session{day ? ` — ${day.date}` : ""}</h3>
       {day && day.decisions && day.decisions.length ? (

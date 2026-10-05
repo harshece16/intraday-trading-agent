@@ -459,3 +459,118 @@ def test_a_failing_mark_never_breaks_the_page(tmp_path, monkeypatch):
     monkeypatch.setattr(jb, "live_marks", boom)
     page = jb.page(path)
     assert page["live"] is None and page["decisions"] == 3
+
+
+# --- the interim read (prereg clarification 12): information only ------------------------------
+
+def _closed_state(path, nets_by_session, p_up=0.6):
+    """A state file of closed sessions. nets_by_session: list of lists of net bp,
+    one list per session, every decision a buy with the scanner on the same side
+    minus 1 bp, so the paired difference is +1 bp on every decision."""
+    days = {}
+    for i, nets in enumerate(nets_by_session):
+        date = (datetime.date(2026, 10, 1) + datetime.timedelta(days=i)).isoformat()
+        days[date] = {"status": "closed", "closed": True,
+                      "decisions": [{"symbol": f"S{j}", "action": "buy", "p_up": p_up, "size_level": 2, "scanner_side": "LONG",
+                                     "entry": 100.0, "exit": 101.0, "move_bp": x + 14.27, "net_bp": x, "scanner_net_bp": x - 1.0}
+                                    for j, x in enumerate(nets)]}
+    jb.save_state({"days": days, "status": "active", "status_reason": None}, path)
+    return path
+
+
+def test_no_interim_read_before_fifteen_closed_sessions(tmp_path, monkeypatch):
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    path = _closed_state(str(tmp_path / "s.json"), [[10.0, 20.0]] * 14)
+    assert jb.summary(path)["sessions_closed"] == 14
+    assert jb.interim(path) is None
+    assert jb.page(path, quotes=lambda keys: {}, now=NOW)["interim"] is None
+
+
+def test_the_interim_read_appears_at_fifteen_sessions_and_marks_the_checkpoints(tmp_path, monkeypatch):
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    path = _closed_state(str(tmp_path / "s.json"), [[10.0, 20.0]] * 15)
+    r = jb.interim(path)
+    assert r["checkpoint"] == 15 and r["next_checkpoint"] == 30
+    assert r["sessions"] == 15 and r["decisions"] == 30
+    assert r["sessions_remaining"] == 45 and r["decisions_remaining"] == 270
+    assert "Information only" in r["note"]
+    s = jb.summary(path)
+    for k in ("mean_net_bp", "t", "hit_rate", "paired_vs_scanner_bp", "paired_t", "brier"):
+        assert r[k] == s[k]
+    assert jb.page(path, quotes=lambda keys: {}, now=NOW)["interim"] == r
+    path30 = _closed_state(str(tmp_path / "s30.json"), [[10.0, 20.0]] * 30)
+    r30 = jb.interim(path30)
+    assert r30["checkpoint"] == 30 and r30["next_checkpoint"] == 45 and r30["sessions_remaining"] == 30
+    r45 = jb.interim(_closed_state(str(tmp_path / "s45.json"), [[10.0, 20.0]] * 45))
+    assert r45["checkpoint"] == 45 and r45["next_checkpoint"] is None
+
+
+def test_interim_projection_and_mde_arithmetic_when_sessions_arrive_first(tmp_path, monkeypatch):
+    """15 sessions of 2 decisions: 2 a session x 60 sessions = 120 < 300, so the
+    verdict comes at 60 sessions on 120 decisions. Everything is recomputed by
+    hand here from the net list."""
+    import math
+    import statistics
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    sessions = [[float(i), float(i)] for i in range(15)]           # session i holds two decisions of i bp
+    nets = [x for s in sessions for x in s]
+    r = jb.interim(_closed_state(str(tmp_path / "s.json"), sessions))
+    n, mean, sd = 30, 7.0, statistics.stdev(nets)
+    t = mean / sd * math.sqrt(n)
+    assert r["mean_net_bp"] == mean and r["sd_bp"] == sd and abs(r["t"] - t) < 1e-12
+    assert r["verdict_at"]["first"] == "sessions"
+    assert r["verdict_at"]["expected_decisions"] == 120 and r["verdict_at"]["expected_sessions"] == 60
+    assert r["expected_decisions_remaining"] == 90 and r["expected_sessions_remaining"] == 45
+    assert abs(r["t_projected"] - t * math.sqrt(120 / 30)) < 1e-12       # = 2 t
+    assert abs(r["mde_remaining_bp"] - 2 * sd / math.sqrt(90)) < 1e-12
+    assert abs(r["mde_full_bp"] - 2 * sd / math.sqrt(120)) < 1e-12
+    assert abs(r["required_mean_remaining_bp"] - (2 * sd * math.sqrt(120) - sum(nets)) / 90) < 1e-12
+    # Session-clustered t: residual sum of session i is 2(i - 7); sum of squares 4 x 280 = 1120;
+    # var(mean) = 15/14 x 1120 / 900 = 4/3; t = 7 / sqrt(4/3).
+    assert abs(r["t_clustered"] - 7 / math.sqrt(4 / 3)) < 1e-12
+    assert abs(r["t_clustered_projected"] - r["t_clustered"] * math.sqrt(60 / 15)) < 1e-12
+    # Paired difference is +1 bp on every decision: no spread, so neither t exists.
+    assert r["paired_vs_scanner_bp"] == 1.0 and r["paired_t"] is None and r["paired_t_clustered"] is None
+    assert r["pass_rule"] == {"t": 2.24, "paired_t": 1.65, "both_halves_positive": True}
+
+
+def test_interim_projection_when_decisions_arrive_first(tmp_path, monkeypatch):
+    """15 sessions of 15 decisions: 15 a session x 60 = 900 >= 300, so the verdict
+    comes at 300 decisions, after 20 sessions."""
+    import math
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    sessions = [[5.0 + (j % 3) + (i % 4) for j in range(15)] for i in range(15)]
+    r = jb.interim(_closed_state(str(tmp_path / "s.json"), sessions))
+    assert r["decisions"] == 225 and r["decisions_per_session"] == 15
+    assert r["verdict_at"]["first"] == "decisions"
+    assert r["verdict_at"]["expected_decisions"] == 300 and r["verdict_at"]["expected_sessions"] == 20
+    assert r["expected_decisions_remaining"] == 75 and r["decisions_remaining"] == 75
+    assert r["expected_sessions_remaining"] == 5 and r["sessions_remaining"] == 45
+    assert abs(r["t_projected"] - r["t"] * math.sqrt(300 / 225)) < 1e-12
+    assert abs(r["t_clustered_projected"] - r["t_clustered"] * math.sqrt(20 / 15)) < 1e-12
+    assert abs(r["mde_remaining_bp"] - 2 * r["sd_bp"] / math.sqrt(75)) < 1e-12
+
+
+def test_the_interim_read_writes_nothing_and_leaves_the_summary_and_verdict_alone(tmp_path, monkeypatch):
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    path = _closed_state(str(tmp_path / "s.json"), [[10.0, -20.0, 30.0]] * 15)
+    before_bytes, before = open(path, "rb").read(), jb.summary(path)
+    r = jb.interim(path)
+    assert r is not None
+    assert open(path, "rb").read() == before_bytes
+    after = jb.summary(path)
+    assert after == before
+    assert "interim" not in after and not after["verdict_due"] and after["status"] == "active"
+    assert "interim" not in json.load(open(path))
+    # The kill rule and the verdict flag read the same functions they did before.
+    state = jb.load_state(path)
+    jb._apply_kill_rule(state)
+    assert state["status"] == "active"
+
+
+def test_a_failing_interim_read_never_breaks_the_page(tmp_path, monkeypatch):
+    monkeypatch.setattr(jb, "round_trip_bp", lambda: 14.27)
+    path = _closed_state(str(tmp_path / "s.json"), [[10.0]] * 15)
+    monkeypatch.setattr(jb, "interim", lambda p=None: 1 / 0)
+    out = jb.page(path, quotes=lambda keys: {}, now=NOW)
+    assert out["interim"] is None and out["sessions_closed"] == 15

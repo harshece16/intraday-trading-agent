@@ -542,7 +542,9 @@ def process_log(day: Optional[str] = None, book: Optional[str] = None, kind: Opt
 def jev_book_summary():
     """The Jev book (README section 86): the LLM judge's paper decisions on the
     daily shortlist, scored after costs against the scanner's own side. While
-    today's round is open, "live" carries a display-only mark of its positions."""
+    today's round is open, "live" carries a display-only mark of its positions;
+    from 15 closed sessions "interim" carries the report-only interim read
+    (prereg clarification 12), which changes nothing in the test."""
     import jev_book
     return jev_book.page()
 
