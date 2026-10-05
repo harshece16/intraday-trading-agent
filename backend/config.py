@@ -444,6 +444,27 @@ JEV_BOOK = {
     "model": "jev-latest",
 }
 
+# Jev 2 (jev2_book.py, README section 128): a second paper test of the Jev
+# judge beside Jev 1, with a blind state, seven narrow questions combined in
+# code, an abstention band and all 25 names on the day's list. Its own state
+# file and rules; it never writes Jev 1's. Every number here is fixed by
+# docs/research/prereg-jev2-book.md and may not be refit during the test.
+JEV2_BOOK = {
+    "enabled": True,
+    "decide_at": "09:45",
+    "decide_until": "10:00",    # a round not started by then is recorded as missed
+    "max_names": 25,
+    "notional": 100_000.0,
+    "timeout_s": 90,
+    "kill_after": 100,
+    "kill_t": -2.0,
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",      # pinned: jev-latest is an alias that moves
+    "buy_at": 0.65,             # combined probability at or above -> buy
+    "short_at": 0.35,           # at or below -> short; between -> skip
+    "exhausted_veto": 0.70,     # move_exhausted at or above -> skip either way
+}
+
 # Liquidity check (liquidity.py): read Kite's five-level book just before an
 # entry, and refuse it when the spread is wider than the cost model allows
 # (2 x COSTS["slippage_pct"], derived rather than set here), when filling our

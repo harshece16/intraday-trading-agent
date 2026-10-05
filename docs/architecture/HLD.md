@@ -104,6 +104,7 @@ flowchart TB
         ScanT["Scanner thread<br/>every 5 min open, 60 min closed"]
         StopT["StopWatcher<br/>Kite tick stream"]
         JevT["Jev round thread<br/>once a day from 09:45"]
+        Jev2T["Jev 2 round thread<br/>after Jev 1, by 10:00"]
         DeskT["Research desk thread<br/>on demand"]
     end
 
@@ -114,6 +115,7 @@ flowchart TB
         MB["momentum_book_state.json"]
         MA["momentum_book_alerts.json<br/>what was alerted"]
         JB["jev_book_state.json"]
+        J2["jev2_book_state.json"]
         Bhav["bhavcopies and<br/>corporate actions"]
         Hist[("kite_history.db<br/>overnight_1m.db")]
         Keys["key and session files"]
@@ -129,6 +131,7 @@ flowchart TB
     Engine --> ScanT
     Engine --> StopT
     Engine --> JevT
+    Engine --> Jev2T
     API --> DeskT
     Engine -->|"spawns"| Child
     Engine -->|"reads, after the job"| MB
@@ -136,6 +139,8 @@ flowchart TB
     Engine --> DB
     State --> DB
     JevT --> JB
+    Jev2T --> J2
+    Jev2T -.->|"reads only"| JB
     Child --> MB
     Child --> Bhav
     API -->|"reads"| MB
@@ -171,6 +176,7 @@ flowchart TB
 | **Momentum book** | The paper run of the one rule that passed, with a monthly report against its benchmark and an alert at each rebalance or failed evening job. One of the four books on the paper desk | `momentum_book`, `momentum_alerts` | Holding 15 since the 1 Oct close; next rebalance 2 Nov |
 | **Paper desk** | The front page: one card per paper book, equal weight, and one process log that merges every step and trade of the four books. Read-only: assembled from what the books already write (README §125) | `paper_desk` | Running from the next backend restart |
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
+| **Jev 2 book** | A second test of the judge beside Jev 1: blind state, seven narrow questions combined in code, a skip band, all 25 names, fills shared with Jev 1 on the common 15 (README §128) | `jev2_book` | Built; first round after the next restart |
 | **Rule lab** | 157 single rules (20 of its own, 87 from the YouTube and practitioner catalogs, 50 basic pattern and indicator rules as cohort 2b), each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §124); collects from the first session after deploy. Never places an order |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |
 | **Research desk** | Multi-agent brief per stock, grounded in a snapshot | `research_desk` | Off by default; never touches orders |
@@ -195,8 +201,9 @@ and `square_off_window` (15:08 to 15:30).
 | 09:15 to 15:08 | Order-book sample of the watchlist on every tick | Yes |
 | 09:30 to 14:30 | Entry window for the checklist and the review queue | |
 | 09:45 | Jev round: one request per shortlisted stock, paper entries at the live price | Yes |
+| After Jev 1's round, by 10:00 | Jev 2 round: fourteen Nouls per stock on the scan captured at 09:45, all 25 names; shared names reuse Jev 1's entry | Yes |
 | 15:00 to 15:30 | ETF window sampling | Yes |
-| 15:08 | Phase `square_off_window`. Every cash and F&O position is closed. Jev positions are closed and scored | Yes for Jev |
+| 15:08 | Phase `square_off_window`. Every cash and F&O position is closed. Jev positions are closed and scored, then Jev 2's (shared names reuse Jev 1's exit) | Yes for Jev and Jev 2 |
 | 15:30 | Phase `closed`. Session summary is logged | |
 | 19:30 to 23:30 | Evening job: download the bhavcopy, rebuild prices, mark the momentum book. On a month's first session, rebalance. After it, one alert per rebalance, failed run or early stop | No |
 | 23:30 | If a run that day left the day unprocessed, one alert | No |
@@ -327,6 +334,7 @@ Kite's prices. The mark is never stored and never scored.
 | --- | --- | --- | --- |
 | Momentum | Hold the 15 of the 200 most-traded stocks with the best volatility-adjusted 6- and 12-month return; keep while in the top 30; rebalance monthly | Cumulative excess falls below n × 0.71% − 2 × 3.89% × √n, from month 6 | Forward record against the pre-registered band |
 | Jev | Buy, short or skip each shortlisted stock at 09:45; close at 15:08 | After 100 trades, t below −2 | After 300 trades or 60 sessions: t ≥ 2.24, both halves positive, beats the scanner |
+| Jev 2 | Seven Nouls on a blind state for all 25 names, combined by a frozen rule with a skip band; close at 15:08 | After 100 trades, t below −2 | After 300 trades or 60 sessions: session-clustered t ≥ 2.39 (N_family = 3), both halves positive, beats the scanner; Jev 2 − Jev 1 reported |
 | Order-book test | None. It records data | Never | After 15 full sessions: one pre-registered analysis |
 | Rule lab | 157 single rules, one book each: next bar's open, 30 minutes (R19/R20 and the two flag rules: stop, 3R or 15:05), ₹50,000 | Never; a failed screen ends a rule | After 40 lab sessions: Romano–Wolf screen; candidates confirm on the next 40; a confirmed rule may only be proposed to the owner |
 

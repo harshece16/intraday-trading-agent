@@ -78,6 +78,12 @@
    "blurb": "The paper test of an LLM judge on the daily shortlist."
   },
   {
+   "id": "jev2",
+   "prefix": "JEV2",
+   "title": "Jev 2 book",
+   "blurb": "The second, blind and decomposed paper test of the LLM judge, beside Jev 1."
+  },
+  {
    "id": "orderbook",
    "prefix": "OBK",
    "title": "Order-book sampler",
@@ -1970,6 +1976,126 @@
    "verify": "Jev Book page from 15 closed sessions: an 'Interim read at N sessions (information only)' box under the verdict line, saying how many sessions remain; GET /api/jev-book carries it under 'interim' and null before 15 sessions. summary() has no interim field; backend/data/jev_book_state.json holds no interim fields.",
    "source": "README §127; docs/research/prereg-jev-book.md (Clarification 12)",
    "test": "backend/tests/test_jev_book.py::test_the_interim_read_writes_nothing_and_leaves_the_summary_and_verdict_alone; backend/tests/test_jev_book.py::test_interim_projection_and_mde_arithmetic_when_sessions_arrive_first"
+  },
+  {
+   "id": "JEV2-01",
+   "area": "jev2",
+   "status": "paper-only",
+   "rule": "Jev 2 is paper only and runs beside Jev 1 without touching it: its own module, state file (backend/data/jev2_book_state.json), API (/api/jev2-book), page and rules. It only ever reads Jev 1's state file and never writes it; a Jev 2 failure is caught in its own try/except and cannot stop Jev 1 or the engine.",
+   "why": "The owner wanted the Jev idea improved; Jev 1's test is fixed by its pre-registration, so the improvement is a second test.",
+   "enforced_in": "backend/jev2_book.py:maybe_decide, maybe_close, jev1_day; backend/trading_engine.py:_tick_impl",
+   "config": "JEV2_BOOK.enabled = True",
+   "verify": "jev_book_state.json's digest is unchanged across a Jev 2 round and close; grep jev2_book backend/*.py",
+   "source": "README §128; docs/research/prereg-jev2-book.md",
+   "test": "backend/tests/test_jev2_book.py::test_jev2_never_writes_jev1s_state"
+  },
+  {
+   "id": "JEV2-02",
+   "area": "jev2",
+   "status": "active",
+   "rule": "The state Jev 2 sees is blind: measurements only (price, change, gap, relative volume, VWAP and distance, opening range, sector and NIFTY change, ATR, RS, 52-week distances, turnover, beta, RSI, ADX, support, resistance, catalyst, event, large deals), up to three headlines with their age in hours, the market summary (NIFTY, VIX, breadth, FII/DII) and the cost line. The scanner's side, score and reasons, the chart's setup, bias and pattern labels, the daily and sector trend labels and the market bias are withheld (WITHHELD).",
+   "why": "An answer that agrees with the scanner's stated side is not evidence of judgment; TypeSafe documents that argumentative text in the state moves Jev's answers.",
+   "enforced_in": "backend/jev2_book.py:build_state",
+   "config": null,
+   "verify": "decisions[].state in jev2_book_state.json has no side, score, reasons, setup or bias key",
+   "source": "docs/research/prereg-jev2-book.md (the blind state)",
+   "test": "backend/tests/test_jev2_book.py::test_the_state_is_blind_and_drops_undated_headlines"
+  },
+  {
+   "id": "JEV2-03",
+   "area": "jev2",
+   "status": "active",
+   "rule": "A headline whose age is missing or exactly 24.0 hours is dropped before the state is built: news_sentiment gives an item with an unparsable publication time age_h = 24.0, so it may be newer than the fill (#279).",
+   "why": "A story that post-dates the fill price would be look-ahead in Jev's favour.",
+   "enforced_in": "backend/jev2_book.py:headlines",
+   "config": "jev2_book.UNDATED_AGE_H = 24.0",
+   "verify": "no headline in decisions[].state.stock.headlines has hours_before_decision 24.0",
+   "source": "docs/research/prereg-jev2-book.md (Headlines); #279",
+   "test": "backend/tests/test_jev2_book.py::test_the_state_is_blind_and_drops_undated_headlines"
+  },
+  {
+   "id": "JEV2-04",
+   "area": "jev2",
+   "status": "active",
+   "rule": "Each stock gets one request with fourteen Noul questions: seven fixed questions (news_positive, news_negative, strength_extending, weakness_extending, sector_up, sector_down, move_exhausted) in two wordings each; the probability used is the mean of the two wordings. No Choice and no Score question. The model is pinned to jev-1.13.0 and the response's model is logged with every decision.",
+   "why": "TypeSafe's own guidance: narrow questions combined in code; Score is the worst-calibrated primitive; jev-latest is an alias that moves.",
+   "enforced_in": "backend/jev2_book.py:questions, parse_answers",
+   "config": "JEV2_BOOK.model = 'jev-1.13.0'; JEV2_BOOK.endpoint = 'https://api.typesafe.ai/v1/systemone'",
+   "verify": "summary().models == ['jev-1.13.0']; decisions[].raw has 14 values",
+   "source": "docs/research/prereg-jev2-book.md (The questions; Model)",
+   "test": "backend/tests/test_jev2_book.py::test_fourteen_nouls_in_one_pinned_request_and_the_rule_decides"
+  },
+  {
+   "id": "JEV2-05",
+   "area": "jev2",
+   "status": "active",
+   "rule": "The combination rule is frozen: S = ((news_positive − news_negative) + (strength_extending − weakness_extending) + (sector_up − sector_down)) / 3; p_combined = 0.5 + S/2. Buy if p_combined ≥ 0.65, short if ≤ 0.35, otherwise skip; skip in either direction if move_exhausted ≥ 0.70. A skip scores 0 and is counted. No number may be refit during the test.",
+   "why": "The pre-registered rule; the band implements selective prediction, which the external benchmark found raises Jev's accuracy.",
+   "enforced_in": "backend/jev2_book.py:combine",
+   "config": "JEV2_BOOK.buy_at = 0.65; JEV2_BOOK.short_at = 0.35; JEV2_BOOK.exhausted_veto = 0.70",
+   "verify": "Jev 2 page thresholds; decisions[].p_combined against decisions[].action",
+   "source": "docs/research/prereg-jev2-book.md (The combination rule)",
+   "test": "backend/tests/test_jev2_book.py::test_the_combination_rule_thresholds_and_the_exhaustion_veto"
+  },
+  {
+   "id": "JEV2-06",
+   "area": "jev2",
+   "status": "active",
+   "rule": "Jev 2 asks about every name on the day's list, at most 25, in the scanner's order. The first 15 are Jev 1's names (shared); the other 10 enter only Jev 2's own verdict, never the Jev 2 − Jev 1 pair.",
+   "why": "Power: 25 names a session instead of 15. The pair stays exact on the names both books judged.",
+   "enforced_in": "backend/jev2_book.py:decide_round, summary",
+   "config": "JEV2_BOOK.max_names = 25",
+   "verify": "Jev 2 page latest-session table has up to 25 rows, 'extra' marked; summary().shared_n and extra_n",
+   "source": "docs/research/prereg-jev2-book.md (When, and on what)",
+   "test": "backend/tests/test_jev2_book.py::test_shared_names_reuse_jev1s_fills_and_the_rest_fetch_their_own"
+  },
+  {
+   "id": "JEV2-07",
+   "area": "jev2",
+   "status": "active",
+   "rule": "The scan is captured at Jev 2's first open-phase tick at or after 09:45, the tick Jev 1 starts on, and the round starts once Jev 1's round for the day has ended (its day recorded and its thread finished), or at once if Jev 1 is disabled or switched off. A day whose round has not started by 10:00 is recorded as missed and is not a session. A day already recorded is never re-run.",
+   "why": "Both books read the same scan, so the shared fills are fair; a late start would pair a newer snapshot with an older price.",
+   "enforced_in": "backend/jev2_book.py:maybe_decide, jev1_finished",
+   "config": "JEV2_BOOK.decide_at = '09:45'; JEV2_BOOK.decide_until = '10:00'",
+   "verify": "Activity log 'Jev 2 book: asking Jev about today's list' after 'Jev book: asking Jev'; days[date].status == 'missed' with the reason",
+   "source": "docs/research/prereg-jev2-book.md (When, and on what)",
+   "test": "backend/tests/test_jev2_book.py::test_maybe_decide_waits_for_jev1_captures_the_0945_scan_and_records_a_missed_day"
+  },
+  {
+   "id": "JEV2-08",
+   "area": "jev2",
+   "status": "active",
+   "rule": "Fills are Kite-only and shared with Jev 1 where it has one: a shared name reuses Jev 1's recorded entry when Jev 1 read the same scan (same ltp and VWAP in its recorded state), and its recorded exit at the square-off; otherwise Jev 2 fetches its own live price through jev_book.live_ltp, never the delayed feed. Each decision records fill_source and exit_source. Without a live Kite session the day is 'no_live_prices' and does not count; a decision that cannot be priced at either end is excluded.",
+   "why": "An exact pair on the shared names, without touching Jev 1's code path or timing (#151 applies as for Jev 1).",
+   "enforced_in": "backend/jev2_book.py:decide_round, close_round, same_scan",
+   "config": null,
+   "verify": "decisions[].fill_source / exit_source; entry equals Jev 1's entry for the same stock-day when 'jev1'",
+   "source": "docs/research/prereg-jev2-book.md (Fills)",
+   "test": "backend/tests/test_jev2_book.py::test_shared_names_reuse_jev1s_fills_and_the_rest_fetch_their_own; backend/tests/test_jev2_book.py::test_a_fill_without_a_live_price_is_excluded"
+  },
+  {
+   "id": "JEV2-09",
+   "area": "jev2",
+   "status": "active",
+   "rule": "Scoring: net_bp = sign × move_bp − the engine's round trip at ₹1,00,000 (14.27 bp, the same function as JEV-11) for a buy or short, 0 for a skip; the scanner's side (score_side) is scored the same way on the same prices, and on the shared names Jev 1's net_bp is read from its state for the paired Jev 2 − Jev 1 figure. The verdict's t is session-clustered (one cluster per session); the plain t is reported beside it. Kill rule: after 100 buy/short decisions, plain t below −2 switches the book off.",
+   "why": "The decisions of one session share that day's market; the plain t overstates the evidence.",
+   "enforced_in": "backend/jev2_book.py:close_round, clustered_t, summary, _apply_kill_rule",
+   "config": "JEV2_BOOK.notional = 100000.0; JEV2_BOOK.kill_after = 100; JEV2_BOOK.kill_t = -2.0",
+   "verify": "GET /api/jev2-book t_clustered, paired_t_clustered, paired_vs_jev1_t_clustered, round_trip_bp",
+   "source": "docs/research/prereg-jev2-book.md (Scoring; Kill rule)",
+   "test": "backend/tests/test_jev2_book.py::test_clustered_t_treats_a_session_as_one_cluster; backend/tests/test_jev2_book.py::test_kill_rule_switches_the_book_off; backend/tests/test_jev2_book.py::test_a_skip_costs_nothing_and_counts"
+  },
+  {
+   "id": "JEV2-10",
+   "area": "jev2",
+   "status": "pending",
+   "rule": "Verdict rule, family 'LLM judgment' at N_family = 3: evaluated once at 300 buy/short decisions or 60 counted sessions. To pass, mean net > 0 with session-clustered t ≥ 2.39, positive in both halves, and ahead of the scanner's side with paired clustered t ≥ 1.65. The Jev 2 − Jev 1 pair, the skip rate, the shared and extra means, per-question Brier scores and Jev 1's record cut by |p_up − 0.5| are reported, not gated. The code flags verdict_due; the call is made by hand. A pass authorises paper only (RES-27).",
+   "why": "The family bar set before any decision, one notch above Jev 1's 2.24 because the family now holds three tests.",
+   "enforced_in": "backend/jev2_book.py:summary",
+   "config": "jev2_book.DEFAULTS.verdict_after_decisions = 300; jev2_book.DEFAULTS.verdict_after_sessions = 60",
+   "verify": "Jev 2 page 'The verdict is now due'; GET /api/jev2-book t_clustered, halves, paired_t_clustered",
+   "source": "docs/research/prereg-jev2-book.md (Pass rule)",
+   "test": "backend/tests/test_jev2_book.py::test_summary_reports_briers_halves_and_the_jev1_band_cut"
   },
   {
    "id": "OBK-01",

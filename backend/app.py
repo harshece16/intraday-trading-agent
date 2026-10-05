@@ -549,6 +549,15 @@ def jev_book_summary():
     return jev_book.page()
 
 
+@app.get("/api/jev2-book")
+def jev2_book_summary():
+    """Jev 2 (README section 128): the blind, decomposed LLM judge's paper
+    decisions on the whole daily list, scored after costs against the
+    scanner's side and, on the shared names, against Jev 1. Read-only."""
+    import jev2_book
+    return jev2_book.page()
+
+
 @app.get("/api/momentum-book")
 def momentum_book_summary():
     """The paper momentum book (README section 83): holdings, NAV against its

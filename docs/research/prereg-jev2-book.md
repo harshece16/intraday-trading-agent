@@ -288,3 +288,29 @@ round on a copy of a recent day's list with the TypeSafe call mocked, one
 real call on a single synthetic state to confirm the response schema, and an
 independent review. The first live round is the first trading day after a
 backend restart that follows that review.
+
+---
+
+# Disclosure addendum — 2026-10-05, after stage 0 and before any Jev 2 decision
+
+While checking the Jev 2 page against a mock API during stage 0, the page's
+"Jev 1's record cut by |p_up − 0.5|" line (pass rule item 5) was computed
+from Jev 1's real state and read: **inside the 0.15 band, 13 closed trades,
++11.2 bp a trade; outside it, 32 trades, +7.6 bp.** Those two figures are
+hereby added to what had been seen. They were not used to change anything:
+the 0.65 / 0.35 band and every other number above stand as written. So that
+the same thing cannot happen daily, the page and `GET /api/jev2-book` carry
+that cut **only once the verdict is due** (`verdict_due`), as item 5 says;
+until then the field is null. The paper desk's Jev 1 card, read on the same
+mock, also showed Jev 1's scanner-side mean, **+7.6 bp a trade** over the same
+45 closed decisions, and that 14 of its 15 positions of 2026-10-05 were open;
+both are added to what had been seen.
+
+Stage 0 also read, for the shared-fill check, Jev 1's fifteen entry prices
+of 2026-10-05 (already listed above) and nothing else of its record.
+
+One wording made exact, before any decision: under Fills, "a shared name
+reuses Jev 1's recorded exit when there is one" means a shared name **whose
+entry was Jev 1's** (`fill_source: "jev1"`); a shared name filled at Jev 2's
+own entry also takes Jev 2's own exit, so no decision mixes the two books'
+ticks. That is what the code does (`close_round`).

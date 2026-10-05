@@ -29,6 +29,7 @@ import momentum_alerts
 import momentum_book
 import chaywanaprash
 import jev_book
+import jev2_book
 import database
 import telegram_alerts
 import fno_instruments
@@ -2388,6 +2389,12 @@ class TradingEngine:
             self.state.log("system", "Jev book: asking Jev about today's shortlist (paper test, README section 86)")
         if phase == "square_off_window" and jev_book.maybe_close(now):
             self.state.log("system", "Jev book: closed today's paper positions at the square-off")
+        # Jev 2 (README section 128) runs after Jev 1 in the same tick, in its own
+        # thread and its own try/except: a Jev 2 failure can't touch Jev 1 or the engine.
+        if phase == "open" and jev2_book.maybe_decide(self.state.scanner, now, holiday):
+            self.state.log("system", "Jev 2 book: asking Jev about today's list (paper test, README section 128)")
+        if phase == "square_off_window" and jev2_book.maybe_close(now):
+            self.state.log("system", "Jev 2 book: closed today's paper positions at the square-off")
 
         if phase == "closed":
             try:

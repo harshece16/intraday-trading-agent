@@ -23,7 +23,7 @@ function Today({ book }) {
       <small>{plural(t.entries ?? 0, "entry")} · {plural(t.open ?? 0, "open position")}{t.unrealized ? ` · open P&L ${money(t.unrealized)}` : ""}</small>
     </>;
   }
-  if (book.id === "jev") {
+  if (book.id === "jev" || book.id === "jev2") {
     return <>
       {plural(t.trades ?? 0, "paper position")} · {t.scored ? money(t.net) : "—"}
       <small>{t.scored ? `${t.net_bp >= 0 ? "+" : "−"}${Math.abs(t.net_bp).toFixed(1)} bp a position after costs` : "nothing scored yet"} · {plural(t.skips ?? 0, "skip")}</small>
@@ -44,7 +44,7 @@ function Today({ book }) {
 function Record({ book }) {
   const r = book.record || {};
   const h = r.headline || {};
-  const unit = book.id === "jev" ? "paper position" : book.id === "momentum" ? "delivery trade" : "closed trade";
+  const unit = book.id === "jev" || book.id === "jev2" ? "paper position" : book.id === "momentum" ? "delivery trade" : "closed trade";
   return <>
     {plural(r.trades ?? 0, unit)} · {r.net === null || r.net === undefined ? "—" : money(r.net)}
     <small>{h.label ? `${h.label}: ` : ""}<strong>{h.value}</strong>{h.note ? ` · ${h.note}` : ""}</small>
@@ -83,7 +83,7 @@ export default function PaperDesk() {
     <>
       <h2 className="h">Paper desk <span className="pill neutral" style={{ verticalAlign: "middle" }}>All paper</span></h2>
       <p className="sub">
-        Four paper books run side by side as equal experiments. Each trades in paper and logs every process step and
+        Five paper books run side by side as equal experiments. Each trades in paper and logs every process step and
         trade. <strong>None of them is the strategy</strong>: a book earns that only by passing the gate written down
         for it before its data was read, and nothing here moves real money. No intraday edge has been found
         (202 trials; looks L40 to L51), and the momentum book&apos;s backtest pass is narrow.{" "}

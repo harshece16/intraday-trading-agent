@@ -40,6 +40,7 @@ One Python process runs everything except the evening job.
 | `scanner` | `request_scan()` | One scan; single-flight | Scan ends |
 | Kite ticker | `StopWatcher.start()` | Receives ticks for held symbols | Socket closes |
 | `jev-book` | `jev_book.maybe_decide` | One decision round | Round ends |
+| `jev2-book` | `jev2_book.maybe_decide` | One Jev 2 round, started once Jev 1's has ended | Round ends |
 | `research-desk` | `research_desk.request_run` | One run of briefs | Run ends |
 | Telegram worker | `telegram_alerts` | Sends queued alerts, at most 20 a minute | Process exits |
 | **Evening job** (child process) | `momentum_book.maybe_start_evening_job` | `momentum_book.py daily` | Job ends |
@@ -83,7 +84,7 @@ duration apart.
 8. Pre-market scan on the first tick of each date. On a trading day from 08:45 until the open, one more read fixes the day's list (`should_fix_list`), tried again after five minutes if it fails. Each read first logs an error if the year has no NSE holiday list; start-up logs the same.
 9. `scanner.due()` then `request_scan()`: every 5 minutes while open, every 60 minutes while closed on a trading day, once on a weekend or holiday (#259). An off-day scan updates `state.market`/`state.scanner` but leaves the watchlist alone, and the pre-market read doesn't seed it then.
 10. If open or in the square-off window: `depth_sampler.sample_windows`.
-11. If open: `jev_book.maybe_decide`. If in the square-off window: `jev_book.maybe_close`.
+11. If open: `jev_book.maybe_decide`, then `jev2_book.maybe_decide` (captures the scan at the first tick from 09:45, starts once Jev 1's round has ended, by 10:00). If in the square-off window: `jev_book.maybe_close`, then `jev2_book.maybe_close` (shared names reuse Jev 1's exit). Each Jev 2 hook is in its own try/except and never raises.
 12. The phase branch, below.
 13. `_update_review_shadows()`, at most once every 60 s.
 14. Stamp `state.last_update_ts`.

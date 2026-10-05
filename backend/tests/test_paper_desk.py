@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import database  # noqa: E402
 import jev_book  # noqa: E402
+import jev2_book  # noqa: E402
 import momentum_book  # noqa: E402
 import paper_desk  # noqa: E402
 
@@ -41,6 +42,7 @@ def files(tmp_path, monkeypatch):
     """Every store the desk reads, pointed at tmp_path: the journal (conftest),
     the Jev state, the momentum state (conftest) and the momentum job log."""
     monkeypatch.setattr(jev_book, "STATE_PATH", str(tmp_path / "jev_book_state.json"))
+    monkeypatch.setattr(jev2_book, "STATE_PATH", str(tmp_path / "jev2_book_state.json"))
     monkeypatch.setattr(momentum_book, "LOG_PATH", str(tmp_path / "momentum_book.log"))
     database._conn()                       # creates the throwaway journal's schema
     return tmp_path
@@ -119,14 +121,14 @@ def test_log_merges_every_book_newest_first_and_tags_each_line(files):
     seed(files)
     log = paper_desk.process_log(DAY)
     books = {ln["book"] for ln in log["items"]}
-    assert books == {"intraday", "jev", "rule_lab", "momentum"}
+    assert books == {"intraday", "jev", "rule_lab", "momentum"}      # no Jev 2 state seeded: no jev2 lines
     ts = [ln["ts"] for ln in log["items"]]
     assert ts == sorted(ts, reverse=True)
     for ln in log["items"]:
         assert ln["book"] in paper_desk.BOOKS and ln["kind"] and ln["time"].count(":") == 2
     assert log["counts"]["intraday"] >= 3 and log["counts"]["jev"] >= 3
     assert log["counts"]["rule_lab"] == 4 and log["counts"]["momentum"] >= 5   # session, 2 entry bars, 1 exit bar
-    assert log["books"] == ["intraday", "jev", "rule_lab", "momentum"]
+    assert log["books"] == ["intraday", "jev", "rule_lab", "momentum"] and log["counts"]["jev2"] == 0
 
 
 def test_log_is_scoped_to_the_ist_day(files):
@@ -282,25 +284,25 @@ def test_jev_card_states(files, monkeypatch):
 def test_rule_lab_card(files, monkeypatch):
     seed(files)
     monkeypatch.setattr(paper_desk.time, "time", lambda: at(DAY, "11:00"))
-    card = paper_desk.cards(now=now_at(DAY, "11:00"))["books"][2]
+    card = paper_desk.cards(now=now_at(DAY, "11:00"))["books"][3]
     assert card["status"]["state"] == "running" and "25 stocks" in card["status"]["detail"]
     assert card["today"] == {"trades": 3, "opened": 4, "open": 1, "net": pytest.approx(186.8, abs=0.01)}
     assert card["record"]["trades"] == 3 and card["record"]["sessions"] == 1
     assert card["record"]["headline"]["value"].startswith("157 · 0 candidate")
     assert card["next"]["text"] == "after 39 more lab sessions"
     monkeypatch.setattr(paper_desk.time, "time", lambda: at(DAY, "11:00") + 3600)
-    assert paper_desk.cards(now=now_at(DAY, "12:00"))["books"][2]["status"]["label"] == "Session recorded"
+    assert paper_desk.cards(now=now_at(DAY, "12:00"))["books"][3]["status"]["label"] == "Session recorded"
 
 
 def test_momentum_card(files):
     seed(files)
-    card = paper_desk.cards(now=now_at(DAY, "21:00"))["books"][3]
+    card = paper_desk.cards(now=now_at(DAY, "21:00"))["books"][4]
     assert card["status"]["label"] == "Today's session processed"
     assert card["today"] == {"trades": 2, "net": pytest.approx(-224.98, abs=0.01), "note": "costs and slippage paid"}
     assert card["record"]["rebalances"] == 1 and card["record"]["headline"]["value"] == "no month complete yet"
     assert card["next"]["label"] == "Next rebalance" and card["next"]["text"].endswith("close")
     os.remove(momentum_book.STATE_PATH)
-    fresh = paper_desk.cards(now=now_at(DAY, "21:00"))["books"][3]
+    fresh = paper_desk.cards(now=now_at(DAY, "21:00"))["books"][4]
     assert fresh["status"]["label"] == "Not started"
 
 
