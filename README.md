@@ -4605,7 +4605,7 @@ python backtester.py --no-costs   # frictionless, for reference only
 - The dashboard builds and lints; the Rule lab page gains a "Cohort 2b" section with its α and its start date. **Not checked in a browser**: the page was not opened against a live API in this session.
 - **Not checked live:** the rules start with the first session after the backend restart (after 15:45 IST); cohort 2b's first lab session is that one.
 
-Rules: RES-36 and RES-37 changed (family 157; L55's family fixed at 107). Files: `backend/rule_lab_patterns.py` (new), `backend/rule_lab.py`, `backend/research/rule_lab_screen.py`, `backend/tests/test_rule_lab_patterns.py` (new), `backend/tests/test_rule_lab.py`, `frontend/src/pages/RuleLab.jsx`, `docs/research/prereg-rule-lab.md` (amendment 7), `docs/research/trials.md`, `docs/architecture/` (HLD, LLD, rules).
+Rules: RES-36 and RES-37 changed (family 157; L55's family fixed at 107). Files: `backend/rule_lab_patterns.py` (new), `backend/rule_lab.py`, `backend/research/rule_lab_screen.py`, `backend/tests/test_rule_lab_patterns.py` (new), `backend/tests/test_rule_lab.py`, `backend/paper_desk.py` (card count), `frontend/src/pages/RuleLab.jsx`, `docs/research/prereg-rule-lab.md` (amendment 7), `docs/research/trials.md`, `docs/architecture/` (HLD, LLD, rules).
 
 ### 123. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
 
