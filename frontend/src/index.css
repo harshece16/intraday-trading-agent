@@ -147,7 +147,7 @@
   .backlink:hover { color: var(--ink); }
   a.backlink { text-decoration: none; }
 
-  /* The intraday pages' banner: a paper record, one of four paper books (README sections 116, 125). */
+  /* The intraday pages' banner: a paper record, one of five paper books (README sections 116, 125, 128). */
   .record-banner { margin: 0 0 24px; padding: 12px 16px; border-radius: 10px; background: var(--wait-bg); box-shadow: inset 4px 0 0 var(--wait); font-size: 14px; line-height: 1.5; }
   .record-banner p { margin: 0; max-width: 90ch; }
   .record-banner a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
@@ -183,6 +183,7 @@
   .book-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; background: var(--sunken); color: var(--ink-2); }
   .book-tag.book-intraday { background: var(--focus-bg); color: var(--focus); }
   .book-tag.book-jev { background: var(--book-bg); color: var(--book); }
+  .book-tag.book-jev2 { background: var(--book-bg); color: var(--book); outline: 1px solid var(--book); outline-offset: -1px; }
   .book-tag.book-rule_lab { background: var(--wait-bg); color: var(--wait); }
   .book-tag.book-momentum { background: var(--long-bg); color: var(--long); }
   .plog-kind { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }

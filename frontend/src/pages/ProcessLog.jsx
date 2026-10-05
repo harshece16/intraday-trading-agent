@@ -7,7 +7,7 @@ import { BOOK_ORDER, BOOK_TEXT, kindLabel } from "../processLog";
 import { istDay } from "../format";
 
 // One unified log (README section 125): every process step and trade from all
-// four paper books on one IST day, newest first, filterable by book and kind.
+// five paper books on one IST day, newest first, filterable by book and kind.
 // Read-only: it only GETs /api/process-log while the tab is visible.
 export default function ProcessLog() {
   const [params, setParams] = useSearchParams();
@@ -37,7 +37,7 @@ export default function ProcessLog() {
     <>
       <h2 className="h">Process log</h2>
       <p className="sub">
-        Everything the four paper books did on one day, merged and newest first: the intraday engine&apos;s scans,
+        Everything the five paper books did on one day, merged and newest first: the intraday engine&apos;s scans,
         setups, entries, exits, review cards and square-off; the Jev book&apos;s rounds and decisions; the rule
         lab&apos;s sessions and the trades it opened and closed (grouped by bar, each expandable); the momentum
         book&apos;s evening-job runs, trades, rebalances and alerts. Times are IST. Money is shown where there is

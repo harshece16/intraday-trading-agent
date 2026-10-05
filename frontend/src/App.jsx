@@ -22,6 +22,7 @@ const Journal = lazy(() => import("./pages/Journal"));
 const Trades = lazy(() => import("./pages/Trades"));
 const MomentumBook = lazy(() => import("./pages/MomentumBook"));
 const JevBook = lazy(() => import("./pages/JevBook"));
+const Jev2Book = lazy(() => import("./pages/Jev2Book"));
 const Kronos = lazy(() => import("./pages/Kronos"));
 const RuleLab = lazy(() => import("./pages/RuleLab"));
 const PaperDesk = lazy(() => import("./pages/PaperDesk"));
@@ -62,6 +63,7 @@ const DAY_PLAN = <Page intraday><DayPlan /></Page>;
 const TECHNICAL = <Page intraday><TechnicalAnalysis /></Page>;
 const JOURNAL = <Page intraday><Journal /></Page>;
 const JEV = <Page intraday><JevBook /></Page>;
+const JEV2 = <Page intraday><Jev2Book /></Page>;
 const KRONOS = <Page intraday><Kronos /></Page>;
 const RULE_LAB = <Page intraday><RuleLab /></Page>;
 const DIAGNOSTIC = <Page><PortfolioDiagnostic /></Page>;
@@ -70,7 +72,7 @@ function AppRoutes({ state }) {
   if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
-      {/* The paper desk is the front page: four paper books as equal experiments, and one
+      {/* The paper desk is the front page: five paper books as equal experiments, and one
           process log (README section 125). No book is the strategy. */}
       <Route path="/" element={DESK} />
       <Route path="/paper-desk" element={<Redirect to="/" />} />
@@ -87,6 +89,7 @@ function AppRoutes({ state }) {
       <Route path="/trades" element={<Page intraday><Trades state={state} /></Page>} />
       <Route path="/journal" element={JOURNAL} />
       <Route path="/jev-book" element={JEV} />
+      <Route path="/jev2-book" element={JEV2} />
       <Route path="/kronos" element={KRONOS} />
       <Route path="/rule-lab" element={RULE_LAB} />
       <Route path="/portfolio" element={<Page><Portfolio state={state} /></Page>} />

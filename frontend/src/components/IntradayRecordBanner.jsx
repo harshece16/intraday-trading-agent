@@ -25,7 +25,7 @@ export default function IntradayRecordBanner() {
         <strong>Intraday paper record.</strong> No intraday edge was found: 202 strategy trials and research
         looks L40 to L51 found nothing that pays the ~16.6 bp round trip. The intraday engine keeps running in
         paper as a record, and takes its trades automatically: the confidence gate applies in Live only.
-        {" "}It is one of four paper books on the <Link to="/">paper desk</Link>, all equal experiments; none is
+        {" "}It is one of five paper books on the <Link to="/">paper desk</Link>, all equal experiments; none is
         the strategy until it passes its gate.
       </p>
       <p className="record-banner-src">

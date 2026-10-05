@@ -1,4 +1,4 @@
-"""The paper desk (README section 125): the four paper books as equal
+"""The paper desk (README section 125): the five paper books as equal
 experiments, and one process log that merges every step and trade they
 record.
 
@@ -32,15 +32,18 @@ import config
 import database
 import holidays
 import jev_book
+import jev2_book
 import momentum_book
 import rule_lab
 
 logger = logging.getLogger("trading_bot")
 IST = ZoneInfo("Asia/Kolkata")
 
-BOOKS = ("intraday", "jev", "rule_lab", "momentum")
-BOOK_NAMES = {"intraday": "Intraday engine", "jev": "Jev book", "rule_lab": "Rule lab", "momentum": "Momentum book"}
-BOOK_PAGES = {"intraday": "/intraday", "jev": "/jev-book", "rule_lab": "/rule-lab", "momentum": "/momentum-book"}
+BOOKS = ("intraday", "jev", "jev2", "rule_lab", "momentum")
+BOOK_NAMES = {"intraday": "Intraday engine", "jev": "Jev book", "jev2": "Jev 2 book", "rule_lab": "Rule lab",
+              "momentum": "Momentum book"}
+BOOK_PAGES = {"intraday": "/intraday", "jev": "/jev-book", "jev2": "/jev2-book", "rule_lab": "/rule-lab",
+              "momentum": "/momentum-book"}
 
 # What each book is in one line, and the one line that says what it must pass
 # before any real money. The gates are the project's existing rules, unchanged
@@ -52,6 +55,9 @@ ABOUT = {
                 "paper entry that clears the other rules (confidence gate off in paper since 2026-10-01).",
     "jev": "Each trading day at 09:45, TypeSafe Jev (an LLM judge) says buy, short or skip for each stock on the "
            "scanner's shortlist; paper positions fill at Kite's live price and close at the 15:08 square-off.",
+    "jev2": "Each trading day after Jev 1's round, Jev is shown a blind state (no scanner side, score or reasons) for "
+            "all 25 names on the day's list and asked seven narrow yes/no questions; a frozen rule combines them into "
+            "buy, short or skip, with a skip band; fills shared with Jev 1 on the common 15 (README section 128).",
     "rule_lab": "157 single rules, each its own shadow paper book on the day's list: a rule that fires on a finished "
                 "5-minute bar trades ₹50,000 for 30 minutes (or to a 3R target), paying full costs.",
     "momentum": "Holds the 15 of NSE's 200 most-traded stocks with the strongest 6- and 12-month momentum, in "
@@ -62,6 +68,8 @@ GATES = {
                 "holds every score at 25 or less, so no automatic live entry can pass. No intraday edge has been found.",
     "jev": "Trial 123's verdict after 300 buy/short trades or 60 sessions: positive after costs with t ≥ 2.24 in both "
            "halves, and ahead of the scanner's side. A pass authorises a paper book only (RES-27).",
+    "jev2": "Its own verdict after 300 buy/short trades or 60 sessions: positive after costs with a session-clustered "
+            "t ≥ 2.39 (N_family = 3), both halves positive, and ahead of the scanner's side. Paper only (RES-27).",
     "rule_lab": "Screen after lab session 40 (Romano–Wolf over every rule), confirmation on the next 40 sessions, then a "
                 "proposal that spends a strategy trial; live needs your yes and the engine's live gate (RES-36).",
     "momentum": "Months of paper results agreeing with the backtest, the band not breached (from month 6, floor −14.8%), "
@@ -175,6 +183,10 @@ def _jev_state():
     return jev_book.load_state(jev_book.STATE_PATH)
 
 
+def _jev2_state():
+    return jev2_book.load_state(jev2_book.STATE_PATH)
+
+
 def _momentum_state():
     # The path is passed, not left to the default bound at import: tests and
     # the mock API point momentum_book.STATE_PATH elsewhere (as conftest does).
@@ -226,7 +238,9 @@ def _engine_lines(start, end, rows_activity, rows_trades):
         book = ACTIVITY_KIND_BOOK.get(kind)
         msg = a.get("message") or ""
         if book is None:
-            if msg.startswith("Jev book:"):
+            if msg.startswith("Jev 2 book:"):
+                book, kind = "jev2", "round"
+            elif msg.startswith("Jev book:"):
                 book, kind = "jev", "round"
             elif msg.startswith("Momentum book:"):
                 book, kind = "momentum", "job"
@@ -306,6 +320,73 @@ def _jev_lines(day, state):
             if mean is not None:
                 msg += f", {mean:+.1f} bp a position after costs"
             out.append(_line(max(exits) + 0.5, "jev", "round", msg,
+                             money=(sum(nets) / 1e4 * notional) if (nets and notional) else None))
+    return out
+
+
+def _jev2_lines(day, state):
+    """Jev 2's lines (README section 128): the round, one decision line per
+    stock with the combined probability and the fill's source, the scored
+    closes, and the round's close."""
+    out = []
+    d = (state.get("days") or {}).get(day)
+    if not d:
+        return out
+    conf = jev2_book.cfg()
+    notional = float(conf.get("notional") or 0)
+    status = d.get("status")
+    decisions = d.get("decisions") or []
+    if status in ("no_live_prices", "jev_unavailable", "missed") and not decisions:
+        ts = _ts_of_iso(f"{day}T{conf.get('decide_at', '09:45')}:00") or day_bounds(day)[0]
+        why = {"no_live_prices": "no live prices", "jev_unavailable": "Jev unavailable", "missed": "missed"}[status]
+        out.append(_line(ts, "jev2", "round", f"Round skipped: {why}. {d.get('error') or ''}".strip(), level="warn"))
+        return out
+    asked = [x for x in decisions if x.get("asked_at")]
+    if asked:
+        first = min(_ts_of_iso(x["asked_at"]) for x in asked)
+        out.append(_line(first, "jev2", "round", f"Round started: asking Jev 2's seven questions about {len(decisions)} "
+                                                 f"stock{'s' if len(decisions) != 1 else ''} on the day's list"))
+    for x in decisions:
+        ts = _ts_of_iso(x.get("asked_at"))
+        if ts is None:
+            continue
+        act = x.get("action") or "—"
+        parts = [f"Jev 2 says {act}"]
+        if x.get("p_combined") is not None:
+            parts.append(f"combined P(up) {x['p_combined']:.2f}")
+        if x.get("scanner_side"):
+            parts.append(f"scanner {str(x['scanner_side']).lower()}")
+        if x.get("entry") is not None:
+            parts.append(f"paper entry @ {float(x['entry']):,.2f}"
+                         + (" (Jev 1's fill)" if x.get("fill_source") == "jev1" else ""))
+        elif x.get("excluded"):
+            parts.append(x["excluded"])
+        out.append(_line(ts, "jev2", "decision", " · ".join(parts), symbol=x.get("symbol")))
+        xt = _ts_of_iso(x.get("exit_at"))
+        if xt is not None and x.get("net_bp") is not None and act in ("buy", "short"):
+            net_bp = float(x["net_bp"])
+            money = net_bp / 1e4 * notional if notional else None
+            out.append(_line(xt, "jev2", "trade", f"Closed {act} @ {float(x.get('exit') or 0):,.2f} · "
+                                                  f"{net_bp:+.1f} bp after costs"
+                                                  + (f" (≈ on ₹{notional:,.0f})" if notional else ""),
+                             symbol=x.get("symbol"), money=money, level="trade"))
+    intr = d.get("interrupted")
+    if intr and intr.get("at"):
+        ts = _ts_of_iso(intr["at"])
+        if ts is not None:
+            why = "Kite stopped giving live prices" if intr.get("reason") == "no_live_prices" else "Jev unavailable"
+            out.append(_line(ts, "jev2", "round", f"Round stopped after {intr.get('asked')} stocks: {why}", level="warn"))
+    if d.get("closed") and decisions:
+        exits = [_ts_of_iso(x.get("exit_at")) for x in decisions if x.get("exit_at")]
+        if exits:
+            traded = [x for x in decisions if x.get("net_bp") is not None and x.get("action") in ("buy", "short")]
+            nets = [float(x["net_bp"]) for x in traded]
+            skips = sum(1 for x in decisions if x.get("action") == "skip")
+            msg = (f"Round closed at the square-off: {len(traded)} position{'s' if len(traded) != 1 else ''} scored, "
+                   f"{skips} skipped")
+            if nets:
+                msg += f", {st.mean(nets):+.1f} bp a position after costs"
+            out.append(_line(max(exits) + 0.5, "jev2", "round", msg,
                              money=(sum(nets) / 1e4 * notional) if (nets and notional) else None))
     return out
 
@@ -408,6 +489,7 @@ def process_log(day=None, book=None, kind=None, limit=400):
     lines = []
     lines += _safe(lambda: _engine_lines(start, end, _activity_rows(start, end), _trade_rows(start, end)), [])
     lines += _safe(lambda: _jev_lines(day, _jev_state()), [])
+    lines += _safe(lambda: _jev2_lines(day, _jev2_state()), [])
     lines += _safe(lambda: _lab_lines(day, _lab_rows(start, end), _lab_session_row(day)), [])
     lines += _safe(lambda: _momentum_lines(day, _momentum_state(), _job_log_lines(day)), [])
     lines = [ln for ln in lines if ln["ts"] is not None and start <= ln["ts"] < end + 1]
@@ -535,6 +617,70 @@ def _jev_card(now, day):
     }
 
 
+def _jev2_card(now, day):
+    state = _safe(_jev2_state, {"days": {}, "status": None})
+    summary = _safe(lambda: jev2_book.summary(jev2_book.STATE_PATH), {})
+    conf = jev2_book.cfg()
+    notional = float(conf.get("notional") or 0)
+    d = (state.get("days") or {}).get(day) or {}
+    decisions = d.get("decisions") or []
+    traded = [x for x in decisions if x.get("action") in ("buy", "short") and x.get("entry") is not None]
+    scored = [float(x["net_bp"]) for x in traded if x.get("net_bp") is not None]
+    skips = sum(1 for x in decisions if x.get("action") == "skip")
+    session = _is_session(now.date())
+    hhmm = now.strftime("%H:%M")
+    at = conf.get("decide_at", "09:45")
+    if state.get("status") == "switched_off":
+        status = _status("off", "Switched off", state.get("status_reason"))
+    elif not conf.get("enabled"):
+        status = _status("off", "Disabled in config", None)
+    elif not summary.get("key_stored"):
+        status = _status("waiting", "No TypeSafe key stored", "No round can run until a key is stored")
+    elif d.get("status") == "no_live_prices":
+        status = _status("skipped", "Skipped today: no live prices", d.get("error"))
+    elif d.get("status") == "jev_unavailable":
+        status = _status("skipped", "Skipped today: Jev unavailable", d.get("error"))
+    elif d.get("status") == "missed":
+        status = _status("skipped", "Missed today", d.get("error"))
+    elif d.get("status") in ("open", "deciding"):
+        status = _status("running", f"Round open until {config.SQUARE_OFF_TIME}",
+                         f"{len(traded)} paper position{'s' if len(traded) != 1 else ''}, {skips} skipped")
+    elif d.get("closed"):
+        status = _status("waiting", "Closed today", f"{len(scored)} position{'s' if len(scored) != 1 else ''} scored, "
+                                                    f"{skips} skipped")
+    elif session and hhmm < at:
+        status = _status("waiting", f"Round after Jev 1's, from {at}", "Needs Kite's live prices and today's list")
+    elif session:
+        status = _status("waiting", "No round today", "The round did not start (no list, or the engine was down)")
+    else:
+        status = _status("waiting", "No session today", None)
+    if d.get("status") in ("open", "deciding"):
+        nxt = {"label": "Square-off", "when": f"{day}T{config.SQUARE_OFF_TIME}", "text": f"today {config.SQUARE_OFF_TIME}"}
+    else:
+        nd = now.date() if (session and hhmm < at and not d) else _next_session(now.date())
+        nxt = {"label": "Next round", "when": f"{nd.isoformat()}T{at}", "text": f"{nd.strftime('%a %-d %b')}, after {at}"}
+    mean = summary.get("mean_net_bp")
+    t = summary.get("t_clustered")
+    note = (f"clustered t {t:.2f} · scanner's side {summary.get('scanner_mean_net_bp'):+.1f} bp"
+            if (t is not None and summary.get("scanner_mean_net_bp") is not None)
+            else f"{summary.get('sessions_closed', 0)} sessions scored")
+    if summary.get("paired_vs_jev1_bp") is not None:
+        note += f" · vs Jev 1 {summary['paired_vs_jev1_bp']:+.1f} bp"
+    return {
+        "id": "jev2", "name": BOOK_NAMES["jev2"], "about": ABOUT["jev2"], "page": BOOK_PAGES["jev2"], "mode": "paper",
+        "status": status,
+        "today": {"trades": len(traded), "scored": len(scored),
+                  "net": _rs(sum(scored) / 1e4 * notional) if (scored and notional) else None,
+                  "net_bp": _rs(st.mean(scored)) if scored else None, "skips": skips},
+        "record": {"trades": summary.get("traded", 0), "sessions": summary.get("sessions_closed", 0),
+                   "net": _rs(mean / 1e4 * notional * summary.get("traded", 0)) if (mean is not None and notional) else None,
+                   "since": None,
+                   "headline": {"label": "Net per trade", "value": (f"{mean:+.1f} bp" if mean is not None else "—"),
+                                "note": note}},
+        "next": nxt, "gate": GATES["jev2"],
+    }
+
+
 def _rule_lab_card(now, day):
     page = _safe(rule_lab.page, {"rules": [], "sessions": 0, "screen_at": rule_lab.SCREEN_SESSIONS})
     start, end = day_bounds(day)
@@ -640,12 +786,13 @@ def cards(now=None, engine=None):
     books = [
         _safe(lambda: _intraday_card(now, engine, day), _fallback("intraday")),
         _safe(lambda: _jev_card(now, day), _fallback("jev")),
+        _safe(lambda: _jev2_card(now, day), _fallback("jev2")),
         _safe(lambda: _rule_lab_card(now, day), _fallback("rule_lab")),
         _safe(lambda: _momentum_card(now, day), _fallback("momentum")),
     ]
     return {"as_of": now.isoformat(timespec="seconds"), "day": day, "session": _is_session(now.date()),
             "paper_mode": (engine or {}).get("paper_mode", True), "books": books,
-            "note": "Four paper books, each an equal experiment. None is the strategy until it passes its own gate; "
+            "note": "Five paper books, each an equal experiment. None is the strategy until it passes its own gate; "
                     "no real-money order has ever been placed."}
 
 

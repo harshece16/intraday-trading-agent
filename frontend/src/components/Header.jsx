@@ -9,11 +9,12 @@ import KiteConnectButton from "./KiteConnectButton";
 import { disable as disableAlerts, enable as enableAlerts, enabled as alertsEnabled, supported as alertsSupported } from "../notifications";
 
 // Grouped by what each page is for. The paper desk leads (README section
-// 125), then the four paper books as peers, then the intraday engine's own
+// 125), then the five paper books as peers, then the intraday engine's own
 // pages, then research, then the Kite account. No book is "the strategy".
 const NAV = [
   ["Paper desk", [["/", "Paper desk"], ["/process-log", "Process log"]]],
-  ["Paper books", [["/intraday", "Intraday engine"], ["/jev-book", "Jev book"], ["/rule-lab", "Rule lab"],
+  ["Paper books", [["/intraday", "Intraday engine"], ["/jev-book", "Jev book"], ["/jev2-book", "Jev 2 book"],
+    ["/rule-lab", "Rule lab"],
     ["/momentum-book", "Momentum book"]]],
   ["Intraday engine pages", [["/premarket", "Pre-market"], ["/day-plan", "Day plan"],
     ["/screener", "Screener", "picks"], ["/technical-analysis", "Technical analysis"], ["/trades", "Trades"],

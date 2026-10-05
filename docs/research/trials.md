@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-09-30: **202** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Ranker (FAIL), 123 Jev book (forward, pending), 124–125 overnight ETF (FAIL), 126 A′ (survives narrowly, smaller), 127 wide book (FAIL), 128–202 forecast × candlestick combinations (FAIL, 0 of 75)
+## Strategy trials — count as of 2026-09-30: **202** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Ranker (FAIL), 123 Jev book (forward, pending), 124–125 overnight ETF (FAIL), 126 A′ (survives narrowly, smaller), 127 wide book (FAIL), 128–202 forecast × candlestick combinations (FAIL, 0 of 75), 203 Jev 2 (forward, pending; registered 2026-10-05, not yet spent)
 
 | n | Label |
 | --- | --- |
@@ -154,6 +154,7 @@ backtest look better than it is.
 | 121 | **Sahab Ranker C1 — IC-weighted composite of 14 literature inputs, walk-forward, 3i book** · `prereg-ranker-engine.md` · code `e31114c` · **FAIL** (family N = 2): net excess +0.08%/month, t 0.23; loses to the momentum rule by 0.77%/month (paired t −1.90); unseen ranks 201–400 t 0.80 · `results-ranker-engine.md` |
 | 122 | **Sahab Ranker C2 — ridge regression, same inputs** · **FAIL**: +0.14%/month, t 0.41; loses to momentum by 0.71%/month (paired t −1.77); unseen t 0.78 · `results-ranker-engine.md` |
 | 123 | **The Jev book** — TypeSafe Jev (LLM judge) on the daily shortlist, forward paper test · `prereg-jev-book.md` · **pending** (verdict after 300 trades or 60 sessions; first round 2026-09-28) |
+| 203 | **Jev 2** — the Jev judge on a blind state, seven narrow Nouls combined by a frozen rule with a skip band, all 25 names, fills shared with Jev 1, forward paper test beside trial 123 · `prereg-jev2-book.md` (family "LLM judgment", N_family = 3, clustered t ≥ 2.39) · **pending** — no trial is spent until the verdict (after 300 buy/short decisions or 60 sessions; first round on the first session after the restart that follows its review) |
 | 124 | **Overnight ETF H1 — hold NIFTYBEES 15:24 → 09:19** · `prereg-overnight-etf.md` · code `b192b90` · **FAIL** (family N = 2): gross +2.41 bp, net −6.42 bp/night, t −5.88 over 2,655 nights; negative every year; SETFNIF50 −4.35 bp (t −2.71) · `results-overnight-etf.md` |
 | 125 | **Overnight ETF H2 — nightly ridge go/no-go** · **FAIL**: gated book −0.09 bp/night (t −0.15), held 8.8% of nights; beats always-hold only by staying out · `results-overnight-etf.md` |
 | 126 | **Universe width A′ — trial 120's rule on the repaired price panel (#175, #177, #178) with honest fills** (band locks, no-trade days, trade-for-trade pricing) · `prereg-universe-width.md` with amendments 1–4 · code `3d210ce` · **SURVIVES trial 120's six criteria, narrowly and with a smaller edge**: net excess +0.71%/month, **t 2.51** (gate 2.394), DSR 0.952 at N = 3, both halves and last three years positive, CAGR 20.6% vs 11.9%, 516 round trips. Recorded trial 120 was +0.82%, t 2.91, CAGR 22.3%. **At the family of 10 now counted it would not clear** (bound 2.807, DSR 0.825) — information, written before the run. **The pass is narrow: about 0.02 points more slippage a side would fail the Deflated Sharpe criterion.** Measures the panel and the fills together; not independent of trial 120 · `results-universe-width.md` |
