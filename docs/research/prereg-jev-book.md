@@ -433,3 +433,67 @@ in paper is now "take the checklist's own entries", recorded in the engine's
 journal and not part of this test.
 
 **Live from 2026-10-01 at 12:18 IST.** The owner asked for the deploy during the session, and the backend was restarted then, in paper, with no position open. Jev's round for 2026-10-01 had already been recorded at 09:45 as `no_live_prices` (Kite had no live session when the round was due), so no Jev decision of that day falls on either side of the change. The first full session under it is 2026-10-02.
+
+---
+
+# Clarification 12 — 2026-10-05, written before the code exists
+
+**What had been seen:** three closed rounds (2026-09-28 to 2026-09-30, 15
+decisions each), summarised on the page as **+8.6 bp a decision, t 0.61**.
+2026-10-01 was recorded as "no live prices". The round of 2026-10-05 was open
+when this was written; no figure of it was read. The owner, on seeing those
+three rounds, asked for the 60-session test to be **cut to 15 sessions**. That
+was declined: a test's size is fixed before it starts, and shortening it after
+a look at the running score is the kind of early stop the pre-registration
+exists to prevent. This clarification adds what was offered instead.
+
+**The change: an interim read, information only.** From **15 closed
+sessions**, and again from **30** and **45**, the page and `GET /api/jev-book`
+(`interim`) show a read of the record so far:
+
+- the statistics the pass rule will use, on the same closed decisions the
+  verdict will use: mean net bp a buy/short decision and its t (as
+  `summary()` computes it), hit rate, the paired difference against the
+  scanner's side and its t, the Brier score, the number of decisions and of
+  counted sessions;
+- beside the pass rule's t, a **session-clustered t** of the same mean. The
+  decisions of one session share that day's market, so the pass rule's t
+  treats fifteen partly-shared outcomes as fifteen independent ones; the
+  clustered t (cluster-robust standard error, one cluster per session) does
+  not. It is shown for honesty; the pass rule's t stays the pass rule's t;
+- **what t a test of the full size could reach if the current mean and
+  spread held:** the present t scaled by the square root of the ratio of the
+  verdict's decision count to the present one, where the verdict's count is
+  300 decisions or the present rate of decisions a session carried to 60
+  sessions, whichever is reached first; the clustered t scaled likewise by
+  sessions;
+- **the minimum detectable mean at t = 2**: the smallest mean net bp that the
+  remaining sessions alone could call at t = 2 with the present spread
+  (2 × sd / √(remaining decisions)), the same for the full test, and the mean
+  the remaining decisions would need for the cumulative t to end at 2 given
+  what has been banked;
+- how many sessions and decisions remain to the verdict, and which of the
+  two counts is on course to arrive first.
+
+**What this changes in the test: nothing.**
+
+- The pass rule (mean > 0 with t ≥ 2.24, positive in both halves, beats the
+  scanner with paired t ≥ 1.65), the kill rule (after 100 decisions, t below
+  −2), the verdict's timing (300 buy/short decisions or 60 sessions,
+  whichever comes first) and the family (N_family = 2) are unchanged.
+- The interim read is **never used to stop, extend or alter the book**. No
+  code path reads it; nothing acts on it; it is not a verdict and not a gate.
+  The verdict is still made once, by hand, at the pre-registered size.
+- It is computed on request from the state file, with the same functions the
+  summary uses, and writes nothing. It reaches no score, no kill rule and no
+  verdict.
+- Jev is shown nothing new. The snapshot, the questions, the fills from Kite
+  only, the cost and the baseline are unchanged.
+
+**How the record is read:** an interim read is the same kind of thing as the
+live mark of clarification 4: a figure for the reader, not for the test. The
+pass rule's t will be read at the verdict and nowhere else. A reader who
+finds the interim read persuasive in either direction should remember that
+the t it shows at 15 sessions is, by the arithmetic above, about half of what
+the same mean would show at 60, and that the projection assumes the mean
+holds, which is exactly what the test exists to find out.
