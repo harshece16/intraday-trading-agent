@@ -52,7 +52,7 @@ ABOUT = {
                 "paper entry that clears the other rules (confidence gate off in paper since 2026-10-01).",
     "jev": "Each trading day at 09:45, TypeSafe Jev (an LLM judge) says buy, short or skip for each stock on the "
            "scanner's shortlist; paper positions fill at Kite's live price and close at the 15:08 square-off.",
-    "rule_lab": "107 single rules, each its own shadow paper book on the day's list: a rule that fires on a finished "
+    "rule_lab": "157 single rules, each its own shadow paper book on the day's list: a rule that fires on a finished "
                 "5-minute bar trades ₹50,000 for 30 minutes (or to a 3R target), paying full costs.",
     "momentum": "Holds the 15 of NSE's 200 most-traded stocks with the strongest 6- and 12-month momentum, in "
                 "delivery, with ₹10 lakh of paper capital, rebalanced at the close of each month's first session.",
