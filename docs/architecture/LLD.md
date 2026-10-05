@@ -812,6 +812,18 @@ Shadow paper books of single rules, research look L54 (`docs/research/prereg-rul
 
 L55, the historical search, is `research/rule_lab_screen.py`: it calls the same signal, exit and pricing functions on the Kite cache before 2026 (read-only), builds a flat panel of condition flags and per-exit outcomes, and evaluates combinations with `romano_wolf_matrix` (streamed over replicates and combinations, so memory does not grow with the family of up to 116,746), `cscv_pbo` and `evaluation.deflated_sharpe_ratio`. `discover()` and `confirm_2026()` refuse to run on an existing result, a dirty tree or a family hash that differs from the stage 0 (or discovery) record; results carry commit, hash and each survivor's origin.
 
+### 10.5 Paper desk (`paper_desk.py`, README §125)
+
+The read side of the four books together, for the front page and the process log. It imports `database`, `jev_book`, `momentum_book`, `rule_lab`, `holidays` and `config`, and calls only their read functions (`jev_book.summary`, `momentum_book.summary`, `rule_lab.page`, `database.trade_stats`) plus its own SELECTs. It never imports the app's state: `app.py` passes the market status, paper mode, paused flag, open-position count and open P&L in a small dict.
+
+| Function | What it does |
+| --- | --- |
+| `cards(now, engine)` | `GET /api/paper-desk`. One card per book in `BOOKS` order, each with `name`, `about`, `page`, `status {state, label, detail}`, `today`, `record {…, headline {label, value, note}}`, `next {label, when, text}` and `gate`. The states are `running`, `waiting`, `skipped`, `off`; each card is built inside `_safe`, so a book whose file is unreadable gives a card that says so. The gate texts quote the existing rules (RES-27, ENT-02/05, RES-36, MOM-10/16, L53) and are not rules of their own |
+| `process_log(day, book, kind, limit)` | `GET /api/process-log`. Merges `_engine_lines` (the `activity` table with every kind but `momentum`, the engine's "Jev book:" and "Momentum book:" system lines re-tagged to their books, and the `trades` table for the fills, so a fill is one line with its money), `_jev_lines` (the state file's day: round started, each decision, each scored close with its bp and its rupee value on the notional, round closed, a skipped day as one 09:45 warning, an interruption), `_lab_lines` (`rule_lab_sessions` for the session line; `rule_lab_trades` grouped by entry bar and by exit bar, each group one line with every trade in `details`; voids) and `_momentum_lines` (`momentum_book.log` runs with the exit code read, the state's trades dated that day at the close, a rebalance from `month_points`, a waiting order). Lines are filtered to the IST day, sorted newest first, then filtered by book and kind; the response carries `total`, `truncated`, `counts` per book and the day's `kinds` |
+| `day_bounds(day)` | The IST day as epoch bounds. Every source is cut by it, so a Jev trade closed at 15:08 and the job run at 19:31 belong to their own day |
+
+Each book's state path is passed explicitly (`jev_book.STATE_PATH`, `momentum_book.STATE_PATH`, `momentum_book.LOG_PATH`), not left to a default bound at import, so conftest and the mock API can point them at copies. Tests: `tests/test_paper_desk.py`.
+
 ## 11. Research desk and holdings diagnostic
 
 ### 11.1 Research desk (`research_desk.py`)
@@ -985,6 +997,8 @@ Every route needs the `X-Api-Key` header except `/kite/callback`.
 | GET | `/api/journal/session-summary` | Why a session traded what it did |
 | GET | `/api/journal/liquidity-checks`, `/api/journal/depth-samples` | Order-book records |
 | GET | `/api/rule-lab` | The rule lab's leaderboard (§10.4). Read-only |
+| GET | `/api/paper-desk` | The paper desk's cards (§10.5): one per book, equal shape. Read-only; `app.py` passes in the market status and open positions |
+| GET | `/api/process-log?day=&book=&kind=&limit=` | The merged process log of the four books for one IST day (§10.5), newest first; 400 lines by default, at most 2,000. 400 on an unknown book or a bad day |
 | GET | `/api/momentum-book`, `/api/jev-book` | The paper books. The momentum book's includes its monthly report, band status and next rebalance |
 | GET | `/api/kronos`, `/api/kronos/day/{date}` | The Kronos space: L40's records and the shadow's forecasts, from `kronos.db`. Display only |
 | GET, POST | `/api/review-queue`, `/enable`, `/{id}/approve`, `/{id}/reject` | The review queue |
@@ -1138,7 +1152,9 @@ clears the stored key and asks again.
 | Technical Analysis | `/technical-analysis` | Every method, from live constants | Headline scoring on and off |
 | Portfolio | `/portfolio` | Margins, holdings, positions | Options on and off |
 | Holdings diagnostic | `/portfolio/diagnostic` | A technical read of real holdings | None |
-| Momentum Book, the front page | `/` (`/momentum-book` redirects) | Status, value, cumulative excess and next rebalance; the monthly report against the benchmark; the band; NAV against the benchmark; holdings, waiting orders, trades | None |
+| Paper desk, the front page | `/` (`/paper-desk` redirects) | One card per paper book: what it is, status, today's trades and money, record with its headline statistic, next event, gate to go live, link; the newest lines of today's process log (README §125) | None |
+| Process log | `/process-log?day=&book=&kind=` | Every step and trade of the four books on one IST day, merged, newest first, tagged by book, kind, time, symbol and money; filters by book and kind, a day picker | None |
+| Momentum Book | `/momentum-book` | Status, value, cumulative excess and next rebalance; the monthly report against the benchmark; the band; NAV against the benchmark; holdings, waiting orders, trades | None |
 | Jev Book | `/jev-book` | Status, Jev against the scanner, the latest session | None |
 | Kronos | `/kronos` | L40's stage 0 records and result, the latest shadow day one time at a time, one row per day | None |
 | Rule lab | `/rule-lab` | Each rule's trades, win rate beside break-even, mean net bp, its interval, t, net R (R19/R20), losing run, historical figure and decay, status | None |

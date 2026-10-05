@@ -17,16 +17,21 @@ has two jobs that share one codebase:
 2. **Decide what is allowed to run** by testing every idea against a rule
    written down before its data is read.
 
-The second job governs the first. After 202 recorded trials, one strategy has
-passed (monthly momentum held in delivery), so that is the only strategy with
-a book of its own. Since 2026-09-30 it is the core of the system, by the
-owner's decision (`docs/research/decisions/decision-2026-09-30-momentum-core.md`):
-the dashboard opens on it, with a monthly report against its benchmark, and
-each rebalance is alerted. The intraday engine still scans, labels setups and
-enforces risk, in paper, as a record: no intraday edge was found, and no new
-intraday look is started. Since 2026-10-01 it takes its entries automatically
-in paper: the confidence gate's bar is 0 in Paper and 60 in Live, where it
-still blocks every automatic entry (README §118).
+The second job governs the first. After 202 recorded trials, one rule has
+passed a pre-registered test (monthly momentum held in delivery), narrowly,
+so it has a book of its own. From 2026-09-30 it was the core of the system
+(`docs/research/decisions/decision-2026-09-30-momentum-core.md`). On
+2026-10-05 the owner reframed the front page
+(`docs/research/decisions/decision-2026-10-05-paper-desk.md`, README §125):
+the dashboard opens on the **paper desk**, where the four paper books (the
+intraday engine, the Jev book, the rule lab and the momentum book) are equal
+experiments, each trading in paper and logging every process step and trade
+into one merged process log. None is "the strategy" until it passes its own
+gate; the gates themselves are unchanged. The intraday engine still scans,
+labels setups and enforces risk, in paper, as a record: no intraday edge was
+found, and no new intraday look is started. Since 2026-10-01 it takes its
+entries automatically in paper: the confidence gate's bar is 0 in Paper and
+60 in Live, where it still blocks every automatic entry (README §118).
 
 No real-money order has ever been placed.
 
@@ -163,7 +168,8 @@ flowchart TB
 | **F&O** | Buy calls and puts, never write | `fno_instruments`, `options_pricing`, `fno_risk` | Off |
 | **Market data** | One interface over Kite and yfinance; Kite session lifecycle | `data_provider`, `kite_tunnel`, `kite_history` | Kite when connected, else delayed |
 | **News and context** | Filings, headlines, flows, breadth, fundamentals | `nse_feed`, `news_sentiment`, `llm_sentiment`, `fundamentals` | Running |
-| **Momentum book** | The strategy: the paper run of the one that passed, the dashboard's front page, a monthly report against its benchmark, and an alert at each rebalance or failed evening job | `momentum_book`, `momentum_alerts` | Waiting for the month turn; first trades at the 1 Oct close |
+| **Momentum book** | The paper run of the one rule that passed, with a monthly report against its benchmark and an alert at each rebalance or failed evening job. One of the four books on the paper desk | `momentum_book`, `momentum_alerts` | Holding 15 since the 1 Oct close; next rebalance 2 Nov |
+| **Paper desk** | The front page: one card per paper book, equal weight, and one process log that merges every step and trade of the four books. Read-only: assembled from what the books already write (README §125) | `paper_desk` | Running from the next backend restart |
 | **Jev book** | Paper test of an LLM judge on the shortlist | `jev_book`, `typesafe_key` | Running since 28 Sep |
 | **Rule lab** | 107 single rules (20 of its own, 87 from the YouTube and practitioner catalogs), each a shadow paper book on the day's list, judged only at pre-registered looks; its historical search (L55) waits for review | `rule_lab`, `research/rule_lab_screen` | Built (README §124); collects from the first session after deploy. Never places an order |
 | **Order-book sampler** | Record five-level books for the one open intraday test | `depth_sampler` | Collecting; test runs after 15 full sessions |

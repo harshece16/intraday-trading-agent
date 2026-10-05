@@ -505,6 +505,39 @@ def rule_lab_page():
     return rule_lab.page()
 
 
+@app.get("/api/paper-desk")
+def paper_desk_cards():
+    """The paper desk (README section 125): one card per paper book, equal
+    weight. Read-only: assembled from what the books already write. The few
+    facts only the running engine knows are passed in, so paper_desk never
+    reads the app's state itself."""
+    import paper_desk
+    with state.lock:
+        engine_facts = {
+            "market_status": state.market_status, "paper_mode": state.paper_mode,
+            "entries_paused": state.entries_paused,
+            "open_positions": sum(1 for p in state.positions.values() if p.get("quantity")),
+            "unrealized_pnl": sum(
+                (state.indicators.get(sym, {}).get("ltp") - p["avg_price"]) * p["quantity"]
+                for sym, p in state.positions.items()
+                if p.get("quantity") and state.indicators.get(sym, {}).get("ltp") is not None),
+        }
+    return paper_desk.cards(engine=engine_facts)
+
+
+@app.get("/api/process-log")
+def process_log(day: Optional[str] = None, book: Optional[str] = None, kind: Optional[str] = None, limit: int = 400):
+    """Every process step and trade of every paper book on one IST day, newest
+    first, each line tagged by book and kind (README section 125). Read-only."""
+    import paper_desk
+    if book and book not in paper_desk.BOOKS:
+        raise HTTPException(status_code=400, detail=f"book must be one of {', '.join(paper_desk.BOOKS)}")
+    try:
+        return paper_desk.process_log(day=day, book=book, kind=kind, limit=max(1, min(limit, 2000)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @app.get("/api/jev-book")
 def jev_book_summary():
     """The Jev book (README section 86): the LLM judge's paper decisions on the

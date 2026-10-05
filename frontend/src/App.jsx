@@ -24,6 +24,8 @@ const MomentumBook = lazy(() => import("./pages/MomentumBook"));
 const JevBook = lazy(() => import("./pages/JevBook"));
 const Kronos = lazy(() => import("./pages/Kronos"));
 const RuleLab = lazy(() => import("./pages/RuleLab"));
+const PaperDesk = lazy(() => import("./pages/PaperDesk"));
+const ProcessLog = lazy(() => import("./pages/ProcessLog"));
 
 // `intraday` marks a page of the intraday paper record: it opens with the
 // banner that says so (README section 116).
@@ -53,6 +55,8 @@ function Connecting() {
 
 // Pages that don't read the live state are built once, so the 3 s state push
 // doesn't re-render them: React skips an element it has already rendered.
+const DESK = <Page><PaperDesk /></Page>;
+const PROCESS_LOG = <Page><ProcessLog /></Page>;
 const MOMENTUM = <Page><MomentumBook /></Page>;
 const DAY_PLAN = <Page intraday><DayPlan /></Page>;
 const TECHNICAL = <Page intraday><TechnicalAnalysis /></Page>;
@@ -66,9 +70,12 @@ function AppRoutes({ state }) {
   if (!state) return <Page><Connecting /></Page>;
   return (
     <Routes>
-      {/* The momentum book is the strategy, so it is the front page (README section 116). */}
-      <Route path="/" element={MOMENTUM} />
-      <Route path="/momentum-book" element={<Redirect to="/" />} />
+      {/* The paper desk is the front page: four paper books as equal experiments, and one
+          process log (README section 125). No book is the strategy. */}
+      <Route path="/" element={DESK} />
+      <Route path="/paper-desk" element={<Redirect to="/" />} />
+      <Route path="/process-log" element={PROCESS_LOG} />
+      <Route path="/momentum-book" element={MOMENTUM} />
       {/* The intraday engine's pages: a paper record, each under the banner. */}
       <Route path="/intraday" element={<Page intraday><Overview state={state} /></Page>} />
       <Route path="/overview" element={<Redirect to="/intraday" />} />
