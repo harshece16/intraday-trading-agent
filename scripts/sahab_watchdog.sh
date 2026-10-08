@@ -14,6 +14,9 @@
 #     replaced, because a hung engine is worse than a dead one: it holds the
 #     port while stops go unchecked.
 set -uo pipefail
+# launchd runs this with PATH=/usr/bin:/bin:/usr/sbin:/sbin, and the backend it starts inherits it: without
+# Homebrew on it, the Kite login can't find ngrok and the dashboard check can't find npm.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND="$REPO/backend"

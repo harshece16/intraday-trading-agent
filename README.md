@@ -2352,6 +2352,10 @@ both now handled in the script:
   while `http://localhost:5500` returns 200. A health check on the IPv4
   address makes a healthy dashboard look dead, and the watchdog would have
   killed and restarted it every two minutes. It probes the name.
+- **launchd's PATH has no Homebrew** (`/usr/bin:/bin:/usr/sbin:/sbin`), and the
+  backend inherits it from the watchdog. On 2026-10-08 the in-app Kite login said
+  "ngrok is not installed" with ngrok in `/opt/homebrew/bin`. The script now puts
+  `/opt/homebrew/bin` and `/usr/local/bin` on PATH before starting anything.
 
 Logs are in `~/Library/Logs/TraderSahab/`: `watchdog.log` (what it did,
 and it stays quiet when nothing needed doing), `backend.log`, and
