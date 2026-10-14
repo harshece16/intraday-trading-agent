@@ -4672,6 +4672,23 @@ The Rule lab page gets the same at the top (the lab's net ₹ since its first se
 
 Rules: UI-07 new; UI-06 changed. Files: `backend/paper_desk.py`, `backend/rule_lab.py`, `backend/tests/test_paper_desk.py`, `backend/tests/test_rule_lab.py`, `frontend/src/pages/PaperDesk.jsx`, `frontend/src/pages/RuleLab.jsx`, `frontend/src/sortRows.js` (new), `frontend/src/sortRows.test.js` (new), `frontend/src/index.css`, `docs/architecture/` (HLD, LLD, rules).
 
+### 130. Frog-in-the-pan tie-break tested on the momentum book: it fails, and the book does not change (trial 204)
+
+**The owner's words, 2026-10-14:** "go do it and add the strategy result". This was after being told that the 2026-10-01 sweep had already looked at the idea and decided to leave it.
+
+**The idea.** A published effect (Da, Gurun & Warachka, 2014): winners whose gains came in many small steps keep winning longer than winners that jumped. The test changed one thing in the momentum book. When a place falls vacant, the book filled it from the 30 best-ranked stocks by the most gradual gain, not by the best rank. Everything else is trial 126's book. It was fixed in [`docs/research/prereg-fip-tiebreak.md`](docs/research/prereg-fip-tiebreak.md) before any code, and run once.
+
+| Question | Answer |
+| --- | --- |
+| Does it beat the running rule in the 200 most-traded? | **No. It did worse: −0.39% a month, t −2.15.** 15.6% a year against 20.6%. |
+| Is that just extra trading cost? | No. With every cost at zero it is still −0.37% a month. |
+| And in ranks 201–400? | −0.15% a month, t −0.72: inside noise. |
+| Does the book change? | **No.** No shadow sleeve either. |
+
+**What it does not show.** That the published effect is absent in India. The rule both prefers gradual winners and stops buying the best-ranked names first, and this test cannot tell those apart.
+
+**Two things to know.** No reviewer read the plan before the run; it is in the reviewer outbox for a read afterwards. And the momentum family now counts eleven tries, so the next momentum test faces a higher bar (t ≥ 2.865). Full figures: [`docs/research/results-fip-tiebreak.md`](docs/research/results-fip-tiebreak.md). A backtest result, not investment advice.
+
 ### 123. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
 
 A logic review of the momentum book on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), but that four things in how the evening job handles its data could go wrong. None of them has touched the live book yet. **No rule changes, and on complete data no figure changes** (see *Checked*).
