@@ -1,0 +1,49 @@
+{
+ "prereg": "prereg-fip-tiebreak.md",
+ "ledger": "look L56",
+ "run_at": "2026-10-14T09:17:40",
+ "samples": {
+  "S1": {
+   "part": "A",
+   "months": 190,
+   "parity_with_recorded_holdings": true,
+   "id_coverage": 1.0,
+   "holdings_that_differ": {
+    "mean": 5.8052631578947365,
+    "median": 6.0,
+    "max": 9,
+    "months_identical": 0
+   },
+   "buys_per_year": {
+    "base": 33.714285714285715,
+    "this_rule": 45.714285714285715
+   },
+   "rank_correlation_id_with_score_rank_mean": 0.19931854106902405,
+   "id_sd_across_top_30_mean": 0.05518352805648606
+  },
+  "S2": {
+   "part": "B",
+   "months": 190,
+   "parity_with_recorded_holdings": true,
+   "id_coverage": 0.9998245614035087,
+   "holdings_that_differ": {
+    "mean": 5.478947368421053,
+    "median": 5.0,
+    "max": 9,
+    "months_identical": 0
+   },
+   "buys_per_year": {
+    "base": 42.22222222222222,
+    "this_rule": 55.04761904761905
+   },
+   "rank_correlation_id_with_score_rank_mean": 0.26679125511219653,
+   "id_sd_across_top_30_mean": 0.05613641884792681
+  }
+ },
+ "gates": {
+  "parity": true,
+  "coverage_ge_0_97": true,
+  "s1_holdings_differ_ge_2": true
+ },
+ "proceed": true
+}
