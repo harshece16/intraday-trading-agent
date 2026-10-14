@@ -338,9 +338,11 @@ class Book:
         self.orders = []
 
 
-def simulate(sessions, chains, unis, cfg, capital, start, honest=True, stress=False):
+def simulate(sessions, chains, unis, cfg, capital, start, honest=True, stress=False, fill_order=None):
     """One part: the strategy and its benchmark, month by month. Returns
-    (series, strategy book, benchmark book, holdings)."""
+    (series, strategy book, benchmark book, holdings). `fill_order`, if given,
+    re-orders the names vacancies are filled from (prereg-fip-tiebreak.md);
+    without it every recorded result is unchanged."""
     lo, hi = cfg["ranks"]
     mes = m3.month_ends(sessions)
     me_idx = {m: i for m, i in mes}
@@ -378,7 +380,7 @@ def simulate(sessions, chains, unis, cfg, capital, start, honest=True, stress=Fa
         strat.work(chains, f, sessions, "sell")
         vac = m3.N_HOLD - len(strat.pos)
         per = strat.cash / vac if vac > 0 else 0
-        for n in order:
+        for n in (fill_order(order, chains, me_idx, months, month) if fill_order else order):
             if vac <= 0:
                 break
             if n not in strat.pos:

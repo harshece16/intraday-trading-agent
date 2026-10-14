@@ -1,3 +1,18 @@
+## For review after the fact — 2026-10-14: trial 204 (frog-in-the-pan tie-break), FAIL. The pre-registration and code were not reviewed before the run.
+
+**2026-10-14.** Branch `research/fip-tiebreak`. The owner asked for the frog-in-the-pan idea to be run and its result recorded ("go do it and add the strategy result"), after being told the 2026-10-01 sweep had decided to leave it at a 5–8% prior. Order of commits: pre-registration `52e8977`, code `cde4947`, stage 0 output `2c7d25e`, then the trial, each run once. No amendment. Nothing dated 2026 was read.
+
+| Part | Result | Record |
+| --- | --- | --- |
+| Stage 0 (L56) | parity exact; ID coverage 100% / 99.98%; 5.8 / 5.5 of 15 holdings differ; trial not withdrawn | `results-fip-tiebreak.md` |
+| Trial 204, top 200, paired | **−0.39% a month, t −2.15**; −0.37% with costs at zero | same |
+| L57, ranks 201–400, paired | −0.15% a month, t −0.72 | same |
+| Family bar at N = 11, top 200 | t 1.26 against 2.838; DSR 0.357; last three years negative | same |
+
+**For the reviewer to check.** (1) The ID formula and the vacancy order in `backend/research/momentum_fip.py` against the pre-registration's text. (2) That `momentum_width.simulate`'s new `fill_order` argument leaves the base loop unchanged; stage 0's parity gate is the evidence. (3) The results file's reading in "What it means" item 4, that the loss may come from giving up rank order inside the top 30: it is stated as untested, and no run was made to test it. (4) The script counts 204 project trials where 203 are spent.
+
+**Disclosed.** No reviewer round preceded the run, unlike `prereg-universe-width.md`. The pre-registration expected a fail for lack of power; the result is a fail in the other direction in one sample. The paper book is unchanged and no shadow sleeve was started.
+
 ## Note for the record — the night of 2026-09-29/30: L46, L47 and trials 128–202, all FAIL. Brought back for review.
 
 **2026-09-30.** Branch `research/overnight-2026-09-30`. The owner, going to sleep, asked for other models and candlestick combinations to be tested if Kronos failed. Decisions were taken by a decision agent against `decisions/charter-2026-09-30.md` and logged in `decisions/log-2026-09-30.md`. Pre-registrations were committed before the results they govern: L46 and the combination search at 00:14 (before L40's result was read), L47 at 01:08 (after L40's and Chronos-Bolt's results; the design is the sweep's, written before either).
