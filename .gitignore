@@ -65,3 +65,6 @@ backend/research/l46_rows_*.jsonl
 backend/research/l47_models/
 backend/research/l47_rows.jsonl
 backend/research/l47_rows.jsonl.tmp
+
+# Kronos shadow-run outputs (the run is finished; never re-run, never delete: see the phase-2 handover)
+backend/data/kronos_shadow*
