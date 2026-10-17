@@ -68,3 +68,8 @@ backend/research/l47_rows.jsonl.tmp
 
 # Kronos shadow-run outputs (the run is finished; never re-run, never delete: see the phase-2 handover)
 backend/data/kronos_shadow*
+
+# Local or runtime-only files (the siblings jev_book_state.json and momentum_book_state.json are ignored above)
+graphify-out/
+backend/data/jev2_book_state.json
+backend/data/momentum_book_state.json.lock
