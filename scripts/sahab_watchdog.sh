@@ -132,6 +132,39 @@ PY
   log "started dashboard on :$DASH_PORT"
 }
 
+# Kite nag. 11 of the first 24 Jev/Jev2 paper days were void because nobody
+# had logged in to Kite by the 09:45 decision time (docs/research/pivot-brief-
+# 2026-10-18.md). The engine cannot log in by itself (Zerodha requires a human
+# at 06:00+ daily), so the next best thing is a nag that reaches the owner:
+# a macOS notification at 09:00 and 09:30, Telegram too when configured, and
+# a "VOID DAY" log line at 09:46 so the record is in the watchdog log, not
+# reconstructed from book state files afterwards. One line per slot per day.
+kite_nag() {
+  local now key status slot
+  now=$(TZ=Asia/Kolkata date '+%H%M')
+  if   [ "$now" -ge 946 ]; then slot=void
+  elif [ "$now" -ge 930 ]; then slot=0930
+  elif [ "$now" -ge 900 ]; then slot=0900
+  else return 0; fi
+  local marker="$LOG_DIR/kite_nag_$(TZ=Asia/Kolkata date '+%F')_$slot"
+  [ -e "$marker" ] && return 0
+  key=$("$PY" -c "import json;print(json.load(open('.dashboard_key.json'))['key'])" 2>/dev/null) || return 0
+  status=$(curl -sf -m 10 -H "X-Api-Key: $key" "http://127.0.0.1:$PORT/api/kite/status") || return 0
+  if printf '%s' "$status" | "$PY" -c "import json,sys;sys.exit(0 if json.load(sys.stdin).get('connected') else 1)"; then
+    return 0
+  fi
+  touch "$marker"
+  local msg
+  if [ "$slot" = void ]; then
+    msg="VOID DAY: Kite still not connected at 09:46 IST — today's Jev/Jev2 rounds will not count"
+  else
+    msg="Kite not connected (${slot:0:2}:${slot:2} IST) — log in before 09:45 or today's paper rounds are void"
+  fi
+  log "kite nag [$slot]: $msg"
+  osascript -e "display notification \"$msg\" with title \"Trader Sahab\" sound name \"Basso\"" 2>/dev/null
+  "$PY" -c "import sys,telegram_alerts as t; t.send_now('Trader Sahab: '+sys.argv[1])" "$msg" >/dev/null 2>&1
+}
+
 cd "$BACKEND" || { log "cannot cd to $BACKEND"; exit 1; }
 
 if ! in_session; then
@@ -148,6 +181,7 @@ fi
 
 if responds; then
   check_dashboard
+  kite_nag
   exit 0                      # healthy; say nothing, this runs every 2 minutes
 fi
 
