@@ -4693,6 +4693,12 @@ Rules: UI-07 new; UI-06 changed. Files: `backend/paper_desk.py`, `backend/rule_l
 
 **Two things to know.** No reviewer read the plan before the run; it is in the reviewer outbox for a read afterwards. And the momentum family now counts eleven tries, so the next momentum test faces a higher bar (t ≥ 2.865). Full figures: [`docs/research/results-fip-tiebreak.md`](docs/research/results-fip-tiebreak.md). A backtest result, not investment advice.
 
+### 131. The watchdog nags you to log in to Kite before 09:45
+
+11 of the first 24 Jev / Jev2 paper days were void: nobody had logged in to Kite by the 09:45 decision time, so the round was recorded as `no_live_prices` and did not count (`docs/research/pivot-brief-2026-10-18.md`). Zerodha's token dies at 06:00 every day and only a human can renew it, so the engine cannot fix this itself. The next best thing is a nag that reaches you.
+
+`scripts/sahab_watchdog.sh` (launchd, every 2 minutes in session) now asks `/api/kite/status` on each healthy check. If Kite is not connected it sends a macOS notification at 09:00 and again at 09:30, a Telegram message too when `backend/.telegram.json` is set up, and at 09:46 writes a `VOID DAY` line to `~/Library/Logs/TraderSahab/watchdog.log` so the record of void days lives in one place. One message per slot per day (marker files `kite_nag_<date>_<slot>` in the log folder). Nothing in the engine changed.
+
 ### 123. The momentum book follows a renamed stock, never trusts a half-written file, and runs one job at a time
 
 A logic review of the momentum book on 2026-10-04 found that the 1 October rebalance was correct (a fresh replay gave the same state), but that four things in how the evening job handles its data could go wrong. None of them has touched the live book yet. **No rule changes, and on complete data no figure changes** (see *Checked*).
