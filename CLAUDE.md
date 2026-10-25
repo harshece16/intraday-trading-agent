@@ -41,7 +41,7 @@ cd frontend && npm run lint && npm run build
 ## Workflow (see WORKFLOW.md)
 
 - Never commit straight to `main`: branch `type/short-desc` → Conventional Commit (`feat:`/`fix:`/`docs:`…) with a prose body explaining why → PR using `.github/PULL_REQUEST_TEMPLATE.md` (include real verification evidence and `Closes #N`) → CI green → squash merge.
-- Update `README.md` with a new numbered section for user-visible changes.
+- A user-visible change adds the next numbered section to `docs/history.md` (README §N in code comments means §N there). `README.md` is the short front page: update its status table only when what runs changes.
 - Every confirmed bug: file a GitHub issue (label `bug`, with evidence) right away, even if it isn't fixed now, and add a row to `BUG_LOG.md`. When the fix merges, move the row to "Fixed" and note the deploy.
 
 ## Rules

@@ -22,7 +22,7 @@ Closes #
 
 - [ ] Read the full diff, not just the files I expected to change
 - [ ] No debug prints, commented-out code, or leftover scratch scripts
-- [ ] README updated if this changes documented behavior (new section, or an existing claim that's now stale)
+- [ ] `docs/history.md` section added if this changes documented behavior, and the README status table if what runs changed
 - [ ] If deploying live: backend restarted and the change verified against a real request, not just "tests pass"
 
 ## Rollback plan

@@ -4115,11 +4115,11 @@ CI must be green before merge. CI runs the full backend pytest suite on Python 3
 </details>
 
 <details>
-<summary><code>WFL-06</code> <b>Active</b> — A user-visible change adds a new numbered section to README.md.</summary>
+<summary><code>WFL-06</code> <b>Active</b> — A user-visible change adds the next numbered section to docs/history.md; the README status table changes only when what runs changes.</summary>
 
 | | |
 | --- | --- |
-| **Why** | The README is the project's running history. |
+| **Why** | docs/history.md is the project's running history (moved out of the README on 2026-10-26); the README stays a short front page. |
 | **Enforced in** | `CLAUDE.md ('Workflow'); .github/PULL_REQUEST_TEMPLATE.md (self-review checklist)` |
 | **How to check** | grep '^### [0-9]\*\\.' README.md returns 88 sections, the last §88 dated 2026-09-27. |
 | **Source** | CLAUDE.md |
