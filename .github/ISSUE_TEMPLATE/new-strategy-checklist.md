@@ -10,7 +10,7 @@ A step that fails stops the line. It is not retried with a different setting.
 
 ## Before any code
 
-- [ ] Checked what is already known: the trial ledger, the sweeps, the closed lines in the README
+- [ ] Checked what is already known: the trial ledger, the sweeps, the closed lines in the README and `docs/history.md`
 - [ ] Named the family (one economic mechanism) and counted N, at least 2 (`EVL-01`)
 - [ ] The effect is stated in basis points and compared with the round-trip cost (`EVL-13`)
 - [ ] **Pre-registration committed**: rule, universe, period, costs, metric, pass rule, what would falsify it (`RES-01`)
@@ -43,7 +43,7 @@ A step that fails stops the line. It is not retried with a different setting.
 - [ ] Confirmed on data the test never read
 - [ ] Held-out look approved by the owner, then taken once (`RES-06`, `RES-25`)
 - [ ] Paper book built with a switch-off band fixed in advance (`RES-26`)
-- [ ] README section added (`WFL-06`)
+- [ ] `docs/history.md` section added (`WFL-06`)
 - [ ] Nothing describes the result as a guarantee. Real money is a separate owner decision (`RES-27`)
 
 ## Verdict

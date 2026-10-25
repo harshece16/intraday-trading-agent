@@ -171,6 +171,17 @@ if ! in_session; then
   exit 0                      # weekend, NSE holiday, or outside the session
 fi
 
+# The backend and this script both run from this working tree, so a checkout
+# left on another branch quietly runs that branch's code (#306: the Kite nag
+# above never fired for four sessions). Warn once a day.
+branch=$(git -C "$REPO" branch --show-current 2>/dev/null)
+marker="$LOG_DIR/branch_warn_$(TZ=Asia/Kolkata date '+%F')"
+if [ -n "$branch" ] && [ "$branch" != main ] && [ ! -e "$marker" ]; then
+  touch "$marker"
+  log "checkout is on '$branch', not main: the backend and the watchdog run that branch's code"
+  osascript -e "display notification \"Checkout is on $branch, not main\" with title \"Trader Sahab\"" 2>/dev/null
+fi
+
 pid="$(listening_pid)"
 if [ -z "$pid" ]; then
   log "nothing on :$PORT during market hours — starting"

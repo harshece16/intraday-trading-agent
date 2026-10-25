@@ -55,7 +55,7 @@ that's when the fix is actually live.
 ## Pull requests
 
 Every change — a bug fix found watching the live log, a new feature, a
-README update — goes through a PR, even solo. `.github/PULL_REQUEST_TEMPLATE.md`
+history or README update — goes through a PR, even solo. `.github/PULL_REQUEST_TEMPLATE.md`
 covers what to fill in: what changed and why, evidence it was actually
 verified (this project's core discipline — a real check against live data
 or the journal DB, not just "the code looks right"), a self-review
