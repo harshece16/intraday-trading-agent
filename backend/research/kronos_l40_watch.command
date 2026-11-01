@@ -1,6 +1,6 @@
 #!/bin/bash
 # Live view of the Kronos look L40: the run of record on the PC (over SSH) and tomorrow's shadow on this Mac. Read-only.
-PC="ssh -i $HOME/.ssh/trader_sahab_pc -o BatchMode=yes -o ConnectTimeout=6 harsh@192.168.88.3"
+PC="ssh -i $HOME/.ssh/trader_sahab_pc -o BatchMode=yes -o ConnectTimeout=6 -o HostKeyAlias=sahab-pc harsh@sahab-pc.tail4e9e14.ts.net"
 SHADOW=/Users/harshgupta/Projects/webapp/backend/data/kronos_shadow_latest.txt
 SHPID=/Users/harshgupta/Projects/webapp/backend/data/kronos_shadow.pid
 while true; do
