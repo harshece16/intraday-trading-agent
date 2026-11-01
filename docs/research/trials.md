@@ -27,7 +27,7 @@ backtest look better than it is.
 
 ---
 
-## Strategy trials — count as of 2026-10-14: **203 spent, numbered to 205** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Ranker (FAIL), 123 Jev book (forward, pending), 124–125 overnight ETF (FAIL), 126 A′ (survives narrowly, smaller), 127 wide book (FAIL), 128–202 forecast × candlestick combinations (FAIL, 0 of 75), 203 Jev 2 (forward, pending; registered 2026-10-05, not yet spent), 204 frog-in-the-pan tie-break (FAIL, spent 2026-10-14), 205 trial 126's rule on US stocks (registered 2026-10-26 in `prereg-us-momentum.md`, not yet spent; waits on the owner buying a survivorship-free data source)
+## Strategy trials — count as of 2026-10-14: **203 spent, numbered to 206** — 118 void, 119 3h, 120 3i Part A (PASS), 121–122 Ranker (FAIL), 123 Jev book (forward, pending), 124–125 overnight ETF (FAIL), 126 A′ (survives narrowly, smaller), 127 wide book (FAIL), 128–202 forecast × candlestick combinations (FAIL, 0 of 75), 203 Jev 2 (forward, pending; registered 2026-10-05, not yet spent), 204 frog-in-the-pan tie-break (FAIL, spent 2026-10-14), 205 trial 126's rule on US stocks (registered 2026-10-26 in `prereg-us-momentum.md`, not yet spent; waits on the owner buying a survivorship-free data source), 206 promoter open-market purchases held five sessions (registered 2026-11-01 in `prereg-insider-buys.md`, not yet spent; first slot of the "insider buying" family, N = 2, t ≥ 2.24; waits on the owner's manual export of NSE PIT disclosures)
 
 | n | Label |
 | --- | --- |
