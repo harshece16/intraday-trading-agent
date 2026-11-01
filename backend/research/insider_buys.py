@@ -25,6 +25,7 @@ BACKEND = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, BACKEND)
 
+import momentum_width as mw  # noqa: E402
 import nse_prices  # noqa: E402
 import slow_momentum as sm  # noqa: E402
 
@@ -36,6 +37,7 @@ LAST_BROADCAST = "2025-12-19"      # the last window that closes inside 2025
 HALF_SPLIT = "2021-01-01"
 LAST3_START = "2023-01-01"
 HELD_OUT_START = "2026-01-01"
+HELD_OUT_END = "2026-04-30"      # the archive thins out after April 2026; amendment 1
 EXPORT_MONTHS = ("2015-12", "2025-12")
 
 UNIVERSE_N = 500
@@ -127,14 +129,15 @@ def parse_num(s):
         return 0.0
 
 
-def normalise(rows):
+def normalise(rows, include_held_out=False):
     """Rows -> dicts with the fields in FIELDS, parsed. Returns (rows, report).
     Column mapping is per file; a file with an unmapped or ambiguous field
-    makes report['mapping_ok'] False (stage-0 gate 1)."""
+    makes report['mapping_ok'] False (stage-0 gate 1). Rows broadcast in the
+    held-out year are dropped here, so a selection run never reads them."""
     by_file = {}
     for r in rows:
         by_file.setdefault(r["_file"], []).append(r)
-    out, report = [], {"files": {}, "mapping_ok": True, "bad_dates": 0, "missing_broadcast": 0}
+    out, report = [], {"files": {}, "mapping_ok": True, "bad_dates": 0, "missing_broadcast": 0, "held_out": 0}
     for name, batch in by_file.items():
         mapping, unmapped, ambiguous = map_columns(batch[0].keys())
         report["files"][name] = {"rows": len(batch), "mapping": mapping,
@@ -152,6 +155,9 @@ def normalise(rows):
                     continue
                 bc = dt.datetime.combine(intim.date(), dt.time(23, 59))
                 report["missing_broadcast"] += 1
+            if bc.date().isoformat() >= HELD_OUT_START and not include_held_out:
+                report["held_out"] += 1
+                continue
             out.append({"symbol": g("symbol").upper(), "category": g("category"), "mode": g("mode"),
                         "txn": g("txn"), "sectype": g("sectype"), "value": parse_num(g("value")),
                         "to_date": parse_dt(g("to_date")), "broadcast": bc, "file": name})
@@ -164,7 +170,7 @@ def qualifies(r):
     """Rule 1-3 of the prereg; returns the first failing rule's name or None."""
     if "promoter" not in r["category"].lower():
         return "category"
-    if r["mode"].lower() != "market purchase" or r["txn"].lower().startswith("sell"):
+    if r["mode"].lower() != "market purchase" or r["txn"].lower() != "buy":
         return "mode"
     if not r["sectype"].lower().startswith("equity"):
         return "sectype"
@@ -240,14 +246,16 @@ class Universes:
         return self.cache[me]
 
 
-def build_events(norm, sessions, chains, nxt, include_held_out=False):
-    """Apply rules 1-7 plus the sample window. Returns (events, drops)."""
+def build_events(norm, sessions, chains, nxt, include_held_out=False, aliases=None):
+    """Apply rules 1-7 plus the sample window. Returns (events, drops).
+    chains is trial 126's wide panel; the ranking reads its EQ rows only
+    (momentum_width.eq_view), pricing reads the chain as traded."""
     drops = {k: 0 for k in ("category", "mode", "sectype", "value", "window", "held_out",
-                            "unmatched", "universe", "no_entry", "overlap")}
-    cache = {}
-    unis = Universes(sessions, chains)
+                            "unmatched", "universe", "no_entry", "no_trade", "zero_shares", "overlap")}
+    cache, aliases = {}, aliases or {}
+    unis = Universes(sessions, mw.eq_view(chains))
     first = HELD_OUT_START if include_held_out else FIRST_BROADCAST
-    last = "9999" if include_held_out else LAST_BROADCAST
+    last = HELD_OUT_END if include_held_out else LAST_BROADCAST
     out, open_until = [], {}
     for e in aggregate(norm, drops):
         d = e["broadcast"].date().isoformat()
@@ -257,7 +265,7 @@ def build_events(norm, sessions, chains, nxt, include_held_out=False):
         if not (first <= d <= last):
             drops["window"] += 1
             continue
-        canon = nse_prices.canonical(e["symbol"], nxt, cache)
+        canon = aliases.get(e["symbol"]) or nse_prices.canonical(e["symbol"], nxt, cache)
         if canon not in chains:
             drops["unmatched"] += 1
             continue
@@ -268,6 +276,14 @@ def build_events(norm, sessions, chains, nxt, include_held_out=False):
         uni = unis.before(k)
         if uni is None or canon not in uni:
             drops["universe"] += 1
+            continue
+        c = chains[canon]
+        j = bisect.bisect_left(c["idx"], k)
+        if j >= len(c["idx"]) or c["idx"][j] != k or c["open"][j] <= 0:
+            drops["no_trade"] += 1
+            continue
+        if int(TICKET // c["open"][j]) == 0:
+            drops["zero_shares"] += 1
             continue
         if open_until.get(canon, -1) >= k:
             drops["overlap"] += 1
@@ -352,10 +368,12 @@ def block(priced):
     xs = [p["excess"] for p in priced]
     if not xs:
         return {"n": 0}
-    return {"n": len(xs), "mean_excess_bp": round(st.mean(xs) * 1e4, 1),
+    t = clustered_t(xs, [p["entry"] for p in priced]) if len(xs) > 1 else None
+    return {"n": len(xs), "mean_excess": st.mean(xs), "t": t,   # unrounded, the gates read these
+            "mean_excess_bp": round(st.mean(xs) * 1e4, 1),
             "median_excess_bp": round(st.median(xs) * 1e4, 1),
             "sd_bp": round(st.stdev(xs) * 1e4, 1) if len(xs) > 1 else None,
-            "t_clustered": round(clustered_t(xs, [p["entry"] for p in priced]), 2) if len(xs) > 1 else None,
+            "t_clustered": round(t, 2) if t is not None else None,
             "t_plain": round(sm.t_stat(xs), 2) if len(xs) > 1 else None,
             "mean_gross_bp": round(st.mean(p["gross"] for p in priced) * 1e4, 1),
             "mean_net_bp": round(st.mean(p["net"] for p in priced) * 1e4, 1),
@@ -385,18 +403,18 @@ def capped_book(priced, sessions, slots=20):
 def verdict(priced, sessions, n_trials=FAMILY_N):
     import evaluation
     xs = [p["excess"] for p in priced]
-    date = lambda p: sessions[p["entry"]]  # noqa: E731
+    date = lambda p: p["broadcast"].date().isoformat()  # noqa: E731  (the prereg splits by broadcast date)
     halves = (block([p for p in priced if date(p) < HALF_SPLIT]),
               block([p for p in priced if date(p) >= HALF_SPLIT]))
     last3 = block([p for p in priced if date(p) >= LAST3_START])
     whole = block(priced)
     dsr = evaluation.deflated_sharpe_ratio(xs, n_trials) if xs else {"dsr": None}
     checks = {
-        "mean_positive_t": bool(xs) and whole["mean_excess_bp"] > 0 and (whole["t_clustered"] or 0) >= FAMILY_T,
+        "mean_positive_t": bool(xs) and whole["mean_excess"] > 0 and (whole["t"] or 0) >= FAMILY_T,
         "dsr": (dsr.get("dsr") or 0) >= 0.95,
-        "both_halves": all(h["n"] and h["mean_excess_bp"] > 0 for h in halves),
-        "last_three_years": bool(last3["n"]) and last3["mean_excess_bp"] > 0,
-        "floor_25bp": bool(xs) and whole["mean_excess_bp"] >= FLOOR_BP,
+        "both_halves": all(h["n"] and h["mean_excess"] > 0 for h in halves),
+        "last_three_years": bool(last3["n"]) and last3["mean_excess"] > 0,
+        "floor_25bp": bool(xs) and whole["mean_excess"] * 1e4 >= FLOOR_BP,
         "n_events": len(xs) >= MIN_EVENTS,
     }
     per_year = {}
@@ -447,6 +465,7 @@ def stage0(norm, report, events, drops, sessions):
     avg = len(events) / n_months if n_months else 0.0
     out = {"mapping_ok": report["mapping_ok"], "files": report["files"],
            "bad_dates": report["bad_dates"], "missing_broadcast": report["missing_broadcast"],
+           "held_out_rows": report.get("held_out", 0),
            "rows": len(norm), "rows_per_month": rows_per_month, "missing_months": missing,
            "events": len(events), "events_per_month": per_month, "events_per_month_avg": round(avg, 2),
            "drops": drops, "lags": lag_distribution(events, sessions)}
@@ -465,10 +484,12 @@ def write(name, obj):
 
 
 def load_everything(include_held_out=False):
-    sessions, chains, _meta, _events = nse_prices.load(include_held_out=include_held_out)
+    """Trial 126's panel (momentum_width.load_panel: nse_prices wide=True)."""
+    sessions, chains, meta, _events = nse_prices.load(include_held_out=include_held_out, wide=True)
+    aliases = {a: canon for canon, names in meta.get("aliases", {}).items() for a in names}
     nxt = nse_prices.symbol_chains(os.path.join(nse_prices.BHAV_DIR, "symbolchange.csv"))
-    norm, report = normalise(load_rows())
-    events, drops = build_events(norm, sessions, chains, nxt, include_held_out)
+    norm, report = normalise(load_rows(), include_held_out)
+    events, drops = build_events(norm, sessions, chains, nxt, include_held_out, aliases)
     return sessions, chains, norm, report, events, drops
 
 
@@ -485,15 +506,26 @@ def main(argv):
     if not s0["proceed"] and not held_out:
         print("stage 0 did not pass; the trial is not run")
         return 1
-    import evaluation
+    result, heldout = os.path.join(OUT_DIR, "trial206_result.json"), os.path.join(OUT_DIR, "trial206_heldout.json")
+    if held_out:
+        if not (os.path.exists(result) and json.load(open(result)).get("pass")) or os.path.exists(heldout):
+            print("the held-out check runs once, after a pass; not run")
+            return 1
+    elif os.path.exists(result):
+        print("trial 206 has been run; one run per hypothesis")
+        return 1
     priced = price_events(events, chains, drops)
-    label = "trial 206 promoter market purchases, 5-session hold" + (" HELD-OUT sign check" if held_out else "")
-    n = evaluation.log_trial(label)
+    label = "trial 206 promoter market purchases, 5-session hold"
     out = verdict(priced, sessions)
-    out.update({"trial_logged_as": n, "label": label, "drops": drops})
+    out.update({"label": label, "drops": drops})
+    if held_out:
+        out["label"] += " HELD-OUT sign check (not a trial)"
+    else:
+        import evaluation
+        out["trial_logged_as"] = evaluation.log_trial(label)
     print(json.dumps({k: v for k, v in out.items() if k != "per_year"}, indent=1, default=str))
-    print("saved", write("trial206_heldout.json" if held_out else "trial206_result.json", out))
-    with open(os.path.join(OUT_DIR, "trial206_events.csv"), "w", newline="") as fh:
+    print("saved", write(os.path.basename(heldout if held_out else result), out))
+    with open(os.path.join(OUT_DIR, "trial206_heldout_events.csv" if held_out else "trial206_events.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["symbol", "chain", "broadcast", "entry", "exit", "value", "shares", "gross", "net", "bench", "excess"])
         for p in priced:

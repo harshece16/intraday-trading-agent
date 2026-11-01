@@ -77,6 +77,7 @@ def test_event_rules_and_same_day_aggregation(tmp_path):
         _csv_row(symbol="DIRCO", category="Director", value="5000000"),  # category
         _csv_row(symbol="ESOPCO", mode="ESOP", value="5000000"),         # mode
         _csv_row(symbol="SELLCO", mode="Market Sale", txn="Sell", value="5000000"),
+        _csv_row(symbol="PLEDGECO", txn="Pledge Revoke", value="5000000"),      # not a buy
         _csv_row(symbol="SMALLCO", value="900000"),                      # under ₹10 L
         _csv_row(symbol="WARRCO", sectype="Warrants", value="5000000"),  # not equity
     ]
@@ -85,7 +86,7 @@ def test_event_rules_and_same_day_aggregation(tmp_path):
     events = ib.aggregate(norm, drops)
     assert [e["symbol"] for e in events] == ["RAYMOND"]
     assert events[0]["value"] == 1_100_000 and events[0]["rows"] == 2
-    assert drops == {"category": 1, "mode": 2, "sectype": 1, "value": 1}
+    assert drops == {"category": 1, "mode": 3, "sectype": 1, "value": 1}
 
 
 SESSIONS = ["2016-02-01", "2016-02-02", "2016-02-03", "2016-02-04", "2016-02-05", "2016-02-08", "2016-02-09"]
@@ -147,7 +148,8 @@ def _market(n_sessions=420, names=("RAYMOND", "DIRCO", "THIRD")):
 
 def test_build_events_applies_universe_overlap_and_held_out_rules(tmp_path):
     sessions, chains = _market()
-    assert sessions[-1] >= "2015-12-31"
+    chains["PRICEY"] = _chain(len(sessions), price=60_000.0)          # one share is over the ticket
+    assert sessions[-1] >= "2016-01-04"
     rows = [
         _csv_row(broadcast="01-Dec-2015 18:00", to="30-Nov-2015"),
         _csv_row(broadcast="03-Dec-2015 18:00", to="02-Dec-2015"),   # inside the open window: overlap
@@ -155,23 +157,30 @@ def test_build_events_applies_universe_overlap_and_held_out_rules(tmp_path):
         _csv_row(symbol="NOCHAIN", broadcast="02-Dec-2015 18:00"),   # no price chain
         _csv_row(symbol="DIRCO", broadcast="05-Jan-2026 18:00"),     # held out
         _csv_row(symbol="THIRD", broadcast="01-Mar-2015 18:00"),     # before the PIT regime
+        _csv_row(symbol="PRICEY", broadcast="02-Dec-2015 18:00"),    # untradable at one ticket
+        _csv_row(symbol="OLDRAY", broadcast="28-Dec-2015 18:00"),    # an old name of RAYMOND
     ]
-    norm, _ = _write(tmp_path, rows)
-    events, drops = ib.build_events(norm, sessions, chains, {}, include_held_out=False)
-    assert [(e["symbol"], sessions[e["entry"]], sessions[e["exit"]]) for e in events] == [
-        ("RAYMOND", "2015-12-02", "2015-12-08"), ("RAYMOND", "2015-12-16", "2015-12-22")]
-    assert drops["overlap"] == 1 and drops["unmatched"] == 1 and drops["held_out"] == 1 and drops["window"] == 1
+    norm, report = _write(tmp_path, rows)
+    assert report["held_out"] == 1 and len(norm) == len(rows) - 1      # 2026 never reaches the run
+    events, drops = ib.build_events(norm, sessions, chains, {}, False, aliases={"OLDRAY": "RAYMOND"})
+    assert [(e["symbol"], e["chain"], sessions[e["entry"]], sessions[e["exit"]]) for e in events] == [
+        ("RAYMOND", "RAYMOND", "2015-12-02", "2015-12-08"), ("RAYMOND", "RAYMOND", "2015-12-16", "2015-12-22"),
+        ("OLDRAY", "RAYMOND", "2015-12-29", "2016-01-04")]
+    assert drops["overlap"] == 1 and drops["unmatched"] == 1 and drops["window"] == 1
+    assert drops["held_out"] == 0 and drops["zero_shares"] == 1 and drops["no_trade"] == 0
     priced = ib.price_events(events, chains, drops)
-    assert len(priced) == 2 and all(abs(p["bench"]) < 1e-12 for p in priced)   # flat market, zero benchmark
+    assert len(priced) == 3 and all(abs(p["bench"]) < 1e-12 for p in priced)   # flat market, zero benchmark
     assert all(p["excess"] == p["net"] for p in priced)
 
 
 def test_the_universe_is_the_top_n_by_trial_126s_ranking():
     sessions, chains = _market()
+    chains["BEONLY"] = dict(_chain(len(sessions)), ser=[1] * len(sessions))   # BE rows: never ranked
+    assert "BEONLY" not in ib.mw.eq_view(chains)
     chains["THIRD"]["raw"] = [10.0] * len(sessions)                  # under the ₹20 floor
     chains["DIRCO"]["val"] = [1e5] * len(sessions)                   # thinnest
     assert ib.liquid_at(chains, 400, n=1) == ["RAYMOND"]
-    assert set(ib.liquid_at(chains, 400)) == {"RAYMOND", "DIRCO"}
+    assert set(ib.liquid_at(ib.mw.eq_view(chains), 400)) == {"RAYMOND", "DIRCO"}
     assert ib.liquid_at(chains, 100) == []                           # under 250 sessions of history
 
 
@@ -192,5 +201,6 @@ def test_verdict_requires_every_check():
                "net": 0.006, "bench": 0.0, "excess": 0.006 if i % 7 else -0.002} for i in range(100)]
     v = ib.verdict(priced, sessions)
     assert v["checks"]["mean_positive_t"] and v["checks"]["floor_25bp"] and v["checks"]["n_events"]
+    assert v["whole"]["t"] >= 2.24 and v["whole"]["t_clustered"] == round(v["whole"]["t"], 2)
     assert not v["checks"]["both_halves"]        # no event after 2021 -> the second half is empty
     assert not v["pass"]

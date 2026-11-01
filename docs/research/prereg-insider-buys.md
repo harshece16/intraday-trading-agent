@@ -270,8 +270,8 @@ item passed); `trial206_stage0.json` is the rerun under this amendment.
   metadata, not transaction rows. The 2026 sign check, if a pass earns it,
   covers **January–April 2026** only unless that page is mapped later.
 - **Stage 0 as run.** Column mapping clean, no bad dates, no missing
-  broadcast time. **2,600 qualifying events**, 20.31 a month on
-  average (gate: 8), none of the stop rules hit. Drops: category 252,450,
+  broadcast time. **2,600 qualifying events**, 21.31 a month on
+  average over 122 months (gate: 8; amendment 2 corrects the 20.31 first written here), none of the stop rules hit. Drops: category 252,450,
   mode 58,220, security type 95, value 6,020, outside the window 64,
   held out 608, no price chain 480, not in the top 500 7,967,
   overlap 2,095. Lag from last transaction to broadcast: mode 2
@@ -284,3 +284,53 @@ item passed); `trial206_stage0.json` is the rerun under this amendment.
   estimate and is recorded here before the run.
 - **Housekeeping.** The `.gitignore` line for `backend/data/pit/` carried a
   trailing comment, which gitignore reads as part of the pattern; fixed.
+
+## Amendment 2 (2026-11-02): independent review
+
+Written after an independent review of the pre-registration, the module and
+the stage-0 output, and before any return was read. One blocking finding and
+five should-fix items; every one is applied here, stage 0 was rerun and
+`trial206_stage0.json` replaced. No rule, sample, gate or bar changes.
+
+- **Blocking: price panel.** The module loaded `nse_prices`' default panel.
+  Trial 126's universe and prices come from `momentum_width.load_panel()`,
+  which is `nse_prices.load(wide=True)`: the repaired panel with BE/BZ rows,
+  consolidations and the dividend fix. Fixed: the wide panel is loaded, the
+  top-500 ranking reads its EQ rows only through `momentum_width.eq_view`
+  as trial 126 does, and entry and exit are priced on the chain as traded.
+  Symbols are matched through the panel's own alias table first, then the
+  symbol-change chain.
+- **Held-out guard.** The held-out check refuses to run unless
+  `trial206_result.json` exists with `pass: true` and no
+  `trial206_heldout.json` exists; it is no longer logged as a trial; it
+  writes its own events file; its window is January–April 2026
+  (`HELD_OUT_END = 2026-04-30`). The trial refuses a second run once its
+  result file exists. Rows broadcast in 2026 are dropped as the export is
+  read, so not even stage 0's row counts see them (4,458 rows).
+- **Gates on unrounded values.** The six checks read the unrounded mean and
+  clustered t; the rounded figures are for display. The Deflated Sharpe
+  comes back from the shared `evaluation` module rounded to three places, so
+  a value within 0.0005 of 0.95 would be a tie; noted before the run.
+- **Rule 2 tightened.** The transaction type must be exactly "Buy" (the
+  export has 131 "Sell", 13 "-" and 5 pledge rows among market purchases).
+  "Non-promoter" does not occur as a category in the export, so no clause
+  for it.
+- **Tradability before the overlap rule.** An event with no row at the entry
+  session, a zero open, or an open above the ticket (no whole share for
+  ₹50,000) is dropped while events are built, so it no longer blocks a later
+  event of the same name. New counters `no_trade` and `zero_shares`.
+- **Split by broadcast date.** Halves, last three years and per-year blocks
+  split on the broadcast date, as the Samples paragraph says; the code had
+  split on the entry session.
+- **Amendment 1 correction.** The average was written as 20.31; 2,600
+  events over 122 months (2015-11 → 2025-12) is 21.31.
+- **Stage 0 as rerun.** Column mapping clean, no bad dates, no missing
+  broadcast time, every month 2015-12 → 2025-12 present; 336,782 rows in
+  sample. **2,579 qualifying events, 21.14 a month** (gate 8). Drops:
+  category 250,451, mode 57,239, security type 90, value 5,703, outside the
+  window 64, no price chain 367, not in the top 500 8,072, no whole share at
+  one ticket 41, no trade at entry 0, overlap 2,080. Events per year: 2015
+  39, 2016 341, 2017 286, 2018 406, 2019 384, 2020 396, 2021 205, 2022 210,
+  2023 143, 2024 68, 2025 101; so S2 rests on 727 events and the last three
+  years on 312. Lag from last transaction to broadcast: mode 2 weekdays.
+  Entry is the next day for 1,821 events, three days later for 493.
