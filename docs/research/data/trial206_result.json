@@ -1,0 +1,291 @@
+{
+ "whole": {
+  "n": 2579,
+  "mean_excess": 0.0004400266783267084,
+  "t": 0.36777992651172225,
+  "mean_excess_bp": 4.4,
+  "median_excess_bp": -39.2,
+  "sd_bp": 577.1,
+  "t_clustered": 0.37,
+  "t_plain": 0.39,
+  "mean_gross_bp": 67.2,
+  "mean_net_bp": 21.8,
+  "win_rate": 0.461
+ },
+ "halves": [
+  {
+   "n": 1852,
+   "mean_excess": -0.0002702725223354868,
+   "t": -0.1800329987426376,
+   "mean_excess_bp": -2.7,
+   "median_excess_bp": -45.1,
+   "sd_bp": 603.7,
+   "t_clustered": -0.18,
+   "t_plain": -0.19,
+   "mean_gross_bp": 49.6,
+   "mean_net_bp": 4.2,
+   "win_rate": 0.456
+  },
+  {
+   "n": 727,
+   "mean_excess": 0.002249482138610595,
+   "t": 1.2240368770595857,
+   "mean_excess_bp": 22.5,
+   "median_excess_bp": -19.6,
+   "sd_bp": 502.8,
+   "t_clustered": 1.22,
+   "t_plain": 1.21,
+   "mean_gross_bp": 112.1,
+   "mean_net_bp": 66.5,
+   "win_rate": 0.473
+  }
+ ],
+ "last_three_years": {
+  "n": 312,
+  "mean_excess": 0.0022255980502528306,
+  "t": 0.9372553959379094,
+  "mean_excess_bp": 22.3,
+  "median_excess_bp": -25.9,
+  "sd_bp": 431.2,
+  "t_clustered": 0.94,
+  "t_plain": 0.91,
+  "mean_gross_bp": 109.2,
+  "mean_net_bp": 63.6,
+  "win_rate": 0.471
+ },
+ "dsr": {
+  "dsr": 0.447,
+  "sharpe": 0.008,
+  "luck_baseline_sharpe": 0.01,
+  "n_trials": 2,
+  "n_trades": 2579,
+  "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+ },
+ "per_year": {
+  "2015": {
+   "n": 39,
+   "mean_excess": -0.013638776528417818,
+   "t": -3.608473024600783,
+   "mean_excess_bp": -136.4,
+   "median_excess_bp": -207.7,
+   "sd_bp": 272.2,
+   "t_clustered": -3.61,
+   "t_plain": -3.13,
+   "mean_gross_bp": -122.5,
+   "mean_net_bp": -167.6,
+   "win_rate": 0.282
+  },
+  "2016": {
+   "n": 341,
+   "mean_excess": 0.0006612185603838144,
+   "t": 0.24318563810831567,
+   "mean_excess_bp": 6.6,
+   "median_excess_bp": -29.5,
+   "sd_bp": 462.3,
+   "t_clustered": 0.24,
+   "t_plain": 0.26,
+   "mean_gross_bp": 44.6,
+   "mean_net_bp": -0.9,
+   "win_rate": 0.46
+  },
+  "2017": {
+   "n": 286,
+   "mean_excess": 0.005456035389955319,
+   "t": 1.9002096146043543,
+   "mean_excess_bp": 54.6,
+   "median_excess_bp": -11.9,
+   "sd_bp": 528.0,
+   "t_clustered": 1.9,
+   "t_plain": 1.75,
+   "mean_gross_bp": 182.1,
+   "mean_net_bp": 136.4,
+   "win_rate": 0.483
+  },
+  "2018": {
+   "n": 406,
+   "mean_excess": -0.0016403508474699046,
+   "t": -0.5313183669094732,
+   "mean_excess_bp": -16.4,
+   "median_excess_bp": -46.1,
+   "sd_bp": 595.4,
+   "t_clustered": -0.53,
+   "t_plain": -0.56,
+   "mean_gross_bp": -14.7,
+   "mean_net_bp": -60.0,
+   "win_rate": 0.441
+  },
+  "2019": {
+   "n": 384,
+   "mean_excess": 0.0003690683340782831,
+   "t": 0.109492057659161,
+   "mean_excess_bp": 3.7,
+   "median_excess_bp": -18.3,
+   "sd_bp": 619.2,
+   "t_clustered": 0.11,
+   "t_plain": 0.12,
+   "mean_gross_bp": 68.2,
+   "mean_net_bp": 22.8,
+   "win_rate": 0.482
+  },
+  "2020": {
+   "n": 396,
+   "mean_excess": -0.0031067522060313334,
+   "t": -0.7297833609106043,
+   "mean_excess_bp": -31.1,
+   "median_excess_bp": -68.1,
+   "sd_bp": 758.4,
+   "t_clustered": -0.73,
+   "t_plain": -0.82,
+   "mean_gross_bp": 23.2,
+   "mean_net_bp": -22.2,
+   "win_rate": 0.439
+  },
+  "2021": {
+   "n": 205,
+   "mean_excess": 7.793065888571873e-05,
+   "t": 0.01959131909712714,
+   "mean_excess_bp": 0.8,
+   "median_excess_bp": -71.5,
+   "sd_bp": 564.1,
+   "t_clustered": 0.02,
+   "t_plain": 0.02,
+   "mean_gross_bp": 118.4,
+   "mean_net_bp": 72.8,
+   "win_rate": 0.429
+  },
+  "2022": {
+   "n": 210,
+   "mean_excess": 0.004404814942949747,
+   "t": 1.2458313267374552,
+   "mean_excess_bp": 44.0,
+   "median_excess_bp": 36.0,
+   "sd_bp": 538.7,
+   "t_clustered": 1.25,
+   "t_plain": 1.18,
+   "mean_gross_bp": 110.2,
+   "mean_net_bp": 64.6,
+   "win_rate": 0.519
+  },
+  "2023": {
+   "n": 143,
+   "mean_excess": -0.0011996184100067579,
+   "t": -0.3285783633595922,
+   "mean_excess_bp": -12.0,
+   "median_excess_bp": -63.9,
+   "sd_bp": 458.0,
+   "t_clustered": -0.33,
+   "t_plain": -0.31,
+   "mean_gross_bp": 100.7,
+   "mean_net_bp": 55.2,
+   "win_rate": 0.427
+  },
+  "2024": {
+   "n": 68,
+   "mean_excess": 0.00511399798155162,
+   "t": 1.0460730008570163,
+   "mean_excess_bp": 51.1,
+   "median_excess_bp": 1.0,
+   "sd_bp": 420.4,
+   "t_clustered": 1.05,
+   "t_plain": 1.0,
+   "mean_gross_bp": 153.7,
+   "mean_net_bp": 108.1,
+   "win_rate": 0.5
+  },
+  "2025": {
+   "n": 101,
+   "mean_excess": 0.005130496649151876,
+   "t": 1.3042856156246865,
+   "mean_excess_bp": 51.3,
+   "median_excess_bp": 13.8,
+   "sd_bp": 398.4,
+   "t_clustered": 1.3,
+   "t_plain": 1.29,
+   "mean_gross_bp": 91.1,
+   "mean_net_bp": 45.6,
+   "win_rate": 0.515
+  }
+ },
+ "capped_book": {
+  "2015": {
+   "events": 35,
+   "net_pct": -1.96,
+   "bench_pct": 0.1
+  },
+  "2016": {
+   "events": 338,
+   "net_pct": -1.98,
+   "bench_pct": -2.94
+  },
+  "2017": {
+   "events": 288,
+   "net_pct": 19.82,
+   "bench_pct": 12.16
+  },
+  "2018": {
+   "events": 401,
+   "net_pct": -9.64,
+   "bench_pct": -6.71
+  },
+  "2019": {
+   "events": 380,
+   "net_pct": 4.42,
+   "bench_pct": 3.18
+  },
+  "2020": {
+   "events": 334,
+   "net_pct": -3.68,
+   "bench_pct": -1.69
+  },
+  "2021": {
+   "events": 204,
+   "net_pct": 7.64,
+   "bench_pct": 7.37
+  },
+  "2022": {
+   "events": 211,
+   "net_pct": 6.29,
+   "bench_pct": 2.41
+  },
+  "2023": {
+   "events": 144,
+   "net_pct": 4.12,
+   "bench_pct": 4.76
+  },
+  "2024": {
+   "events": 67,
+   "net_pct": 3.67,
+   "bench_pct": 1.94
+  },
+  "2025": {
+   "events": 102,
+   "net_pct": 2.31,
+   "bench_pct": -0.29
+  }
+ },
+ "checks": {
+  "mean_positive_t": false,
+  "dsr": false,
+  "both_halves": false,
+  "last_three_years": true,
+  "floor_25bp": false,
+  "n_events": true
+ },
+ "pass": false,
+ "label": "trial 206 promoter market purchases, 5-session hold",
+ "drops": {
+  "category": 250451,
+  "mode": 57239,
+  "sectype": 90,
+  "value": 5703,
+  "window": 64,
+  "held_out": 0,
+  "unmatched": 367,
+  "universe": 8072,
+  "no_entry": 0,
+  "no_trade": 0,
+  "zero_shares": 41,
+  "overlap": 2080
+ },
+ "trial_logged_as": 35
+}

@@ -1,5 +1,7 @@
 # Pre-registration: trial 206, promoter open-market purchases held five sessions
 
+**Outcome (2026-11-02): FAIL.** Mean net excess +4.4 bp per event, clustered t 0.37, first half negative, DSR 0.447. Line closed. `results-insider-buys.md`.
+
 **Written 2026-11-01, before any disclosure file is in the repo and before any
 code exists.** The owner asked for a strategy the project has not tested, found
 in the literature and on GitHub, and implemented. The sweep behind this choice
