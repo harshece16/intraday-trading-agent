@@ -177,7 +177,7 @@ def test_the_universe_is_the_top_n_by_trial_126s_ranking():
 
 def test_stage_zero_flags_missing_months_and_too_few_events(tmp_path):
     sessions, chains = _market()
-    norm, report = _write(tmp_path, [_csv_row(broadcast="01-Dec-2015 18:00")])
+    norm, report = _write(tmp_path, [_csv_row(broadcast="01-Dec-2015 18:00", to="30-Nov-2015")])
     events, drops = ib.build_events(norm, sessions, chains, {}, False)
     s0 = ib.stage0(norm, report, events, drops, sessions)
     assert s0["gate"]["columns"] and not s0["gate"]["export_complete"] and not s0["gate"]["enough_events"]
