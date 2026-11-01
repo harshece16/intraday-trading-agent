@@ -39,6 +39,7 @@ backend/data/bhav_daily_2026_heldout/
 backend/data/corp_actions/
 # L50 raw NSE bulk/block deal CSVs and symbolchange.csv (re-downloadable)
 backend/data/nse_deals/
+backend/data/pit/   # NSE insider-trading disclosures exported by hand (docs/research/prereg-insider-buys.md)
 backend/data/bhav_live/
 backend/data/momentum_book_state.json
 backend/data/momentum_book.log
