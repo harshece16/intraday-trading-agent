@@ -181,7 +181,7 @@ def test_stage_zero_flags_missing_months_and_too_few_events(tmp_path):
     events, drops = ib.build_events(norm, sessions, chains, {}, False)
     s0 = ib.stage0(norm, report, events, drops, sessions)
     assert s0["gate"]["columns"] and not s0["gate"]["export_complete"] and not s0["gate"]["enough_events"]
-    assert "2015-06" in s0["missing_months"] and not s0["proceed"]
+    assert "2016-01" in s0["missing_months"] and not s0["proceed"]
     assert s0["lags"]["transaction_to_broadcast_weekdays"] == {1: 1}   # 30 Nov (Mon) -> 1 Dec (Tue)
     assert s0["lags"]["broadcast_to_entry_days"] == {1: 1}
 

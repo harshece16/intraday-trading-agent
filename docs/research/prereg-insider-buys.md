@@ -244,3 +244,43 @@ row → held-out sign check only on a pass.
    from NSE Data & Analytics. Nothing runs until one of these is done.
 2. Confirm 10 bp a side slippage and the ₹50,000 ticket, or amend before stage 0.
 3. Whether the earlier scripted NSE fetches in research code should stay.
+
+## Amendment 1 (2026-11-02): data start, provenance, held-out coverage
+
+Written after stage 0 ran on the owner's export and before any return was
+read. The first run failed only the 2015-06 completeness gate (every other
+item passed); `trial206_stage0.json` is the rerun under this amendment.
+
+- **Provenance.** The export was not a hand download. At the owner's
+  instruction the data was fetched from inside the owner's own Chrome tab on
+  NSE's insider-trading *archive* page, through the page's own date-range data
+  URL, in six two-year calls paced three seconds apart (341,240 rows, one file
+  `pit_2015-05-15_2026-11-02.json`, never committed). NSE's terms treat this
+  as automated collection; the owner chose it knowing that. No script in the
+  repo fetches NSE data. The acquirer's name was dropped from the saved rows;
+  the trial does not use it.
+- **Data start.** NSE's archive holds no row before **19 Nov 2015** (the
+  regime began 15 May 2015; the exchange's archive does not reach back to
+  it). The sample therefore starts at **2015-11-19**, and the completeness
+  gate runs over **2015-12 → 2025-12** (November 2015 is a part month).
+  `FIRST_BROADCAST` and `EXPORT_MONTHS` change accordingly. Nothing else in
+  the trial changes.
+- **Held-out coverage.** The archive thins to 3 rows in May 2026 and stops;
+  NSE moved new filings to an XBRL-based page whose data URL returns filing
+  metadata, not transaction rows. The 2026 sign check, if a pass earns it,
+  covers **January–April 2026** only unless that page is mapped later.
+- **Stage 0 as run.** Column mapping clean, no bad dates, no missing
+  broadcast time. **2,600 qualifying events**, 20.31 a month on
+  average (gate: 8), none of the stop rules hit. Drops: category 252,450,
+  mode 58,220, security type 95, value 6,020, outside the window 64,
+  held out 608, no price chain 480, not in the top 500 7,967,
+  overlap 2,095. Lag from last transaction to broadcast: mode 2
+  weekdays, long tail. Entry falls the day after the broadcast for most
+  events, three days later after a Friday broadcast.
+- **Thinning.** Events a month fall from about 30 (2016–2020) to about 6–8
+  (2024–2025) while rows per month stay in the hundreds to thousands, so the
+  second half and the last three years rest on fewer events than the first
+  half. The gates are unchanged; the power is lower than the September
+  estimate and is recorded here before the run.
+- **Housekeeping.** The `.gitignore` line for `backend/data/pit/` carried a
+  trailing comment, which gitignore reads as part of the pattern; fixed.

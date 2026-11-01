@@ -31,12 +31,12 @@ import slow_momentum as sm  # noqa: E402
 PIT_DIR = os.path.join(BACKEND, "data", "pit")
 OUT_DIR = os.path.join(BACKEND, "..", "docs", "research", "data")
 
-FIRST_BROADCAST = "2015-05-15"
+FIRST_BROADCAST = "2015-11-19"   # NSE's archive starts here; prereg amendment 1
 LAST_BROADCAST = "2025-12-19"      # the last window that closes inside 2025
 HALF_SPLIT = "2021-01-01"
 LAST3_START = "2023-01-01"
 HELD_OUT_START = "2026-01-01"
-EXPORT_MONTHS = ("2015-06", "2025-12")
+EXPORT_MONTHS = ("2015-12", "2025-12")
 
 UNIVERSE_N = 500
 MIN_VALUE = 1_000_000.0           # ₹10 lakh per symbol per broadcast date
