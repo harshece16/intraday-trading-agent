@@ -284,3 +284,28 @@ state, trial or pass rules change. The data checks are tightened:
 
 Rights and demerger ex-dates also adjust lot sizes, but they stay in the
 sample. The reviewer estimated a few dozen stock-days, too few to matter.
+
+## Amendment 2 (2026-11-08, after stage 0 and before any return was read)
+
+Stage 0 run 1 (`docs/research/data/trial207_stage0_run1.json`) passed every
+gate, but item 3 listed two months with no expiry day: April 2009 and April
+2014. In both, the old-format files list the contract's original expiry,
+30 April 2009 and 24 April 2014. Both days were market holidays (Lok Sabha
+polling in Mumbai), so the contracts settled on the session before. On the
+next session each stock's OI loses the whole April contract. That is the roll
+the expiry rule exists to exclude, and as written ("the exclusion uses the
+detected days") it would have stayed in.
+
+The rule is now: an expiry listed on a day with no F&O file is the expiry of
+the last file day before it. The aggregator applies this and writes the
+moved days to `moved_expiries` in its meta file. There are four:
+2009-04-29, 2014-02-26, 2014-04-23 and 2023-06-28. February 2014
+(Mahashivratri) and June 2023 (Bakri Id) were already detected, because later
+files carry the corrected date; for those two, the move changes nothing.
+
+Run 2 (`trial207_stage0.json`) has 210 expiry days instead of 208. Every month
+has one expiry day, except the six with a single-stock early expiry from a
+corporate action (IDFC, ITC, SIEMENS, ABFRL, TATAMOTORS, HINDUNILVR). Those
+days are dropped, as the prereg intends. LONG_BUILDUP events go from 89,268
+to 89,232 and SHORT_COVERING from 84,540 to 84,456. Every gate still passes.
+No state, trial or pass rule changes.
