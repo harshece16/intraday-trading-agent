@@ -42,6 +42,7 @@ backend/data/nse_deals/
 # NSE insider-trading disclosures, never committed (docs/research/prereg-insider-buys.md)
 backend/data/pit/
 backend/data/bhav_live/
+backend/data/fo_oi/
 backend/data/momentum_book_state.json
 backend/data/momentum_book.log
 # What the momentum alerts have said (README section 116), written by the engine
