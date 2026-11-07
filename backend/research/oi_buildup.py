@@ -171,7 +171,10 @@ def summary(priced, series):
             "sd_event_bp": round(st.stdev(ev) * 1e4, 1) if len(ev) > 1 else None,
             "mean_gross_bp": round(st.mean(p["gross"] for p in priced) * 1e4, 1),
             "mean_net_bp": round(st.mean(p["net"] for p in priced) * 1e4, 1),
-            "win_rate": round(sum(1 for x in ev if x > 0) / len(ev), 3)}
+            "win_rate": round(sum(1 for x in ev if x > 0) / len(ev), 3),
+            # information, not a gate (trial-check item 4): the mean event excess with costs doubled and tripled
+            "excess_bp_at_cost": {f"{k}x": round(st.mean(p["excess"] - (k - 1) * (p["gross"] - p["net"])
+                                                         for p in priced) * 1e4, 1) for k in (1, 2, 3)}}
 
 
 def verdict(lb, sc):
@@ -306,11 +309,16 @@ def main(argv):
     if not s0["proceed"]:
         print("stage 0 did not pass; the trial is not run")
         return 1
+    if os.path.exists(os.path.join(ib.OUT_DIR, "trial207_result.json")):
+        print("trial 207 has been run; one run per hypothesis")
+        return 1
     drops = {LB: {}, SC: {}}
     lb = ib.price_events(events[LB], chains, drops[LB])
     sc = ib.price_events(events[SC], chains, drops[SC])
     out = verdict(lb, sc)
-    out["pricing_drops"] = drops
+    import evaluation
+    label = "trial 207 futures OI long build-up, 5-session hold"
+    out.update({"label": label, "pricing_drops": drops, "trial_logged_as": evaluation.log_trial(label)})
     print(json.dumps({k: v for k, v in out.items() if k != "per_year"}, indent=1, default=str))
     print("saved", ib.write("trial207_result.json", out))
     return 0

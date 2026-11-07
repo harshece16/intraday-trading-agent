@@ -1,6 +1,8 @@
 """Trial 207's aggregator and rules (prereg-oi-buildup.md) on synthetic data.
 No real NSE file is used or committed."""
+import gzip
 import io
+import json
 import os
 import sys
 import zipfile
@@ -31,7 +33,24 @@ def test_parse_old_format_sums_expiries_and_skips_index_futures_and_options():
     assert day == "2015-01-01"
     assert syms == {"ACC": [1250, 2, 0]}
     assert expiry_day is False
-    assert info == {"format": "old", "expiries": 2, "has_chg": True}
+    assert info == {"format": "old", "expiries": 2, "has_chg": True, "listed": {"2015-01-29", "2015-02-26"}}
+
+
+def test_build_moves_an_expiry_listed_on_a_holiday_to_the_session_before(tmp_path):
+    # April 2009: files list 30-Apr-2009 (a holiday); the contract settled on the 29th
+    head = "INSTRUMENT,SYMBOL,EXPIRY_DT,OPEN_INT,CHG_IN_OI,TIMESTAMP\n"
+    for name, day, exps in (("20090428", "28-Apr-2009", ("30-Apr-2009", "28-May-2009")),
+                            ("20090429", "29-Apr-2009", ("30-Apr-2009", "28-May-2009")),
+                            ("20090504", "04-May-2009", ("28-May-2009", "25-Jun-2009"))):
+        (tmp_path / (name + ".zip")).write_bytes(
+            _zip(head + "".join(f"FUTSTK,ACC,{e},100,0,{day}\n" for e in exps)))
+    out = str(tmp_path / "oi.csv.gz")
+    agg.build(str(tmp_path), out)
+    with gzip.open(out, "rt") as fh:
+        flags = {r.split(",")[0]: r.split(",")[5] for r in fh.read().splitlines()[1:]}
+    assert flags == {"2009-04-28": "0", "2009-04-29": "1", "2009-05-04": "0"}
+    # 28-May and 25-Jun lie past the last file day, so they move nothing
+    assert json.load(open(out + ".meta.json"))["moved_expiries"] == ["2009-04-29"]
 
 
 def test_parse_udiff_format_and_flags_an_expiry_day():
@@ -136,6 +155,8 @@ def test_verdict_runs_end_to_end_on_synthetic_priced_events():
     assert out["long_buildup"]["events"] == len(lb)
     assert out["checks"]["6_n_events"] and out["checks"]["5_floor_25bp"]
     assert out["mechanism"]["mean_bp"] == 20.0
+    at = out["long_buildup"]["excess_bp_at_cost"]                   # cost = gross - net = 40 bp an event
+    assert abs(at["1x"] - at["2x"] - 40) < 0.11 and abs(at["2x"] - at["3x"] - 40) < 0.11
 
 
 def test_stage0_gates_on_missing_files_and_lists_parse_counts_by_month():

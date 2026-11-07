@@ -1,0 +1,3151 @@
+{
+ "cash_sessions": 4215,
+ "fo_sessions": 4211,
+ "missing": [
+  "2010-05-16",
+  "2012-11-11",
+  "2013-10-09",
+  "2021-03-30"
+ ],
+ "missing_frac": 0.0009,
+ "expiry_days": 208,
+ "months_without_one_expiry": {
+  "2009-04": 0,
+  "2014-04": 0,
+  "2024-10": 2,
+  "2025-01": 2,
+  "2025-04": 2,
+  "2025-05": 2,
+  "2025-10": 2,
+  "2025-12": 2
+ },
+ "parse_by_month": {
+  "2009-01": {
+   "days": 20,
+   "stocks_per_day": 258.8,
+   "contracts_per_day": 764.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-02": {
+   "days": 19,
+   "stocks_per_day": 254.7,
+   "contracts_per_day": 738.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-03": {
+   "days": 20,
+   "stocks_per_day": 247.6,
+   "contracts_per_day": 716.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-04": {
+   "days": 17,
+   "stocks_per_day": 234.0,
+   "contracts_per_day": 700.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-05": {
+   "days": 20,
+   "stocks_per_day": 233.0,
+   "contracts_per_day": 646.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-06": {
+   "days": 22,
+   "stocks_per_day": 226.2,
+   "contracts_per_day": 588.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-07": {
+   "days": 23,
+   "stocks_per_day": 182.9,
+   "contracts_per_day": 542.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-08": {
+   "days": 21,
+   "stocks_per_day": 180.0,
+   "contracts_per_day": 540.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-09": {
+   "days": 20,
+   "stocks_per_day": 179.8,
+   "contracts_per_day": 539.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-10": {
+   "days": 20,
+   "stocks_per_day": 179.0,
+   "contracts_per_day": 537.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-11": {
+   "days": 20,
+   "stocks_per_day": 179.0,
+   "contracts_per_day": 537.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2009-12": {
+   "days": 21,
+   "stocks_per_day": 179.0,
+   "contracts_per_day": 537.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-01": {
+   "days": 19,
+   "stocks_per_day": 179.0,
+   "contracts_per_day": 537.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-02": {
+   "days": 20,
+   "stocks_per_day": 182.3,
+   "contracts_per_day": 546.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-03": {
+   "days": 21,
+   "stocks_per_day": 190.0,
+   "contracts_per_day": 570.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-04": {
+   "days": 20,
+   "stocks_per_day": 190.0,
+   "contracts_per_day": 570.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-05": {
+   "days": 21,
+   "stocks_per_day": 190.6,
+   "contracts_per_day": 571.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-06": {
+   "days": 22,
+   "stocks_per_day": 196.6,
+   "contracts_per_day": 589.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-07": {
+   "days": 22,
+   "stocks_per_day": 200.1,
+   "contracts_per_day": 600.3,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-08": {
+   "days": 22,
+   "stocks_per_day": 202.7,
+   "contracts_per_day": 606.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-09": {
+   "days": 21,
+   "stocks_per_day": 202.0,
+   "contracts_per_day": 603.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-10": {
+   "days": 21,
+   "stocks_per_day": 203.0,
+   "contracts_per_day": 607.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-11": {
+   "days": 21,
+   "stocks_per_day": 223.3,
+   "contracts_per_day": 670.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2010-12": {
+   "days": 22,
+   "stocks_per_day": 223.0,
+   "contracts_per_day": 669.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-01": {
+   "days": 20,
+   "stocks_per_day": 223.0,
+   "contracts_per_day": 669.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-02": {
+   "days": 20,
+   "stocks_per_day": 223.0,
+   "contracts_per_day": 669.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-03": {
+   "days": 22,
+   "stocks_per_day": 223.0,
+   "contracts_per_day": 669.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-04": {
+   "days": 18,
+   "stocks_per_day": 223.1,
+   "contracts_per_day": 668.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-05": {
+   "days": 22,
+   "stocks_per_day": 223.9,
+   "contracts_per_day": 668.3,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-06": {
+   "days": 22,
+   "stocks_per_day": 222.6,
+   "contracts_per_day": 662.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-07": {
+   "days": 21,
+   "stocks_per_day": 224.7,
+   "contracts_per_day": 667.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-08": {
+   "days": 21,
+   "stocks_per_day": 229.0,
+   "contracts_per_day": 684.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-09": {
+   "days": 21,
+   "stocks_per_day": 228.0,
+   "contracts_per_day": 680.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-10": {
+   "days": 19,
+   "stocks_per_day": 226.8,
+   "contracts_per_day": 678.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-11": {
+   "days": 20,
+   "stocks_per_day": 226.0,
+   "contracts_per_day": 674.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2011-12": {
+   "days": 21,
+   "stocks_per_day": 225.9,
+   "contracts_per_day": 668.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-01": {
+   "days": 22,
+   "stocks_per_day": 223.5,
+   "contracts_per_day": 656.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-02": {
+   "days": 20,
+   "stocks_per_day": 219.2,
+   "contracts_per_day": 648.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-03": {
+   "days": 22,
+   "stocks_per_day": 216.0,
+   "contracts_per_day": 640.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-04": {
+   "days": 20,
+   "stocks_per_day": 214.4,
+   "contracts_per_day": 636.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-05": {
+   "days": 22,
+   "stocks_per_day": 210.6,
+   "contracts_per_day": 629.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-06": {
+   "days": 21,
+   "stocks_per_day": 209.9,
+   "contracts_per_day": 625.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-07": {
+   "days": 22,
+   "stocks_per_day": 208.0,
+   "contracts_per_day": 615.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-08": {
+   "days": 21,
+   "stocks_per_day": 208.0,
+   "contracts_per_day": 568.3,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-09": {
+   "days": 20,
+   "stocks_per_day": 204.4,
+   "contracts_per_day": 512.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-10": {
+   "days": 21,
+   "stocks_per_day": 155.2,
+   "contracts_per_day": 457.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-11": {
+   "days": 20,
+   "stocks_per_day": 151.9,
+   "contracts_per_day": 451.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2012-12": {
+   "days": 20,
+   "stocks_per_day": 150.8,
+   "contracts_per_day": 447.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-01": {
+   "days": 23,
+   "stocks_per_day": 149.0,
+   "contracts_per_day": 443.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-02": {
+   "days": 20,
+   "stocks_per_day": 148.0,
+   "contracts_per_day": 438.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-03": {
+   "days": 19,
+   "stocks_per_day": 146.0,
+   "contracts_per_day": 433.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-04": {
+   "days": 20,
+   "stocks_per_day": 143.8,
+   "contracts_per_day": 429.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-05": {
+   "days": 23,
+   "stocks_per_day": 143.0,
+   "contracts_per_day": 428.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-06": {
+   "days": 20,
+   "stocks_per_day": 142.9,
+   "contracts_per_day": 426.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-07": {
+   "days": 23,
+   "stocks_per_day": 142.0,
+   "contracts_per_day": 424.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-08": {
+   "days": 20,
+   "stocks_per_day": 141.8,
+   "contracts_per_day": 421.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-09": {
+   "days": 20,
+   "stocks_per_day": 139.8,
+   "contracts_per_day": 410.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-10": {
+   "days": 20,
+   "stocks_per_day": 140.8,
+   "contracts_per_day": 410.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-11": {
+   "days": 20,
+   "stocks_per_day": 134.9,
+   "contracts_per_day": 400.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2013-12": {
+   "days": 21,
+   "stocks_per_day": 133.3,
+   "contracts_per_day": 398.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-01": {
+   "days": 23,
+   "stocks_per_day": 135.0,
+   "contracts_per_day": 403.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-02": {
+   "days": 19,
+   "stocks_per_day": 134.0,
+   "contracts_per_day": 401.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-03": {
+   "days": 21,
+   "stocks_per_day": 135.2,
+   "contracts_per_day": 405.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-04": {
+   "days": 18,
+   "stocks_per_day": 136.0,
+   "contracts_per_day": 406.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-05": {
+   "days": 21,
+   "stocks_per_day": 136.0,
+   "contracts_per_day": 406.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-06": {
+   "days": 21,
+   "stocks_per_day": 135.0,
+   "contracts_per_day": 405.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-07": {
+   "days": 22,
+   "stocks_per_day": 135.0,
+   "contracts_per_day": 405.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-08": {
+   "days": 19,
+   "stocks_per_day": 135.0,
+   "contracts_per_day": 405.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-09": {
+   "days": 22,
+   "stocks_per_day": 138.0,
+   "contracts_per_day": 413.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-10": {
+   "days": 18,
+   "stocks_per_day": 139.0,
+   "contracts_per_day": 417.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-11": {
+   "days": 18,
+   "stocks_per_day": 139.3,
+   "contracts_per_day": 418.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2014-12": {
+   "days": 22,
+   "stocks_per_day": 145.0,
+   "contracts_per_day": 435.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-01": {
+   "days": 21,
+   "stocks_per_day": 145.0,
+   "contracts_per_day": 435.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-02": {
+   "days": 20,
+   "stocks_per_day": 145.0,
+   "contracts_per_day": 435.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-03": {
+   "days": 21,
+   "stocks_per_day": 145.0,
+   "contracts_per_day": 434.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-04": {
+   "days": 19,
+   "stocks_per_day": 144.1,
+   "contracts_per_day": 432.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-05": {
+   "days": 20,
+   "stocks_per_day": 144.7,
+   "contracts_per_day": 434.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-06": {
+   "days": 22,
+   "stocks_per_day": 158.0,
+   "contracts_per_day": 473.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-07": {
+   "days": 23,
+   "stocks_per_day": 158.0,
+   "contracts_per_day": 474.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-08": {
+   "days": 21,
+   "stocks_per_day": 158.0,
+   "contracts_per_day": 472.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-09": {
+   "days": 20,
+   "stocks_per_day": 158.8,
+   "contracts_per_day": 473.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-10": {
+   "days": 20,
+   "stocks_per_day": 162.9,
+   "contracts_per_day": 486.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-11": {
+   "days": 19,
+   "stocks_per_day": 162.0,
+   "contracts_per_day": 486.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2015-12": {
+   "days": 22,
+   "stocks_per_day": 162.0,
+   "contracts_per_day": 486.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-01": {
+   "days": 20,
+   "stocks_per_day": 166.0,
+   "contracts_per_day": 498.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-02": {
+   "days": 21,
+   "stocks_per_day": 166.7,
+   "contracts_per_day": 500.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-03": {
+   "days": 20,
+   "stocks_per_day": 173.0,
+   "contracts_per_day": 519.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-04": {
+   "days": 18,
+   "stocks_per_day": 173.0,
+   "contracts_per_day": 518.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-05": {
+   "days": 22,
+   "stocks_per_day": 173.0,
+   "contracts_per_day": 516.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-06": {
+   "days": 22,
+   "stocks_per_day": 173.0,
+   "contracts_per_day": 514.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-07": {
+   "days": 20,
+   "stocks_per_day": 172.9,
+   "contracts_per_day": 517.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-08": {
+   "days": 22,
+   "stocks_per_day": 172.0,
+   "contracts_per_day": 516.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-09": {
+   "days": 20,
+   "stocks_per_day": 172.2,
+   "contracts_per_day": 516.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-10": {
+   "days": 19,
+   "stocks_per_day": 175.0,
+   "contracts_per_day": 525.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-11": {
+   "days": 21,
+   "stocks_per_day": 175.0,
+   "contracts_per_day": 525.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2016-12": {
+   "days": 22,
+   "stocks_per_day": 175.0,
+   "contracts_per_day": 525.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-01": {
+   "days": 21,
+   "stocks_per_day": 175.0,
+   "contracts_per_day": 523.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-02": {
+   "days": 19,
+   "stocks_per_day": 174.9,
+   "contracts_per_day": 522.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-03": {
+   "days": 22,
+   "stocks_per_day": 174.7,
+   "contracts_per_day": 524.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-04": {
+   "days": 18,
+   "stocks_per_day": 189.7,
+   "contracts_per_day": 569.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-05": {
+   "days": 22,
+   "stocks_per_day": 204.9,
+   "contracts_per_day": 614.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-06": {
+   "days": 21,
+   "stocks_per_day": 209.2,
+   "contracts_per_day": 627.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-07": {
+   "days": 21,
+   "stocks_per_day": 213.1,
+   "contracts_per_day": 638.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-08": {
+   "days": 21,
+   "stocks_per_day": 213.0,
+   "contracts_per_day": 637.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-09": {
+   "days": 21,
+   "stocks_per_day": 212.0,
+   "contracts_per_day": 636.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-10": {
+   "days": 20,
+   "stocks_per_day": 212.0,
+   "contracts_per_day": 634.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-11": {
+   "days": 22,
+   "stocks_per_day": 212.0,
+   "contracts_per_day": 634.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2017-12": {
+   "days": 20,
+   "stocks_per_day": 211.0,
+   "contracts_per_day": 630.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-01": {
+   "days": 22,
+   "stocks_per_day": 210.7,
+   "contracts_per_day": 628.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-02": {
+   "days": 19,
+   "stocks_per_day": 209.0,
+   "contracts_per_day": 626.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-03": {
+   "days": 19,
+   "stocks_per_day": 209.0,
+   "contracts_per_day": 626.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-04": {
+   "days": 21,
+   "stocks_per_day": 207.9,
+   "contracts_per_day": 621.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-05": {
+   "days": 22,
+   "stocks_per_day": 207.0,
+   "contracts_per_day": 620.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-06": {
+   "days": 21,
+   "stocks_per_day": 206.0,
+   "contracts_per_day": 618.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-07": {
+   "days": 22,
+   "stocks_per_day": 206.0,
+   "contracts_per_day": 617.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-08": {
+   "days": 21,
+   "stocks_per_day": 206.0,
+   "contracts_per_day": 615.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-09": {
+   "days": 18,
+   "stocks_per_day": 205.9,
+   "contracts_per_day": 613.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-10": {
+   "days": 21,
+   "stocks_per_day": 204.0,
+   "contracts_per_day": 609.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-11": {
+   "days": 20,
+   "stocks_per_day": 203.8,
+   "contracts_per_day": 607.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2018-12": {
+   "days": 20,
+   "stocks_per_day": 200.9,
+   "contracts_per_day": 601.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-01": {
+   "days": 23,
+   "stocks_per_day": 200.0,
+   "contracts_per_day": 597.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-02": {
+   "days": 20,
+   "stocks_per_day": 199.0,
+   "contracts_per_day": 594.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-03": {
+   "days": 19,
+   "stocks_per_day": 196.9,
+   "contracts_per_day": 588.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-04": {
+   "days": 19,
+   "stocks_per_day": 196.0,
+   "contracts_per_day": 584.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-05": {
+   "days": 22,
+   "stocks_per_day": 196.0,
+   "contracts_per_day": 552.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-06": {
+   "days": 19,
+   "stocks_per_day": 194.2,
+   "contracts_per_day": 518.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-07": {
+   "days": 23,
+   "stocks_per_day": 161.1,
+   "contracts_per_day": 481.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-08": {
+   "days": 20,
+   "stocks_per_day": 161.0,
+   "contracts_per_day": 470.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-09": {
+   "days": 19,
+   "stocks_per_day": 159.7,
+   "contracts_per_day": 456.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-10": {
+   "days": 20,
+   "stocks_per_day": 149.0,
+   "contracts_per_day": 444.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-11": {
+   "days": 20,
+   "stocks_per_day": 147.9,
+   "contracts_per_day": 438.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2019-12": {
+   "days": 21,
+   "stocks_per_day": 146.6,
+   "contracts_per_day": 430.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-01": {
+   "days": 23,
+   "stocks_per_day": 143.8,
+   "contracts_per_day": 423.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-02": {
+   "days": 20,
+   "stocks_per_day": 140.2,
+   "contracts_per_day": 420.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-03": {
+   "days": 21,
+   "stocks_per_day": 143.1,
+   "contracts_per_day": 428.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-04": {
+   "days": 18,
+   "stocks_per_day": 144.0,
+   "contracts_per_day": 428.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-05": {
+   "days": 19,
+   "stocks_per_day": 143.9,
+   "contracts_per_day": 426.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-06": {
+   "days": 22,
+   "stocks_per_day": 141.9,
+   "contracts_per_day": 421.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-07": {
+   "days": 23,
+   "stocks_per_day": 140.9,
+   "contracts_per_day": 415.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-08": {
+   "days": 21,
+   "stocks_per_day": 138.7,
+   "contracts_per_day": 410.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-09": {
+   "days": 22,
+   "stocks_per_day": 136.0,
+   "contracts_per_day": 408.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-10": {
+   "days": 21,
+   "stocks_per_day": 136.0,
+   "contracts_per_day": 408.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-11": {
+   "days": 20,
+   "stocks_per_day": 137.0,
+   "contracts_per_day": 411.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2020-12": {
+   "days": 22,
+   "stocks_per_day": 137.0,
+   "contracts_per_day": 411.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-01": {
+   "days": 20,
+   "stocks_per_day": 140.0,
+   "contracts_per_day": 420.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-02": {
+   "days": 20,
+   "stocks_per_day": 140.8,
+   "contracts_per_day": 422.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-03": {
+   "days": 20,
+   "stocks_per_day": 156.0,
+   "contracts_per_day": 468.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-04": {
+   "days": 19,
+   "stocks_per_day": 156.0,
+   "contracts_per_day": 468.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-05": {
+   "days": 20,
+   "stocks_per_day": 156.0,
+   "contracts_per_day": 468.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-06": {
+   "days": 22,
+   "stocks_per_day": 156.7,
+   "contracts_per_day": 470.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-07": {
+   "days": 21,
+   "stocks_per_day": 160.1,
+   "contracts_per_day": 480.3,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-08": {
+   "days": 21,
+   "stocks_per_day": 163.4,
+   "contracts_per_day": 490.3,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-09": {
+   "days": 21,
+   "stocks_per_day": 172.0,
+   "contracts_per_day": 516.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-10": {
+   "days": 20,
+   "stocks_per_day": 180.4,
+   "contracts_per_day": 541.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-11": {
+   "days": 20,
+   "stocks_per_day": 188.0,
+   "contracts_per_day": 564.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2021-12": {
+   "days": 23,
+   "stocks_per_day": 188.4,
+   "contracts_per_day": 565.2,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-01": {
+   "days": 20,
+   "stocks_per_day": 197.2,
+   "contracts_per_day": 591.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-02": {
+   "days": 20,
+   "stocks_per_day": 199.0,
+   "contracts_per_day": 596.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-03": {
+   "days": 21,
+   "stocks_per_day": 199.0,
+   "contracts_per_day": 596.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-04": {
+   "days": 19,
+   "stocks_per_day": 198.9,
+   "contracts_per_day": 594.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-05": {
+   "days": 21,
+   "stocks_per_day": 198.0,
+   "contracts_per_day": 591.6,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-06": {
+   "days": 22,
+   "stocks_per_day": 198.0,
+   "contracts_per_day": 589.0,
+   "expiries_per_day": 3.05,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-07": {
+   "days": 21,
+   "stocks_per_day": 196.0,
+   "contracts_per_day": 584.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-08": {
+   "days": 20,
+   "stocks_per_day": 194.8,
+   "contracts_per_day": 582.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-09": {
+   "days": 22,
+   "stocks_per_day": 194.0,
+   "contracts_per_day": 582.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-10": {
+   "days": 19,
+   "stocks_per_day": 194.0,
+   "contracts_per_day": 580.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-11": {
+   "days": 21,
+   "stocks_per_day": 193.5,
+   "contracts_per_day": 577.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2022-12": {
+   "days": 22,
+   "stocks_per_day": 192.0,
+   "contracts_per_day": 574.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-01": {
+   "days": 21,
+   "stocks_per_day": 191.0,
+   "contracts_per_day": 572.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-02": {
+   "days": 20,
+   "stocks_per_day": 191.0,
+   "contracts_per_day": 570.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-03": {
+   "days": 21,
+   "stocks_per_day": 190.9,
+   "contracts_per_day": 567.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-04": {
+   "days": 17,
+   "stocks_per_day": 188.9,
+   "contracts_per_day": 563.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-05": {
+   "days": 22,
+   "stocks_per_day": 187.8,
+   "contracts_per_day": 560.5,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-06": {
+   "days": 21,
+   "stocks_per_day": 187.0,
+   "contracts_per_day": 557.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-07": {
+   "days": 21,
+   "stocks_per_day": 185.3,
+   "contracts_per_day": 554.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-08": {
+   "days": 22,
+   "stocks_per_day": 184.0,
+   "contracts_per_day": 552.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-09": {
+   "days": 20,
+   "stocks_per_day": 184.0,
+   "contracts_per_day": 552.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-10": {
+   "days": 20,
+   "stocks_per_day": 184.0,
+   "contracts_per_day": 551.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-11": {
+   "days": 21,
+   "stocks_per_day": 184.0,
+   "contracts_per_day": 551.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2023-12": {
+   "days": 20,
+   "stocks_per_day": 183.9,
+   "contracts_per_day": 549.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-01": {
+   "days": 22,
+   "stocks_per_day": 183.0,
+   "contracts_per_day": 547.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-02": {
+   "days": 21,
+   "stocks_per_day": 183.0,
+   "contracts_per_day": 547.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-03": {
+   "days": 19,
+   "stocks_per_day": 182.0,
+   "contracts_per_day": 546.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-04": {
+   "days": 20,
+   "stocks_per_day": 182.0,
+   "contracts_per_day": 545.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-05": {
+   "days": 22,
+   "stocks_per_day": 182.0,
+   "contracts_per_day": 545.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-06": {
+   "days": 19,
+   "stocks_per_day": 181.9,
+   "contracts_per_day": 543.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old"
+   ]
+  },
+  "2024-07": {
+   "days": 22,
+   "stocks_per_day": 181.0,
+   "contracts_per_day": 541.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "old",
+    "udiff"
+   ]
+  },
+  "2024-08": {
+   "days": 21,
+   "stocks_per_day": 181.0,
+   "contracts_per_day": 540.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2024-09": {
+   "days": 21,
+   "stocks_per_day": 180.0,
+   "contracts_per_day": 538.9,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2024-10": {
+   "days": 22,
+   "stocks_per_day": 179.3,
+   "contracts_per_day": 535.8,
+   "expiries_per_day": 3.14,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2024-11": {
+   "days": 19,
+   "stocks_per_day": 180.4,
+   "contracts_per_day": 541.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2024-12": {
+   "days": 21,
+   "stocks_per_day": 223.0,
+   "contracts_per_day": 666.7,
+   "expiries_per_day": 3.05,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-01": {
+   "days": 23,
+   "stocks_per_day": 223.2,
+   "contracts_per_day": 652.7,
+   "expiries_per_day": 3.13,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-02": {
+   "days": 20,
+   "stocks_per_day": 226.4,
+   "contracts_per_day": 646.8,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-03": {
+   "days": 19,
+   "stocks_per_day": 216.1,
+   "contracts_per_day": 643.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-04": {
+   "days": 19,
+   "stocks_per_day": 216.8,
+   "contracts_per_day": 642.7,
+   "expiries_per_day": 3.05,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-05": {
+   "days": 21,
+   "stocks_per_day": 216.2,
+   "contracts_per_day": 638.6,
+   "expiries_per_day": 3.1,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-06": {
+   "days": 21,
+   "stocks_per_day": 220.4,
+   "contracts_per_day": 649.4,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-07": {
+   "days": 23,
+   "stocks_per_day": 224.0,
+   "contracts_per_day": 644.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-08": {
+   "days": 19,
+   "stocks_per_day": 215.6,
+   "contracts_per_day": 630.7,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-09": {
+   "days": 22,
+   "stocks_per_day": 209.0,
+   "contracts_per_day": 625.0,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-10": {
+   "days": 21,
+   "stocks_per_day": 209.0,
+   "contracts_per_day": 625.3,
+   "expiries_per_day": 3.24,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-11": {
+   "days": 19,
+   "stocks_per_day": 208.8,
+   "contracts_per_day": 620.1,
+   "expiries_per_day": 3.0,
+   "formats": [
+    "udiff"
+   ]
+  },
+  "2025-12": {
+   "days": 22,
+   "stocks_per_day": 208.0,
+   "contracts_per_day": 615.3,
+   "expiries_per_day": 3.18,
+   "formats": [
+    "udiff"
+   ]
+  }
+ },
+ "symbol_match_rate": 1.0,
+ "oi_units": {
+  "identity_match": {
+   "old": 0.9986,
+   "udiff": 1.0
+  },
+  "switch": {
+   "date": "2024-07-08",
+   "symbols": 181,
+   "median_doi": 0.0055
+  }
+ },
+ "aggregator": {
+  "sessions": 4211,
+  "symbol_days": 769608,
+  "files_per_format": {
+   "old": 3841,
+   "udiff": 370
+  },
+  "bad_files": []
+ },
+ "rule_notes": [
+  "gap: a day whose previous cash session has no F&O file is dropped, not compared across the gap (stricter than the prereg's wording)",
+  "zero_oi: a stock with OI 0 on t-1 has no defined dOI and is dropped"
+ ],
+ "signal_drops": {
+  "expiry": 38181,
+  "after_expiry": 38110,
+  "no_session": 0,
+  "gap": 639,
+  "first_day": 68,
+  "zero_oi": 170,
+  "unmatched": 0,
+  "share_change": 156,
+  "no_close": 6,
+  "no_state": 9381
+ },
+ "event_drops": {
+  "LONG_BUILDUP": {
+   "window": 88,
+   "no_trade": 26,
+   "zero_shares": 478,
+   "overlap": 88874
+  },
+  "SHORT_COVERING": {
+   "window": 116,
+   "no_trade": 34,
+   "zero_shares": 478,
+   "overlap": 77308
+  }
+ },
+ "events": {
+  "LONG_BUILDUP": 89268,
+  "SHORT_COVERING": 84540
+ },
+ "lb_entry_sessions": 3756,
+ "states_per_month": {
+  "2009-01": {
+   "LONG_BUILDUP": 1001,
+   "SHORT_COVERING": 766,
+   "SHORT_BUILDUP": 1049,
+   "LONG_UNWINDING": 1255
+  },
+  "2009-02": {
+   "LONG_BUILDUP": 1047,
+   "SHORT_COVERING": 702,
+   "SHORT_BUILDUP": 1135,
+   "LONG_UNWINDING": 1102
+  },
+  "2009-03": {
+   "LONG_BUILDUP": 1152,
+   "SHORT_COVERING": 920,
+   "SHORT_BUILDUP": 1041,
+   "LONG_UNWINDING": 856
+  },
+  "2009-04": {
+   "LONG_BUILDUP": 1384,
+   "SHORT_COVERING": 918,
+   "SHORT_BUILDUP": 605,
+   "LONG_UNWINDING": 836
+  },
+  "2009-05": {
+   "LONG_BUILDUP": 1204,
+   "SHORT_COVERING": 1128,
+   "SHORT_BUILDUP": 698,
+   "LONG_UNWINDING": 833
+  },
+  "2009-06": {
+   "LONG_BUILDUP": 1270,
+   "SHORT_COVERING": 871,
+   "SHORT_BUILDUP": 889,
+   "LONG_UNWINDING": 1278
+  },
+  "2009-07": {
+   "LONG_BUILDUP": 1175,
+   "SHORT_COVERING": 883,
+   "SHORT_BUILDUP": 725,
+   "LONG_UNWINDING": 951
+  },
+  "2009-08": {
+   "LONG_BUILDUP": 1101,
+   "SHORT_COVERING": 658,
+   "SHORT_BUILDUP": 788,
+   "LONG_UNWINDING": 780
+  },
+  "2009-09": {
+   "LONG_BUILDUP": 1009,
+   "SHORT_COVERING": 679,
+   "SHORT_BUILDUP": 791,
+   "LONG_UNWINDING": 671
+  },
+  "2009-10": {
+   "LONG_BUILDUP": 738,
+   "SHORT_COVERING": 667,
+   "SHORT_BUILDUP": 870,
+   "LONG_UNWINDING": 897
+  },
+  "2009-11": {
+   "LONG_BUILDUP": 1077,
+   "SHORT_COVERING": 816,
+   "SHORT_BUILDUP": 681,
+   "LONG_UNWINDING": 585
+  },
+  "2009-12": {
+   "LONG_BUILDUP": 1026,
+   "SHORT_COVERING": 788,
+   "SHORT_BUILDUP": 865,
+   "LONG_UNWINDING": 829
+  },
+  "2010-01": {
+   "LONG_BUILDUP": 685,
+   "SHORT_COVERING": 464,
+   "SHORT_BUILDUP": 876,
+   "LONG_UNWINDING": 805
+  },
+  "2010-02": {
+   "LONG_BUILDUP": 808,
+   "SHORT_COVERING": 693,
+   "SHORT_BUILDUP": 987,
+   "LONG_UNWINDING": 699
+  },
+  "2010-03": {
+   "LONG_BUILDUP": 1064,
+   "SHORT_COVERING": 797,
+   "SHORT_BUILDUP": 1112,
+   "LONG_UNWINDING": 584
+  },
+  "2010-04": {
+   "LONG_BUILDUP": 942,
+   "SHORT_COVERING": 692,
+   "SHORT_BUILDUP": 1042,
+   "LONG_UNWINDING": 686
+  },
+  "2010-05": {
+   "LONG_BUILDUP": 605,
+   "SHORT_COVERING": 724,
+   "SHORT_BUILDUP": 1101,
+   "LONG_UNWINDING": 930
+  },
+  "2010-06": {
+   "LONG_BUILDUP": 1320,
+   "SHORT_COVERING": 871,
+   "SHORT_BUILDUP": 1040,
+   "LONG_UNWINDING": 648
+  },
+  "2010-07": {
+   "LONG_BUILDUP": 1101,
+   "SHORT_COVERING": 867,
+   "SHORT_BUILDUP": 1259,
+   "LONG_UNWINDING": 700
+  },
+  "2010-08": {
+   "LONG_BUILDUP": 1185,
+   "SHORT_COVERING": 760,
+   "SHORT_BUILDUP": 1320,
+   "LONG_UNWINDING": 724
+  },
+  "2010-09": {
+   "LONG_BUILDUP": 1198,
+   "SHORT_COVERING": 980,
+   "SHORT_BUILDUP": 1078,
+   "LONG_UNWINDING": 709
+  },
+  "2010-10": {
+   "LONG_BUILDUP": 1001,
+   "SHORT_COVERING": 671,
+   "SHORT_BUILDUP": 1174,
+   "LONG_UNWINDING": 745
+  },
+  "2010-11": {
+   "LONG_BUILDUP": 1006,
+   "SHORT_COVERING": 1047,
+   "SHORT_BUILDUP": 1084,
+   "LONG_UNWINDING": 1054
+  },
+  "2010-12": {
+   "LONG_BUILDUP": 1081,
+   "SHORT_COVERING": 1189,
+   "SHORT_BUILDUP": 1260,
+   "LONG_UNWINDING": 854
+  },
+  "2011-01": {
+   "LONG_BUILDUP": 847,
+   "SHORT_COVERING": 780,
+   "SHORT_BUILDUP": 1312,
+   "LONG_UNWINDING": 1006
+  },
+  "2011-02": {
+   "LONG_BUILDUP": 873,
+   "SHORT_COVERING": 936,
+   "SHORT_BUILDUP": 1205,
+   "LONG_UNWINDING": 939
+  },
+  "2011-03": {
+   "LONG_BUILDUP": 1441,
+   "SHORT_COVERING": 1209,
+   "SHORT_BUILDUP": 1142,
+   "LONG_UNWINDING": 790
+  },
+  "2011-04": {
+   "LONG_BUILDUP": 1075,
+   "SHORT_COVERING": 603,
+   "SHORT_BUILDUP": 903,
+   "LONG_UNWINDING": 710
+  },
+  "2011-05": {
+   "LONG_BUILDUP": 980,
+   "SHORT_COVERING": 917,
+   "SHORT_BUILDUP": 1447,
+   "LONG_UNWINDING": 1048
+  },
+  "2011-06": {
+   "LONG_BUILDUP": 1165,
+   "SHORT_COVERING": 940,
+   "SHORT_BUILDUP": 1428,
+   "LONG_UNWINDING": 1057
+  },
+  "2011-07": {
+   "LONG_BUILDUP": 1150,
+   "SHORT_COVERING": 795,
+   "SHORT_BUILDUP": 1168,
+   "LONG_UNWINDING": 845
+  },
+  "2011-08": {
+   "LONG_BUILDUP": 831,
+   "SHORT_COVERING": 970,
+   "SHORT_BUILDUP": 1210,
+   "LONG_UNWINDING": 1268
+  },
+  "2011-09": {
+   "LONG_BUILDUP": 1151,
+   "SHORT_COVERING": 983,
+   "SHORT_BUILDUP": 1228,
+   "LONG_UNWINDING": 878
+  },
+  "2011-10": {
+   "LONG_BUILDUP": 1135,
+   "SHORT_COVERING": 762,
+   "SHORT_BUILDUP": 1237,
+   "LONG_UNWINDING": 644
+  },
+  "2011-11": {
+   "LONG_BUILDUP": 709,
+   "SHORT_COVERING": 726,
+   "SHORT_BUILDUP": 1438,
+   "LONG_UNWINDING": 1105
+  },
+  "2011-12": {
+   "LONG_BUILDUP": 943,
+   "SHORT_COVERING": 842,
+   "SHORT_BUILDUP": 1320,
+   "LONG_UNWINDING": 1084
+  },
+  "2012-01": {
+   "LONG_BUILDUP": 1632,
+   "SHORT_COVERING": 1105,
+   "SHORT_BUILDUP": 998,
+   "LONG_UNWINDING": 629
+  },
+  "2012-02": {
+   "LONG_BUILDUP": 1365,
+   "SHORT_COVERING": 912,
+   "SHORT_BUILDUP": 842,
+   "LONG_UNWINDING": 750
+  },
+  "2012-03": {
+   "LONG_BUILDUP": 980,
+   "SHORT_COVERING": 954,
+   "SHORT_BUILDUP": 1091,
+   "LONG_UNWINDING": 1190
+  },
+  "2012-04": {
+   "LONG_BUILDUP": 1092,
+   "SHORT_COVERING": 751,
+   "SHORT_BUILDUP": 1109,
+   "LONG_UNWINDING": 798
+  },
+  "2012-05": {
+   "LONG_BUILDUP": 923,
+   "SHORT_COVERING": 851,
+   "SHORT_BUILDUP": 1494,
+   "LONG_UNWINDING": 1050
+  },
+  "2012-06": {
+   "LONG_BUILDUP": 1322,
+   "SHORT_COVERING": 831,
+   "SHORT_BUILDUP": 890,
+   "LONG_UNWINDING": 622
+  },
+  "2012-07": {
+   "LONG_BUILDUP": 1169,
+   "SHORT_COVERING": 736,
+   "SHORT_BUILDUP": 1216,
+   "LONG_UNWINDING": 948
+  },
+  "2012-08": {
+   "LONG_BUILDUP": 909,
+   "SHORT_COVERING": 809,
+   "SHORT_BUILDUP": 1186,
+   "LONG_UNWINDING": 910
+  },
+  "2012-09": {
+   "LONG_BUILDUP": 1132,
+   "SHORT_COVERING": 967,
+   "SHORT_BUILDUP": 883,
+   "LONG_UNWINDING": 614
+  },
+  "2012-10": {
+   "LONG_BUILDUP": 783,
+   "SHORT_COVERING": 569,
+   "SHORT_BUILDUP": 898,
+   "LONG_UNWINDING": 664
+  },
+  "2012-11": {
+   "LONG_BUILDUP": 697,
+   "SHORT_COVERING": 616,
+   "SHORT_BUILDUP": 688,
+   "LONG_UNWINDING": 526
+  },
+  "2012-12": {
+   "LONG_BUILDUP": 866,
+   "SHORT_COVERING": 558,
+   "SHORT_BUILDUP": 799,
+   "LONG_UNWINDING": 461
+  },
+  "2013-01": {
+   "LONG_BUILDUP": 761,
+   "SHORT_COVERING": 736,
+   "SHORT_BUILDUP": 967,
+   "LONG_UNWINDING": 777
+  },
+  "2013-02": {
+   "LONG_BUILDUP": 452,
+   "SHORT_COVERING": 641,
+   "SHORT_BUILDUP": 847,
+   "LONG_UNWINDING": 685
+  },
+  "2013-03": {
+   "LONG_BUILDUP": 486,
+   "SHORT_COVERING": 581,
+   "SHORT_BUILDUP": 783,
+   "LONG_UNWINDING": 581
+  },
+  "2013-04": {
+   "LONG_BUILDUP": 781,
+   "SHORT_COVERING": 545,
+   "SHORT_BUILDUP": 703,
+   "LONG_UNWINDING": 386
+  },
+  "2013-05": {
+   "LONG_BUILDUP": 944,
+   "SHORT_COVERING": 573,
+   "SHORT_BUILDUP": 887,
+   "LONG_UNWINDING": 550
+  },
+  "2013-06": {
+   "LONG_BUILDUP": 496,
+   "SHORT_COVERING": 521,
+   "SHORT_BUILDUP": 978,
+   "LONG_UNWINDING": 540
+  },
+  "2013-07": {
+   "LONG_BUILDUP": 811,
+   "SHORT_COVERING": 626,
+   "SHORT_BUILDUP": 987,
+   "LONG_UNWINDING": 520
+  },
+  "2013-08": {
+   "LONG_BUILDUP": 610,
+   "SHORT_COVERING": 609,
+   "SHORT_BUILDUP": 759,
+   "LONG_UNWINDING": 547
+  },
+  "2013-09": {
+   "LONG_BUILDUP": 736,
+   "SHORT_COVERING": 630,
+   "SHORT_BUILDUP": 592,
+   "LONG_UNWINDING": 521
+  },
+  "2013-10": {
+   "LONG_BUILDUP": 831,
+   "SHORT_COVERING": 540,
+   "SHORT_BUILDUP": 610,
+   "LONG_UNWINDING": 510
+  },
+  "2013-11": {
+   "LONG_BUILDUP": 598,
+   "SHORT_COVERING": 429,
+   "SHORT_BUILDUP": 790,
+   "LONG_UNWINDING": 444
+  },
+  "2013-12": {
+   "LONG_BUILDUP": 770,
+   "SHORT_COVERING": 511,
+   "SHORT_BUILDUP": 734,
+   "LONG_UNWINDING": 499
+  },
+  "2014-01": {
+   "LONG_BUILDUP": 624,
+   "SHORT_COVERING": 565,
+   "SHORT_BUILDUP": 967,
+   "LONG_UNWINDING": 629
+  },
+  "2014-02": {
+   "LONG_BUILDUP": 558,
+   "SHORT_COVERING": 587,
+   "SHORT_BUILDUP": 749,
+   "LONG_UNWINDING": 339
+  },
+  "2014-03": {
+   "LONG_BUILDUP": 860,
+   "SHORT_COVERING": 612,
+   "SHORT_BUILDUP": 629,
+   "LONG_UNWINDING": 427
+  },
+  "2014-04": {
+   "LONG_BUILDUP": 708,
+   "SHORT_COVERING": 456,
+   "SHORT_BUILDUP": 717,
+   "LONG_UNWINDING": 546
+  },
+  "2014-05": {
+   "LONG_BUILDUP": 839,
+   "SHORT_COVERING": 638,
+   "SHORT_BUILDUP": 684,
+   "LONG_UNWINDING": 400
+  },
+  "2014-06": {
+   "LONG_BUILDUP": 851,
+   "SHORT_COVERING": 616,
+   "SHORT_BUILDUP": 575,
+   "LONG_UNWINDING": 509
+  },
+  "2014-07": {
+   "LONG_BUILDUP": 687,
+   "SHORT_COVERING": 740,
+   "SHORT_BUILDUP": 748,
+   "LONG_UNWINDING": 639
+  },
+  "2014-08": {
+   "LONG_BUILDUP": 663,
+   "SHORT_COVERING": 584,
+   "SHORT_BUILDUP": 618,
+   "LONG_UNWINDING": 411
+  },
+  "2014-09": {
+   "LONG_BUILDUP": 650,
+   "SHORT_COVERING": 597,
+   "SHORT_BUILDUP": 815,
+   "LONG_UNWINDING": 542
+  },
+  "2014-10": {
+   "LONG_BUILDUP": 654,
+   "SHORT_COVERING": 551,
+   "SHORT_BUILDUP": 664,
+   "LONG_UNWINDING": 338
+  },
+  "2014-11": {
+   "LONG_BUILDUP": 615,
+   "SHORT_COVERING": 477,
+   "SHORT_BUILDUP": 740,
+   "LONG_UNWINDING": 381
+  },
+  "2014-12": {
+   "LONG_BUILDUP": 689,
+   "SHORT_COVERING": 673,
+   "SHORT_BUILDUP": 893,
+   "LONG_UNWINDING": 620
+  },
+  "2015-01": {
+   "LONG_BUILDUP": 782,
+   "SHORT_COVERING": 694,
+   "SHORT_BUILDUP": 728,
+   "LONG_UNWINDING": 525
+  },
+  "2015-02": {
+   "LONG_BUILDUP": 652,
+   "SHORT_COVERING": 591,
+   "SHORT_BUILDUP": 855,
+   "LONG_UNWINDING": 490
+  },
+  "2015-03": {
+   "LONG_BUILDUP": 638,
+   "SHORT_COVERING": 614,
+   "SHORT_BUILDUP": 843,
+   "LONG_UNWINDING": 623
+  },
+  "2015-04": {
+   "LONG_BUILDUP": 574,
+   "SHORT_COVERING": 599,
+   "SHORT_BUILDUP": 892,
+   "LONG_UNWINDING": 503
+  },
+  "2015-05": {
+   "LONG_BUILDUP": 623,
+   "SHORT_COVERING": 610,
+   "SHORT_BUILDUP": 710,
+   "LONG_UNWINDING": 477
+  },
+  "2015-06": {
+   "LONG_BUILDUP": 843,
+   "SHORT_COVERING": 672,
+   "SHORT_BUILDUP": 949,
+   "LONG_UNWINDING": 660
+  },
+  "2015-07": {
+   "LONG_BUILDUP": 1062,
+   "SHORT_COVERING": 637,
+   "SHORT_BUILDUP": 1049,
+   "LONG_UNWINDING": 528
+  },
+  "2015-08": {
+   "LONG_BUILDUP": 626,
+   "SHORT_COVERING": 661,
+   "SHORT_BUILDUP": 1036,
+   "LONG_UNWINDING": 650
+  },
+  "2015-09": {
+   "LONG_BUILDUP": 817,
+   "SHORT_COVERING": 640,
+   "SHORT_BUILDUP": 807,
+   "LONG_UNWINDING": 558
+  },
+  "2015-10": {
+   "LONG_BUILDUP": 828,
+   "SHORT_COVERING": 665,
+   "SHORT_BUILDUP": 855,
+   "LONG_UNWINDING": 539
+  },
+  "2015-11": {
+   "LONG_BUILDUP": 749,
+   "SHORT_COVERING": 583,
+   "SHORT_BUILDUP": 960,
+   "LONG_UNWINDING": 413
+  },
+  "2015-12": {
+   "LONG_BUILDUP": 934,
+   "SHORT_COVERING": 713,
+   "SHORT_BUILDUP": 1076,
+   "LONG_UNWINDING": 633
+  },
+  "2016-01": {
+   "LONG_BUILDUP": 578,
+   "SHORT_COVERING": 496,
+   "SHORT_BUILDUP": 1068,
+   "LONG_UNWINDING": 659
+  },
+  "2016-02": {
+   "LONG_BUILDUP": 649,
+   "SHORT_COVERING": 644,
+   "SHORT_BUILDUP": 1064,
+   "LONG_UNWINDING": 773
+  },
+  "2016-03": {
+   "LONG_BUILDUP": 969,
+   "SHORT_COVERING": 982,
+   "SHORT_BUILDUP": 722,
+   "LONG_UNWINDING": 563
+  },
+  "2016-04": {
+   "LONG_BUILDUP": 800,
+   "SHORT_COVERING": 621,
+   "SHORT_BUILDUP": 726,
+   "LONG_UNWINDING": 417
+  },
+  "2016-05": {
+   "LONG_BUILDUP": 885,
+   "SHORT_COVERING": 701,
+   "SHORT_BUILDUP": 1193,
+   "LONG_UNWINDING": 630
+  },
+  "2016-06": {
+   "LONG_BUILDUP": 933,
+   "SHORT_COVERING": 952,
+   "SHORT_BUILDUP": 970,
+   "LONG_UNWINDING": 728
+  },
+  "2016-07": {
+   "LONG_BUILDUP": 935,
+   "SHORT_COVERING": 642,
+   "SHORT_BUILDUP": 874,
+   "LONG_UNWINDING": 453
+  },
+  "2016-08": {
+   "LONG_BUILDUP": 1021,
+   "SHORT_COVERING": 805,
+   "SHORT_BUILDUP": 1042,
+   "LONG_UNWINDING": 538
+  },
+  "2016-09": {
+   "LONG_BUILDUP": 794,
+   "SHORT_COVERING": 796,
+   "SHORT_BUILDUP": 912,
+   "LONG_UNWINDING": 566
+  },
+  "2016-10": {
+   "LONG_BUILDUP": 861,
+   "SHORT_COVERING": 621,
+   "SHORT_BUILDUP": 860,
+   "LONG_UNWINDING": 583
+  },
+  "2016-11": {
+   "LONG_BUILDUP": 699,
+   "SHORT_COVERING": 797,
+   "SHORT_BUILDUP": 962,
+   "LONG_UNWINDING": 832
+  },
+  "2016-12": {
+   "LONG_BUILDUP": 812,
+   "SHORT_COVERING": 701,
+   "SHORT_BUILDUP": 1170,
+   "LONG_UNWINDING": 774
+  },
+  "2017-01": {
+   "LONG_BUILDUP": 1105,
+   "SHORT_COVERING": 721,
+   "SHORT_BUILDUP": 925,
+   "LONG_UNWINDING": 525
+  },
+  "2017-02": {
+   "LONG_BUILDUP": 945,
+   "SHORT_COVERING": 662,
+   "SHORT_BUILDUP": 818,
+   "LONG_UNWINDING": 519
+  },
+  "2017-03": {
+   "LONG_BUILDUP": 1000,
+   "SHORT_COVERING": 799,
+   "SHORT_BUILDUP": 1010,
+   "LONG_UNWINDING": 617
+  },
+  "2017-04": {
+   "LONG_BUILDUP": 918,
+   "SHORT_COVERING": 657,
+   "SHORT_BUILDUP": 893,
+   "LONG_UNWINDING": 521
+  },
+  "2017-05": {
+   "LONG_BUILDUP": 979,
+   "SHORT_COVERING": 827,
+   "SHORT_BUILDUP": 1313,
+   "LONG_UNWINDING": 944
+  },
+  "2017-06": {
+   "LONG_BUILDUP": 874,
+   "SHORT_COVERING": 973,
+   "SHORT_BUILDUP": 1255,
+   "LONG_UNWINDING": 807
+  },
+  "2017-07": {
+   "LONG_BUILDUP": 1162,
+   "SHORT_COVERING": 1089,
+   "SHORT_BUILDUP": 1016,
+   "LONG_UNWINDING": 722
+  },
+  "2017-08": {
+   "LONG_BUILDUP": 950,
+   "SHORT_COVERING": 1026,
+   "SHORT_BUILDUP": 1178,
+   "LONG_UNWINDING": 1071
+  },
+  "2017-09": {
+   "LONG_BUILDUP": 1033,
+   "SHORT_COVERING": 618,
+   "SHORT_BUILDUP": 1239,
+   "LONG_UNWINDING": 871
+  },
+  "2017-10": {
+   "LONG_BUILDUP": 1247,
+   "SHORT_COVERING": 857,
+   "SHORT_BUILDUP": 1075,
+   "LONG_UNWINDING": 590
+  },
+  "2017-11": {
+   "LONG_BUILDUP": 1061,
+   "SHORT_COVERING": 1051,
+   "SHORT_BUILDUP": 1309,
+   "LONG_UNWINDING": 980
+  },
+  "2017-12": {
+   "LONG_BUILDUP": 1032,
+   "SHORT_COVERING": 904,
+   "SHORT_BUILDUP": 956,
+   "LONG_UNWINDING": 657
+  },
+  "2018-01": {
+   "LONG_BUILDUP": 1064,
+   "SHORT_COVERING": 914,
+   "SHORT_BUILDUP": 1378,
+   "LONG_UNWINDING": 824
+  },
+  "2018-02": {
+   "LONG_BUILDUP": 789,
+   "SHORT_COVERING": 773,
+   "SHORT_BUILDUP": 1074,
+   "LONG_UNWINDING": 878
+  },
+  "2018-03": {
+   "LONG_BUILDUP": 749,
+   "SHORT_COVERING": 907,
+   "SHORT_BUILDUP": 1143,
+   "LONG_UNWINDING": 924
+  },
+  "2018-04": {
+   "LONG_BUILDUP": 1113,
+   "SHORT_COVERING": 830,
+   "SHORT_BUILDUP": 1094,
+   "LONG_UNWINDING": 674
+  },
+  "2018-05": {
+   "LONG_BUILDUP": 810,
+   "SHORT_COVERING": 1050,
+   "SHORT_BUILDUP": 1458,
+   "LONG_UNWINDING": 984
+  },
+  "2018-06": {
+   "LONG_BUILDUP": 811,
+   "SHORT_COVERING": 848,
+   "SHORT_BUILDUP": 1291,
+   "LONG_UNWINDING": 710
+  },
+  "2018-07": {
+   "LONG_BUILDUP": 1029,
+   "SHORT_COVERING": 1087,
+   "SHORT_BUILDUP": 1150,
+   "LONG_UNWINDING": 812
+  },
+  "2018-08": {
+   "LONG_BUILDUP": 1081,
+   "SHORT_COVERING": 974,
+   "SHORT_BUILDUP": 1090,
+   "LONG_UNWINDING": 723
+  },
+  "2018-09": {
+   "LONG_BUILDUP": 611,
+   "SHORT_COVERING": 703,
+   "SHORT_BUILDUP": 1118,
+   "LONG_UNWINDING": 837
+  },
+  "2018-10": {
+   "LONG_BUILDUP": 950,
+   "SHORT_COVERING": 973,
+   "SHORT_BUILDUP": 1125,
+   "LONG_UNWINDING": 783
+  },
+  "2018-11": {
+   "LONG_BUILDUP": 931,
+   "SHORT_COVERING": 1003,
+   "SHORT_BUILDUP": 945,
+   "LONG_UNWINDING": 739
+  },
+  "2018-12": {
+   "LONG_BUILDUP": 958,
+   "SHORT_COVERING": 845,
+   "SHORT_BUILDUP": 1000,
+   "LONG_UNWINDING": 765
+  },
+  "2019-01": {
+   "LONG_BUILDUP": 877,
+   "SHORT_COVERING": 983,
+   "SHORT_BUILDUP": 1423,
+   "LONG_UNWINDING": 1038
+  },
+  "2019-02": {
+   "LONG_BUILDUP": 838,
+   "SHORT_COVERING": 905,
+   "SHORT_BUILDUP": 1037,
+   "LONG_UNWINDING": 751
+  },
+  "2019-03": {
+   "LONG_BUILDUP": 885,
+   "SHORT_COVERING": 775,
+   "SHORT_BUILDUP": 788,
+   "LONG_UNWINDING": 665
+  },
+  "2019-04": {
+   "LONG_BUILDUP": 674,
+   "SHORT_COVERING": 817,
+   "SHORT_BUILDUP": 1002,
+   "LONG_UNWINDING": 792
+  },
+  "2019-05": {
+   "LONG_BUILDUP": 824,
+   "SHORT_COVERING": 986,
+   "SHORT_BUILDUP": 1088,
+   "LONG_UNWINDING": 982
+  },
+  "2019-06": {
+   "LONG_BUILDUP": 693,
+   "SHORT_COVERING": 848,
+   "SHORT_BUILDUP": 954,
+   "LONG_UNWINDING": 790
+  },
+  "2019-07": {
+   "LONG_BUILDUP": 701,
+   "SHORT_COVERING": 758,
+   "SHORT_BUILDUP": 1130,
+   "LONG_UNWINDING": 764
+  },
+  "2019-08": {
+   "LONG_BUILDUP": 624,
+   "SHORT_COVERING": 749,
+   "SHORT_BUILDUP": 813,
+   "LONG_UNWINDING": 693
+  },
+  "2019-09": {
+   "LONG_BUILDUP": 680,
+   "SHORT_COVERING": 682,
+   "SHORT_BUILDUP": 752,
+   "LONG_UNWINDING": 587
+  },
+  "2019-10": {
+   "LONG_BUILDUP": 685,
+   "SHORT_COVERING": 825,
+   "SHORT_BUILDUP": 729,
+   "LONG_UNWINDING": 561
+  },
+  "2019-11": {
+   "LONG_BUILDUP": 615,
+   "SHORT_COVERING": 589,
+   "SHORT_BUILDUP": 793,
+   "LONG_UNWINDING": 505
+  },
+  "2019-12": {
+   "LONG_BUILDUP": 626,
+   "SHORT_COVERING": 705,
+   "SHORT_BUILDUP": 864,
+   "LONG_UNWINDING": 572
+  },
+  "2020-01": {
+   "LONG_BUILDUP": 867,
+   "SHORT_COVERING": 744,
+   "SHORT_BUILDUP": 770,
+   "LONG_UNWINDING": 618
+  },
+  "2020-02": {
+   "LONG_BUILDUP": 581,
+   "SHORT_COVERING": 549,
+   "SHORT_BUILDUP": 803,
+   "LONG_UNWINDING": 564
+  },
+  "2020-03": {
+   "LONG_BUILDUP": 423,
+   "SHORT_COVERING": 638,
+   "SHORT_BUILDUP": 692,
+   "LONG_UNWINDING": 951
+  },
+  "2020-04": {
+   "LONG_BUILDUP": 808,
+   "SHORT_COVERING": 554,
+   "SHORT_BUILDUP": 641,
+   "LONG_UNWINDING": 418
+  },
+  "2020-05": {
+   "LONG_BUILDUP": 699,
+   "SHORT_COVERING": 489,
+   "SHORT_BUILDUP": 665,
+   "LONG_UNWINDING": 431
+  },
+  "2020-06": {
+   "LONG_BUILDUP": 805,
+   "SHORT_COVERING": 689,
+   "SHORT_BUILDUP": 694,
+   "LONG_UNWINDING": 638
+  },
+  "2020-07": {
+   "LONG_BUILDUP": 775,
+   "SHORT_COVERING": 745,
+   "SHORT_BUILDUP": 724,
+   "LONG_UNWINDING": 691
+  },
+  "2020-08": {
+   "LONG_BUILDUP": 698,
+   "SHORT_COVERING": 686,
+   "SHORT_BUILDUP": 621,
+   "LONG_UNWINDING": 603
+  },
+  "2020-09": {
+   "LONG_BUILDUP": 611,
+   "SHORT_COVERING": 683,
+   "SHORT_BUILDUP": 763,
+   "LONG_UNWINDING": 651
+  },
+  "2020-10": {
+   "LONG_BUILDUP": 574,
+   "SHORT_COVERING": 701,
+   "SHORT_BUILDUP": 716,
+   "LONG_UNWINDING": 584
+  },
+  "2020-11": {
+   "LONG_BUILDUP": 785,
+   "SHORT_COVERING": 740,
+   "SHORT_BUILDUP": 507,
+   "LONG_UNWINDING": 414
+  },
+  "2020-12": {
+   "LONG_BUILDUP": 764,
+   "SHORT_COVERING": 886,
+   "SHORT_BUILDUP": 595,
+   "LONG_UNWINDING": 601
+  },
+  "2021-01": {
+   "LONG_BUILDUP": 587,
+   "SHORT_COVERING": 554,
+   "SHORT_BUILDUP": 663,
+   "LONG_UNWINDING": 561
+  },
+  "2021-02": {
+   "LONG_BUILDUP": 701,
+   "SHORT_COVERING": 692,
+   "SHORT_BUILDUP": 609,
+   "LONG_UNWINDING": 505
+  },
+  "2021-03": {
+   "LONG_BUILDUP": 581,
+   "SHORT_COVERING": 711,
+   "SHORT_BUILDUP": 676,
+   "LONG_UNWINDING": 672
+  },
+  "2021-04": {
+   "LONG_BUILDUP": 784,
+   "SHORT_COVERING": 672,
+   "SHORT_BUILDUP": 669,
+   "LONG_UNWINDING": 512
+  },
+  "2021-05": {
+   "LONG_BUILDUP": 820,
+   "SHORT_COVERING": 768,
+   "SHORT_BUILDUP": 686,
+   "LONG_UNWINDING": 519
+  },
+  "2021-06": {
+   "LONG_BUILDUP": 717,
+   "SHORT_COVERING": 751,
+   "SHORT_BUILDUP": 856,
+   "LONG_UNWINDING": 794
+  },
+  "2021-07": {
+   "LONG_BUILDUP": 679,
+   "SHORT_COVERING": 787,
+   "SHORT_BUILDUP": 866,
+   "LONG_UNWINDING": 689
+  },
+  "2021-08": {
+   "LONG_BUILDUP": 771,
+   "SHORT_COVERING": 782,
+   "SHORT_BUILDUP": 890,
+   "LONG_UNWINDING": 638
+  },
+  "2021-09": {
+   "LONG_BUILDUP": 953,
+   "SHORT_COVERING": 871,
+   "SHORT_BUILDUP": 843,
+   "LONG_UNWINDING": 746
+  },
+  "2021-10": {
+   "LONG_BUILDUP": 725,
+   "SHORT_COVERING": 804,
+   "SHORT_BUILDUP": 871,
+   "LONG_UNWINDING": 646
+  },
+  "2021-11": {
+   "LONG_BUILDUP": 785,
+   "SHORT_COVERING": 868,
+   "SHORT_BUILDUP": 976,
+   "LONG_UNWINDING": 740
+  },
+  "2021-12": {
+   "LONG_BUILDUP": 961,
+   "SHORT_COVERING": 1138,
+   "SHORT_BUILDUP": 940,
+   "LONG_UNWINDING": 896
+  },
+  "2022-01": {
+   "LONG_BUILDUP": 927,
+   "SHORT_COVERING": 856,
+   "SHORT_BUILDUP": 1025,
+   "LONG_UNWINDING": 715
+  },
+  "2022-02": {
+   "LONG_BUILDUP": 738,
+   "SHORT_COVERING": 826,
+   "SHORT_BUILDUP": 1163,
+   "LONG_UNWINDING": 832
+  },
+  "2022-03": {
+   "LONG_BUILDUP": 970,
+   "SHORT_COVERING": 1158,
+   "SHORT_BUILDUP": 1092,
+   "LONG_UNWINDING": 737
+  },
+  "2022-04": {
+   "LONG_BUILDUP": 781,
+   "SHORT_COVERING": 735,
+   "SHORT_BUILDUP": 859,
+   "LONG_UNWINDING": 787
+  },
+  "2022-05": {
+   "LONG_BUILDUP": 754,
+   "SHORT_COVERING": 778,
+   "SHORT_BUILDUP": 1265,
+   "LONG_UNWINDING": 946
+  },
+  "2022-06": {
+   "LONG_BUILDUP": 862,
+   "SHORT_COVERING": 1005,
+   "SHORT_BUILDUP": 1317,
+   "LONG_UNWINDING": 950
+  },
+  "2022-07": {
+   "LONG_BUILDUP": 1115,
+   "SHORT_COVERING": 974,
+   "SHORT_BUILDUP": 818,
+   "LONG_UNWINDING": 592
+  },
+  "2022-08": {
+   "LONG_BUILDUP": 967,
+   "SHORT_COVERING": 960,
+   "SHORT_BUILDUP": 795,
+   "LONG_UNWINDING": 766
+  },
+  "2022-09": {
+   "LONG_BUILDUP": 815,
+   "SHORT_COVERING": 896,
+   "SHORT_BUILDUP": 1153,
+   "LONG_UNWINDING": 987
+  },
+  "2022-10": {
+   "LONG_BUILDUP": 857,
+   "SHORT_COVERING": 880,
+   "SHORT_BUILDUP": 927,
+   "LONG_UNWINDING": 607
+  },
+  "2022-11": {
+   "LONG_BUILDUP": 826,
+   "SHORT_COVERING": 1041,
+   "SHORT_BUILDUP": 1015,
+   "LONG_UNWINDING": 762
+  },
+  "2022-12": {
+   "LONG_BUILDUP": 735,
+   "SHORT_COVERING": 990,
+   "SHORT_BUILDUP": 1100,
+   "LONG_UNWINDING": 979
+  },
+  "2023-01": {
+   "LONG_BUILDUP": 873,
+   "SHORT_COVERING": 931,
+   "SHORT_BUILDUP": 1156,
+   "LONG_UNWINDING": 644
+  },
+  "2023-02": {
+   "LONG_BUILDUP": 766,
+   "SHORT_COVERING": 847,
+   "SHORT_BUILDUP": 1054,
+   "LONG_UNWINDING": 744
+  },
+  "2023-03": {
+   "LONG_BUILDUP": 776,
+   "SHORT_COVERING": 887,
+   "SHORT_BUILDUP": 1078,
+   "LONG_UNWINDING": 864
+  },
+  "2023-04": {
+   "LONG_BUILDUP": 854,
+   "SHORT_COVERING": 818,
+   "SHORT_BUILDUP": 732,
+   "LONG_UNWINDING": 406
+  },
+  "2023-05": {
+   "LONG_BUILDUP": 1007,
+   "SHORT_COVERING": 1034,
+   "SHORT_BUILDUP": 996,
+   "LONG_UNWINDING": 690
+  },
+  "2023-06": {
+   "LONG_BUILDUP": 1006,
+   "SHORT_COVERING": 944,
+   "SHORT_BUILDUP": 819,
+   "LONG_UNWINDING": 753
+  },
+  "2023-07": {
+   "LONG_BUILDUP": 1007,
+   "SHORT_COVERING": 864,
+   "SHORT_BUILDUP": 915,
+   "LONG_UNWINDING": 716
+  },
+  "2023-08": {
+   "LONG_BUILDUP": 888,
+   "SHORT_COVERING": 1024,
+   "SHORT_BUILDUP": 1020,
+   "LONG_UNWINDING": 901
+  },
+  "2023-09": {
+   "LONG_BUILDUP": 838,
+   "SHORT_COVERING": 791,
+   "SHORT_BUILDUP": 834,
+   "LONG_UNWINDING": 650
+  },
+  "2023-10": {
+   "LONG_BUILDUP": 739,
+   "SHORT_COVERING": 758,
+   "SHORT_BUILDUP": 997,
+   "LONG_UNWINDING": 798
+  },
+  "2023-11": {
+   "LONG_BUILDUP": 1070,
+   "SHORT_COVERING": 1127,
+   "SHORT_BUILDUP": 849,
+   "LONG_UNWINDING": 605
+  },
+  "2023-12": {
+   "LONG_BUILDUP": 912,
+   "SHORT_COVERING": 932,
+   "SHORT_BUILDUP": 633,
+   "LONG_UNWINDING": 641
+  },
+  "2024-01": {
+   "LONG_BUILDUP": 940,
+   "SHORT_COVERING": 901,
+   "SHORT_BUILDUP": 1029,
+   "LONG_UNWINDING": 774
+  },
+  "2024-02": {
+   "LONG_BUILDUP": 886,
+   "SHORT_COVERING": 928,
+   "SHORT_BUILDUP": 1008,
+   "LONG_UNWINDING": 825
+  },
+  "2024-03": {
+   "LONG_BUILDUP": 685,
+   "SHORT_COVERING": 821,
+   "SHORT_BUILDUP": 941,
+   "LONG_UNWINDING": 625
+  },
+  "2024-04": {
+   "LONG_BUILDUP": 746,
+   "SHORT_COVERING": 816,
+   "SHORT_BUILDUP": 950,
+   "LONG_UNWINDING": 569
+  },
+  "2024-05": {
+   "LONG_BUILDUP": 879,
+   "SHORT_COVERING": 997,
+   "SHORT_BUILDUP": 942,
+   "LONG_UNWINDING": 806
+  },
+  "2024-06": {
+   "LONG_BUILDUP": 1013,
+   "SHORT_COVERING": 854,
+   "SHORT_BUILDUP": 696,
+   "LONG_UNWINDING": 520
+  },
+  "2024-07": {
+   "LONG_BUILDUP": 1024,
+   "SHORT_COVERING": 914,
+   "SHORT_BUILDUP": 993,
+   "LONG_UNWINDING": 679
+  },
+  "2024-08": {
+   "LONG_BUILDUP": 842,
+   "SHORT_COVERING": 862,
+   "SHORT_BUILDUP": 953,
+   "LONG_UNWINDING": 775
+  },
+  "2024-09": {
+   "LONG_BUILDUP": 770,
+   "SHORT_COVERING": 955,
+   "SHORT_BUILDUP": 984,
+   "LONG_UNWINDING": 705
+  },
+  "2024-10": {
+   "LONG_BUILDUP": 651,
+   "SHORT_COVERING": 750,
+   "SHORT_BUILDUP": 1137,
+   "LONG_UNWINDING": 860
+  },
+  "2024-11": {
+   "LONG_BUILDUP": 590,
+   "SHORT_COVERING": 780,
+   "SHORT_BUILDUP": 853,
+   "LONG_UNWINDING": 618
+  },
+  "2024-12": {
+   "LONG_BUILDUP": 1090,
+   "SHORT_COVERING": 939,
+   "SHORT_BUILDUP": 1385,
+   "LONG_UNWINDING": 808
+  },
+  "2025-01": {
+   "LONG_BUILDUP": 1058,
+   "SHORT_COVERING": 996,
+   "SHORT_BUILDUP": 1326,
+   "LONG_UNWINDING": 845
+  },
+  "2025-02": {
+   "LONG_BUILDUP": 838,
+   "SHORT_COVERING": 834,
+   "SHORT_BUILDUP": 1471,
+   "LONG_UNWINDING": 938
+  },
+  "2025-03": {
+   "LONG_BUILDUP": 1068,
+   "SHORT_COVERING": 1071,
+   "SHORT_BUILDUP": 976,
+   "LONG_UNWINDING": 549
+  },
+  "2025-04": {
+   "LONG_BUILDUP": 1197,
+   "SHORT_COVERING": 970,
+   "SHORT_BUILDUP": 688,
+   "LONG_UNWINDING": 391
+  },
+  "2025-05": {
+   "LONG_BUILDUP": 1018,
+   "SHORT_COVERING": 967,
+   "SHORT_BUILDUP": 946,
+   "LONG_UNWINDING": 722
+  },
+  "2025-06": {
+   "LONG_BUILDUP": 1202,
+   "SHORT_COVERING": 1013,
+   "SHORT_BUILDUP": 1273,
+   "LONG_UNWINDING": 680
+  },
+  "2025-07": {
+   "LONG_BUILDUP": 1044,
+   "SHORT_COVERING": 1195,
+   "SHORT_BUILDUP": 1556,
+   "LONG_UNWINDING": 1110
+  },
+  "2025-08": {
+   "LONG_BUILDUP": 855,
+   "SHORT_COVERING": 873,
+   "SHORT_BUILDUP": 1070,
+   "LONG_UNWINDING": 632
+  },
+  "2025-09": {
+   "LONG_BUILDUP": 1183,
+   "SHORT_COVERING": 1105,
+   "SHORT_BUILDUP": 1366,
+   "LONG_UNWINDING": 714
+  },
+  "2025-10": {
+   "LONG_BUILDUP": 963,
+   "SHORT_COVERING": 862,
+   "SHORT_BUILDUP": 975,
+   "LONG_UNWINDING": 533
+  },
+  "2025-11": {
+   "LONG_BUILDUP": 788,
+   "SHORT_COVERING": 823,
+   "SHORT_BUILDUP": 1169,
+   "LONG_UNWINDING": 755
+  },
+  "2025-12": {
+   "LONG_BUILDUP": 855,
+   "SHORT_COVERING": 831,
+   "SHORT_BUILDUP": 1260,
+   "LONG_UNWINDING": 779
+  }
+ },
+ "gates": {
+  "completeness": true,
+  "symbol_match": true,
+  "events": true,
+  "sessions": true,
+  "oi_units": true
+ },
+ "proceed": true
+}

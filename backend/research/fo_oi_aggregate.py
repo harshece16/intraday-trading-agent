@@ -4,7 +4,8 @@ Rules: docs/research/prereg-oi-buildup.md ("Data"). Stdlib only, so it runs as
 one copied file on sahab-pc, where the zips live on /mnt/data. Output columns:
 date, symbol, oi (shares, summed over every live expiry), n_exp (contracts),
 chg (the file's own change in OI, summed), expiry_day (1 when any stock future
-expires that date, by either UDiFF expiry column), fmt (old or udiff) and
+expires that date, by either UDiFF expiry column, or it is the last file day
+before an expiry listed on a holiday), fmt (old or udiff) and
 day_expiries (distinct stock-future expiries in the file). A sidecar
 <out>.meta.json lists every bad file and the file count per format.
 
@@ -15,6 +16,7 @@ systematic collection, so it is run only on the owner's explicit choice.
 
     python3 -I fo_oi_aggregate.py fetch /mnt/data/trader-sahab/fo_bhav 2009-01-01 2025-12-31
 """
+import bisect
 import csv
 import datetime as dt
 import gzip
@@ -134,11 +136,12 @@ def parse(data):
             acc[2] += _num(r[chg]) if chg is not None else 0
             expiries |= es
             expiry_day = expiry_day or d in es
-    return day, out, expiry_day, {"format": f["name"], "expiries": len(expiries), "has_chg": chg is not None}
+    return day, out, expiry_day, {"format": f["name"], "expiries": len(expiries), "has_chg": chg is not None,
+                                  "listed": expiries}
 
 
 def build(folder, out_path):
-    seen, rows, bad, per_format = set(), [], [], {}
+    seen, rows, bad, per_format, listed = set(), [], [], {}, set()
     for root, _dirs, files in os.walk(folder):
         for f in sorted(files):
             if not f.endswith(".zip"):
@@ -154,16 +157,22 @@ def build(folder, out_path):
                 continue
             seen.add(day)
             per_format[info["format"]] = per_format.get(info["format"], 0) + 1
+            listed |= info["listed"]
             rows += [(day, s, v[0], v[1], v[2], int(expiry_day), info["format"], info["expiries"])
                      for s, v in syms.items()]
-    rows.sort()
+    # Amendment 2: an expiry listed on a day with no file (a holiday; April 2009 and 2014) was
+    # settled on the last file day before it, so that day is the expiry day
+    days = sorted(seen)
+    moved = sorted({days[bisect.bisect_left(days, e) - 1] for e in listed
+                    if e not in seen and days and days[0] < e <= days[-1]})
+    rows = sorted(r[:5] + (1 if r[0] in moved else r[5],) + r[6:] for r in rows)
     with gzip.open(out_path, "wt", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(("date", "symbol", "oi", "n_exp", "chg", "expiry_day", "fmt", "day_expiries"))
         w.writerows(rows)
     with open(out_path + ".meta.json", "w") as fh:
         json.dump({"sessions": len(seen), "symbol_days": len(rows), "files_per_format": per_format,
-                   "bad_files": bad}, fh, indent=1)
+                   "bad_files": bad, "moved_expiries": moved}, fh, indent=1)
     print(f"{len(seen)} sessions, {len(rows)} symbol-days -> {out_path}; bad files: {len(bad)}")
 
 
