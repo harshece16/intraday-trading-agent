@@ -206,8 +206,8 @@ them before the run, as `prereg-us-momentum.md` requires.
 1. Mean session net excess **> 0** with Newey–West **t ≥ 2.24**.
 2. Deflated Sharpe ≥ **0.95 at N = 2** (`evaluation.deflated_sharpe_ratio`
    on the session series).
-3. Mean net excess **> 0 in both halves**.
-4. Mean net excess **> 0 over the last three years**.
+3. Mean of the session series **> 0 in both halves**.
+4. Mean of the session series **> 0 over the last three years**.
 5. Mean event net excess ≥ **+25 bp**, the economic floor.
 6. **≥ 100 events.**
 7. **Mechanism:** the mean LONG_BUILDUP − SHORT_COVERING difference is
