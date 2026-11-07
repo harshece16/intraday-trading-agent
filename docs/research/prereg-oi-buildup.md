@@ -258,3 +258,29 @@ because the mechanism gate needs it.
 - **No futures as the vehicle.** The README limits F&O to buying calls and
   puts, so the trial uses cash delivery, the instrument this project can
   hold.
+
+## Amendment 1 (2026-11-07, before any F&O history was fetched)
+
+Written after the independent code review (PR #322). No OI series and no
+return had been read, beyond the two-file probe described above. None of the
+state, trial or pass rules change. The data checks are tightened:
+
+1. **OI units across the format switch.** Stage 0 reports how often, per
+   format, `OI_t − OI_{t−1}` equals the file's own change-in-OI column
+   (`CHG_IN_OI`, `ChngInOpnIntrst`) on non-expiry days, plus the median dOI
+   across the first old → UDiFF pair of sessions (July 2024). A new stop gate,
+   `oi_units`, needs that median within ±50%. Shares in one format and lots in
+   the other would show as about −100% or several hundred percent.
+2. **UDiFF expiry days** are flagged when either `XpryDt` or
+   `FininstrmActlXpryDt` equals the trade date, so a holiday-shifted expiry is
+   still excluded.
+3. **Weekend sessions** (Budget Saturdays, Muhurat, special sessions) are
+   fetched too: weekends get one request under that era's file name.
+4. **Stage 0 item 2** also lists expiries per day and formats by month, and
+   carries the aggregator's list of bad files.
+5. **Two rules the code already applied are now written here.** A day whose
+   previous cash session has no F&O file is dropped, not compared across the
+   gap. A stock with zero OI on t−1 has no dOI and is dropped.
+
+Rights and demerger ex-dates also adjust lot sizes, but they stay in the
+sample. The reviewer estimated a few dozen stock-days, too few to matter.

@@ -27,10 +27,11 @@ def test_parse_old_format_sums_expiries_and_skips_index_futures_and_options():
             "FUTSTK,ACC,29-Jan-2015,0,XX,1,1,1,1,1,1,1,1000,0,01-JAN-2015,\n"
             "FUTSTK,ACC,26-Feb-2015,0,XX,1,1,1,1,1,1,1,250,0,01-JAN-2015,\n"
             "OPTSTK,ACC,29-Jan-2015,1400,CE,1,1,1,1,1,1,1,777,0,01-JAN-2015,\n")
-    day, syms, expiry_day = agg.parse(_zip(text))
+    day, syms, expiry_day, info = agg.parse(_zip(text))
     assert day == "2015-01-01"
-    assert syms == {"ACC": [1250, 2]}
+    assert syms == {"ACC": [1250, 2, 0]}
     assert expiry_day is False
+    assert info == {"format": "old", "expiries": 2, "has_chg": True}
 
 
 def test_parse_udiff_format_and_flags_an_expiry_day():
@@ -40,8 +41,38 @@ def test_parse_udiff_format_and_flags_an_expiry_day():
             "2025-01-30,2025-01-30,FO,NSE,STF,1,,TCS,,2025-01-30,2025-01-30,,,X,1,1,1,1,1,1,1,1,500,0\n"
             "2025-01-30,2025-01-30,FO,NSE,STF,2,,TCS,,2025-02-27,2025-02-27,,,X,1,1,1,1,1,1,1,1,4000.0,0\n"
             "2025-01-30,2025-01-30,FO,NSE,IDF,3,,NIFTY,,2025-02-27,2025-02-27,,,X,1,1,1,1,1,1,1,1,9,0\n")
-    day, syms, expiry_day = agg.parse(_zip(text))
-    assert (day, syms, expiry_day) == ("2025-01-30", {"TCS": [4500, 2]}, True)
+    day, syms, expiry_day, info = agg.parse(_zip(text))
+    assert (day, syms, expiry_day) == ("2025-01-30", {"TCS": [4500, 2, 0]}, True)
+    assert info["format"] == "udiff" and info["expiries"] == 2
+
+
+UDIFF_HEAD = ("TradDt,BizDt,Sgmt,Src,FinInstrmTp,FinInstrmId,ISIN,TckrSymb,SctySrs,XpryDt,FininstrmActlXpryDt,"
+              "StrkPric,OptnTp,FinInstrmNm,OpnPric,HghPric,LwPric,ClsPric,LastPric,PrvsClsgPric,UndrlygPric,"
+              "SttlmPric,OpnIntrst,ChngInOpnIntrst\n")
+
+
+def test_udiff_actual_expiry_column_also_flags_an_expiry_day():
+    # contract dated the 27th but actually expiring on the 26th (a holiday shift)
+    text = UDIFF_HEAD + "2025-03-26,2025-03-26,FO,NSE,STF,1,,TCS,,2025-03-27,2025-03-26,,,X,1,1,1,1,1,1,1,1,10,2\n"
+    assert agg.parse(_zip(text))[2] is True
+
+
+def test_parse_survives_a_bom_dash_oi_and_two_digit_years():
+    text = ("\ufeffINSTRUMENT,SYMBOL,EXPIRY_DT,OPEN_INT,CHG_IN_OI,TIMESTAMP\n"
+            "FUTSTK,ACC,29-Jan-15,-,-,01-Jan-15\n"
+            "FUTSTK,ACC,26-Feb-15, 300 ,25,01-Jan-15\n")
+    day, syms, _e, _i = agg.parse(_zip(text))
+    assert (day, syms) == ("2015-01-01", {"ACC": [300, 2, 25]})
+
+
+def test_fetch_refuses_the_held_out_window_before_any_request(tmp_path, monkeypatch):
+    monkeypatch.setattr(agg, "get", lambda url: (_ for _ in ()).throw(AssertionError("fetched")))
+    try:
+        agg.fetch(str(tmp_path), "2025-12-30", "2026-01-02")
+    except SystemExit as e:
+        assert "held-out" in str(e)
+    else:
+        raise AssertionError("no refusal")
 
 
 def test_state_needs_both_signs_nonzero():
@@ -110,12 +141,34 @@ def test_verdict_runs_end_to_end_on_synthetic_priced_events():
 def test_stage0_gates_on_missing_files_and_lists_parse_counts_by_month():
     sessions, chains = _market()
     by_date = {d: {"UP": 100 + i} for i, d in enumerate(sessions) if i != 4}
-    contracts = {d: 3 for d in by_date}
+    info = _info(by_date)
     days, sdrops, match = _days(sessions, chains, by_date)
     events, edrops = {}, {}
     for s in (ob.LB, ob.SC):
         events[s], edrops[s] = ob.build_events(days, sessions, chains, s)
-    s0 = ob.stage0(sessions, by_date, sorted(by_date), set(), contracts, days, sdrops, match, events, edrops)
+    s0 = ob.stage0(sessions, by_date, sorted(by_date), set(), info, days, sdrops, match, events, edrops)
     assert s0["missing"] == [sessions[4]] and not s0["gates"]["completeness"] and not s0["proceed"]
-    assert s0["parse_by_month"]["2015-02"] == {"days": 11, "stocks_per_day": 1.0, "contracts_per_day": 3.0}
+    assert s0["parse_by_month"]["2015-02"] == {"days": 11, "stocks_per_day": 1.0, "contracts_per_day": 3.0,
+                                               "expiries_per_day": 3.0, "formats": ["old"]}
     assert s0["months_without_one_expiry"] == {"2015-02": 0}
+
+
+def _info(by_date, fmt=lambda d: "old", chg=None):
+    dates = sorted(by_date)
+    prev = dict(zip(dates[1:], dates))
+    return {"contracts": {d: 3 for d in dates}, "fmt": {d: fmt(d) for d in dates},
+            "day_expiries": {d: 3 for d in dates},
+            "chg": {d: {s: (chg(d, s) if chg else oi - by_date.get(prev.get(d), {}).get(s, oi))
+                        for s, oi in by_date[d].items()} for d in dates}}
+
+
+def test_oi_units_gate_catches_a_shares_to_lots_switch():
+    sessions, _ = _market()
+    fmt = lambda d: "udiff" if d >= sessions[6] else "old"  # noqa: E731
+    same = {d: {"A": 1000 + i, "B": 2000 + i} for i, d in enumerate(sessions)}
+    lots = {d: {s: (v // 500 if d >= sessions[6] else v) for s, v in syms.items()} for d, syms in same.items()}
+    ok = ob.oi_units(same, sessions, set(), _info(same, fmt))
+    assert ok["identity_match"] == {"old": 1.0, "udiff": 1.0} and abs(ok["switch"]["median_doi"]) < 0.01
+    bad = ob.oi_units(lots, sessions, set(), _info(lots, fmt, chg=lambda d, s: 1))
+    assert bad["switch"]["date"] == sessions[6] and bad["switch"]["median_doi"] < -0.99
+    assert bad["identity_match"]["old"] == 1.0 and bad["identity_match"]["udiff"] < 1.0   # the switch day breaks it

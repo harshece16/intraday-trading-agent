@@ -25,7 +25,7 @@ import insider_buys as ib  # noqa: E402  (trial 206: ticket, costs, event and be
 import nse_prices  # noqa: E402
 from pead_stage_a import nw_t  # noqa: E402
 
-OI_FILE = os.path.join(BACKEND, "data", "fo_oi", "fo_oi_daily.csv.gz")
+OI_FILE = os.path.join(nse_prices.DATA, "fo_oi", "fo_oi_daily.csv.gz")   # honours SAHAB_RESEARCH_DATA
 FIRST = "2009-01-01"
 LAST_EXIT = "2025-12-31"
 HALF_SPLIT = "2017-07-01"
@@ -40,18 +40,22 @@ LB, SC, SB, LU = "LONG_BUILDUP", "SHORT_COVERING", "SHORT_BUILDUP", "LONG_UNWIND
 
 
 def load_oi(path=OI_FILE):
-    """({date: {symbol: oi}}, sorted F&O dates, expiry dates, {date: contracts}). 2026 is never read."""
-    by_date, expiries, contracts = {}, set(), {}
+    """({date: {symbol: oi}}, sorted F&O dates, expiry dates, info). 2026 is never read.
+    info: contracts, fmt and day_expiries per date, and chg {date: {symbol: the file's change in OI}}."""
+    by_date, expiries = {}, set()
+    info = {"contracts": {}, "fmt": {}, "day_expiries": {}, "chg": {}}
     with gzip.open(path, "rt") as fh:
         for r in csv.DictReader(fh):
             d = r["date"]
             if d < FIRST or d > LAST_EXIT:
                 continue
             by_date.setdefault(d, {})[r["symbol"]] = int(r["oi"])
-            contracts[d] = contracts.get(d, 0) + int(r["n_exp"])
+            info["chg"].setdefault(d, {})[r["symbol"]] = int(r["chg"])
+            info["contracts"][d] = info["contracts"].get(d, 0) + int(r["n_exp"])
+            info["fmt"][d], info["day_expiries"][d] = r["fmt"], int(r["day_expiries"])
             if r["expiry_day"] == "1":
                 expiries.add(d)
-    return by_date, sorted(by_date), expiries, contracts
+    return by_date, sorted(by_date), expiries, info
 
 
 def state(r, doi):
@@ -162,7 +166,7 @@ def summary(priced, series):
     ev = [p["excess"] for p in priced]
     t = nw_t(xs, NW_LAGS)
     return {"events": len(ev), "sessions": len(xs), "mean_session": st.mean(xs), "t_nw": t,
-            "mean_session_bp": round(st.mean(xs) * 1e4, 1), "t_nw_r": round(t, 2) if t else None,
+            "mean_session_bp": round(st.mean(xs) * 1e4, 1), "t_nw_r": round(t, 2) if t is not None else None,
             "mean_event_bp": round(st.mean(ev) * 1e4, 1), "median_event_bp": round(st.median(ev) * 1e4, 1),
             "sd_event_bp": round(st.stdev(ev) * 1e4, 1) if len(ev) > 1 else None,
             "mean_gross_bp": round(st.mean(p["gross"] for p in priced) * 1e4, 1),
@@ -200,12 +204,35 @@ def verdict(lb, sc):
             "halves_t_nw": [round(nw_t([m for _, _, m in h], NW_LAGS) or 0, 2) for h in halves],
             "last_three_years_mean_bp": round(mean(last3) * 1e4, 1), "dsr": dsr,
             "mechanism": {"sessions": len(diff), "mean_bp": round(st.mean(diff) * 1e4, 1) if diff else None,
-                          "t_nw": round(t_diff, 2) if t_diff else None},
+                          "t_nw": round(t_diff, 2) if t_diff is not None else None},
             "per_year": {y: summary(v, session_series(v)) for y, v in sorted(per_year.items())},
             "checks": checks, "pass": all(checks.values())}
 
 
-def stage0(sessions, by_date, f_dates, expiries, contracts, days, sdrops, match, events, edrops):
+def oi_units(by_date, f_dates, expiries, info):
+    """Amendment 1: OI must mean the same thing in both formats. Reports, per format, how often
+    OI_t - OI_t-1 equals the file's own change in OI (non-expiry days), and the median dOI across
+    the July 2024 switch; shares vs lots would show there as about -100% or +x00%."""
+    after = {f_dates[i + 1] for i, d in enumerate(f_dates[:-1]) if d in expiries}
+    ident, switch = {}, None
+    for prev, d in zip(f_dates, f_dates[1:]):
+        if switch is None and info["fmt"][prev] == "old" and info["fmt"][d] == "udiff":
+            common = [s for s in by_date[d] if by_date[prev].get(s, 0) > 0]
+            switch = {"date": d, "symbols": len(common), "median_doi": round(st.median(
+                by_date[d][s] / by_date[prev][s] - 1 for s in common), 4) if common else None}
+        if d in expiries or d in after:
+            continue
+        c = ident.setdefault(info["fmt"][d], [0, 0])
+        for sym, oi in by_date[d].items():
+            oi0 = by_date[prev].get(sym)
+            if oi0 is not None:
+                c[0] += abs(oi - oi0 - info["chg"][d][sym]) <= max(1, 1e-3 * oi0)
+                c[1] += 1
+    return {"identity_match": {f: round(a / b, 4) if b else None for f, (a, b) in ident.items()},
+            "switch": switch}
+
+
+def stage0(sessions, by_date, f_dates, expiries, info, days, sdrops, match, events, edrops, agg_meta=None):
     cash = [s for s in sessions if FIRST <= s <= LAST_EXIT]
     have = set(f_dates)
     missing = [s for s in cash if s not in have]
@@ -216,12 +243,18 @@ def stage0(sessions, by_date, f_dates, expiries, contracts, days, sdrops, match,
     bad_months = {m: by_month.get(m, 0) for m in months if by_month.get(m, 0) != 1}
     parse = {}   # prereg stage 0 item 2: rows and stocks per day, by month
     for d in f_dates:
-        m = parse.setdefault(d[:7], {"days": 0, "stocks": 0, "contracts": 0})
+        m = parse.setdefault(d[:7], {"days": 0, "stocks": 0, "contracts": 0, "expiries": 0, "fmt": set()})
         m["days"] += 1
         m["stocks"] += len(by_date[d])
-        m["contracts"] += contracts[d]
+        m["contracts"] += info["contracts"][d]
+        m["expiries"] += info["day_expiries"][d]
+        m["fmt"].add(info["fmt"][d])
     parse = {k: {"days": v["days"], "stocks_per_day": round(v["stocks"] / v["days"], 1),
-                 "contracts_per_day": round(v["contracts"] / v["days"], 1)} for k, v in parse.items()}
+                 "contracts_per_day": round(v["contracts"] / v["days"], 1),
+                 "expiries_per_day": round(v["expiries"] / v["days"], 2), "formats": sorted(v["fmt"])}
+             for k, v in parse.items()}
+    units = oi_units(by_date, f_dates, expiries, info)
+    sw = units["switch"]
     counts = {}
     for d, _k, states in days:
         c = counts.setdefault(d[:7], {LB: 0, SC: 0, SB: 0, LU: 0})
@@ -231,11 +264,16 @@ def stage0(sessions, by_date, f_dates, expiries, contracts, days, sdrops, match,
     n_sessions = len({e["entry"] for e in events[LB]})
     rate = match["matched"] / match["symbol_days"] if match["symbol_days"] else 0.0
     gates = {"completeness": len(missing) <= MAX_MISSING * len(cash), "symbol_match": rate >= MIN_MATCH,
-             "events": n_ev >= MIN_EVENTS, "sessions": n_sessions >= MIN_SESSIONS}
+             "events": n_ev >= MIN_EVENTS, "sessions": n_sessions >= MIN_SESSIONS,
+             "oi_units": sw is None or (sw["median_doi"] is not None and abs(sw["median_doi"]) < 0.5)}
     return {"cash_sessions": len(cash), "fo_sessions": len(f_dates), "missing": missing,
             "missing_frac": round(len(missing) / len(cash), 4) if cash else None,
             "expiry_days": len(expiries), "months_without_one_expiry": bad_months, "parse_by_month": parse,
-            "symbol_match_rate": round(rate, 4), "signal_drops": sdrops,
+            "symbol_match_rate": round(rate, 4), "oi_units": units, "aggregator": agg_meta,
+            "rule_notes": ["gap: a day whose previous cash session has no F&O file is dropped, not compared "
+                           "across the gap (stricter than the prereg's wording)",
+                           "zero_oi: a stock with OI 0 on t-1 has no defined dOI and is dropped"],
+            "signal_drops": sdrops,
             "event_drops": edrops, "events": {s: len(v) for s, v in events.items()},
             "lb_entry_sessions": n_sessions, "states_per_month": counts,
             "gates": gates, "proceed": all(gates.values())}
@@ -252,22 +290,25 @@ def main(argv):
     canon = lambda s: aliases.get(s) or nse_prices.canonical(s, nxt, cache)  # noqa: E731
     # the session the factor lands on (an ex-date on a holiday moves to the next session)
     share_days = {(e[0], sessions[chains[e[0]]["idx"][e[1]]]) for e in ca if e[2] in SHARE_CHANGES}
-    by_date, f_dates, expiries, contracts = load_oi()
+    by_date, f_dates, expiries, info = load_oi()
     days, sdrops, match = signal_days(by_date, f_dates, expiries, sessions, chains, canon, share_days)
     events, edrops = {}, {}
     for s in (LB, SC):
         events[s], edrops[s] = build_events(days, sessions, chains, s)
-    s0 = stage0(sessions, by_date, f_dates, expiries, contracts, days, sdrops, match, events, edrops)
-    print(json.dumps({k: v for k, v in s0.items() if k not in ("states_per_month", "missing", "parse_by_month")}, indent=1))
+    meta_path = OI_FILE + ".meta.json"
+    agg_meta = json.load(open(meta_path)) if os.path.exists(meta_path) else None
+    s0 = stage0(sessions, by_date, f_dates, expiries, info, days, sdrops, match, events, edrops, agg_meta)
+    print(json.dumps({k: v for k, v in s0.items() if k not in ("states_per_month", "missing", "parse_by_month", "aggregator")},
+                     indent=1))
     if mode == "stage0":
         print("saved", ib.write("trial207_stage0.json", s0))
         return 0
     if not s0["proceed"]:
         print("stage 0 did not pass; the trial is not run")
         return 1
-    drops = {}
-    lb = ib.price_events(events[LB], chains, drops)
-    sc = ib.price_events(events[SC], chains, drops)
+    drops = {LB: {}, SC: {}}
+    lb = ib.price_events(events[LB], chains, drops[LB])
+    sc = ib.price_events(events[SC], chains, drops[SC])
     out = verdict(lb, sc)
     out["pricing_drops"] = drops
     print(json.dumps({k: v for k, v in out.items() if k != "per_year"}, indent=1, default=str))
