@@ -1,3 +1,5 @@
+**Outcome (2026-11-08): FAIL.** Mean session net excess −56.9 bp, Newey–West t −19.74, both halves and every year negative, DSR 0.000; the mechanism ran backwards (LONG_BUILDUP − SHORT_COVERING −10.2 bp, t −2.95). Line closed. `results-oi-buildup.md`.
+
 # Pre-registration: trial 207, futures OI build-up held five sessions
 
 **Written 2026-11-07, before any F&O history is in the repo and before any

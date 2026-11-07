@@ -1,0 +1,403 @@
+{
+ "long_buildup": {
+  "events": 89232,
+  "sessions": 3753,
+  "mean_session": -0.00569016813453186,
+  "t_nw": -19.74102711244754,
+  "mean_session_bp": -56.9,
+  "t_nw_r": -19.74,
+  "mean_event_bp": -53.2,
+  "median_event_bp": -74.9,
+  "sd_event_bp": 464.6,
+  "mean_gross_bp": 2.2,
+  "mean_net_bp": -43.2,
+  "win_rate": 0.413,
+  "excess_bp_at_cost": {
+   "1x": -53.2,
+   "2x": -98.6,
+   "3x": -144.0
+  }
+ },
+ "short_covering": {
+  "events": 84456,
+  "sessions": 3770,
+  "mean_session": -0.004583219077218052,
+  "t_nw": -22.647055764535246,
+  "mean_session_bp": -45.8,
+  "t_nw_r": -22.65,
+  "mean_event_bp": -44.5,
+  "median_event_bp": -67.5,
+  "sd_event_bp": 448.1,
+  "mean_gross_bp": 12.4,
+  "mean_net_bp": -33.0,
+  "win_rate": 0.42,
+  "excess_bp_at_cost": {
+   "1x": -44.5,
+   "2x": -89.9,
+   "3x": -135.3
+  }
+ },
+ "halves_mean_bp": [
+  -56.2,
+  -57.6
+ ],
+ "halves_t_nw": [
+  -12.56,
+  -15.85
+ ],
+ "last_three_years_mean_bp": -52.5,
+ "dsr": {
+  "dsr": 0.0,
+  "sharpe": -0.323,
+  "luck_baseline_sharpe": 0.008,
+  "n_trials": 2,
+  "n_trades": 3753,
+  "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+ },
+ "mechanism": {
+  "sessions": 3747,
+  "mean_bp": -10.2,
+  "t_nw": -2.95
+ },
+ "per_year": {
+  "2009": {
+   "events": 6265,
+   "sessions": 216,
+   "mean_session": -0.004411253968071538,
+   "t_nw": -3.06958509613492,
+   "mean_session_bp": -44.1,
+   "t_nw_r": -3.07,
+   "mean_event_bp": -44.1,
+   "median_event_bp": -101.1,
+   "sd_event_bp": 749.3,
+   "mean_gross_bp": 125.7,
+   "mean_net_bp": 80.1,
+   "win_rate": 0.427,
+   "excess_bp_at_cost": {
+    "1x": -44.1,
+    "2x": -89.7,
+    "3x": -135.3
+   }
+  },
+  "2010": {
+   "events": 5941,
+   "sessions": 219,
+   "mean_session": -0.004928014138956876,
+   "t_nw": -6.7341482991670265,
+   "mean_session_bp": -49.3,
+   "t_nw_r": -6.73,
+   "mean_event_bp": -53.8,
+   "median_event_bp": -81.3,
+   "sd_event_bp": 399.2,
+   "mean_gross_bp": -20.3,
+   "mean_net_bp": -65.6,
+   "win_rate": 0.409,
+   "excess_bp_at_cost": {
+    "1x": -53.8,
+    "2x": -99.1,
+    "3x": -144.4
+   }
+  },
+  "2011": {
+   "events": 6328,
+   "sessions": 223,
+   "mean_session": -0.004201728680699553,
+   "t_nw": -2.7982643748377276,
+   "mean_session_bp": -42.0,
+   "t_nw_r": -2.8,
+   "mean_event_bp": -52.3,
+   "median_event_bp": -60.5,
+   "sd_event_bp": 457.6,
+   "mean_gross_bp": -125.1,
+   "mean_net_bp": -170.2,
+   "win_rate": 0.433,
+   "excess_bp_at_cost": {
+    "1x": -52.3,
+    "2x": -97.4,
+    "3x": -142.5
+   }
+  },
+  "2012": {
+   "events": 6165,
+   "sessions": 225,
+   "mean_session": -0.00682131762636158,
+   "t_nw": -6.830004707033448,
+   "mean_session_bp": -68.2,
+   "t_nw_r": -6.83,
+   "mean_event_bp": -55.8,
+   "median_event_bp": -78.6,
+   "sd_event_bp": 459.2,
+   "mean_gross_bp": 29.3,
+   "mean_net_bp": -16.1,
+   "win_rate": 0.417,
+   "excess_bp_at_cost": {
+    "1x": -55.8,
+    "2x": -101.2,
+    "3x": -146.6
+   }
+  },
+  "2013": {
+   "events": 4147,
+   "sessions": 223,
+   "mean_session": -0.00516235910438572,
+   "t_nw": -3.0647796359287947,
+   "mean_session_bp": -51.6,
+   "t_nw_r": -3.06,
+   "mean_event_bp": -62.9,
+   "median_event_bp": -79.1,
+   "sd_event_bp": 472.4,
+   "mean_gross_bp": -49.6,
+   "mean_net_bp": -94.9,
+   "win_rate": 0.424,
+   "excess_bp_at_cost": {
+    "1x": -62.9,
+    "2x": -108.1,
+    "3x": -153.4
+   }
+  },
+  "2014": {
+   "events": 4071,
+   "sessions": 219,
+   "mean_session": -0.005705620264503672,
+   "t_nw": -6.651510451842554,
+   "mean_session_bp": -57.1,
+   "t_nw_r": -6.65,
+   "mean_event_bp": -55.2,
+   "median_event_bp": -74.3,
+   "sd_event_bp": 463.9,
+   "mean_gross_bp": 47.2,
+   "mean_net_bp": 1.7,
+   "win_rate": 0.42,
+   "excess_bp_at_cost": {
+    "1x": -55.2,
+    "2x": -100.6,
+    "3x": -146.1
+   }
+  },
+  "2015": {
+   "events": 4441,
+   "sessions": 224,
+   "mean_session": -0.00812242388334187,
+   "t_nw": -4.352175518717404,
+   "mean_session_bp": -81.2,
+   "t_nw_r": -4.35,
+   "mean_event_bp": -63.2,
+   "median_event_bp": -83.5,
+   "sd_event_bp": 442.2,
+   "mean_gross_bp": -35.6,
+   "mean_net_bp": -80.9,
+   "win_rate": 0.404,
+   "excess_bp_at_cost": {
+    "1x": -63.2,
+    "2x": -108.5,
+    "3x": -153.7
+   }
+  },
+  "2016": {
+   "events": 5048,
+   "sessions": 218,
+   "mean_session": -0.005423087214580329,
+   "t_nw": -6.162526404479276,
+   "mean_session_bp": -54.2,
+   "t_nw_r": -6.16,
+   "mean_event_bp": -57.0,
+   "median_event_bp": -76.0,
+   "sd_event_bp": 411.8,
+   "mean_gross_bp": -5.3,
+   "mean_net_bp": -50.6,
+   "win_rate": 0.405,
+   "excess_bp_at_cost": {
+    "1x": -57.0,
+    "2x": -102.4,
+    "3x": -147.7
+   }
+  },
+  "2017": {
+   "events": 5954,
+   "sessions": 224,
+   "mean_session": -0.005462744448742673,
+   "t_nw": -5.481245479933822,
+   "mean_session_bp": -54.6,
+   "t_nw_r": -5.48,
+   "mean_event_bp": -54.4,
+   "median_event_bp": -96.2,
+   "sd_event_bp": 452.2,
+   "mean_gross_bp": 39.9,
+   "mean_net_bp": -5.6,
+   "win_rate": 0.378,
+   "excess_bp_at_cost": {
+    "1x": -54.4,
+    "2x": -99.8,
+    "3x": -145.2
+   }
+  },
+  "2018": {
+   "events": 5707,
+   "sessions": 222,
+   "mean_session": -0.006206724455713811,
+   "t_nw": -6.571207761464599,
+   "mean_session_bp": -62.1,
+   "t_nw_r": -6.57,
+   "mean_event_bp": -60.4,
+   "median_event_bp": -65.8,
+   "sd_event_bp": 461.0,
+   "mean_gross_bp": -45.3,
+   "mean_net_bp": -90.6,
+   "win_rate": 0.421,
+   "excess_bp_at_cost": {
+    "1x": -60.4,
+    "2x": -105.6,
+    "3x": -150.9
+   }
+  },
+  "2019": {
+   "events": 4693,
+   "sessions": 221,
+   "mean_session": -0.007667629714468799,
+   "t_nw": -5.763194813381788,
+   "mean_session_bp": -76.7,
+   "t_nw_r": -5.76,
+   "mean_event_bp": -57.6,
+   "median_event_bp": -56.8,
+   "sd_event_bp": 493.3,
+   "mean_gross_bp": -33.6,
+   "mean_net_bp": -78.8,
+   "win_rate": 0.431,
+   "excess_bp_at_cost": {
+    "1x": -57.6,
+    "2x": -102.9,
+    "3x": -148.2
+   }
+  },
+  "2020": {
+   "events": 4056,
+   "sessions": 222,
+   "mean_session": -0.005107801903402171,
+   "t_nw": -3.0734279344845232,
+   "mean_session_bp": -51.1,
+   "t_nw_r": -3.07,
+   "mean_event_bp": -49.2,
+   "median_event_bp": -90.8,
+   "sd_event_bp": 567.8,
+   "mean_gross_bp": 71.2,
+   "mean_net_bp": 25.7,
+   "win_rate": 0.409,
+   "excess_bp_at_cost": {
+    "1x": -49.2,
+    "2x": -94.7,
+    "3x": -140.2
+   }
+  },
+  "2021": {
+   "events": 4595,
+   "sessions": 220,
+   "mean_session": -0.005795924482075163,
+   "t_nw": -5.390393104505159,
+   "mean_session_bp": -58.0,
+   "t_nw_r": -5.39,
+   "mean_event_bp": -49.0,
+   "median_event_bp": -83.0,
+   "sd_event_bp": 435.1,
+   "mean_gross_bp": 21.8,
+   "mean_net_bp": -23.7,
+   "win_rate": 0.405,
+   "excess_bp_at_cost": {
+    "1x": -49.0,
+    "2x": -94.4,
+    "3x": -139.9
+   }
+  },
+  "2022": {
+   "events": 5336,
+   "sessions": 222,
+   "mean_session": -0.005887464605173222,
+   "t_nw": -6.059759726768517,
+   "mean_session_bp": -58.9,
+   "t_nw_r": -6.06,
+   "mean_event_bp": -44.4,
+   "median_event_bp": -55.0,
+   "sd_event_bp": 387.3,
+   "mean_gross_bp": -16.7,
+   "mean_net_bp": -62.0,
+   "win_rate": 0.428,
+   "excess_bp_at_cost": {
+    "1x": -44.4,
+    "2x": -89.7,
+    "3x": -135.1
+   }
+  },
+  "2023": {
+   "events": 5302,
+   "sessions": 221,
+   "mean_session": -0.005425137469276798,
+   "t_nw": -9.162822635117205,
+   "mean_session_bp": -54.3,
+   "t_nw_r": -9.16,
+   "mean_event_bp": -53.8,
+   "median_event_bp": -74.0,
+   "sd_event_bp": 347.9,
+   "mean_gross_bp": 37.2,
+   "mean_net_bp": -8.2,
+   "win_rate": 0.388,
+   "excess_bp_at_cost": {
+    "1x": -53.8,
+    "2x": -99.3,
+    "3x": -144.8
+   }
+  },
+  "2024": {
+   "events": 5210,
+   "sessions": 222,
+   "mean_session": -0.005167652596094003,
+   "t_nw": -7.293158024880591,
+   "mean_session_bp": -51.7,
+   "t_nw_r": -7.29,
+   "mean_event_bp": -49.7,
+   "median_event_bp": -70.1,
+   "sd_event_bp": 378.8,
+   "mean_gross_bp": 0.6,
+   "mean_net_bp": -44.8,
+   "win_rate": 0.411,
+   "excess_bp_at_cost": {
+    "1x": -49.7,
+    "2x": -95.1,
+    "3x": -140.5
+   }
+  },
+  "2025": {
+   "events": 5973,
+   "sessions": 212,
+   "mean_session": -0.0051445266613045024,
+   "t_nw": -8.338786799663579,
+   "mean_session_bp": -51.4,
+   "t_nw_r": -8.34,
+   "mean_event_bp": -47.0,
+   "median_event_bp": -59.2,
+   "sd_event_bp": 343.3,
+   "mean_gross_bp": 2.9,
+   "mean_net_bp": -42.5,
+   "win_rate": 0.414,
+   "excess_bp_at_cost": {
+    "1x": -47.0,
+    "2x": -92.4,
+    "3x": -137.8
+   }
+  }
+ },
+ "checks": {
+  "1_mean_positive_t": false,
+  "2_dsr": false,
+  "3_both_halves": false,
+  "4_last_three_years": false,
+  "5_floor_25bp": false,
+  "6_n_events": true,
+  "7_mechanism": false
+ },
+ "pass": false,
+ "label": "trial 207 futures OI long build-up, 5-session hold",
+ "pricing_drops": {
+  "LONG_BUILDUP": {},
+  "SHORT_COVERING": {}
+ },
+ "trial_logged_as": 36
+}
