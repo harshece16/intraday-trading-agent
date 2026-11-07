@@ -155,6 +155,8 @@ def test_verdict_runs_end_to_end_on_synthetic_priced_events():
     assert out["long_buildup"]["events"] == len(lb)
     assert out["checks"]["6_n_events"] and out["checks"]["5_floor_25bp"]
     assert out["mechanism"]["mean_bp"] == 20.0
+    at = out["long_buildup"]["excess_bp_at_cost"]                   # cost = gross - net = 40 bp an event
+    assert abs(at["1x"] - at["2x"] - 40) < 0.11 and abs(at["2x"] - at["3x"] - 40) < 0.11
 
 
 def test_stage0_gates_on_missing_files_and_lists_parse_counts_by_month():
