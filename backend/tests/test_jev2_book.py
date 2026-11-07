@@ -332,6 +332,16 @@ def test_maybe_decide_waits_for_jev1_captures_the_0945_scan_and_records_a_missed
     assert j2.maybe_decide(sc, NOW.replace(hour=10, minute=2)) is False and len(started) == 1
 
 
+def test_a_day_with_no_list_by_1000_is_recorded_as_missed(tmp_path, monkeypatch):
+    # 4 Nov 2026: every scan failed, so no list ever existed and the day dropped out of the record (#318).
+    monkeypatch.setattr(j2, "STATE_PATH", str(tmp_path / "s.json"))
+    monkeypatch.setattr(j2, "_pending", {"date": None, "scanner": None, "at": None})
+    assert j2.maybe_decide(None, NOW.replace(minute=50)) is False and DAY not in j2.load_state()["days"]
+    assert j2.maybe_decide({**_scanner(2), "active": False}, NOW.replace(hour=10, minute=1)) is False
+    day = j2.load_state()["days"][DAY]
+    assert day["status"] == "missed" and "no list at 09:45" in day["error"]
+
+
 def test_jev1_disabled_or_switched_off_lets_jev2_run_alone(tmp_path, monkeypatch):
     j1_path = str(tmp_path / "jev1.json")
     monkeypatch.setattr(jb, "STATE_PATH", j1_path)
