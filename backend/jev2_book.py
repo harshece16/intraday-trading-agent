@@ -438,11 +438,13 @@ def maybe_decide(scanner, now, holiday=None):
             if _running["decide"]:
                 return False
             if _pending["date"] != today:
-                if not scanner or scanner.get("session_date") != today or not scanner.get("active"):
-                    return False
+                # The deadline comes first: a day whose scan never produced a list must still be
+                # recorded as missed, not left out of the record (#318).
                 if hhmm > conf["decide_until"]:
                     _record_missed(today, f"no round had started by {conf['decide_until']} (engine restarted, "
                                           "or no list at 09:45)")
+                    return False
+                if not scanner or scanner.get("session_date") != today or not scanner.get("active"):
                     return False
                 _pending.update(date=today, scanner=scanner, at=now)
             if not jev1_finished(today):
