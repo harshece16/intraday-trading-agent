@@ -68,7 +68,7 @@ price.
   `SYMBOL`, `EXPIRY_DT`, `OPEN_INT`) up to the switch in July 2024; UDiFF
   `BhavCopy_NSE_FO_0_0_0_{YYYYMMDD}_F_0000.csv.zip` (`FinInstrmTp = STF`,
   `TckrSymb`, `XpryDt`, `OpnIntrst`) after it.
-- **Where.** Fetched on sahab-pc into `/mnt/data/trader-sahab/fo_bhav/`, at
+- **Where.** Stored on sahab-pc in `/mnt/data/trader-sahab/fo_bhav/`, at
   about 1.6 GB of zips (the Mac is on an away network, rule 23). One
   aggregate is made there and moved to the Mac:
   `backend/data/fo_oi/fo_oi_daily.csv.gz` (gitignored). It holds date,
@@ -76,6 +76,18 @@ price.
   of live expiries, and whether any stock future expires that day.
 - **Symbols** map to cash chains through `symbolchange.csv`, as the cash
   loader does. An unmatched symbol-day is dropped and counted.
+- **Terms.** NSE's Terms of Use (updated 29/10/2025) prohibit "any systematic
+  or automated data collection activities". Trial 206 recorded that no script
+  in this repo fetches NSE data unless the owner chooses otherwise
+  (`prereg-insider-buys.md`, "Data source and terms"). A paced fetch of about
+  4,200 archive files is that kind of collection. **The fetch waits on the
+  owner's choice** of one route: (a) a paced script on sahab-pc, chosen
+  knowingly as for trial 206's archive; (b) a licensed history (NSE Data &
+  Analytics or a vendor). Kite's continuous futures are not an option: they
+  hold only the near month and only stocks listed today, so they carry
+  survivor bias. The rules above apply unchanged whichever route is chosen.
+  The 2026-11-07 probe was two requests, made to learn the file shape; it is
+  disclosed and not repeated.
 
 ## The trial
 
