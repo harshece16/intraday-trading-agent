@@ -8,7 +8,7 @@
 
 The trial ran once, at 00:25 IST on 2026-11-23, from `5f4ba38`. It is logged as entries 37 and 38 of `backend/data/backtest_trials.json`. No 2026 row was fetched or read.
 
-The option extract (`backend/data/fo_oi/fo_opt_expiry.csv.gz`, sha256 `99c7631f…a959bb9f`) and the index closes (`index_close.csv`, sha256 `71f2c7a2…c0ca879b`) are not committed. These are: `data/trial208_result.json`, `data/trial208_cycles.csv` (one row per priced cycle, both arms and both indices) and `data/trial208_stage0.json` (run 3).
+The option extract (`backend/data/fo_oi/fo_opt_expiry.csv.gz`, sha256 `99c7631f…a959bb9f`) and the index closes (`index_close.csv`, sha256 `71f2c7a2…c0ca879b`) are not committed. Committed with this file: `data/trial208_result.json`, `data/trial208_cycles.csv` (one row per priced cycle, both arms and both indices) and `data/trial208_stage0.json` (run 3).
 
 ## Verdict, in the pre-registration's terms
 
@@ -38,11 +38,11 @@ Falsification rows:
 - Costs were small: 7% of the condor's credit and 2% of the straddle's.
 - A cheaper broker, the old STT rate or a better fill could not rescue it. Each only shrinks a cost the trade never earned back.
 
-**2. The options were not priced for more movement than arrived.**
+**2. The options were not priced for more movement than arrived.** The sold-pair and wing split below was computed after the run from `trial208_cycles.csv`, as explanation only. It is not a gate and selects nothing.
 - **The straddle, trial 209.** It sold a call and a put at the strike where they cost the same. That pair alone lost 0.039 of its price before costs (t −1.04, BANKNIFTY −0.050, t −1.29). The index's average move to expiry was 1.04× the straddle's price. The median move was 0.86×, so the seller won 57% of the time, but the large moves cost more than the small ones paid.
 - **The bought wings** gained slightly before costs (+0.006 and +0.024 of the straddle price), so the hedge did not cause the loss.
 - **The condor, trial 208.** The index finished beyond its sold strikes in 32.2% of NIFTY cycles (normal 31.7%) and beyond its bought wings in 15.9% (normal 13.4%). That is as many breaches as a fairly priced option implies, with fatter tails.
-- The +1.96 vol points of implied over realised volatility in the 2026-09-26 sweep compares 30-day VIX with realised volatility. It does not show up as a premium in front-cycle options sold at the expiry-day close. (Computed after the run from `trial208_cycles.csv`, as explanation only. Not a gate, and it selects nothing.)
+- The +1.96 vol points of implied over realised volatility in the 2026-09-26 sweep compares 30-day VIX with realised volatility. It does not show up as a premium in front-cycle options sold at the expiry-day close.
 
 **3. The usual short-premium shape, with no edge.**
 - **Condor:** won 75% of cycles, but the mean win was +0.18 R against a mean loss of −0.71 R. 10.8% of cycles lost 0.9 R or more. The deepest drawdown was −24.5 R.
