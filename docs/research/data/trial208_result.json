@@ -1,0 +1,647 @@
+{
+ "proceed": {
+  "208": true,
+  "209": true
+ },
+ "arms": {
+  "208": {
+   "checks": {
+    "1_mean_positive_t": false,
+    "2_dsr": false,
+    "3_both_halves": false,
+    "4_last_three_years": false,
+    "5_short_cycles": false,
+    "6_costs_2x": false,
+    "7_cycles": true,
+    "8_banknifty": false
+   },
+   "pass": false,
+   "label": "trial 208 NIFTY front-cycle iron condor, held to expiry",
+   "NIFTY": {
+    "cycles": 471,
+    "mean_r": -0.0421,
+    "sd_r": 0.41877,
+    "t": -2.18193,
+    "t_plain": -2.18193,
+    "t_nw4": -2.24445,
+    "dsr": {
+     "dsr": 0.00171,
+     "sharpe": -0.101,
+     "luck_baseline_sharpe": 0.024,
+     "n_trials": 2,
+     "n_trades": 471,
+     "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+    },
+    "mean_r_gross": -0.02822,
+    "mean_r_2x": -0.05598,
+    "mean_r_3x": -0.06986,
+    "break_even_cost_multiple": -2.03362,
+    "s1": {
+     "n": 99,
+     "mean_r": -0.01718
+    },
+    "s2": {
+     "n": 372,
+     "mean_r": -0.04873
+    },
+    "last3": {
+     "n": 156,
+     "mean_r": -0.06312
+    },
+    "short": {
+     "n": 353,
+     "mean_r": -0.04299
+    },
+    "long": {
+     "n": 118,
+     "mean_r": -0.03943
+    },
+    "call_side_mean_r": -0.03316,
+    "put_side_mean_r": -0.00894,
+    "win_rate": 0.75372,
+    "mean_win": 0.1771,
+    "mean_loss": -0.71294,
+    "worst5": [
+     [
+      "2020-02-20",
+      "2020-02-27",
+      -1.04624
+     ],
+     [
+      "2019-07-18",
+      "2019-07-25",
+      -1.04081
+     ],
+     [
+      "2020-03-05",
+      "2020-03-12",
+      -1.03751
+     ],
+     [
+      "2021-08-26",
+      "2021-09-02",
+      -1.03371
+     ],
+     [
+      "2025-10-14",
+      "2025-10-20",
+      -1.03001
+     ]
+    ],
+    "longest_losing_run": 5,
+    "deepest_drawdown_r": -24.50604,
+    "total_r": -19.83027,
+    "by_year": {
+     "2009": {
+      "n": 9,
+      "mean_r": 0.15607
+     },
+     "2010": {
+      "n": 12,
+      "mean_r": 0.05123
+     },
+     "2011": {
+      "n": 12,
+      "mean_r": -0.10463
+     },
+     "2012": {
+      "n": 12,
+      "mean_r": 0.10966
+     },
+     "2013": {
+      "n": 12,
+      "mean_r": -0.07639
+     },
+     "2014": {
+      "n": 12,
+      "mean_r": -0.07248
+     },
+     "2015": {
+      "n": 12,
+      "mean_r": 0.00883
+     },
+     "2016": {
+      "n": 12,
+      "mean_r": -0.15697
+     },
+     "2017": {
+      "n": 12,
+      "mean_r": -0.11827
+     },
+     "2018": {
+      "n": 12,
+      "mean_r": -0.16264
+     },
+     "2019": {
+      "n": 44,
+      "mean_r": -0.04379
+     },
+     "2020": {
+      "n": 51,
+      "mean_r": -0.06327
+     },
+     "2021": {
+      "n": 52,
+      "mean_r": 0.01914
+     },
+     "2022": {
+      "n": 51,
+      "mean_r": -0.01901
+     },
+     "2023": {
+      "n": 52,
+      "mean_r": -0.07185
+     },
+     "2024": {
+      "n": 52,
+      "mean_r": -0.08996
+     },
+     "2025": {
+      "n": 52,
+      "mean_r": -0.02757
+     }
+    },
+    "credit_share_of_max_loss": 0.19185,
+    "cost_share_of_credit": 0.07314,
+    "mean_bp_of_forward": -3.28249,
+    "skips": {
+     "no_leg": 6,
+     "hole": 1
+    },
+    "mean_r_skips_at_worst": -0.05633
+   },
+   "BANKNIFTY": {
+    "cycles": 469,
+    "mean_r": -0.07128,
+    "sd_r": 0.45661,
+    "t": -3.38058,
+    "t_plain": -3.38058,
+    "t_nw4": -3.40963,
+    "dsr": {
+     "dsr": 1e-05,
+     "sharpe": -0.156,
+     "luck_baseline_sharpe": 0.024,
+     "n_trials": 2,
+     "n_trades": 469,
+     "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+    },
+    "mean_r_gross": -0.05839,
+    "mean_r_2x": -0.08417,
+    "mean_r_3x": -0.09705,
+    "break_even_cost_multiple": -4.53035,
+    "s1": {
+     "n": 76,
+     "mean_r": -0.17561
+    },
+    "s2": {
+     "n": 393,
+     "mean_r": -0.0511
+    },
+    "last3": {
+     "n": 111,
+     "mean_r": -0.08165
+    },
+    "short": {
+     "n": 429,
+     "mean_r": -0.06065
+    },
+    "long": {
+     "n": 40,
+     "mean_r": -0.18528
+    },
+    "call_side_mean_r": -0.05352,
+    "put_side_mean_r": -0.01776,
+    "win_rate": 0.72281,
+    "mean_win": 0.19197,
+    "mean_loss": -0.75774,
+    "worst5": [
+     [
+      "2018-09-19",
+      "2018-09-27",
+      -1.03008
+     ],
+     [
+      "2019-09-19",
+      "2019-09-26",
+      -1.0283
+     ],
+     [
+      "2018-05-24",
+      "2018-05-31",
+      -1.0273
+     ],
+     [
+      "2024-10-01",
+      "2024-10-09",
+      -1.02727
+     ],
+     [
+      "2023-07-13",
+      "2023-07-20",
+      -1.02602
+     ]
+    ],
+    "longest_losing_run": 4,
+    "deepest_drawdown_r": -33.83682,
+    "total_r": -33.42907,
+    "by_year": {
+     "2012": {
+      "n": 1,
+      "mean_r": -1.01376
+     },
+     "2013": {
+      "n": 7,
+      "mean_r": -0.27715
+     },
+     "2014": {
+      "n": 7,
+      "mean_r": -0.33256
+     },
+     "2015": {
+      "n": 9,
+      "mean_r": 0.02958
+     },
+     "2016": {
+      "n": 27,
+      "mean_r": -0.23245
+     },
+     "2017": {
+      "n": 51,
+      "mean_r": -0.06225
+     },
+     "2018": {
+      "n": 52,
+      "mean_r": -0.07666
+     },
+     "2019": {
+      "n": 49,
+      "mean_r": -0.01902
+     },
+     "2020": {
+      "n": 51,
+      "mean_r": -0.07484
+     },
+     "2021": {
+      "n": 52,
+      "mean_r": -0.01087
+     },
+     "2022": {
+      "n": 52,
+      "mean_r": -0.01152
+     },
+     "2023": {
+      "n": 52,
+      "mean_r": -0.07185
+     },
+     "2024": {
+      "n": 48,
+      "mean_r": -0.07963
+     },
+     "2025": {
+      "n": 11,
+      "mean_r": -0.13678
+     }
+    },
+    "credit_share_of_max_loss": 0.20793,
+    "cost_share_of_credit": 0.06264,
+    "mean_bp_of_forward": -8.23378,
+    "skips": {
+     "no_k0": 19,
+     "no_leg": 50,
+     "hole": 2
+    },
+    "mean_r_skips_at_worst": -0.19502
+   },
+   "trial_logged_as": 37
+  },
+  "209": {
+   "checks": {
+    "1_mean_positive_t": false,
+    "2_dsr": false,
+    "3_both_halves": false,
+    "4_last_three_years": false,
+    "5_short_cycles": false,
+    "6_costs_2x": false,
+    "7_cycles": true,
+    "8_banknifty": false
+   },
+   "pass": false,
+   "label": "trial 209 NIFTY front-cycle hedged straddle, held to expiry",
+   "NIFTY": {
+    "cycles": 477,
+    "mean_r": -0.08523,
+    "sd_r": 0.76706,
+    "t": -2.42688,
+    "t_plain": -2.42688,
+    "t_nw4": -2.60629,
+    "dsr": {
+     "dsr": 0.00182,
+     "sharpe": -0.111,
+     "luck_baseline_sharpe": 0.024,
+     "n_trials": 2,
+     "n_trades": 477,
+     "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+    },
+    "mean_r_gross": -0.05377,
+    "mean_r_2x": -0.1167,
+    "mean_r_3x": -0.14816,
+    "break_even_cost_multiple": -1.70916,
+    "s1": {
+     "n": 102,
+     "mean_r": -0.09948
+    },
+    "s2": {
+     "n": 375,
+     "mean_r": -0.08136
+    },
+    "last3": {
+     "n": 156,
+     "mean_r": -0.12519
+    },
+    "short": {
+     "n": 356,
+     "mean_r": -0.07603
+    },
+    "long": {
+     "n": 121,
+     "mean_r": -0.11231
+    },
+    "call_side_mean_r": -0.09585,
+    "put_side_mean_r": 0.01061,
+    "win_rate": 0.46122,
+    "mean_win": 0.64832,
+    "mean_loss": -0.71318,
+    "worst5": [
+     [
+      "2023-06-28",
+      "2023-07-06",
+      -1.05049
+     ],
+     [
+      "2025-03-13",
+      "2025-03-20",
+      -1.05024
+     ],
+     [
+      "2023-07-13",
+      "2023-07-20",
+      -1.04987
+     ],
+     [
+      "2024-09-26",
+      "2024-10-03",
+      -1.04939
+     ],
+     [
+      "2025-04-03",
+      "2025-04-09",
+      -1.04925
+     ]
+    ],
+    "longest_losing_run": 8,
+    "deepest_drawdown_r": -47.18088,
+    "total_r": -40.65699,
+    "by_year": {
+     "2009": {
+      "n": 12,
+      "mean_r": 0.00279
+     },
+     "2010": {
+      "n": 12,
+      "mean_r": 0.00823
+     },
+     "2011": {
+      "n": 12,
+      "mean_r": -0.32839
+     },
+     "2012": {
+      "n": 12,
+      "mean_r": 0.05741
+     },
+     "2013": {
+      "n": 12,
+      "mean_r": -0.42719
+     },
+     "2014": {
+      "n": 12,
+      "mean_r": -0.20499
+     },
+     "2015": {
+      "n": 12,
+      "mean_r": 0.11507
+     },
+     "2016": {
+      "n": 12,
+      "mean_r": -0.03846
+     },
+     "2017": {
+      "n": 12,
+      "mean_r": -0.13221
+     },
+     "2018": {
+      "n": 12,
+      "mean_r": -0.28533
+     },
+     "2019": {
+      "n": 45,
+      "mean_r": -0.04282
+     },
+     "2020": {
+      "n": 52,
+      "mean_r": -0.03449
+     },
+     "2021": {
+      "n": 52,
+      "mean_r": 0.09375
+     },
+     "2022": {
+      "n": 52,
+      "mean_r": -0.14395
+     },
+     "2023": {
+      "n": 52,
+      "mean_r": -0.21359
+     },
+     "2024": {
+      "n": 52,
+      "mean_r": -0.1792
+     },
+     "2025": {
+      "n": 52,
+      "mean_r": 0.01723
+     }
+    },
+    "credit_share_of_max_loss": 1.30484,
+    "cost_share_of_credit": 0.02405,
+    "mean_bp_of_forward": -9.50972,
+    "skips": {
+     "no_leg": 1
+    },
+    "mean_r_skips_at_worst": -0.08721
+   },
+   "BANKNIFTY": {
+    "cycles": 496,
+    "mean_r": -0.07102,
+    "sd_r": 0.78698,
+    "t": -2.00994,
+    "t_plain": -2.00994,
+    "t_nw4": -2.21075,
+    "dsr": {
+     "dsr": 0.00613,
+     "sharpe": -0.09,
+     "luck_baseline_sharpe": 0.023,
+     "n_trials": 2,
+     "n_trades": 496,
+     "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce across 2 attempted configurations. Below 0.95, don't trust the backtest."
+    },
+    "mean_r_gross": -0.03983,
+    "mean_r_2x": -0.10222,
+    "mean_r_3x": -0.13341,
+    "break_even_cost_multiple": -1.27678,
+    "s1": {
+     "n": 100,
+     "mean_r": -0.14391
+    },
+    "s2": {
+     "n": 396,
+     "mean_r": -0.05262
+    },
+    "last3": {
+     "n": 111,
+     "mean_r": -0.12878
+    },
+    "short": {
+     "n": 435,
+     "mean_r": -0.074
+    },
+    "long": {
+     "n": 61,
+     "mean_r": -0.04978
+    },
+    "call_side_mean_r": -0.07639,
+    "put_side_mean_r": 0.00537,
+    "win_rate": 0.47782,
+    "mean_win": 0.66256,
+    "mean_loss": -0.74229,
+    "worst5": [
+     [
+      "2019-09-19",
+      "2019-09-26",
+      -1.05209
+     ],
+     [
+      "2020-03-05",
+      "2020-03-12",
+      -1.04989
+     ],
+     [
+      "2023-03-09",
+      "2023-03-16",
+      -1.04934
+     ],
+     [
+      "2022-06-09",
+      "2022-06-16",
+      -1.04681
+     ],
+     [
+      "2016-07-07",
+      "2016-07-14",
+      -1.04637
+     ]
+    ],
+    "longest_losing_run": 8,
+    "deepest_drawdown_r": -38.87523,
+    "total_r": -35.22789,
+    "by_year": {
+     "2012": {
+      "n": 9,
+      "mean_r": 0.12223
+     },
+     "2013": {
+      "n": 11,
+      "mean_r": -0.47118
+     },
+     "2014": {
+      "n": 10,
+      "mean_r": -0.06061
+     },
+     "2015": {
+      "n": 12,
+      "mean_r": 0.37089
+     },
+     "2016": {
+      "n": 32,
+      "mean_r": -0.27154
+     },
+     "2017": {
+      "n": 52,
+      "mean_r": -0.05311
+     },
+     "2018": {
+      "n": 52,
+      "mean_r": -0.02702
+     },
+     "2019": {
+      "n": 52,
+      "mean_r": -0.07673
+     },
+     "2020": {
+      "n": 51,
+      "mean_r": -0.09351
+     },
+     "2021": {
+      "n": 52,
+      "mean_r": 0.10169
+     },
+     "2022": {
+      "n": 52,
+      "mean_r": -0.08399
+     },
+     "2023": {
+      "n": 52,
+      "mean_r": -0.15983
+     },
+     "2024": {
+      "n": 48,
+      "mean_r": -0.14843
+     },
+     "2025": {
+      "n": 11,
+      "mean_r": 0.10369
+     }
+    },
+    "credit_share_of_max_loss": 1.31976,
+    "cost_share_of_credit": 0.0237,
+    "mean_bp_of_forward": -5.1215,
+    "skips": {
+     "no_k0": 19,
+     "no_leg": 23,
+     "hole": 2
+    },
+    "mean_r_skips_at_worst": -0.14927
+   },
+   "trial_logged_as": 38
+  }
+ },
+ "mechanism": {
+  "BANKNIFTY": {
+   "cycles": 521,
+   "beyond_1sd": 0.33781,
+   "normal_1sd": 0.3173,
+   "beyond_1_5sd": 0.16699,
+   "normal_1_5sd": 0.1336,
+   "above_1sd": 0.1881,
+   "below_1sd": 0.14971
+  },
+  "NIFTY": {
+   "cycles": 478,
+   "beyond_1sd": 0.32218,
+   "normal_1sd": 0.3173,
+   "beyond_1_5sd": 0.159,
+   "normal_1_5sd": 0.1336,
+   "above_1sd": 0.1841,
+   "below_1sd": 0.13808
+  }
+ }
+}

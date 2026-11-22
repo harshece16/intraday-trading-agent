@@ -1,3 +1,5 @@
+**Outcome (2026-11-23): FAIL, both arms.** Trial 208 (iron condor) −0.042 R a cycle, t −2.18; trial 209 (hedged straddle) −0.085 R, t −2.43. Seven of eight gates fail for each, both lose before any cost, both lose on BANKNIFTY, DSR 0.002. At the money the options were priced about fairly. Family closed at N = 2; nothing goes to paper. `results-index-premium.md`.
+
 # Pre-registration: trials 208 and 209, selling NIFTY option premium with defined risk
 
 **Written 2026-11-22, before any option price is in the repo and before any
