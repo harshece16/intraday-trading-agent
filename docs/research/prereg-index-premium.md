@@ -334,7 +334,8 @@ outcome and no payoff, win rate or R was computed.
    occur).
 7. **BANKNIFTY's own data gate.** If BANKNIFTY fails its own check 3 or 4,
    gate 8 counts as not met, because a sign cannot be confirmed on data that
-   failed its gate. After amendment 1 it passes both.
+   failed its gate. After amendments 1 and 8 it passes both (amendment 12
+   gives the count without amendment 8).
 8. **Check 4, exactly.** The forward is read at the nearest strike on each side
    of K0 that has a liquid call and put, and the larger of the two gaps
    counts. A cycle with no such neighbour counts as outside 0.3%. A cycle with
@@ -359,3 +360,76 @@ with no F&O file touch no cycle.
 | Entry quotes: median gap, within 0.3% | 0.014%, 478 of 478 | 0.023%, 509 of 521 |
 | Trial 208 buildable (skips) | 471 (no_leg 6, hole 1) | 469 (no_k0 19, no_leg 50, hole 2) |
 | Trial 209 buildable (skips) | 477 (no_leg 1) | 496 (no_k0 19, no_leg 23, hole 2) |
+
+### After the review (2026-11-23)
+
+Amendments 12–18 were written on 2026-11-23, after the independent review and
+still before any P&L. The reviewer read this file and the script, ran the
+self-check and stage 0, and computed no P&L. It found nothing that blocks the
+run. Amendments 12–14 settle the three items it said to fix first; 15–18 settle
+its notes. Stage 0's third run, with amendments 16 and 18 in it, gives the same
+counts as the table above.
+
+12. **Check 4's count, disclosed (review item 1).** Amendment 8 was written with
+    stage 0's counts in view, and for BANKNIFTY it decides whether gate 8 can be
+    met at all. Counting every BANKNIFTY cycle, 509 of 540 are within 0.3%
+    (94.3%). That is under 95%, so check 4 would fail, gate 8 would count as
+    not met (amendment 7), and both arms would fail whatever their P&L. Leaving
+    out the 19 cycles with no K0 (2009–11, when BANKNIFTY options barely
+    traded) gives 509 of 521 (97.7%), a pass. Amendment 8's reading stands:
+    check 4 tests the quotes a trade is priced from, and no trade is priced on
+    a cycle with no K0. A cycle that is priced but has no neighbour to check
+    still counts as outside (10 BANKNIFTY cycles). NIFTY is 478 of 478 either
+    way. Stage 0 now records the no-K0 count beside the others. **A pass would
+    rest on this reading, and the results will say so.**
+13. **The last falsification row explains a fail; it is not a gate (review
+    item 2).** "More cycles finish outside the sold strikes than the normal
+    share" is read from the mechanism figures: the share of cycles that settle
+    more than 1.25·S0 from F, against 31.7% for a normal move. It applies to
+    trial 208 only, whose sold strikes sit there. Trial 209 sells at K0, and
+    its ±1.25·S0 strikes are the wings it buys. The row never turns a pass into
+    a fail: the eight gates alone decide each arm.
+14. **One run, enforced (review item 3).** Trial mode refuses to start if
+    `trial208_result.json` or `trial208_cycles.csv` exists, or if either arm's
+    label is already in `backend/data/backtest_trials.json`. Once everything is
+    computed it logs both arms first, then writes the result and the per-cycle
+    file, then prints. Nothing is written or shown before the log entries, so a
+    crash before them allows a re-run under the protocol, with both runs
+    recorded.
+15. **The DSR is compared unrounded (review item 4).**
+    `evaluation.deflated_sharpe_ratio` rounded the DSR to three places before
+    gate 2 read it, so a value from 0.9495 up to 0.95 would have passed. It now
+    returns the unrounded value. That also corrects the project's other DSR
+    gates; every place that displays it formats it anyway.
+16. **Check 3: every source within 1% (review item 5).** Each source value
+    present on a cycle expiry, not only the one used, must be within 1% of the
+    nearest future's close. On the re-run, none is beyond 1%.
+17. **A bound for skipped cycles, reported only (review item 6).** Skips use
+    entry-day data alone, so nothing is looked up ahead. But they cluster in
+    turbulent years, so the sample leans away from the cycles where short
+    premium loses most. NIFTY trial 208 skips 2009 (3), 2019 (1), 2020 (2) and
+    2022 (1). Trial 209 skips one cycle, 2020-03-12. 66 of BANKNIFTY's 71
+    trial-208 skips fall in 2009–17. Each arm and index also reports its mean R
+    with every skipped cycle scored at −1 R less the median cost in R, about
+    the worst a defined-risk spread held to expiry can do. It is information,
+    not a gate.
+18. **Two checks the reviewer made by hand, now recorded (review items 7 and
+    8).**
+    - **Parity on each cycle expiry.** Stage 0 now sets the settlement value
+      used against the level that put-call parity implies on the expiring
+      series' own closes, at the strike where call and put are closest. Where
+      the value is the close (amendment 1), the median gap is 0.037% for NIFTY
+      (37 days, largest 0.22%) and 0.042% for BANKNIFTY (144 days, largest
+      0.25%). Where the file supplies it, the median gap is 0.028% (441 days,
+      largest 0.25%) and 0.040% (396 days, largest 1.7%, early 2009). The close
+      sits as near the exchange's own option prices as the file's values do.
+      This is reported, not a gate.
+    - **Re-links.** For the four re-linked cycles, the reviewer matched the
+      front series' row counts at entry and on the end day: 220/220, 228/228,
+      152/152 and 230 → 302. Each is the same series, re-dated by the
+      exchange. The script does not re-check this.
+
+    The self-check now also covers the check-4 count, the one-run guard, the
+    put side's orders at intrinsic value, the parity level and the skip bound.
+    A moved expiry day whose series is listed for the next day was already in
+    its cycle-chain case (2021-03-03, listed 03-04).

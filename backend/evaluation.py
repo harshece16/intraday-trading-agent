@@ -82,7 +82,8 @@ def deflated_sharpe_ratio(r_values, n_trials, sharpe_std=None):
     z = (sr - sr0) * math.sqrt(n - 1) / denom
     dsr = _NORMAL.cdf(z)
     return {
-        "dsr": round(dsr, 3), "sharpe": round(sr, 3), "luck_baseline_sharpe": round(sr0, 3),
+        # dsr unrounded: callers gate it at 0.95, and a rounded 0.9495 would pass (#329 review)
+        "dsr": dsr, "sharpe": round(sr, 3), "luck_baseline_sharpe": round(sr0, 3),
         "n_trials": n_trials, "n_trades": n,
         "note": "DSR is the probability the true Sharpe ratio beats what pure luck would produce "
                 f"across {n_trials} attempted configurations. Below 0.95, don't trust the backtest.",

@@ -73,14 +73,18 @@ def day_record(date, rows):
     und = {_f(r[9]) for r in expiring} - {0.0}
     settles = {_f(r[5]) for r in expiring}                   # "the one value every expiring row carries"
     fut = [_f(r[5]) for r in futs if r[1] == exp or r[2] == date]
-    chain = {}
+    chain, pair = {}, collections.defaultdict(dict)
     for r in opts:
         if later and r[1] == min(later):
             chain.setdefault(_f(r[3]), {})[r[0]] = (_f(r[4]), _f(r[6]), _f(r[10]))   # close, volume, lot
+        elif r[1] == exp and _f(r[4]) > 0 and _f(r[6]) > 0:
+            pair[_f(r[3])][r[0]] = _f(r[4])
+    # amendment 18: the level put-call parity implies on the expiring series' own closes, at its K0
+    par = min(((abs(v["CE"] - v["PE"]), k + v["CE"] - v["PE"]) for k, v in pair.items() if len(v) == 2), default=None)
     return {"exp": exp, "front": min(later) if later else None, "fmt": rows[0][11],
             "und": und.pop() if len(und) == 1 else None, "fut": fut[0] if fut else None,
             "opt": settles.pop() if len(settles) == 1 else None,
-            "near_fut": _f(futs[0][4]) if futs else None, "chain": chain,
+            "near_fut": _f(futs[0][4]) if futs else None, "chain": chain, "parity": par[1] if par else None,
             "exp2_differs": sum(1 for r in opts if r[2] and r[2] != r[1])}
 
 
@@ -287,7 +291,34 @@ def run_arm(recs, cyc, arm, bad_days, ref=None, lot=None):
     return rows, dict(skips), skipped
 
 
+def worst_case(rows, n_skipped):
+    """Amendment 17, reported only: mean R with every skipped cycle scored at -1 R less the median cost in R."""
+    if not rows:
+        return None
+    worst = -1 - st.median(r["r_cost"] for r in rows)
+    return (sum(r["r"] for r in rows) + worst * n_skipped) / (len(rows) + n_skipped)
+
+
 # --- stage 0 ----------------------------------------------------------------------
+
+def entry_gaps(recs, cyc):
+    """Check 4 as amendment 8 reads it: ([the worse neighbour's forward gap over F], cycles with a K0 and no
+    neighbour, which count as outside). A cycle with no K0 is left out: no trade is priced on it."""
+    gaps, unchecked = [], 0
+    for day, _ in cyc:
+        chain = recs[day]["chain"]
+        fw = forward(chain)
+        if fw is None:
+            continue
+        k0, f, _s0, both = fw
+        i = both.index(k0)
+        near = both[max(0, i - 1):i] + both[i + 1:i + 2]
+        if not near:
+            unchecked += 1
+            continue
+        gaps.append(max(abs(k + chain[k]["CE"][0] - chain[k]["PE"][0] - f) for k in near) / f)
+    return gaps, unchecked
+
 
 def stage0(days, unit, sessions, meta):
     cash = {s for s in sessions if FIRST <= s <= LAST_EXIT}
@@ -301,6 +332,7 @@ def stage0(days, unit, sessions, meta):
         bad_days = sorted(d for d, e in moved if e in cash)   # the listed expiry was a session: its file is missing
         ends = [end for _, end in cyc]
         srcs, two, agree, disagree, far, idx_gap = collections.Counter(), 0, 0, [], [], []
+        par_gap = {"close": [], "file": []}
         for d in ends:
             rec = recs[d]
             s, src = settlement(rec)
@@ -309,6 +341,8 @@ def stage0(days, unit, sessions, meta):
             srcs[src] += 1
             if src != "idx" and rec.get("idx"):              # amendment 1: the close against the file's own value
                 idx_gap.append((abs(rec["idx"] - s), abs(rec["idx"] / s - 1), d))
+            if rec.get("parity"):                            # amendment 18: the value used against parity
+                par_gap["close" if src == "idx" else "file"].append((abs(rec["parity"] / s - 1), d))
             vals = [rec[k] for k in SOURCES if rec.get(k) and rec[k] > 0]
             if len(vals) > 1:
                 two += 1
@@ -316,21 +350,10 @@ def stage0(days, unit, sessions, meta):
                     agree += 1
                 else:
                     disagree.append([d, vals])
-            if not rec["near_fut"] or abs(s / rec["near_fut"] - 1) > 0.01:
-                far.append([d, s, rec["near_fut"]])
-        gaps, unchecked = [], 0
-        for day, _ in cyc:                                   # check 4: the forward one strike either side of K0
-            chain = recs[day]["chain"]
-            fw = forward(chain)
-            if fw is None:
-                continue
-            k0, f, _s0, both = fw
-            i = both.index(k0)
-            near = both[max(0, i - 1):i] + both[i + 1:i + 2]
-            if not near:
-                unchecked += 1
-                continue
-            gaps.append(max(abs(k + chain[k]["CE"][0] - chain[k]["PE"][0] - f) for k in near) / f)
+            if not rec["near_fut"] or any(abs(v / rec["near_fut"] - 1) > 0.01 for v in vals):   # amendment 16
+                far.append([d, vals, rec["near_fut"]])
+        gaps, unchecked = entry_gaps(recs, cyc)
+        no_k0 = sum(1 for day, _ in cyc if forward(recs[day]["chain"]) is None)
         have = sum(srcs.values())
         short = [c for c in cyc if gap_days(*c) <= SHORT_DAYS]
         gates = {"3_settlement_present": bool(ends) and have >= 0.98 * len(ends),
@@ -355,8 +378,11 @@ def stage0(days, unit, sessions, meta):
                            "index_close_vs_file": {"days": len(idx_gap),
                                                    "within_0.01_point": sum(p <= 0.01 for p, _, _ in idx_gap),
                                                    "within_0.05pct": sum(g <= 0.0005 for _, g, _ in idx_gap),
-                                                   "worst": [[d, p] for p, _, d in sorted(idx_gap)[-5:]]}},
-            "entry_quotes": {"checked": len(gaps), "no_neighbour": unchecked,
+                                                   "worst": [[d, p] for p, _, d in sorted(idx_gap)[-5:]]},
+                           "parity_gap": {k: {"days": len(v), "median": st.median(g for g, _ in v) if v else None,
+                                              "worst": [[d, g] for g, d in sorted(v)[-3:]]}
+                                          for k, v in par_gap.items()}},
+            "entry_quotes": {"checked": len(gaps), "no_neighbour": unchecked, "no_k0_not_counted": no_k0,
                              "median_gap": st.median(gaps) if gaps else None,
                              "within_0.3pct": sum(g <= 0.003 for g in gaps),
                              "worst": sorted(gaps)[-5:]},
@@ -440,7 +466,8 @@ def verdict(rep, bank):
 
 def mechanism(recs, cyc, bad_days):
     """Reported, not judged: how often the index finished beyond one and one and a half standard
-    deviations of the move the straddle priced in, against 31.7% and 13.4% for a normal move."""
+    deviations of the move the straddle priced in, against 31.7% and 13.4% for a normal move.
+    Amendment 13: beyond 1 sd is beyond trial 208's sold strikes; for 209 those are its bought wings."""
     moves = []
     for day, end in cyc:
         fw, settle = forward(recs[day]["chain"]), settlement(recs[end])[0]
@@ -463,8 +490,9 @@ def trial(days, s0):
             continue
         per = {}
         for sym in sorted(days):
-            rows, skips, _ = run_arm(days[sym], cyc[sym], arm, bad[sym], s0["symbols"][sym]["ref_level"], LOT[sym])
-            per[sym] = dict(report(rows), skips=skips)
+            rows, skips, skipped = run_arm(days[sym], cyc[sym], arm, bad[sym], s0["symbols"][sym]["ref_level"],
+                                           LOT[sym])
+            per[sym] = dict(report(rows), skips=skips, mean_r_skips_at_worst=worst_case(rows, len(skipped)))
             detail += [dict({"trial": num, "symbol": sym}, **r) for r in rows]
         res = verdict(per["NIFTY"], per["BANKNIFTY"] if s0["symbols"]["BANKNIFTY"]["data_ok"] else {})
         res.update({"label": LABELS[num], "NIFTY": per["NIFTY"], "BANKNIFTY": per["BANKNIFTY"]})
@@ -472,6 +500,13 @@ def trial(days, s0):
     if detail:
         out["mechanism"] = {sym: mechanism(days[sym], cyc[sym], bad[sym]) for sym in sorted(days)}
     return out, detail
+
+
+def already_run(out_dir, log_path):
+    """Amendment 14: either output file, or either label in the trial log, means the one run happened."""
+    files = [os.path.join(out_dir, f) for f in ("trial208_result.json", "trial208_cycles.csv")]
+    logged = {t.get("label") for t in json.loads(log_path.read_text())} if log_path.exists() else set()
+    return any(map(os.path.exists, files)) or bool(logged & set(LABELS.values()))
 
 
 def save_cycles(detail, path):
@@ -530,6 +565,9 @@ def selftest():
     deep = price(t, 11500, 20000.0, 65)      # the bought call is exercised: a sale at intrinsic, with its STT
     assert abs(deep["call"][1] - (rupees("SELL", 50) + rupees("BUY", 14) + rupees("BUY", 1000)
                                   + rupees("SELL", 700)) / 130 - 0.64) < 1e-9
+    low = price(t, 9000, 20000.0, 65)        # the put side: sold put bought back, bought put sold, at intrinsic value
+    assert abs(low["put"][1] - (rupees("SELL", 50) + rupees("BUY", 14) + rupees("BUY", 500)
+                                + rupees("SELL", 200)) / 130 - 0.64) < 1e-9
     # slippage floors: a quarter point at today's level and one tick, on a 2-point option
     cheap = {"f": 10000.0, "sc": 10500, "bc": 10800, "sp": 9500, "bp": 9200,
              "prem": {"sc": 2.0, "bc": 1.0, "sp": 2.0, "bp": 1.0}}
@@ -549,11 +587,12 @@ def selftest():
     assert (rec["exp"], rec["front"], rec["opt"], rec["fut"], rec["und"], rec["near_fut"]) == \
         ("2021-06-03", "2021-06-10", 15690.35, None, None, 15712.4)
     assert rec["chain"] == {15700.0: {"CE": (90.0, 500.0, 0.0), "PE": (95.0, 500.0, 0.0)}}
-    assert settlement(rec) == (15690.35, "opt")
+    assert settlement(rec) == (15690.35, "opt") and abs(rec["parity"] - 15687.05) < 1e-9   # 15000 + 687.1 - 0.05
     rec = day_record("2025-03-12", [row("CE", "2025-03-13", 22000, 400, 22400.5, "2025-03-12", "22400.5", "udiff"),
                                     row("CE", "2025-03-20", 22400, 150, 150, "2025-03-20", "22400.5", "udiff"),
                                     row("F", "2025-03-13", 0, 22399, 22400.5, "2025-03-12", "22400.5", "udiff")])
     assert (rec["exp"], rec["front"], rec["exp2_differs"]) == ("2025-03-13", "2025-03-20", 1)   # option rows only
+    assert rec["parity"] is None                          # no expiring put to pair with
     assert settlement(rec) == (22400.5, "und") and rec["fut"] == 22400.5
     days = {"X": {"2025-03-12": rec}}
     to_contracts(days, "units")
@@ -577,6 +616,8 @@ def selftest():
             "2021-03-10": r("2021-03-10", "2021-03-18"), "2021-03-17": r("2021-03-17", "2026-01-06")}
     assert cycles(recs) == ([("2021-01-28", "2021-02-25"), ("2021-02-25", "2021-03-03"), ("2021-03-03", "2021-03-10"),
                              ("2021-03-10", "2021-03-17")], [["2021-03-10", "2021-03-18", "2021-03-17"]])
+    gp = {"a": {"chain": chain}, "b": {"chain": {}}, "c": {"chain": {10000.0: chain[10000.0]}}}
+    assert entry_gaps(gp, [("a", ""), ("b", ""), ("c", "")]) == ([0.0], 1)   # no K0: left out; no neighbour: outside
 
     # --- an arm end to end on made-up days, then the report and the gates on made-up R
     mk = lambda exp, front, settle: {"exp": exp, "front": front, "und": settle, "fut": None, "opt": None,  # noqa: E731
@@ -600,8 +641,19 @@ def selftest():
         s: {"missing_file_expiries": [], "ref_level": 20000.0, "data_ok": s == "NIFTY"} for s in two}})
     assert out["arms"]["209"]["not_run"] and not out["arms"]["208"]["pass"] and len(detail) == 6
     assert out["arms"]["208"]["NIFTY"]["cycles"] == 3 and out["arms"]["208"]["checks"]["8_banknifty"] is False
-    with tempfile.TemporaryDirectory() as tmp:
-        save_cycles(detail, os.path.join(tmp, "cycles.csv"))
+    nif = out["arms"]["208"]["NIFTY"]
+    assert nif["mean_r_skips_at_worst"] < nif["mean_r"]                  # the no_settlement cycle at the worst case
+    assert abs(worst_case([{"r": 0.5, "r_cost": 0.1}, {"r": -0.2, "r_cost": 0.3}], 1) + 0.3) < 1e-12
+    with tempfile.TemporaryDirectory() as tmp:            # amendment 14: either file or either label means it ran
+        log = pathlib.Path(tmp) / "log.json"
+        assert not already_run(tmp, log)
+        log.write_text(json.dumps([{"n": 1, "label": "another trial"}]))
+        assert not already_run(tmp, log)
+        log.write_text(json.dumps([{"n": 1, "label": LABELS["209"]}]))
+        assert already_run(tmp, log)
+        log.unlink()
+        save_cycles(detail, os.path.join(tmp, "trial208_cycles.csv"))
+        assert already_run(tmp, log)
     json.dumps(rounded(out))
 
     import random
@@ -636,6 +688,11 @@ def main(argv):
         return 0
     if mode not in ("stage0", "trial"):
         sys.exit(__doc__)
+    import evaluation
+    evaluation.TRIAL_LOG_PATH = pathlib.Path(nse_prices.DATA) / "backtest_trials.json"   # the log lives with the data
+    if mode == "trial" and already_run(ib.OUT_DIR, evaluation.TRIAL_LOG_PATH):
+        print("trials 208 and 209 have been run; one run per hypothesis")
+        return 1
     days, samples = load()
     unit = volume_unit(samples)
     to_contracts(days, unit["unit"])
@@ -656,18 +713,12 @@ def main(argv):
     if mode == "stage0":
         print("saved", ib.write("trial208_stage0.json", rounded(s0, 6)))
         return 0
-    if os.path.exists(os.path.join(ib.OUT_DIR, "trial208_result.json")):
-        print("trials 208 and 209 have been run; one run per hypothesis")
-        return 1
-    import evaluation
-    if os.environ.get("SAHAB_RESEARCH_DATA"):     # the run log lives with the data, not in a worktree's empty folder
-        evaluation.TRIAL_LOG_PATH = pathlib.Path(nse_prices.DATA) / "backtest_trials.json"
     out, detail = trial(days, s0)
-    save_cycles(detail, os.path.join(ib.OUT_DIR, "trial208_cycles.csv"))
-    for num in ARMS:                              # logged once everything is computed, before anything is shown
+    for num in ARMS:                              # logged first: nothing is written or shown before these entries
         if "not_run" not in out["arms"][num]:
             out["arms"][num]["trial_logged_as"] = evaluation.log_trial(LABELS[num])
     print("saved", ib.write("trial208_result.json", rounded(out)))
+    save_cycles(detail, os.path.join(ib.OUT_DIR, "trial208_cycles.csv"))
     print(json.dumps(rounded({n: {k: v for k, v in a.items() if k != "BANKNIFTY"} for n, a in out["arms"].items()}, 4),
                      indent=1))
     print(json.dumps(rounded({"BANKNIFTY": {n: a.get("BANKNIFTY") for n, a in out["arms"].items()},
