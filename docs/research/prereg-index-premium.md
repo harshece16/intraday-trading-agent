@@ -284,4 +284,78 @@ selling. No stock options. No 2026 row. No order, live or paper.
 
 ## Amendments
 
-None yet.
+All written on 2026-11-22, after stage 0 and before any P&L. At that point stage 0
+had computed only counts and the source checks above: no credit was set against an
+outcome and no payoff, win rate or R was computed.
+
+1. **A fourth settlement source.** Stage 0's first run found the final
+   settlement price for 441 of 478 NIFTY cycle expiries (92.3%) and 396 of 540
+   BANKNIFTY ones (73.3%). That fails check 3's 98% and stops both arms. Every
+   missing day is an old-format weekly expiry on which no future expires and
+   every expiring option row carries `SETTLE_PR` 0: NIFTY 37 days (2019-03-07 to
+   2020-01-23), BANKNIFTY 144 days (2016-07-07 to 2020-01-23). The final
+   settlement price of an NSE index option is the index's closing value on the
+   expiry day, the same number the three registered sources carry. So a fourth
+   source is added, used only when the other three are absent: the index's
+   daily close (NIFTY 50 `^NSEI`, NIFTY BANK `^NSEBANK`) from Yahoo Finance
+   through yfinance, 2009-01-01 to 2025-12-31. yfinance's end date is
+   exclusive, so no 2026 row is requested. It is fetched once by
+   `index_premium.py closes` to `backend/data/fo_oi/index_close.csv`
+   (git-ignored; 8,355 rows; sha256 `71f2c7a2…ca879b`). The 98% threshold and
+   the other checks are unchanged. The close counts as one more source in
+   check 3's agreement test, and stage 0 reports it against the file's own
+   value. **Re-run:** on every cycle expiry where both exist, the close equals
+   the file's own settlement value to within 0.01 point (NIFTY 440 of 440,
+   BANKNIFTY 396 of 396). Settlement is now present for 478 of 478 and 540 of
+   540 cycle expiries, and every check passes on both indices. This does not
+   loosen the gate: the exit price's definition and the threshold are
+   unchanged, and the new source matched the exchange's own value on 836 days
+   before it is used on 181. The Data section's "nothing new is fetched" no
+   longer holds for this one series.
+2. **Front series.** "The series with the nearest expiry after that day" means
+   the nearest series listed after the one that expires on the entry day. The
+   two readings differ only on the two moved expiry days (2009-04-29 and
+   2014-04-23). On those days the series that expires is listed for the
+   following day.
+3. **A listed expiry moved after entry.** Sometimes the front series' listed
+   date is not an expiry day after the entry, because the exchange changed the
+   date after the entry day. Then the cycle ends on the expiry day nearest the
+   listed date, within four calendar days. A listed date with no expiry day
+   within four days stops the script. NIFTY has one case (entry 2023-06-22,
+   listed 06-29, expired 06-28). BANKNIFTY has three: that one, 2023-08-31
+   (listed 09-07, expired 09-06) and 2024-12-24 (listed 2025-01-29, expired
+   01-30).
+4. **Liquid** also needs a closing price above zero.
+5. **Volume unit (stage 0 item 5).** UDiFF's `TtlTradgVol` counts contracts.
+   On 333 of 333 UDiFF futures rows, turnover ÷ (volume × close) equals the
+   lot. No conversion is applied.
+6. **Skips.** "A leg not found" (`no_leg`) and "a hole" (`hole`) are counted
+   apart. A cycle that touches a missing file counts as `missing_file` (none
+   occur).
+7. **BANKNIFTY's own data gate.** If BANKNIFTY fails its own check 3 or 4,
+   gate 8 counts as not met, because a sign cannot be confirmed on data that
+   failed its gate. After amendment 1 it passes both.
+8. **Check 4, exactly.** The forward is read at the nearest strike on each side
+   of K0 that has a liquid call and put, and the larger of the two gaps
+   counts. A cycle with no such neighbour counts as outside 0.3%. A cycle with
+   no K0 is not counted here (it is skipped as `no_k0`).
+9. **BANKNIFTY's cost level** is 59,171.25, its final settlement on 2025-12-30
+   from the file.
+10. **Output.** `docs/research/data/trial208_cycles.csv` is also saved: one row
+    per priced cycle (both arms, both indices) with strikes, credit, maximum
+    loss, settlement and R at each cost multiple.
+11. **Extract.** 12.6 MB (12,604,271 bytes, sha256 `99c7631f…a959bb9f`), not "a
+    few MB": 945,362 rows, 4,211 sessions, 3,841 old-format and 370 UDiFF
+    files, no bad file.
+
+**Stage 0 after amendment 1** (`trial208_stage0.json`). The four cash sessions
+with no F&O file touch no cycle.
+
+| | NIFTY | BANKNIFTY |
+| --- | --- | --- |
+| Cycles (first entry 2009-01-29) | 478 | 540 |
+| Short cycles (first) | 357 (2019-02-28) | 437 (2016-06-30) |
+| Settlement: UDiFF, future, option rows, close | 78, 185, 178, 37 | 33, 185, 178, 144 |
+| Entry quotes: median gap, within 0.3% | 0.014%, 478 of 478 | 0.023%, 509 of 521 |
+| Trial 208 buildable (skips) | 471 (no_leg 6, hole 1) | 469 (no_k0 19, no_leg 50, hole 2) |
+| Trial 209 buildable (skips) | 477 (no_leg 1) | 496 (no_k0 19, no_leg 23, hole 2) |

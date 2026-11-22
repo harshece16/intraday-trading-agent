@@ -5,6 +5,7 @@ written and merged before this file. The option history is the expiry-day extrac
 fo_options_aggregate.py builds on sahab-pc (backend/data/fo_oi/, gitignored).
 
     python research/index_premium.py selftest   # strike, payoff, cost and verdict logic on made-up data
+    python research/index_premium.py closes     # amendment 1: the two indices' daily closes, 2009-2025, from Yahoo
     python research/index_premium.py stage0     # data gate: counts and source checks, no P&L
     python research/index_premium.py trial      # both arms, one run each, logged as trials
 """
@@ -12,6 +13,7 @@ import collections
 import csv
 import datetime as dt
 import gzip
+import hashlib
 import itertools
 import json
 import math
@@ -32,6 +34,8 @@ from costs import FNO_OPTION_COSTS, leg_cost  # noqa: E402
 from pead_stage_a import nw_t  # noqa: E402
 
 OPT_FILE = os.path.join(nse_prices.DATA, "fo_oi", "fo_opt_expiry.csv.gz")
+CLOSE_FILE = os.path.join(nse_prices.DATA, "fo_oi", "index_close.csv")     # amendment 1
+YAHOO = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
 FIRST, LAST_EXIT = "2009-01-01", "2025-12-31"
 HALF_SPLIT, LAST3_START = "2017-07-01", "2023-01-01"
 FAMILY_N, FAMILY_T, MIN_DSR = 2, 2.24, 0.95
@@ -95,6 +99,32 @@ def load(path=OPT_FILE):
     return days, samples
 
 
+def fetch_closes(path=CLOSE_FILE):
+    """Amendment 1: each index's daily close from Yahoo Finance, 2009-2025 (yfinance's end date is exclusive)."""
+    import yfinance as yf
+    rows = []
+    for sym, ticker in YAHOO.items():
+        df = yf.download(ticker, start=FIRST, end="2026-01-01", interval="1d", auto_adjust=False,
+                         progress=False, multi_level_index=False)
+        for ts, close in df["Close"].dropna().items():
+            day = ts.date().isoformat()
+            assert FIRST <= day <= LAST_EXIT, day
+            rows.append([day, sym, round(float(close), 2)])
+    with open(path, "w", newline="") as fh:
+        csv.writer(fh).writerows([["date", "symbol", "close"]] + rows)
+    return len(rows)
+
+
+def add_closes(days, path=CLOSE_FILE):
+    """The index's close becomes each expiry day's fourth settlement source."""
+    with open(path, newline="") as fh:
+        closes = {(r["symbol"], r["date"]): float(r["close"]) for r in csv.DictReader(fh)}
+    for sym, recs in days.items():
+        for day, rec in recs.items():
+            rec["idx"] = closes.get((sym, day))
+    return len(closes)
+
+
 def volume_unit(samples):
     """Stage 0 item 5: is UDiFF's TtlTradgVol in contracts or in units? On a futures row
     turnover / (volume x close) is 1 when volume counts units and the lot when it counts contracts
@@ -152,11 +182,15 @@ def cycles(recs):
     return out, relinked
 
 
+SOURCES = ("und", "fut", "opt", "idx")
+
+
 def settlement(rec):
     """(final settlement price, source): the UDiFF underlying value, else the settle price of the
-    future expiring that day, else the one value every expiring option row carries."""
-    for src in ("und", "fut", "opt"):
-        if rec[src] and rec[src] > 0:
+    future expiring that day, else the one value every expiring option row carries, else (amendment 1)
+    the index's close that day."""
+    for src in SOURCES:
+        if rec.get(src) and rec[src] > 0:
             return rec[src], src
     return None, None
 
@@ -266,14 +300,16 @@ def stage0(days, unit, sessions, meta):
         moved = [[d, r["exp"]] for d, r in sorted(recs.items()) if r["exp"] != d]
         bad_days = sorted(d for d, e in moved if e in cash)   # the listed expiry was a session: its file is missing
         ends = [end for _, end in cyc]
-        srcs, two, agree, disagree, far = collections.Counter(), 0, 0, [], []
+        srcs, two, agree, disagree, far, idx_gap = collections.Counter(), 0, 0, [], [], []
         for d in ends:
             rec = recs[d]
             s, src = settlement(rec)
             if s is None:
                 continue
             srcs[src] += 1
-            vals = [rec[k] for k in ("und", "fut", "opt") if rec[k] and rec[k] > 0]
+            if src != "idx" and rec.get("idx"):              # amendment 1: the close against the file's own value
+                idx_gap.append((abs(rec["idx"] - s), abs(rec["idx"] / s - 1), d))
+            vals = [rec[k] for k in SOURCES if rec.get(k) and rec[k] > 0]
             if len(vals) > 1:
                 two += 1
                 if max(vals) / min(vals) - 1 <= 0.0005:
@@ -315,7 +351,11 @@ def stage0(days, unit, sessions, meta):
             "short_cycles": len(short), "first_short_cycle": short[0] if short else None,
             "cycles_per_year": dict(sorted(collections.Counter(c[0][:4] for c in cyc).items())),
             "settlement": {"present": have, "by_source": dict(srcs), "days_with_two_sources": two,
-                           "agree_within_0.05pct": agree, "disagree": disagree, "beyond_1pct_of_near_future": far},
+                           "agree_within_0.05pct": agree, "disagree": disagree, "beyond_1pct_of_near_future": far,
+                           "index_close_vs_file": {"days": len(idx_gap),
+                                                   "within_0.01_point": sum(p <= 0.01 for p, _, _ in idx_gap),
+                                                   "within_0.05pct": sum(g <= 0.0005 for _, g, _ in idx_gap),
+                                                   "worst": [[d, p] for p, _, d in sorted(idx_gap)[-5:]]}},
             "entry_quotes": {"checked": len(gaps), "no_neighbour": unchecked,
                              "median_gap": st.median(gaps) if gaps else None,
                              "within_0.3pct": sum(g <= 0.003 for g in gaps),
@@ -324,6 +364,7 @@ def stage0(days, unit, sessions, meta):
             "cycle_list": cyc}
     nifty = out["symbols"]["NIFTY"]
     assert nifty["ref_level"] is not None and abs(nifty["ref_level"] - REF_NIFTY) < 0.01, nifty["ref_level"]
+    assert all(d["ref_level"] for d in out["symbols"].values()), "an index has no 2025-12-30 level"
     out["proceed"] = {num: bool(unit["unit"]) and nifty["data_ok"] and nifty["arms"][num]["buildable"] >= MIN_CYCLES
                       for num in ARMS}
     return out
@@ -517,6 +558,14 @@ def selftest():
     days = {"X": {"2025-03-12": rec}}
     to_contracts(days, "units")
     assert days["X"]["2025-03-12"]["chain"][22400.0]["CE"] == (150.0, 500 / 75)
+    with tempfile.TemporaryDirectory() as tmp:            # amendment 1: the close is the last source, used alone
+        path = os.path.join(tmp, "closes.csv")
+        with open(path, "w") as fh:
+            fh.write("date,symbol,close\n2025-03-12,X,22400.45\n2025-03-12,Y,1.0\n")
+        assert add_closes(days, path) == 2 and days["X"]["2025-03-12"]["idx"] == 22400.45
+    assert settlement(days["X"]["2025-03-12"]) == (22400.5, "und")
+    assert settlement({"und": None, "fut": None, "opt": 0.0, "idx": 11300.25}) == (11300.25, "idx")
+    assert settlement({"und": None, "fut": 11300.0, "opt": None, "idx": 11300.25}) == (11300.0, "fut")
     unit = volume_unit([("udiff", 75 * 100 * 22000.0, 75 * 100, 22000.0, 75.0)] * 20 + [("old", 1650.0, 100, 22000.0, 0.0)])   # 100 contracts of 75 = Rs 1,650 lakh
     assert unit["unit"] == "units" and unit["old_format_median_turnover_per_contract_in_units"] == 75.0
     assert volume_unit([("udiff", 75 * 100 * 22000.0, 100, 22000.0, 75.0)])["unit"] == "contracts"
@@ -582,16 +631,22 @@ def main(argv):
     mode = argv[1] if len(argv) > 1 else ""
     if mode == "selftest":
         return selftest()
+    if mode == "closes":
+        print(fetch_closes(), "closes saved to", CLOSE_FILE)
+        return 0
     if mode not in ("stage0", "trial"):
         sys.exit(__doc__)
     days, samples = load()
     unit = volume_unit(samples)
     to_contracts(days, unit["unit"])
+    n_closes = add_closes(days)
     with open(OPT_FILE + ".meta.json") as fh:
         meta = json.load(fh)
     # ponytail: the whole price panel is loaded for its session dates alone; trial 207's calendar, kept the same
     sessions = nse_prices.load(wide=True)[0]
     s0 = stage0(days, unit, sessions, meta)
+    with open(CLOSE_FILE, "rb") as fh:
+        s0["index_close_file"] = {"rows": n_closes, "sha256": hashlib.sha256(fh.read()).hexdigest()}
     quiet = ("cycle_list", "moved", "arms", "cycles_per_year")
     brief = dict(s0, symbols={s: dict({k: v for k, v in d.items() if k not in quiet},
                                       moved=len(d["moved"]),
